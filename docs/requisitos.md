@@ -274,6 +274,7 @@ Nenhum no momento. As duas últimas pendências foram fechadas em 30/08: métric
 
 ## Como usar este documento
 
-- Cada linha vira uma issue quando entrar no backlog; use o ID (RF-xxx / RNF-xx) no título ou no corpo para rastrear.
-- Mudança de requisito entra por **pull request** — este arquivo é a fonte da verdade, e a issue linka para ele em vez de copiar o texto.
-- IDs são estáveis: novos requisitos entram no fim do bloco do seu módulo, sem renumerar os existentes.
+- Este arquivo é a **fonte da verdade** dos requisitos. Mudança de regra entra por **pull request** aqui, não em issue.
+- Requisito **não vira issue um a um**: um flow pode virar uma task só, e um requisito que atravessa modelo, tela e validação vira várias.
+- A issue **cita o ID** (RF-xxx / RNF-xx) e linka este arquivo; nunca copia o texto do requisito — duas versões da mesma regra é como elas divergem.
+- **IDs são estáveis**: requisito novo entra no fim do bloco do seu módulo, sem renumerar os existentes.
