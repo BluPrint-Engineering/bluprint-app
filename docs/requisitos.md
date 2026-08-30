@@ -242,9 +242,9 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RNF-16 | Rastreabilidade: toda ação relevante identifica autor, obra e horário | S |
 | RNF-17 | Disponibilidade ≥ 99% em horário comercial | S |
 | RNF-18 | Acessibilidade (contraste, tamanho de fonte ajustável) | C |
-| RNF-19 | Instalável na tela de início do celular (PWA), abrindo em tela cheia, sem barra do navegador | S |
-| RNF-20 | Aviso ao usuário quando houver itens na fila offline há mais de 24h — o navegador pode descartar o armazenamento local sem avisar | S |
-| RNF-21 | Suporte a plantas em PDF vetorial, além de imagem | C |
+| RNF-19 | Suporte a plantas em PDF vetorial, além de imagem | C |
+| RNF-20 | Instalável na tela de início do celular (PWA), abrindo em tela cheia, sem barra do navegador | S |
+| RNF-21 | Aviso ao usuário quando houver itens na fila offline há mais de 24h — o navegador pode descartar o armazenamento local sem avisar | S |
 
 ---
 
@@ -264,8 +264,8 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 - **Pin no lugar errado não se perde** (RF-411): a disciplina fica gravada no pin, não na planta. Vale para qualquer disciplina, não só hidráulica e elétrica.
 - **Duas paletas independentes** (ver Paleta no topo): status pinta a célula da unidade, disciplina pinta o pin. "Em checklist" deixou de ser azul e virou célula sem preenchimento, liberando o azul para a hidráulica.
 - **Excluir estrutura vazia é fácil, destruir trabalho de campo é difícil** (RF-209 a RF-214). Item sem conteúdo some na hora; item com pins ou plantas é arquivado, nunca apagado. Foto de obra não se refaz — quando alguém perceber o erro, o problema registrado pode já ter sido corrigido.
-- **Plataforma: aplicação web mobile-first** (RNF-01, RNF-02, RNF-19). Um código só, React + Tailwind, usado no celular em campo e no desktop no escritório. App nativo é evolução pós-produção.
-- **Limite consciente do offline no navegador** (RF-511, RNF-12, RNF-20). A fila local existe, mas o Safari do iPhone não sincroniza com o app fechado e pode descartar o armazenamento local após dias sem uso. Portanto: a fila sobe quando o assistente reabre o app com sinal, e a interface mostra o que está pendente. Offline completo e em segundo plano é uma das razões para o app nativo depois.
+- **Plataforma: aplicação web mobile-first** (RNF-01, RNF-02, RNF-20). Um código só, React + Tailwind, usado no celular em campo e no desktop no escritório. App nativo é evolução pós-produção.
+- **Limite consciente do offline no navegador** (RF-511, RNF-12, RNF-21). A fila local existe, mas o Safari do iPhone não sincroniza com o app fechado e pode descartar o armazenamento local após dias sem uso. Portanto: a fila sobe quando o assistente reabre o app com sinal, e a interface mostra o que está pendente. Offline completo e em segundo plano é uma das razões para o app nativo depois.
 - **Métrica de assistente é volume, não desempenho** (RF-806): mede o que a pessoa levantou, e o painel deve ser rotulado assim. Quem trabalha numa torre em melhor estado encontra menos pendências.
 
 ## Pontos em aberto
