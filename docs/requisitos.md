@@ -180,7 +180,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-508 | Editar e excluir pin | S |
 | RF-509 | Múltiplas fotos por pin | S |
 | RF-510 | Registro de data/hora de criação e de conclusão do pin | S |
-| RF-511 | Uso em campo **offline** com sincronização posterior (criar pin e tirar foto sem rede) | S |
+| RF-511 | **Fila offline**: criar pin e tirar foto sem rede, guardados localmente e enviados **ao reabrir o app com sinal**, com indicador visível de quantos itens estão pendentes | S |
 | RF-512 | Comentários e histórico de alterações dentro do pin | C |
 | RF-513 | Atribuir pin a um assistente responsável | C |
 
@@ -224,8 +224,8 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 
 | ID | Requisito | Prio |
 | --- | --- | --- |
-| RNF-01 | **Mobile-first**: o uso principal é em campo, no celular/tablet, dentro do apartamento em obra | M |
-| RNF-02 | Acesso web para configuração da obra e dashboards (telas densas) | M |
+| RNF-01 | **Aplicação web mobile-first**: o uso principal é em campo, no celular, dentro do apartamento em obra. App nativo instalável fica para depois de produção | M |
+| RNF-02 | A mesma aplicação no desktop, com layout mais denso para configuração da obra e dashboards | M |
 | RNF-03 | Isolamento de dados em três níveis: super admin vê só metadados de organização e licença; admin vê a organização inteira; gerente e assistente veem só as obras a que estão vinculados, com o papel daquele vínculo | M |
 | RNF-04 | Autenticação segura e sessão persistente (o usuário não reloga a cada visita em campo) | M |
 | RNF-05 | Interface em **português (pt-BR)** | M |
@@ -235,7 +235,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RNF-09 | Compressão automática das fotos no upload, sem perder legibilidade do problema | M |
 | RNF-10 | Escala alvo: obra com múltiplas torres, ~500 unidades e dezenas de milhares de pins e fotos sem degradação | M |
 | RNF-11 | Abrir a planta com os pins renderizados em até ~3s em 4G | S |
-| RNF-12 | Funcionamento com conectividade ruim/intermitente (áreas internas de obra, subsolo) | S |
+| RNF-12 | Funcionamento com conectividade ruim ou intermitente (áreas internas de obra, subsolo). No navegador não existe sincronização com o app fechado — ver a decisão de plataforma | S |
 | RNF-13 | Backup diário e política de retenção das fotos e dos dados da obra | S |
 | RNF-14 | Conformidade com a LGPD: fotos, dados dos usuários, base legal, exclusão a pedido e a barreira de acesso do super admin (RF-105) | S |
 | RNF-15 | Custo de armazenamento de imagens previsível e monitorado (fotos são o maior volume) | S |
@@ -243,6 +243,8 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RNF-17 | Disponibilidade ≥ 99% em horário comercial | S |
 | RNF-18 | Acessibilidade (contraste, tamanho de fonte ajustável) | C |
 | RNF-19 | Suporte a plantas em PDF vetorial, além de imagem | C |
+| RNF-20 | Instalável na tela de início do celular (PWA), abrindo em tela cheia, sem barra do navegador | S |
+| RNF-21 | Aviso ao usuário quando houver itens na fila offline há mais de 24h — o navegador pode descartar o armazenamento local sem avisar | S |
 
 ---
 
@@ -262,6 +264,8 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 - **Pin no lugar errado não se perde** (RF-411): a disciplina fica gravada no pin, não na planta. Vale para qualquer disciplina, não só hidráulica e elétrica.
 - **Duas paletas independentes** (ver Paleta no topo): status pinta a célula da unidade, disciplina pinta o pin. "Em checklist" deixou de ser azul e virou célula sem preenchimento, liberando o azul para a hidráulica.
 - **Excluir estrutura vazia é fácil, destruir trabalho de campo é difícil** (RF-209 a RF-214). Item sem conteúdo some na hora; item com pins ou plantas é arquivado, nunca apagado. Foto de obra não se refaz — quando alguém perceber o erro, o problema registrado pode já ter sido corrigido.
+- **Plataforma: aplicação web mobile-first** (RNF-01, RNF-02, RNF-20). Um código só, React + Tailwind, usado no celular em campo e no desktop no escritório. App nativo é evolução pós-produção.
+- **Limite consciente do offline no navegador** (RF-511, RNF-12, RNF-21). A fila local existe, mas o Safari do iPhone não sincroniza com o app fechado e pode descartar o armazenamento local após dias sem uso. Portanto: a fila sobe quando o assistente reabre o app com sinal, e a interface mostra o que está pendente. Offline completo e em segundo plano é uma das razões para o app nativo depois.
 - **Métrica de assistente é volume, não desempenho** (RF-806): mede o que a pessoa levantou, e o painel deve ser rotulado assim. Quem trabalha numa torre em melhor estado encontra menos pendências.
 
 ## Pontos em aberto
