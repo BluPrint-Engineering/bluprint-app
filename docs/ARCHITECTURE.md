@@ -20,6 +20,7 @@ Monorepo com **Bun workspaces**:
 | Dados | TanStack Query v5 |
 | Formulários | React Hook Form + Zod v4 |
 | UI | shadcn/ui sobre Radix |
+| Ícones | lucide-react |
 | Back | Bun + Hono |
 | ORM | Drizzle |
 | Banco | Neon (sa-east-1) |
@@ -46,21 +47,84 @@ Os demais itens (React/Vite/Tailwind, TanStack, React Hook Form + Zod, shadcn/ui
 
 ## Estrutura do front
 
-> Placeholder — preenchido pela issue #16 (scaffold de `apps/web`), respondendo:
-> - onde entra um componente de tela vs. um componente reutilizável;
-> - onde ficam os componentes do shadcn/ui (gerados pela CLI, não editados à mão);
-> - onde ficam as chamadas de API e os hooks de TanStack Query;
-> - onde ficam tipos e schemas Zod promovidos para `packages/shared`, e o critério para isso;
-> - onde ficam rotas, assets e estilos globais.
+```
+apps/web/src/
+├── routes/            a árvore de rotas do TanStack Router (file-based)
+├── features/<x>/      tudo que pertence a UMA tela: componentes, hooks, queries. Barrel na raiz
+├── components/
+│   ├── ui/            shadcn/ui — gerado pela CLI, não editar à mão
+│   └── ...             componentes reutilizáveis, usados por 2+ features
+├── lib/               tem estado ou fala com o mundo: cliente HTTP, queryClient, cn()
+├── utils/             funções puras, sem estado nem I/O
+└── styles/            globals.css — Tailwind e tokens de tema
+```
+
+- **`src/routes/`** é a árvore de rotas, não uma pasta de telas — inclui `__root.tsx` e layout
+  routes, que não renderizam UI própria. O arquivo de rota é fino: `validateSearch`, `loader`,
+  `beforeLoad` (guarda de auth) e `errorComponent` moram nele; a renderização é importada de
+  `features/`.
+- **`src/features/<x>/`** — pertence a uma tela só, fica na feature (ex.: `features/health/`).
+  Quando uma **segunda** feature precisar do mesmo componente, aí sobe para `components/`. Nunca
+  antes: é o que mantém `components/` confiável — tudo que está lá é, por definição, reutilizável.
+- **`src/components/ui/`** — shadcn/ui, gerado por `bunx shadcn add <componente>`. Kebab-case por
+  imposição da CLI; é a única exceção à convenção de nomenclatura do projeto.
+- **Chamadas de API e hooks de TanStack Query** vivem em `features/<x>/api.ts`, usando `queryOptions`
+  e o helper `apiFetch` de `src/lib/api.ts`.
+- **Promoção para `packages/shared`** — um tipo ou schema sobe quando **front e API precisam
+  concordar sobre ele**: contrato de request/response, enum de domínio (ex.: `healthQuerySchema`,
+  `healthResponseSchema`). Enquanto for só do front — como o schema de validação de um form —, fica
+  local à feature.
+- **`lib/` vs `utils/`** — mesma fronteira do back: `lib/` tem estado ou fala com o mundo
+  (`api.ts`, `queryClient.ts`, `cn()`); `utils/` é função pura.
+- **Rotas, assets e estilos globais** — rotas em `src/routes/`; `index.html` é o entry point que o
+  Vite processa (não um asset estático); `src/styles/globals.css` importa o Tailwind e os tokens de
+  tema gerados pelo `shadcn init`.
 
 ## Estrutura do back
 
-> Placeholder — preenchido pela issue #17 (scaffold de `apps/api`), respondendo:
-> - onde ficam as rotas e como são registradas no app Hono;
-> - onde ficam as services (regra de negócio) e o que não pode morar na rota;
-> - onde ficam o schema e as queries Drizzle, e a fronteira entre service e acesso a banco;
-> - onde ficam os middlewares e o tratamento de erro;
-> - onde ficam os schemas Zod de request/response e como são compartilhados com o front.
+```
+apps/api/src/
+├── index.ts          entrypoint — export default { port, fetch: app.fetch } (padrão Bun)
+├── app.ts             monta o Hono: CORS, rotas, error handling — testável sem abrir porta
+├── routes/            uma rota registra um Hono Router e valida entrada com @hono/zod-validator
+├── services/          regra de negócio — não conhece o Context do Hono
+├── middleware/         error handling (onError + notFound) e outros middlewares Hono
+├── lib/               tem estado ou fala com o mundo: env validado, conexão de banco (#18), clientes
+└── utils/             funções puras, sem estado nem I/O
+```
+
+- **Rota** só valida a entrada, chama a service e dá forma à resposta. Nunca faz query direto.
+- **Service** contém a regra de negócio e nunca toca no `Context` do Hono — isso é o que permite
+  testar a service sem subir uma request HTTP.
+- **`db/`** (Drizzle, chega na issue #18) é acessado só por services — a fronteira entre service e
+  banco é essa pasta.
+- **Middlewares e tratamento de erro** ficam em `middleware/`. `app.onError` e `app.notFound` são
+  registrados uma vez, em `app.ts`.
+- **Schemas Zod de request/response** que o front também precisa moram em `packages/shared` (ex.:
+  `healthQuerySchema`, `healthResponseSchema`) e são importados aqui e em `apps/web`. Um schema só
+  sobe para lá quando front e API precisam concordar sobre ele — ver "Estrutura do front".
+- **`lib/` vs `utils/`** — `lib/` é código que *é* alguma coisa (tem estado ou fala com o mundo:
+  `env.ts`, conexão de banco, clientes de storage). `utils/` é função pura, testável sem mock.
+
+**Convenção de Bruno:** toda rota nova entra na coleção (`apps/api/bruno/`) no mesmo PR que a cria.
+
+## Idioma
+
+- **Inglês** — identificadores (variáveis, funções, tipos, arquivos, rotas), mensagens de erro da
+  API, mensagens de commit, chaves de JSON de resposta.
+- **pt-BR** — todo texto que o usuário lê na tela (RNF-05) e a documentação em `docs/`.
+
+O front traduz o erro da API antes de exibir; a API nunca devolve texto pronto para tela.
+
+## Nomenclatura
+
+- **PascalCase** — arquivos de componente React. O nome do arquivo é o nome do que ele exporta:
+  `StatCard.tsx` exporta `StatCard`.
+- **camelCase** — todo o resto: hooks (`useDashboardStats.ts`), helpers (`formatCurrency.ts`),
+  módulos (`queryClient.ts`), pastas de feature (`features/adminDashboard/`).
+- **Exceções, ambas por imposição de ferramenta:** `components/ui/` fica em kebab-case porque a CLI
+  do shadcn gera assim (e ninguém edita à mão), e os arquivos em `routes/` seguem a sintaxe do
+  TanStack Router (`admin.dashboard.tsx`, `$obraId.tsx`) — ponto separa segmento, `$` marca parâmetro.
 
 ## Fora de escopo por enquanto
 
