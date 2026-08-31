@@ -1,0 +1,74 @@
+# Arquitetura — BluPrint
+
+Este arquivo é a **fonte da verdade das decisões técnicas**. `docs/requisitos.md` é a fonte da verdade das **regras de negócio**. Mudança de decisão aqui entra por **pull request**, não por issue — mesma regra que o `requisitos.md` já usa para si.
+
+## Visão geral
+
+Monorepo com **Bun workspaces**:
+
+- `apps/web` — SPA React.
+- `apps/api` — API Bun + Hono.
+- `packages/shared` — schemas Zod e tipos usados pelos dois lados.
+
+## A stack
+
+| Camada | Escolha |
+| --- | --- |
+| Linguagem | TypeScript em tudo, `tsconfig` base estrito |
+| Front | React + Vite + Tailwind v4 (`@tailwindcss/vite`) |
+| Roteamento | TanStack Router |
+| Dados | TanStack Query v5 |
+| Formulários | React Hook Form + Zod v4 |
+| UI | shadcn/ui sobre Radix |
+| Back | Bun + Hono |
+| ORM | Drizzle |
+| Banco | Neon (sa-east-1) |
+| Auth | Better Auth (self-hosted na API) |
+| Storage de imagem | Cloudflare R2 |
+| Host da API | Fly.io, região GRU |
+| Host do front | Cloudflare Pages |
+| Testes | Vitest + Testing Library (web) · `bun test` (api) |
+| Lint/format | Biome |
+| Doc de API | Bruno, coleção `.bru` versionada |
+
+## Por que cada escolha
+
+- **Neon** — única com região São Paulo, branching grátis por PR e hibernação que não apaga dados. Os descartados falham por **perda de dados**, não por performance: Render deleta o banco free em 30 dias corridos, Railway deleta o volume, Supabase pausa o projeto após 7 dias parado (restore manual), CockroachDB deleta após 6 meses.
+- **Better Auth** — grátis, roda dentro da própria API, adapter Drizzle oficial, e o plugin de organização já traz convite com token de uso único e expiração configurável (RF-133). Lucia está deprecado desde março/2025. Nenhum SaaS de auth modela "papel por obra" (RF-121/RF-122), então pagar por um não pouparia trabalho.
+- **Cloudflare R2** — único object storage com egress grátis e ilimitado, que é o que torna o custo de foto previsível (RNF-15). S3 e Supabase cobram US$ 0,09–0,15/GB de saída, e no S3 a região São Paulo é ~67% mais cara.
+- **Fly.io GRU** — único host com região no Brasil que roda Bun como processo longo com conexão persistente ao Postgres. Cloudflare Workers, Vercel Functions e Deno Deploy não rodam a runtime Bun; Render free hiberna com cold start de 30–60s, inviável para uso em campo.
+- **Cloudflare Pages** — banda e seats ilimitados no free. O plano Hobby da Vercel proíbe uso comercial; Netlify dá 1 seat.
+- **`bun test` na API** — já vem embutido e é compatível com a API do Jest. Vitest fica só no front, onde DOM e JSX importam.
+- **Biome** — um binário para lint e format, no lugar de ESLint + Prettier.
+- **Bruno** — coleção fica como arquivo no repo: versionada em git, revisável em PR, sem conta em nuvem nem sync pago.
+
+Os demais itens (React/Vite/Tailwind, TanStack, React Hook Form + Zod, shadcn/ui, Hono, Drizzle) não têm alternativa descartada que valha registrar — são a escolha padrão do ecossistema para o papel que cumprem.
+
+## Estrutura do front
+
+> Placeholder — preenchido pela issue #16 (scaffold de `apps/web`), respondendo:
+> - onde entra um componente de tela vs. um componente reutilizável;
+> - onde ficam os componentes do shadcn/ui (gerados pela CLI, não editados à mão);
+> - onde ficam as chamadas de API e os hooks de TanStack Query;
+> - onde ficam tipos e schemas Zod promovidos para `packages/shared`, e o critério para isso;
+> - onde ficam rotas, assets e estilos globais.
+
+## Estrutura do back
+
+> Placeholder — preenchido pela issue #17 (scaffold de `apps/api`), respondendo:
+> - onde ficam as rotas e como são registradas no app Hono;
+> - onde ficam as services (regra de negócio) e o que não pode morar na rota;
+> - onde ficam o schema e as queries Drizzle, e a fronteira entre service e acesso a banco;
+> - onde ficam os middlewares e o tratamento de erro;
+> - onde ficam os schemas Zod de request/response e como são compartilhados com o front.
+
+## Fora de escopo por enquanto
+
+Decisões conscientemente em aberto — não é esquecimento, é falta de problema real para decidir em cima:
+
+- **Renderização da planta com pins.** Decide no épico da planta (#7/#8), com planta e volume reais na mão. A expectativa é ~100–300 pins por planta, não milhares.
+- **Tratamento de imagem.** Compressão no cliente ou no servidor, upload direto para o R2 ou via backend, o que fazer com PDF. Mesmo épico.
+
+## Custo
+
+No free tier, o custo é zero. Fora dele, estimativa de ~US$ 25–45/mês no total — Neon é o item dominante.
