@@ -27,7 +27,7 @@ describe("GET /health", () => {
 });
 
 describe("unknown routes", () => {
-	test("returns a 404 with an English error message", async () => {
+	test("returns a 404 error", async () => {
 		const res = await app.request("/no-such-route");
 
 		expect(res.status).toBe(404);

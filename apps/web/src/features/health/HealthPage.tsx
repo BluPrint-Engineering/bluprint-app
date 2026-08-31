@@ -7,9 +7,6 @@ import { Button } from "@/components/ui/button";
 import { healthQueryOptions } from "./api";
 import { HealthCard } from "./components/HealthCard";
 
-// Shape of the checkbox in this form — UI-only, so it stays local instead of
-// packages/shared. healthQuerySchema (shared) validates the URL query string
-// the API receives, which is a different concern from this form's own value.
 const healthFormSchema = z.object({ verbose: z.boolean() });
 type HealthFormValues = z.infer<typeof healthFormSchema>;
 
