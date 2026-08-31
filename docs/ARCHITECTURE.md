@@ -20,6 +20,7 @@ Monorepo com **Bun workspaces**:
 | Dados | TanStack Query v5 |
 | Formulários | React Hook Form + Zod v4 |
 | UI | shadcn/ui sobre Radix |
+| Ícones | lucide-react |
 | Back | Bun + Hono |
 | ORM | Drizzle |
 | Banco | Neon (sa-east-1) |
@@ -46,12 +47,38 @@ Os demais itens (React/Vite/Tailwind, TanStack, React Hook Form + Zod, shadcn/ui
 
 ## Estrutura do front
 
-> Placeholder — preenchido pela issue #16 (scaffold de `apps/web`), respondendo:
-> - onde entra um componente de tela vs. um componente reutilizável;
-> - onde ficam os componentes do shadcn/ui (gerados pela CLI, não editados à mão);
-> - onde ficam as chamadas de API e os hooks de TanStack Query;
-> - onde ficam tipos e schemas Zod promovidos para `packages/shared`, e o critério para isso;
-> - onde ficam rotas, assets e estilos globais.
+```
+apps/web/src/
+├── routes/            a árvore de rotas do TanStack Router (file-based)
+├── features/<x>/      tudo que pertence a UMA tela: componentes, hooks, queries. Barrel na raiz
+├── components/
+│   ├── ui/            shadcn/ui — gerado pela CLI, não editar à mão
+│   └── ...             componentes reutilizáveis, usados por 2+ features
+├── lib/               tem estado ou fala com o mundo: cliente HTTP, queryClient, cn()
+├── utils/             funções puras, sem estado nem I/O
+└── styles/            globals.css — Tailwind e tokens de tema
+```
+
+- **`src/routes/`** é a árvore de rotas, não uma pasta de telas — inclui `__root.tsx` e layout
+  routes, que não renderizam UI própria. O arquivo de rota é fino: `validateSearch`, `loader`,
+  `beforeLoad` (guarda de auth) e `errorComponent` moram nele; a renderização é importada de
+  `features/`.
+- **`src/features/<x>/`** — pertence a uma tela só, fica na feature (ex.: `features/health/`).
+  Quando uma **segunda** feature precisar do mesmo componente, aí sobe para `components/`. Nunca
+  antes: é o que mantém `components/` confiável — tudo que está lá é, por definição, reutilizável.
+- **`src/components/ui/`** — shadcn/ui, gerado por `bunx shadcn add <componente>`. Kebab-case por
+  imposição da CLI; é a única exceção à convenção de nomenclatura do projeto.
+- **Chamadas de API e hooks de TanStack Query** vivem em `features/<x>/api.ts`, usando `queryOptions`
+  e o helper `apiFetch` de `src/lib/api.ts`.
+- **Promoção para `packages/shared`** — um tipo ou schema sobe quando **front e API precisam
+  concordar sobre ele**: contrato de request/response, enum de domínio (ex.: `healthQuerySchema`,
+  `healthResponseSchema`). Enquanto for só do front — como o schema de validação de um form —, fica
+  local à feature.
+- **`lib/` vs `utils/`** — mesma fronteira do back: `lib/` tem estado ou fala com o mundo
+  (`api.ts`, `queryClient.ts`, `cn()`); `utils/` é função pura.
+- **Rotas, assets e estilos globais** — rotas em `src/routes/`; `index.html` é o entry point que o
+  Vite processa (não um asset estático); `src/styles/globals.css` importa o Tailwind e os tokens de
+  tema gerados pelo `shadcn init`.
 
 ## Estrutura do back
 
