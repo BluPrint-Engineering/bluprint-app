@@ -27,11 +27,13 @@ afterAll(async () => {
 });
 
 describe("GET /health", () => {
-	test("returns ok status matching the shared schema", async () => {
+	test("returns ok status with the database up, matching the shared schema", async () => {
 		const res = await request(server).get("/health");
 
 		expect(res.status).toBe(200);
-		expect(healthResponseSchema.parse(res.body).status).toBe("ok");
+		const body = healthResponseSchema.parse(res.body);
+		expect(body.status).toBe("ok");
+		expect(body.database).toBe("up");
 	});
 
 	test("includes verbose details when requested", async () => {

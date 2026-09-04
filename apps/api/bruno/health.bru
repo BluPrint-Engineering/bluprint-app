@@ -17,5 +17,6 @@ params:query {
 assert {
   res.status: eq 200
   res.body.status: eq ok
+  res.body.database: eq up
   res.body.verbose.runtime: contains node
 }

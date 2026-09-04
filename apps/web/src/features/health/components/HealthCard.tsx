@@ -1,14 +1,20 @@
 import type { HealthResponse } from "@bluprint/shared";
-import { CircleCheck } from "lucide-react";
+import { CircleAlert, CircleCheck } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function HealthCard({ health }: { health: HealthResponse }) {
+	const degraded = health.status === "degraded";
+
 	return (
 		<Card>
 			<CardHeader>
 				<CardTitle className="flex items-center gap-2">
-					<CircleCheck className="size-5 text-green-600" />
-					API no ar
+					{degraded ? (
+						<CircleAlert className="size-5 text-destructive" />
+					) : (
+						<CircleCheck className="size-5 text-green-600" />
+					)}
+					{degraded ? "API degradada" : "API no ar"}
 				</CardTitle>
 			</CardHeader>
 			<CardContent className="space-y-1 text-sm text-muted-foreground">
