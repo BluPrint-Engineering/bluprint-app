@@ -26,22 +26,20 @@ Monorepo com **Bun workspaces**. O Bun é gerenciador de pacotes e runner de scr
 | Back | Node + NestJS (adapter Express) |
 | Validação | Zod v4 em `packages/shared`, aplicado na API por `nestjs-zod` |
 | ORM | Drizzle |
-| Banco | Neon (sa-east-1) |
+| Banco | PostgreSQL — provedor **em aberto**; em dev, container local |
 | Auth | Better Auth (self-hosted na API) |
-| Storage de imagem | Cloudflare R2 |
-| Host da API | Fly.io, região GRU |
-| Host do front | Cloudflare Pages |
+| Storage de imagem | Object storage compatível com S3 — provedor **em aberto** |
+| Host da API | **em aberto** |
+| Host do front | **em aberto** |
 | Testes | Vitest + Testing Library (web) · Jest + Supertest (api) |
 | Lint/format | Biome (web, shared) · ESLint + Prettier (api) |
 | Doc de API | Bruno, coleção `.bru` versionada |
 
 ## Por que cada escolha
 
-- **Neon** — única com região São Paulo, branching grátis por PR e hibernação que não apaga dados. Os descartados falham por **perda de dados**, não por performance: Render deleta o banco free em 30 dias corridos, Railway deleta o volume, Supabase pausa o projeto após 7 dias parado (restore manual), CockroachDB deleta após 6 meses.
-- **Better Auth** — grátis, roda dentro da própria API, adapter Drizzle oficial, e o plugin de organização entrega `organization` e `member` (o papel padrão do RF-123) sem trabalho nosso. Lucia está deprecado desde março/2025. Nenhum SaaS de auth modela "papel por obra" (RF-121/RF-122), então pagar por um não pouparia trabalho. **O convite é a exceção:** usamos tabela própria, não a do plugin, porque o RF-129 exige um convite que crie o vínculo com a organização **e** com a obra de uma vez — `project_id` anulável distingue o convite em lote do RF-127 do convite direto à obra. Na tabela do plugin isso viraria uma segunda tabela de convite ou `project_id` escondido em metadata, com dois fluxos de aceite para manter. O custo é implementar token de uso único e expiração de 7 dias (RF-133) na mão.
-- **Cloudflare R2** — único object storage com egress grátis e ilimitado, que é o que torna o custo de foto previsível (RNF-15). S3 e Supabase cobram US$ 0,09–0,15/GB de saída, e no S3 a região São Paulo é ~67% mais cara.
-- **Fly.io GRU** — mantido, mas o motivo mudou com a troca de runtime e **a comparação ainda não foi refeita**. O critério antigo era "único host com região no Brasil que roda a runtime **Bun** como processo longo", e ele deixou de existir: em Node, Vercel Functions e Deno Deploy não são mais excluídos por runtime. O que continua valendo é o formato de execução — a API precisa de um **processo longo** que segure o pool de conexões do Postgres e pague o bootstrap do container de DI do Nest uma vez só, com região no Brasil e **sem cold start** (RNF-11, uso em campo no 4G). Nesses critérios o Fly.io atende, e Render free segue fora por hibernar com cold start de 30–60s. Mas Railway, Cloud Run (`southamerica-east1`) e Vercel passaram a ser candidatos legítimos e ninguém os comparou em preço e região atuais. **Item em aberto:** refazer esse levantamento antes do primeiro deploy. Não há `Dockerfile` nem `fly.toml` no repo, então a decisão ainda não custa nada para reverter.
-- **Cloudflare Pages** — banda e seats ilimitados no free. O plano Hobby da Vercel proíbe uso comercial; Netlify dá 1 seat.
+- **Hospedagem e provedores** (host da API, host do front, banco, storage) — **em aberto** desde
+  04/09/2026. O levantamento que sustenta esse adiamento, os candidatos e os descartados estão em
+  § Fora de escopo por enquanto.
 - **Jest na API** — é o runner que o Nest assume: `@nestjs/testing` + Supertest é o caminho documentado, e o `ts-jest` lê o mesmo `tsconfig` que o build, então decorator e `emitDecoratorMetadata` se comportam igual no teste e em produção. Divergência aí não dá teste vermelho, dá `Nest can't resolve dependencies` em runtime — não vale economizar. Vitest fica só no front, onde DOM e JSX importam.
 - **ESLint + Prettier na API, Biome no front** — o Biome não roda regra com informação de tipo, e é justamente isso que a API precisa: `no-floating-promises` numa service `async`, `no-misused-promises` num handler. No front, onde a regra que importa é de React e não de tipo, o Biome continua ganhando por ser um binário só. A divisão também é **imposta**: o `typescript-eslint` não suporta o compilador nativo do TypeScript 7, que não expõe API JavaScript nenhuma, então rodar ESLint na raiz custaria rebaixar o TypeScript do monorepo inteiro. Os dois estão configurados com tab e aspas duplas — a fronteira é de ferramenta, não de estilo. O que se perde é o `organizeImports` automático do Biome, que no ESLint não tem equivalente nativo.
 - **NestJS** — o Hono era a escolha certa enquanto a runtime era Bun: framework mínimo, convenção por nossa conta. Em Node a comparação muda. Ou reescrevemos injeção de dependência, fronteira de módulo, guarda e filtro de erro, ou usamos um framework que já entrega isso e o **impõe por construção** em vez de por code review. O que decidiu foi o que vem pela frente: RF-121/RF-122 (papel por obra) viram guards, o Better Auth vira um módulo, e a fronteira rota/service que este documento já prescrevia deixa de ser combinado e passa a ser estrutura. O preço está explícito e é real — decorators, que tiram `apps/api` do `tsconfig` base do monorepo (ver § Estrutura do back), um passo de build no lugar de rodar o `.ts` direto, e `--watch` com restart no lugar de hot reload. Hono sobre `@hono/node-server` manteria o código e não compraria nada disso.
@@ -151,11 +149,97 @@ O front traduz o erro da API antes de exibir; a API nunca devolve texto pronto p
 
 ## Fora de escopo por enquanto
 
-Decisões conscientemente em aberto — não é esquecimento, é falta de problema real para decidir em cima:
+Decisões conscientemente em aberto — não é esquecimento, é falta de problema real para decidir em
+cima. Os dois primeiros esperam o épico da planta; **hospedagem** tem seção própria abaixo, porque
+espera a aplicação existir.
 
 - **Renderização da planta com pins.** Decide no épico da planta (#7/#8), com planta e volume reais na mão. A expectativa é ~100–300 pins por planta, não milhares.
-- **Tratamento de imagem.** Compressão no cliente ou no servidor, upload direto para o R2 ou via backend, o que fazer com PDF. Mesmo épico.
+- **Tratamento de imagem.** Compressão no cliente ou no servidor, upload direto para o object storage ou via backend, o que fazer com PDF. Mesmo épico.
+
+### Hospedagem e provedores
+
+Ficam em aberto os quatro: **host da API, host do front, provedor do banco e provedor do storage.**
+
+**Por quê.** Todo critério que decide host — custo real, volume de requisição, tamanho de instância,
+quanto o cold start incomoda de fato — só se mede com aplicação rodando, e nenhum deles existe hoje.
+A prioridade é construir a aplicação; a escolha acontece no primeiro deploy, com uso medido em vez de
+estimado.
+
+**O que o adiamento custa: quase nada.** Trocar de host é o mesmo `Dockerfile` com outra configuração
+de deploy — nenhuma linha de código de aplicação muda. Trocar de provedor de Postgres é
+`pg_dump`/`pg_restore` e uma `DATABASE_URL` nova: os schemas e migrations do Drizzle são os mesmos em
+qualquer Postgres. Storage é API compatível com S3 dos dois lados. **O que seria caro é adotar backend
+proprietário** (Firestore, Firebase SQL Connect), porque aí não é migração, é reescrita — por isso
+esses estão descartados abaixo, e não em aberto.
+
+**Em desenvolvimento:** Postgres em container local e storage local compatível com S3. Nenhuma conta
+em nuvem é necessária para rodar o projeto.
+
+#### Levantamento de 04/09/2026
+
+Feito para sustentar esse adiamento e registrado para não ser refeito. **Trate como foto** — preço e
+free tier mudam rápido, e vários mudaram desde a versão anterior deste documento. Critérios: região no
+Brasil, processo longo sem cold start, e free tier que não vença por prazo.
+
+| Candidato | Região BR | Situação em 09/2026 |
+| --- | --- | --- |
+| Fly.io | ✅ GRU | Sem free tier desde 10/2024. `shared-cpu-1x` 512 MB ≈ US$ 3,32/mês — a mais barata das opções sem cold start |
+| Cloud Run | ✅ `southamerica-east1` | O Always Free só vale em `us-central1`/`us-east1`/`us-west1`. Scale-to-zero sai por centavos mas tem cold start de 1–3s; `min-instances=1` em SP ≈ US$ 69/mês |
+| AWS Lightsail | ✅ desde 06/2026 | US$ 5/mês fixos, 2 TB de banda inclusa. Você opera o SO |
+| AWS EC2 | ✅ `sa-east-1` | Cobra por **hora ligada**, não por uso. `t3.micro` em SP ≈ US$ 11–12/mês |
+| Render | ❌ | Nenhuma região na América do Sul. Free hiberna em 15 min com cold start de 30–60s; always-on US$ 7/mês |
+| Railway | ❌ | Só US West/East, Amsterdam e Singapura. Sem free tier — Hobby tem piso de US$ 5/mês |
+| Vercel | ✅ `gru1` | Hobby **proíbe uso comercial** — o mesmo motivo que já o tirou do host do front |
+| Northflank | ❌ | Melhor free tier do mercado (sem cold start), mas sem região no Brasil |
+| Koyeb | ❌ | Frankfurt/Washington. O free escala a zero em 1h e não dá para desligar |
+| Azure App Service F1 | Brazil South | 60 min de CPU/dia, dorme em 20 min, sem suporte a produção |
+| AWS App Runner | ❌ | Fecha para novos clientes em 30/04/2026 |
+| Oracle Always Free | ✅ `sa-saopaulo-1` | VPS cru com idle reclaim; ARM em São Paulo vive sem capacidade |
+
+**Sobre free tier que vence.** O free tier de 12 meses da AWS acabou para contas criadas depois de
+15/07/2025 — virou US$ 100–200 de crédito por 6 meses, e a conta **fecha sozinha** ao fim. Os US$ 300
+do Google Cloud são crédito de trial de **90 dias**, não free tier: ao fim, a conta de faturamento
+fecha e os recursos param. Um free tier que vence por prazo é o mesmo modo de falha que já tirou
+Render, Railway e Supabase da escolha do banco — o problema nunca foi performance, foi o que acontece
+quando o prazo vence.
+
+**Descartado por arquitetura, não por preço:** Firebase. O compute é Cloud Run por baixo e exige o
+plano Blaze com cartão, e as cotas gratuitas não alcançam São Paulo. O SQL Connect (ex-Data Connect) é
+GraphQL com SDK gerado para o **cliente falar direto com o banco** — usá-lo como foi projetado elimina
+o `apps/api`, o Better Auth e a espinha de schema Zod compartilhado, e o RF-121/RF-122 (papel por
+obra) viraria regra de segurança em GraphQL. Mantendo o NestJS na frente, ele não contribui com nada e
+sobra só a fatura do Cloud SQL, que **não tem free tier em plano nenhum** (≈ US$ 8–12/mês
+permanentes). Firestore, além disso, brigaria com o modelo relacional de obra → unidade → disciplina →
+pin.
+
+#### Favoritos ao reabrir
+
+Não são decisão, mas o critério que os elegeu **não foi invalidado** por nada acima — nenhum deles
+dependia da runtime:
+
+- **Neon** (banco) — única com região São Paulo, branching grátis por PR e hibernação que **não apaga
+  dados**. Os descartados falhavam por perda de dados: Render deleta o banco free em 30 dias corridos,
+  Railway deleta o volume, Supabase pausa após 7 dias parado (restore manual), CockroachDB deleta após
+  6 meses.
+- **Cloudflare R2** (storage) — único object storage com egress grátis e ilimitado, que é o que torna
+  o custo de foto previsível (RNF-15). S3 e Supabase cobram US$ 0,09–0,15/GB de saída, e no S3 a
+  região São Paulo é ~67% mais cara.
+- **Cloudflare Pages** (front) — banda e seats ilimitados no free. O plano Hobby da Vercel proíbe uso
+  comercial; Netlify dá 1 seat.
+
+#### Forma de execução, essa sim já decidida
+
+Independente de onde rode, a API precisa de um **processo longo**: é ele que segura o pool de conexões
+do Postgres e paga o bootstrap do container de DI do Nest uma vez só. Isso exclui qualquer host que só
+ofereça função efêmera, e é o que torna cold start um critério — o RNF-11 dá ~3s em 4G para abrir a
+planta, e um host que hiberna gasta esse orçamento inteiro antes da primeira query.
 
 ## Custo
 
-No free tier, o custo é zero. Fora dele, estimativa de ~US$ 25–45/mês no total — Neon é o item dominante.
+Em desenvolvimento, **zero**: banco e storage rodam em container local, sem conta em nuvem.
+
+Em produção, ainda **não estimável** — depende dos provedores, que estão em aberto. Pelo levantamento
+em § Fora de escopo por enquanto, a ordem de grandeza dos candidatos vai de ~US$ 3/mês (Fly.io com
+banco em free tier) a ~US$ 81/mês (Cloud Run sem cold start com Cloud SQL). A estimativa anterior
+deste documento — "no free tier o custo é zero, fora dele US$ 25–45/mês" — **não vale mais**: em 2026
+nenhum host com região no Brasil oferece free tier de processo longo.

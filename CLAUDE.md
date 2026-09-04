@@ -19,7 +19,7 @@ Two documents are the sources of truth, and both change only by **pull request**
 | Where a file belongs on the front; when something is promoted to `components/` or `packages/shared` | `docs/ARCHITECTURE.md` § Estrutura do front |
 | Where a file belongs on the API; route vs service vs `lib/` boundaries | `docs/ARCHITECTURE.md` § Estrutura do back |
 | English vs pt-BR, file and folder naming | `docs/ARCHITECTURE.md` § Idioma, § Nomenclatura |
-| Deliberately undecided (plan rendering, image handling) | `docs/ARCHITECTURE.md` § Fora de escopo por enquanto |
+| Deliberately undecided (plan rendering, image handling, **all hosting and provider choices**) | `docs/ARCHITECTURE.md` § Fora de escopo por enquanto |
 
 Issues cite the requirement ID and link the file; they never copy the requirement text. When a decision changes, update the document in the same PR as the code.
 
