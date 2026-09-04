@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DATABASE_URL: postgresql://bluprint:bluprint@localhost:5432/bluprint
+  DATABASE_URL_TEST: postgresql://bluprint:bluprint@localhost:5432/bluprint
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: bluprint
+          POSTGRES_PASSWORD: bluprint
+          POSTGRES_DB: bluprint
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U bluprint -d bluprint"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Cache Bun install cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build @bluprint/shared
+        run: bun run --filter @bluprint/shared build
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Typecheck
+        run: bun run typecheck
+
+      - name: Build
+        run: bun run build
+
+      - name: Check routeTree.gen.ts is up to date
+        run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
+
+      - name: Run migrations
+        run: bun run --filter @bluprint/api db:migrate
+
+      - name: Test
+        run: bun run test
