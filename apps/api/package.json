@@ -12,8 +12,8 @@
 		"test:int": "jest --testPathPatterns \"\\.int-spec\\.ts$\"",
 		"typecheck": "tsc --noEmit",
 		"build": "nest build",
-		"lint": "eslint .",
-		"lint:fix": "eslint . --fix",
+		"lint": "eslint . && prettier --check .",
+		"lint:fix": "eslint . --fix && prettier --write .",
 		"format": "prettier --write .",
 		"db:generate": "drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate"
@@ -61,7 +61,9 @@
 		],
 		"rootDir": ".",
 		"testRegex": "\\.(int-)?spec\\.ts$",
-		"setupFiles": ["<rootDir>/test/setup-env.ts"],
+		"setupFiles": [
+			"<rootDir>/test/setup-env.ts"
+		],
 		"transform": {
 			"^.+\\.ts$": [
 				"ts-jest",
