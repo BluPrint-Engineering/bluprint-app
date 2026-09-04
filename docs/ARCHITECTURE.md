@@ -150,6 +150,12 @@ apps/api/src/
 
 O front traduz o erro da API antes de exibir; a API nunca devolve texto pronto para tela.
 
+Mensagem de commit segue **Conventional Commits**: `tipo(escopo): assunto`, em inglês e no
+imperativo — `feat(api): connect local Postgres via Drizzle`. O escopo é o workspace afetado
+(`api`, `web`, `shared`) e é omitido quando a mudança é do repositório inteiro. Os tipos em uso
+são `feat`, `fix`, `docs`, `refactor`, `chore`, `test` e `ci`. O corpo, quando existe, explica o
+porquê, não o quê — o diff já mostra o quê.
+
 ## Nomenclatura
 
 - **PascalCase** — arquivos de componente React. O nome do arquivo é o nome do que ele exporta:

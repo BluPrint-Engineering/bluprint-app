@@ -87,6 +87,8 @@ bunx vitest run -t "shows the API health status"              # from apps/web
 TypeScript is strict at the root `tsconfig.json` (including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`) and inherited by every workspace. `apps/web` overrides only `lib`, `types`, `jsx` and `paths`; `packages/shared` additionally turns on emit. **`apps/api` is the deliberate exception:** it also sets `experimentalDecorators`, `emitDecoratorMetadata`, `module`/`moduleResolution: nodenext`, `outDir`, `noEmit: false`, and turns `verbatimModuleSyntax` and `isolatedModules` **off** — Nest's decorator metadata cannot survive them. It is also pinned to TypeScript **5.9.3** rather than 7.0.2, because the native TS 7 compiler exposes no JavaScript API and `typescript-eslint`, `ts-jest` and the Nest CLI all need one.
 
 Work reaches `main` through pull requests; commit subjects reference the PR number.
+Commits follow **Conventional Commits** and are written **in English** — see
+`docs/ARCHITECTURE.md` § Idioma for the exact shape.
 
 ## Agent skills
 

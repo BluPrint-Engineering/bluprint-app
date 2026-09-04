@@ -13,6 +13,27 @@ Issues and specs for this repo live as GitHub issues. Use the `gh` CLI for all o
 
 Infer the repo from `git remote -v`; `gh` does this automatically when run inside a clone.
 
+## Repo label conventions
+
+The five triage roles in `docs/agents/triage-labels.md` are the `triagem:` axis: they say where an issue sits in the pipeline, nothing about what it is. This repo classifies every issue on three further axes, and no skill applies them for you — apply them yourself whenever you create an issue.
+
+- **`tipo:`** — exactly one of `tipo:feat`, `tipo:bug`, `tipo:chore`, `tipo:docs`, `tipo:infra`.
+- **`area:`** — one or more of `area:web`, `area:api`, `area:banco`, `area:storage`, `area:ci`, `area:deploy`, `area:shared`. Pick every workspace the ticket actually touches; a vertical slice usually carries several.
+- **`prio:`** — exactly one of `prio:must`, `prio:should`, `prio:could` (MoSCoW, as used in `docs/requisitos.md`). When breaking an epic down, inherit the epic's priority unless the ticket is plainly less critical than the epic as a whole.
+- **`epic`** — only on epics themselves. Never on the tickets broken out of one.
+
+Run `gh label list` before assuming a label exists, and don't invent new ones without asking.
+
+## GitHub Project
+
+The repo has a project board, **BluPrint** (project number `3`, owner `BluPrint-Engineering`). Issues do **not** join it automatically. After creating one:
+
+```
+gh project item-add 3 --owner BluPrint-Engineering --url <issue-url>
+```
+
+When a skill creates several issues at once (`/to-tickets` breaking down an epic), add each of them.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
