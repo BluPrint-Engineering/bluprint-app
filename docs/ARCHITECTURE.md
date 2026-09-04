@@ -253,6 +253,38 @@ do Postgres e paga o bootstrap do container de DI do Nest uma vez só. Isso excl
 ofereça função efêmera, e é o que torna cold start um critério — o RNF-11 dá ~3s em 4G para abrir a
 planta, e um host que hiberna gasta esse orçamento inteiro antes da primeira query.
 
+## CI
+
+`.github/workflows/ci.yml`, job único de id `ci`, roda em todo `pull_request` e em `push` na `main`:
+`bun install --frozen-lockfile`, build explícito do `@bluprint/shared` (o `lint` da raiz não constrói
+o `shared`, e o `typescript-eslint` de `apps/api` é type-aware — sem o passo, um checkout limpo resolve
+`@bluprint/shared` como `any` e degrada as regras em silêncio), `bun run lint`, `bun run typecheck`
+(antes do `build`, de propósito — exercita o `routeTree.gen.ts` **commitado**, o que um checkout limpo
+e o editor enxergam), `bun run build`, `git diff --exit-code` sobre o `routeTree.gen.ts` (denuncia se o
+commitado estava desatualizado), `bun run --filter @bluprint/api db:migrate` e `bun run test`. Chama os
+scripts da raiz, não as ferramentas por trás deles — workspace novo não exige editar YAML, e "passa
+aqui" e "passa lá" são o mesmo comando.
+
+Postgres sobe como service container (`postgres:18-alpine`, healthcheck `pg_isready`). `DATABASE_URL`
+e `DATABASE_URL_TEST` apontam para o **mesmo** banco — a separação dev/teste existe só para não deixar
+o Jest limpar um banco com dado de mão, e o runner nasce vazio e descartável a cada job.
+`docker/postgres/init-test-db.sql` não é reproduzido no CI porque `services:` não monta arquivo do
+repo em `docker-entrypoint-initdb.d`, e não precisa ser.
+
+Versões pinadas — Bun `1.4.0`, Node `22` (o piso de `apps/api`'s `engines`) — porque Jest e o Nest CLI
+têm shebang de Node mesmo com Bun rodando os scripts. `permissions: contents: read` no topo;
+`pull_request_target` nunca é usado, porque o repo é público e essa trigger roda código de fork com
+permissão do repo-alvo.
+
+Duas notas que não aparecem no diff do workflow:
+
+- **Branch protection na `main` é configuração de repo, não código** — não é revisável em PR, e o
+  nome do check só fica selecionável depois do workflow rodar verde ao menos uma vez. Aplicada com
+  check obrigatório, `enforce_admins: true` (os três colaboradores são admin) e zero approves
+  obrigatórios (ninguém aprova o próprio PR, e até aqui todo PR foi do mesmo autor).
+- **A proteção só existe porque o repo é público** (desde 04/09/2026, para destravar branch
+  protection no plano free). Voltando a privado sem GitHub Pro, ela para de valer **em silêncio**.
+
 ## Custo
 
 Em desenvolvimento, **zero**: banco e storage rodam em container local, sem conta em nuvem.
