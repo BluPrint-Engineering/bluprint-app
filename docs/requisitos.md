@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 30/08/2026 — sem pendências abertas.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 01/09/2026 — revisão de RF-405, RF-412, RF-414, RF-508, RF-702, RF-704, RF-706 e RF-707, mais o novo RF-808.
 
 ---
 
@@ -155,16 +155,16 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-402 | Criação de disciplinas extras (alvenaria, estrutural, pintura…) por gerente **ou** assistente. Na criação o sistema pergunta **se a disciplina terá planta própria** e pede a **cor** | M |
 | RF-403 | O seletor de cor bloqueia azul (hidráulica), âmbar (elétrica), cinza (reservado a pin concluído) e as cores já usadas por outras disciplinas daquela obra | M |
 | RF-404 | Disciplina criada vale para a obra inteira e fica disponível a todos os usuários daquela obra | M |
-| RF-405 | Upload da planta (imagem/PDF) **por unidade e por disciplina**, conforme a etapa da obra avança | M |
+| RF-405 | Upload da planta (imagem/PDF) **por unidade, andar ou área comum, e por disciplina**, conforme a etapa da obra avança | M |
 | RF-406 | Visualização da planta com zoom e pan, com os pins sobrepostos | M |
 | RF-407 | **Planta Geral** aceita pin de **qualquer** disciplina da obra, inclusive das que já têm planta própria. Ao criar o pin ali, o usuário **escolhe** a disciplina — não existe pin com disciplina "Geral" | M |
 | RF-408 | **Planta de disciplina específica** (base ou extra) aceita **somente** pins da própria disciplina, herdada e travada no momento da criação | M |
 | RF-409 | Uma disciplina pode existir **sem planta própria**; nesse caso os pins dela são criados na planta Geral | M |
 | RF-410 | Na planta Geral cada pin aparece com a **cor da sua própria disciplina** — é a única planta que mistura disciplinas | M |
 | RF-411 | Pin criado na Geral com disciplina X **continua válido, contado e reportado como X** mesmo depois que a planta de X for cadastrada. Nunca é perdido, apagado nem reclassificado | M |
-| RF-412 | Substituir a planta de uma unidade/disciplina mantendo histórico (versionamento) | S |
+| RF-412 | Subir uma planta nova para uma unidade e disciplina **não substitui** a anterior: a planta antiga permanece, com todos os seus pins, e a nova passa a conviver com ela na mesma disciplina. O usuário escolhe em qual planta está trabalhando. **Só o gerente da obra pode apagar uma planta** — nem o admin da construtora | M |
 | RF-413 | Reposicionar manualmente um pin da Geral para a planta da sua disciplina, quando ela for cadastrada depois | S |
-| RF-414 | Plantas de andar e de área comum (não só de unidade) | C |
+| RF-414 | **Andares e áreas comuns têm plantas e pins exatamente como as unidades**: upload de planta por disciplina, criação de pin sobre ela, status, relatório e contagem no dashboard | M |
 
 ## 5. Pins
 
@@ -177,7 +177,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-505 | Pin fica vinculado à **conta de quem o criou** (rastreio de autoria) | M |
 | RF-506 | Status do pin: pendente / concluído, com distinção visual (concluído fica cinza) | M |
 | RF-507 | Alterar o status do pin pela planta ou pela tela da unidade | M |
-| RF-508 | Editar e excluir pin | S |
+| RF-508 | **Editar** um pin: qualquer usuário vinculado à obra pode, independentemente de quem o criou. **Excluir** um pin: só o usuário que o criou e o gerente da obra | M |
 | RF-509 | Múltiplas fotos por pin | S |
 | RF-510 | Registro de data/hora de criação e de conclusão do pin | S |
 | RF-511 | **Fila offline**: criar pin e tirar foto sem rede, guardados localmente e enviados **ao reabrir o app com sinal**, com indicador visível de quantos itens estão pendentes | S |
@@ -199,12 +199,12 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | ID | Requisito | Prio |
 | --- | --- | --- |
 | RF-701 | Exportar relatório em **PDF** contendo os itens, as fotos, a planta com a posição dos pins e o significado de cada pin | M |
-| RF-702 | Escopo granular da exportação: por cômodo, por unidade, por disciplina, por andar ou pela obra inteira | M |
+| RF-702 | Escopo granular da exportação: por cômodo, por unidade, por andar, por área comum, por disciplina ou pela obra inteira | M |
 | RF-703 | O relatório por disciplina inclui os pins daquela disciplina **onde quer que estejam** — na planta específica ou na Geral (RF-411) | M |
-| RF-704 | Relatório pronto para impressão (é entregue impresso ou enviado ao obreiro) | M |
+| RF-704 | O PDF é **legível impresso em preto e branco** — o relatório vai para a mão do obreiro em papel (ver RNF-07) | M |
 | RF-705 | Filtrar o relatório por empresa executora e por status | S |
-| RF-706 | Enviar o relatório por e-mail direto da plataforma | S |
-| RF-707 | Layout do relatório com a marca da construtora | C |
+| RF-706 | Com o relatório gerado, o usuário pode **baixar o PDF, imprimir ou compartilhar pelo próprio sistema do aparelho** (WhatsApp, e-mail, o que estiver instalado). **A plataforma não envia e-mail** | M |
+| RF-707 | O relatório sai com o layout, o logo e a marca d'água do **BluPrint**. A marca da construtora não aparece | C |
 
 ## 8. Dashboards
 
@@ -217,6 +217,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-805 | Exportar os dados do dashboard (PDF/planilha) para apresentar em reunião | S |
 | RF-806 | Painel de acompanhamento dos assistentes, visível para **gerentes de obra e admin**: quantos pins cada assistente criou e a situação deles (pendentes × concluídos). É medida de volume levantado, não ranking de desempenho — o status depende da empreiteira que executa, não de quem criou o pin | S |
 | RF-807 | Divisão de unidades por assistente responsável (setorização da equipe) | C |
+| RF-808 | As **áreas comuns aparecem em faixa própria** no dashboard geral, separada do mapa de unidades do RF-801: um bloco por área (hall, garagem, salão de festas, fachada…), rotulado pelo nome e medido pela **contagem de pendências**, não pela paleta de status da unidade. Área comum não tem número nem status de venda, e o ciclo de status da unidade (RF-601) não se aplica a ela. Clicar no bloco abre o dashboard daquela área, como o RF-802 faz com a unidade | M |
 
 ---
 
@@ -262,6 +263,11 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 - **Empresa executora segue a mesma lógica do papel** (RF-302, RF-303): padrão por unidade + disciplina, override no pin. O padrão é preenchido unidade a unidade, porque na prática cada uma tem sua empreiteira por disciplina.
 - **"Geral" é o novo nome de "arquitetônica"** e não existe pin com disciplina Geral (RF-401, RF-407).
 - **Pin no lugar errado não se perde** (RF-411): a disciplina fica gravada no pin, não na planta. Vale para qualquer disciplina, não só hidráulica e elétrica.
+- **Planta e pin não penduram só em unidade** (RF-414, RF-202, RF-405, RF-702, RF-808). Andar e área comum são escopos de primeira classe: hall, garagem, salão de festas e fachada concentram parte grande das pendências de acabamento. É decisão de modelo, não de tela — se planta e pin só souberem viver dentro de unidade, incluir andar e área comum depois vira migração. No dashboard, área comum não entra na grade de unidades: vive em **faixa própria**, medida por pendências, porque não tem número, status de venda nem o ciclo de status da unidade (RF-808, RF-601).
+- **Planta nova não substitui a antiga** (RF-412). As coordenadas de um pin só fazem sentido sobre a imagem em que ele foi criado; reaproveitar os pins numa planta nova move a pendência de lugar sem ninguém perceber. As duas plantas convivem na mesma disciplina, o usuário escolhe em qual trabalha, e só o gerente da obra apaga — nem o admin, que no operacional é leitura e exportação (RF-116).
+- **Editar pin é colaborativo, excluir não** (RF-508). Quem passa depois na unidade completa a descrição ou corrige o cômodo, e travar isso no autor emperraria o campo. A exclusão apaga foto que não se refaz, então fica com quem registrou e com quem responde pela obra — mesma lógica do arquivamento de estrutura (RF-210).
+- **O ciclo até o obreiro fecha pelo aparelho, não por e-mail** (RF-706). O obreiro recebe o relatório por WhatsApp. Envio de e-mail pela plataforma significaria domínio, remetente, entregabilidade e caixa de spam — infraestrutura que só existiria para replicar, pior, o compartilhamento nativo do celular.
+- **A marca no relatório é a do BluPrint** (RF-707). O relatório é o único artefato do produto que circula fora da plataforma — vai impresso para a mão do pedreiro e por WhatsApp para empreiteiras que não são clientes. Tirar a marca ou pôr a da construtora é item de plano pago no futuro, não bug.
 - **Duas paletas independentes** (ver Paleta no topo): status pinta a célula da unidade, disciplina pinta o pin. "Em checklist" deixou de ser azul e virou célula sem preenchimento, liberando o azul para a hidráulica.
 - **Excluir estrutura vazia é fácil, destruir trabalho de campo é difícil** (RF-209 a RF-214). Item sem conteúdo some na hora; item com pins ou plantas é arquivado, nunca apagado. Foto de obra não se refaz — quando alguém perceber o erro, o problema registrado pode já ter sido corrigido.
 - **Plataforma: aplicação web mobile-first** (RNF-01, RNF-02, RNF-20). Um código só, React + Tailwind, usado no celular em campo e no desktop no escritório. App nativo é evolução pós-produção.
@@ -270,7 +276,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 
 ## Pontos em aberto
 
-Nenhum no momento. As duas últimas pendências foram fechadas em 30/08: métricas dos assistentes (RF-806) e exclusão de estrutura (RF-209 a RF-214).
+Nenhum no momento. A última pendência foi fechada em 01/09: a área comum no dashboard geral entra em faixa própria (RF-808).
 
 ## Como usar este documento
 
