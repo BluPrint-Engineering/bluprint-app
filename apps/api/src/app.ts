@@ -1,13 +1,20 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { env } from "./lib/env";
-import { registerErrorHandling } from "./middleware/error";
-import { health } from "./routes/health";
+import { INestApplication } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { ZodValidationPipe } from "nestjs-zod";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { Env } from "./lib/env";
 
-export const app = new Hono();
+/**
+ * CORS, validação e tratamento de erro. `main.ts` e `app.spec.ts` chamam esta
+ * mesma função — é o que impede um contrato que só vale em produção.
+ *
+ * Precisa rodar ANTES de `app.init()`: pipe e filtro registrados depois são
+ * silenciosamente ignorados pelas rotas já montadas.
+ */
+export function configureApp(app: INestApplication): void {
+	const config = app.get(ConfigService<Env, true>);
 
-app.use("*", cors({ origin: env.CORS_ORIGIN }));
-
-app.route("/health", health);
-
-registerErrorHandling(app);
+	app.enableCors({ origin: config.get("CORS_ORIGIN", { infer: true }) });
+	app.useGlobalPipes(new ZodValidationPipe());
+	app.useGlobalFilters(new AllExceptionsFilter());
+}

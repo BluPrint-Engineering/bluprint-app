@@ -13,3 +13,9 @@ get {
 params:query {
   verbose: true
 }
+
+assert {
+  res.status: eq 200
+  res.body.status: eq ok
+  res.body.verbose.runtime: contains node
+}

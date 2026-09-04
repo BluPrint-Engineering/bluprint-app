@@ -1,0 +1,16 @@
+meta {
+  name: Rota desconhecida
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/no-such-route
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 404
+  res.body.error: eq Not Found
+}

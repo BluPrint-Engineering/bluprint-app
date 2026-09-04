@@ -2,9 +2,17 @@
 	"name": "@bluprint/shared",
 	"private": true,
 	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
 	"exports": {
-		".": "./src/index.ts"
+		".": {
+			"types": "./dist/index.d.ts",
+			"default": "./dist/index.js"
+		}
 	},
+	"files": [
+		"dist"
+	],
 	"dependencies": {
 		"zod": "^4.5.4"
 	},
@@ -12,6 +20,8 @@
 		"typescript": "7.0.2"
 	},
 	"scripts": {
+		"build": "tsc",
+		"dev": "tsc --watch --preserveWatchOutput",
 		"typecheck": "tsc --noEmit"
 	}
 }

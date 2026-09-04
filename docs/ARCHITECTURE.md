@@ -4,11 +4,13 @@ Este arquivo é a **fonte da verdade das decisões técnicas**. `docs/requisitos
 
 ## Visão geral
 
-Monorepo com **Bun workspaces**:
+Monorepo com **Bun workspaces**. O Bun é gerenciador de pacotes e runner de script; a API roda em
+**Node**.
 
 - `apps/web` — SPA React.
-- `apps/api` — API Bun + Hono.
-- `packages/shared` — schemas Zod e tipos usados pelos dois lados.
+- `apps/api` — API Node + NestJS.
+- `packages/shared` — schemas Zod e tipos usados pelos dois lados. Tem passo de build: publica
+  `dist/`, e todo script da raiz o constrói antes de qualquer outra coisa.
 
 ## A stack
 
@@ -21,15 +23,16 @@ Monorepo com **Bun workspaces**:
 | Formulários | React Hook Form + Zod v4 |
 | UI | shadcn/ui sobre Radix |
 | Ícones | lucide-react |
-| Back | Bun + Hono |
+| Back | Node + NestJS (adapter Express) |
+| Validação | Zod v4 em `packages/shared`, aplicado na API por `nestjs-zod` |
 | ORM | Drizzle |
 | Banco | Neon (sa-east-1) |
 | Auth | Better Auth (self-hosted na API) |
 | Storage de imagem | Cloudflare R2 |
 | Host da API | Fly.io, região GRU |
 | Host do front | Cloudflare Pages |
-| Testes | Vitest + Testing Library (web) · `bun test` (api) |
-| Lint/format | Biome |
+| Testes | Vitest + Testing Library (web) · Jest + Supertest (api) |
+| Lint/format | Biome (web, shared) · ESLint + Prettier (api) |
 | Doc de API | Bruno, coleção `.bru` versionada |
 
 ## Por que cada escolha
@@ -37,13 +40,15 @@ Monorepo com **Bun workspaces**:
 - **Neon** — única com região São Paulo, branching grátis por PR e hibernação que não apaga dados. Os descartados falham por **perda de dados**, não por performance: Render deleta o banco free em 30 dias corridos, Railway deleta o volume, Supabase pausa o projeto após 7 dias parado (restore manual), CockroachDB deleta após 6 meses.
 - **Better Auth** — grátis, roda dentro da própria API, adapter Drizzle oficial, e o plugin de organização entrega `organization` e `member` (o papel padrão do RF-123) sem trabalho nosso. Lucia está deprecado desde março/2025. Nenhum SaaS de auth modela "papel por obra" (RF-121/RF-122), então pagar por um não pouparia trabalho. **O convite é a exceção:** usamos tabela própria, não a do plugin, porque o RF-129 exige um convite que crie o vínculo com a organização **e** com a obra de uma vez — `project_id` anulável distingue o convite em lote do RF-127 do convite direto à obra. Na tabela do plugin isso viraria uma segunda tabela de convite ou `project_id` escondido em metadata, com dois fluxos de aceite para manter. O custo é implementar token de uso único e expiração de 7 dias (RF-133) na mão.
 - **Cloudflare R2** — único object storage com egress grátis e ilimitado, que é o que torna o custo de foto previsível (RNF-15). S3 e Supabase cobram US$ 0,09–0,15/GB de saída, e no S3 a região São Paulo é ~67% mais cara.
-- **Fly.io GRU** — único host com região no Brasil que roda Bun como processo longo com conexão persistente ao Postgres. Cloudflare Workers, Vercel Functions e Deno Deploy não rodam a runtime Bun; Render free hiberna com cold start de 30–60s, inviável para uso em campo.
+- **Fly.io GRU** — mantido, mas o motivo mudou com a troca de runtime e **a comparação ainda não foi refeita**. O critério antigo era "único host com região no Brasil que roda a runtime **Bun** como processo longo", e ele deixou de existir: em Node, Vercel Functions e Deno Deploy não são mais excluídos por runtime. O que continua valendo é o formato de execução — a API precisa de um **processo longo** que segure o pool de conexões do Postgres e pague o bootstrap do container de DI do Nest uma vez só, com região no Brasil e **sem cold start** (RNF-11, uso em campo no 4G). Nesses critérios o Fly.io atende, e Render free segue fora por hibernar com cold start de 30–60s. Mas Railway, Cloud Run (`southamerica-east1`) e Vercel passaram a ser candidatos legítimos e ninguém os comparou em preço e região atuais. **Item em aberto:** refazer esse levantamento antes do primeiro deploy. Não há `Dockerfile` nem `fly.toml` no repo, então a decisão ainda não custa nada para reverter.
 - **Cloudflare Pages** — banda e seats ilimitados no free. O plano Hobby da Vercel proíbe uso comercial; Netlify dá 1 seat.
-- **`bun test` na API** — já vem embutido e é compatível com a API do Jest. Vitest fica só no front, onde DOM e JSX importam.
-- **Biome** — um binário para lint e format, no lugar de ESLint + Prettier.
+- **Jest na API** — é o runner que o Nest assume: `@nestjs/testing` + Supertest é o caminho documentado, e o `ts-jest` lê o mesmo `tsconfig` que o build, então decorator e `emitDecoratorMetadata` se comportam igual no teste e em produção. Divergência aí não dá teste vermelho, dá `Nest can't resolve dependencies` em runtime — não vale economizar. Vitest fica só no front, onde DOM e JSX importam.
+- **ESLint + Prettier na API, Biome no front** — o Biome não roda regra com informação de tipo, e é justamente isso que a API precisa: `no-floating-promises` numa service `async`, `no-misused-promises` num handler. No front, onde a regra que importa é de React e não de tipo, o Biome continua ganhando por ser um binário só. A divisão também é **imposta**: o `typescript-eslint` não suporta o compilador nativo do TypeScript 7, que não expõe API JavaScript nenhuma, então rodar ESLint na raiz custaria rebaixar o TypeScript do monorepo inteiro. Os dois estão configurados com tab e aspas duplas — a fronteira é de ferramenta, não de estilo. O que se perde é o `organizeImports` automático do Biome, que no ESLint não tem equivalente nativo.
+- **NestJS** — o Hono era a escolha certa enquanto a runtime era Bun: framework mínimo, convenção por nossa conta. Em Node a comparação muda. Ou reescrevemos injeção de dependência, fronteira de módulo, guarda e filtro de erro, ou usamos um framework que já entrega isso e o **impõe por construção** em vez de por code review. O que decidiu foi o que vem pela frente: RF-121/RF-122 (papel por obra) viram guards, o Better Auth vira um módulo, e a fronteira rota/service que este documento já prescrevia deixa de ser combinado e passa a ser estrutura. O preço está explícito e é real — decorators, que tiram `apps/api` do `tsconfig` base do monorepo (ver § Estrutura do back), um passo de build no lugar de rodar o `.ts` direto, e `--watch` com restart no lugar de hot reload. Hono sobre `@hono/node-server` manteria o código e não compraria nada disso.
+- **nestjs-zod** — mantém o Zod de `packages/shared` como a única fonte de validação: `createZodDto()` embrulha o schema num DTO que o `ZodValidationPipe` global lê pelo metadado do decorator. A alternativa nativa do Nest é `class-validator` + `class-transformer`, que duplicaria o contrato em decorators de classe e quebraria a espinha de schema compartilhado — o front deixaria de ser validado pelo mesmo objeto que a API.
 - **Bruno** — coleção fica como arquivo no repo: versionada em git, revisável em PR, sem conta em nuvem nem sync pago.
 
-Os demais itens (React/Vite/Tailwind, TanStack, React Hook Form + Zod, shadcn/ui, Hono, Drizzle) não têm alternativa descartada que valha registrar — são a escolha padrão do ecossistema para o papel que cumprem.
+Os demais itens (React/Vite/Tailwind, TanStack, React Hook Form + Zod, shadcn/ui, Drizzle) não têm alternativa descartada que valha registrar — são a escolha padrão do ecossistema para o papel que cumprem.
 
 ## Estrutura do front
 
@@ -84,27 +89,45 @@ apps/web/src/
 
 ```
 apps/api/src/
-├── index.ts          entrypoint — export default { port, fetch: app.fetch } (padrão Bun)
-├── app.ts             monta o Hono: CORS, rotas, error handling — testável sem abrir porta
-├── routes/            uma rota registra um Hono Router e valida entrada com @hono/zod-validator
-├── services/          regra de negócio — não conhece o Context do Hono
-├── middleware/         error handling (onError + notFound) e outros middlewares Hono
-├── lib/               tem estado ou fala com o mundo: env validado, conexão de banco (#18), clientes
+├── main.ts            entrypoint — cria o app Nest, aplica configureApp e abre a porta
+├── app.ts             configureApp(app): CORS, pipe de validação e filtro de erro. O teste chama
+│                       a mesma função — é o que impede um contrato que só vale em produção
+├── app.module.ts      módulo raiz — ConfigModule (env validado no boot) e os módulos de domínio
+├── <domínio>/         um módulo por domínio: controller, service, module, dto/
+├── common/            o que atravessa todos os módulos: filtros, pipes, guards, interceptors
+├── lib/               tem estado ou fala com o mundo: schema de env, conexão de banco (#18), clientes
 └── utils/             funções puras, sem estado nem I/O
 ```
 
-- **Rota** só valida a entrada, chama a service e dá forma à resposta. Nunca faz query direto.
-- **Service** contém a regra de negócio e nunca toca no `Context` do Hono — isso é o que permite
-  testar a service sem subir uma request HTTP.
+- **Módulo é a unidade de organização, não a camada.** `health/` tem `health.module.ts`,
+  `health.controller.ts`, `health.service.ts` e `dto/` — uma pasta por domínio. `controllers/` e
+  `services/` na raiz é o anti-padrão que espalha um domínio por três lugares e faz toda mudança
+  virar três diffs.
+- **Controller** só declara a rota, valida a entrada e chama a service. Nunca faz query direto e
+  nunca contém regra. O `@Query()`/`@Body()` é tipado com um DTO de `dto/`, criado por
+  `createZodDto()` sobre o schema de `packages/shared`; é o `emitDecoratorMetadata` que entrega
+  essa classe ao `ZodValidationPipe` global. Isso tem consequência direta na configuração: o
+  `apps/api` não pode ligar `verbatimModuleSyntax` nem `isolatedModules`, e a regra
+  `consistent-type-imports` do ESLint fica desligada de propósito. Um `import type` no DTO apaga o
+  valor de que o metadado precisa, e a injeção quebra **em runtime**, não na compilação.
+- **Service** contém a regra de negócio e nunca toca em `Request`, `Response` nem em nada do
+  Express — isso é o que permite testá-la instanciando a classe, sem subir uma request HTTP.
+  `health.service.spec.ts` é o exemplo trabalhado dessa fronteira.
 - **`db/`** (Drizzle, chega na issue #18) é acessado só por services — a fronteira entre service e
   banco é essa pasta.
-- **Middlewares e tratamento de erro** ficam em `middleware/`. `app.onError` e `app.notFound` são
-  registrados uma vez, em `app.ts`.
+- **Erro e não-encontrado** ficam em `common/filters/`. O `AllExceptionsFilter` é registrado uma
+  vez, em `app.ts`, e é ele que sustenta o contrato de resposta: `{"error":"Not Found"}` em 404 e
+  `{"error":"Internal Server Error"}` em 500, no lugar do corpo verboso que o Nest devolve por
+  padrão. Se esse filtro sair, o contrato sai junto — em silêncio, porque o front lança em qualquer
+  não-2xx sem ler o corpo. Por isso a coleção do Bruno tem um caso de rota desconhecida.
+- **Ordem importa no bootstrap.** `configureApp` roda **antes** de `app.init()`. Pipe e filtro
+  registrados depois são ignorados pelas rotas já montadas, sem erro nenhum.
 - **Schemas Zod de request/response** que o front também precisa moram em `packages/shared` (ex.:
-  `healthQuerySchema`, `healthResponseSchema`) e são importados aqui e em `apps/web`. Um schema só
-  sobe para lá quando front e API precisam concordar sobre ele — ver "Estrutura do front".
+  `healthQuerySchema`, `healthResponseSchema`), importados aqui pelo DTO e lá pelo `apiFetch`. Um
+  schema só sobe para lá quando front e API precisam concordar sobre ele — ver "Estrutura do front".
 - **`lib/` vs `utils/`** — `lib/` é código que *é* alguma coisa (tem estado ou fala com o mundo:
-  `env.ts`, conexão de banco, clientes de storage). `utils/` é função pura, testável sem mock.
+  `env.ts`, conexão de banco, clientes de storage). `utils/` é função pura, testável sem mock. Nada
+  em `lib/` precisa ser provider do Nest: só vira `@Injectable()` o que outro módulo injeta.
 
 **Convenção de Bruno:** toda rota nova entra na coleção (`apps/api/bruno/`) no mesmo PR que a cria.
 
