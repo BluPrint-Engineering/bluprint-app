@@ -89,6 +89,10 @@ TypeScript is strict at the root `tsconfig.json` (including `noUncheckedIndexedA
 Work reaches `main` through pull requests; commit subjects reference the PR number.
 Commits follow **Conventional Commits** and are written **in English** — see
 `docs/ARCHITECTURE.md` § Idioma for the exact shape.
+Every PR fills in `.github/pull_request_template.md` — it is the checklist for what CI
+cannot verify: screenshots (mobile and desktop) for anything touching UI, a Bruno entry
+for every new route, the shared-schema contract, and the permanent RNFs. A block that
+does not apply is marked `n/a`, never deleted.
 
 ## Agent skills
 
