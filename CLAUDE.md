@@ -23,6 +23,8 @@ Two documents are the sources of truth, and both change only by **pull request**
 
 Issues cite the requirement ID and link the file; they never copy the requirement text. When a decision changes, update the document in the same PR as the code.
 
+`docs/modelo-de-dados.md` is the exception: it sketches how the database is modelled and **why**, but it is **not a source of truth** — the Drizzle schemas and migrations are. Read it for the reasoning behind a table, never as the rule; where it contradicts a migration, the migration wins.
+
 ## Layout
 
 ```
