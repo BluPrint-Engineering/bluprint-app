@@ -30,6 +30,7 @@ Issues cite the requirement ID and link the file; they never copy the requiremen
 ```
 apps/web        React SPA (Vite, TanStack Router + Query, Tailwind v4, shadcn/ui)
 apps/api        Node + NestJS (Express adapter, Jest, ESLint + Prettier)
+apps/api/db     Drizzle: DatabaseModule, schema, migrations (apps/api/drizzle/)
 packages/shared Zod schemas and types both sides agree on — built to dist/, build it first
 apps/api/bruno  versioned Bruno collection — every new route gets an entry in the same PR
 ```
@@ -43,9 +44,12 @@ The shared-schema contract is the spine: a request/response schema lives in `pac
 Bun workspaces (Bun 1.4). Root scripts fan out to every workspace that defines them.
 
 ```bash
+docker compose up -d --wait  # Postgres for dev + test, once per session
 bun install
 bun run dev          # builds packages/shared, then web (:5173) + api (:3000) in parallel
-bun run test
+bun run test         # unit + integration — needs the Postgres container up
+bun run test:unit    # hermetic only, never touches the container
+bun run test:int     # integration only
 bun run typecheck
 bun run lint         # biome check . (web, shared) + eslint (api)
 bun run lint:fix
@@ -57,17 +61,25 @@ bun run build
 running `bunx vitest` or `tsc` inside a workspace fails to resolve `@bluprint/shared` until
 `bun run --filter @bluprint/shared build` has run once; `bun run dev` keeps it in `tsc --watch`.
 `nest start --watch` restarts the API process on change — it is not `--hot`, so expect about a
-second between save and ready.
+second between save and ready. The API refuses to boot without a reachable Postgres — see
+`apps/api/src/db/database.module.ts`.
+
+Drizzle, from `apps/api`:
+
+```bash
+bun run db:generate  # drizzle-kit generate — new migration from a schema change
+bun run db:migrate   # drizzle-kit migrate — apply pending migrations
+```
 
 Per workspace / single test:
 
 ```bash
-bun run --filter @bluprint/api test                       # jest
-bun run --filter @bluprint/api test -- src/app.spec.ts    # single api file
-bun run --filter @bluprint/api test -- -t "verbose"       # single api test
-bun run --filter @bluprint/web test                       # vitest run
-bunx vitest run src/features/health/HealthPage.test.tsx   # from apps/web
-bunx vitest run -t "shows the API health status"          # from apps/web
+bun run --filter @bluprint/api test                          # jest, unit + integration
+bun run --filter @bluprint/api test -- src/app.int-spec.ts    # single api file
+bun run --filter @bluprint/api test -- -t "verbose"           # single api test
+bun run --filter @bluprint/web test                           # vitest run
+bunx vitest run src/features/health/HealthPage.test.tsx       # from apps/web
+bunx vitest run -t "shows the API health status"              # from apps/web
 ```
 
 `.env` lives at the repo root and is shared: the API loads it via `ConfigModule.forRoot({ envFilePath: '../../.env', validate })`, which parses it against `envSchema` and aborts the bootstrap before the port opens on a bad value; Vite's `envDir` points at the root. Only `VITE_`-prefixed vars reach the browser. Start from `.env.example`.

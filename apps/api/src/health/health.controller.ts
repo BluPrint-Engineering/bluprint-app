@@ -8,7 +8,7 @@ export class HealthController {
 	constructor(private readonly health: HealthService) {}
 
 	@Get()
-	check(@Query() query: HealthQueryDto): HealthResponse {
+	check(@Query() query: HealthQueryDto): Promise<HealthResponse> {
 		return this.health.check(query.verbose);
 	}
 }

@@ -7,7 +7,8 @@ export const healthQuerySchema = z.object({
 export type HealthQuery = z.infer<typeof healthQuerySchema>;
 
 export const healthResponseSchema = z.object({
-	status: z.literal("ok"),
+	status: z.enum(["ok", "degraded"]),
+	database: z.enum(["up", "down"]),
 	timestamp: z.iso.datetime(),
 	uptime: z.number(),
 	verbose: z

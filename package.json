@@ -9,6 +9,8 @@
 		"dev": "bun run --filter @bluprint/shared build && bun run --parallel --filter '*' --if-present dev",
 		"build": "bun run --filter @bluprint/shared build && bun run --filter './apps/*' --if-present build",
 		"test": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test",
+		"test:unit": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test:unit",
+		"test:int": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test:int",
 		"typecheck": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present typecheck",
 		"lint": "biome check . && bun run --filter @bluprint/api lint",
 		"lint:fix": "biome check --write . && bun run --filter @bluprint/api lint:fix",

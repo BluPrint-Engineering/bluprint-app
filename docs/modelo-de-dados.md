@@ -11,7 +11,8 @@
 
 Desenho visual: **[board no Miro](https://miro.com/app/board/uXjVHrUOxfg=/)**.
 
-Postgres (Neon) + Drizzle. Identificadores em inglês, conforme `ARCHITECTURE.md` § Idioma.
+Postgres (provedor em aberto, ver `ARCHITECTURE.md` § Hospedagem e provedores) + Drizzle.
+Identificadores em inglês, conforme `ARCHITECTURE.md` § Idioma.
 
 ---
 
@@ -144,8 +145,9 @@ aceitar a chave estrangeira composta de `pin` (ver abaixo). Não apague achando 
 | `created_by` | Autoria (RF-505). Editar é de qualquer vinculado à obra; excluir é só do autor e do gerente (RF-508). |
 
 `pin_photo` é tabela separada porque o MVP já mira múltiplas fotos por pin (RF-509), e o `id` também
-vem do cliente pelo mesmo motivo de idempotência. As imagens ficam no Cloudflare R2; `storage_key`
-guarda a chave.
+vem do cliente pelo mesmo motivo de idempotência. As imagens ficam em object storage compatível com
+S3 (provedor em aberto, ver `ARCHITECTURE.md` § Hospedagem e provedores); `storage_key` guarda a
+chave.
 
 `pin.project_id` continua denormalizado ao lado de `location_id`. Estritamente é redundante — dá
 para chegar na obra pela árvore —, mas é o filtro de tenancy de toda query e de todo índice.

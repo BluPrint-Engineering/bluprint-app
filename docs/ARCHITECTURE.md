@@ -25,7 +25,7 @@ Monorepo com **Bun workspaces**. O Bun é gerenciador de pacotes e runner de scr
 | Ícones | lucide-react |
 | Back | Node + NestJS (adapter Express) |
 | Validação | Zod v4 em `packages/shared`, aplicado na API por `nestjs-zod` |
-| ORM | Drizzle |
+| ORM | Drizzle, driver `node-postgres` (`pg`) |
 | Banco | PostgreSQL — provedor **em aberto**; em dev, container local |
 | Auth | Better Auth (self-hosted na API) |
 | Storage de imagem | Object storage compatível com S3 — provedor **em aberto** |
@@ -93,7 +93,8 @@ apps/api/src/
 ├── app.module.ts      módulo raiz — ConfigModule (env validado no boot) e os módulos de domínio
 ├── <domínio>/         um módulo por domínio: controller, service, module, dto/
 ├── common/            o que atravessa todos os módulos: filtros, pipes, guards, interceptors
-├── lib/               tem estado ou fala com o mundo: schema de env, conexão de banco (#18), clientes
+├── db/                DatabaseModule: pool, instância Drizzle, schema, check de conexão no boot
+├── lib/               tem estado ou fala com o mundo: schema de env, clientes
 └── utils/             funções puras, sem estado nem I/O
 ```
 
@@ -111,8 +112,16 @@ apps/api/src/
 - **Service** contém a regra de negócio e nunca toca em `Request`, `Response` nem em nada do
   Express — isso é o que permite testá-la instanciando a classe, sem subir uma request HTTP.
   `health.service.spec.ts` é o exemplo trabalhado dessa fronteira.
-- **`db/`** (Drizzle, chega na issue #18) é acessado só por services — a fronteira entre service e
-  banco é essa pasta.
+- **`db/`** é acessado só por services — a fronteira entre service e banco é essa pasta. O
+  `DatabaseModule` é `@Global()` e exporta a instância do Drizzle sob o token `DATABASE`; qualquer
+  service injeta esse token, sem precisar importar o módulo. No boot, um `SELECT 1` roda antes da
+  porta abrir — `DATABASE_URL` que não responde é configuração errada, e é pega no mesmo momento em
+  que `envSchema.parse` já pega o resto. Isso é **checagem no código**, não `depends_on` do Compose:
+  o Compose só ordena entre containers e a API roda no host; mesmo em container, ele garante só que o
+  Postgres aceita conexão, não que a `DATABASE_URL` está certa. O que essa checagem não cobre é o
+  banco cair **depois** do boot — é o que sustenta o `database`/`status: "degraded"` do `/health`
+  (`health.service.ts`). Custo aceito: em produção, um blip do banco vira crash-loop; a mitigação é
+  restart com backoff no host, decisão do #21.
 - **Erro e não-encontrado** ficam em `common/filters/`. O `AllExceptionsFilter` é registrado uma
   vez, em `app.ts`, e é ele que sustenta o contrato de resposta: `{"error":"Not Found"}` em 404 e
   `{"error":"Internal Server Error"}` em 500, no lugar do corpo verboso que o Nest devolve por
@@ -124,8 +133,12 @@ apps/api/src/
   `healthQuerySchema`, `healthResponseSchema`), importados aqui pelo DTO e lá pelo `apiFetch`. Um
   schema só sobe para lá quando front e API precisam concordar sobre ele — ver "Estrutura do front".
 - **`lib/` vs `utils/`** — `lib/` é código que *é* alguma coisa (tem estado ou fala com o mundo:
-  `env.ts`, conexão de banco, clientes de storage). `utils/` é função pura, testável sem mock. Nada
-  em `lib/` precisa ser provider do Nest: só vira `@Injectable()` o que outro módulo injeta.
+  `env.ts`, clientes de storage). `utils/` é função pura, testável sem mock. Nada em `lib/` precisa
+  ser provider do Nest: só vira `@Injectable()` o que outro módulo injeta.
+- **Testes de `apps/api`** — `*.spec.ts` é unitário e não toca banco nem HTTP (`health.service.spec.ts`
+  mocka a dependência injetada, nunca a cadeia do query builder do Drizzle). `*.int-spec.ts` sobe o
+  `AppModule` de verdade contra Postgres (`app.int-spec.ts`). `bun run test` roda os dois; `test:unit`
+  e `test:int` isolam — o primeiro nunca exige o container de pé.
 
 **Convenção de Bruno:** toda rota nova entra na coleção (`apps/api/bruno/`) no mesmo PR que a cria.
 
