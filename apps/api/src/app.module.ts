@@ -7,9 +7,8 @@ import { envSchema } from "./lib/env";
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
-			// Relativo ao cwd do workspace — o mesmo arquivo que o Vite lê via envDir.
+			// Relative to the workspace cwd — the root .env that Vite also reads.
 			envFilePath: "../../.env",
-			// Falha o bootstrap antes de abrir a porta se o env for inválido.
 			validate: (raw) => envSchema.parse(raw),
 		}),
 		HealthModule,

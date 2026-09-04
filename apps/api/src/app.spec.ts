@@ -18,7 +18,7 @@ beforeAll(async () => {
 	configureApp(app);
 	await app.init();
 
-	// getHttpServer() devolve `any`; estreitar aqui em vez de espalhar o any.
+	// getHttpServer() is typed `any`; narrow once here instead of at every call.
 	server = app.getHttpServer() as Server;
 });
 

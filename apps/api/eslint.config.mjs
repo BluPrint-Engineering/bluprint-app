@@ -16,12 +16,11 @@ export default tseslint.config(
 			},
 		},
 		rules: {
-			// NUNCA ligar. Um `import type` no DTO de um parâmetro decorado apaga o
-			// valor que o emitDecoratorMetadata grava em design:paramtypes, e a
-			// injeção quebra em runtime ("Nest can't resolve dependencies (?)"),
-			// não na compilação.
+			// Never enable: `import type` on a decorated parameter's DTO erases the
+			// value emitDecoratorMetadata writes to design:paramtypes, and DI then
+			// fails at runtime, not at compile time.
 			"@typescript-eslint/consistent-type-imports": "off",
-			// O tsc já cobre, via noUnusedLocals/noUnusedParameters.
+			// Already covered by tsc's noUnusedLocals/noUnusedParameters.
 			"@typescript-eslint/no-unused-vars": "off",
 		},
 	},
@@ -30,7 +29,7 @@ export default tseslint.config(
 		languageOptions: { globals: globals.jest },
 	},
 	{
-		// O próprio arquivo de config não está no programa do tsconfig.
+		// This config file is not part of the tsconfig program.
 		files: ["**/*.mjs"],
 		extends: [tseslint.configs.disableTypeChecked],
 	},

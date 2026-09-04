@@ -4,9 +4,7 @@
 		"lib": ["ES2023"],
 		"types": ["node", "jest"],
 
-		// A raiz é noEmit + module "preserve" + resolução "bundler": não produz saída
-		// executável no Node. Aqui precisamos de emit real e do exports map de
-		// packages/shared, que "bundler" leria de forma diferente.
+		// The root config is noEmit + "preserve"/"bundler": no runnable Node output.
 		"module": "nodenext",
 		"moduleResolution": "nodenext",
 		"noEmit": false,
@@ -14,15 +12,12 @@
 		"rootDir": "./src",
 		"sourceMap": true,
 
-		// O Nest depende de decorators e do metadado de tipo que eles emitem.
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 
-		// Obrigatório: com emit CommonJS, verbatimModuleSyntax dá ts(1286). E um
-		// `import type` apagaria o valor que design:paramtypes precisa carregar —
-		// que é o mesmo motivo de isolatedModules sair: com ele ligado, o tsc exige
-		// `import type` para o DTO de um parâmetro decorado (ts1272). A flag existe
-		// para transpiler por arquivo, e aqui quem compila é um programa tsc inteiro.
+		// Both must stay off: each one forces `import type` on a decorated
+		// parameter's DTO (ts1286 / ts1272), which erases the value
+		// design:paramtypes carries. See ARCHITECTURE.md § Estrutura do back.
 		"verbatimModuleSyntax": false,
 		"isolatedModules": false,
 		"esModuleInterop": true

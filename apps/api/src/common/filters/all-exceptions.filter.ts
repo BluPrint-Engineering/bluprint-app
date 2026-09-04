@@ -8,11 +8,8 @@ import {
 } from "@nestjs/common";
 import { Response } from "express";
 
-/**
- * Sustenta o contrato de erro da API: o corpo é sempre `{ "error": "<razão HTTP>" }`,
- * no lugar do corpo verboso que o Nest devolve por padrão. `@Catch()` sem argumento
- * pega também a NotFoundException que o router levanta em rota desconhecida.
- */
+/** Keeps every error body as `{ "error": "<HTTP reason>" }` instead of Nest's
+ * default. Bare `@Catch()` so it also takes the router's NotFoundException. */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
 	catch(exception: unknown, host: ArgumentsHost): void {
