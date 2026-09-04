@@ -2,7 +2,26 @@
 	"extends": "../../tsconfig.json",
 	"compilerOptions": {
 		"lib": ["ES2023"],
-		"types": ["bun"]
+		"types": ["node", "jest"],
+
+		// The root config is noEmit + "preserve"/"bundler": no runnable Node output.
+		"module": "nodenext",
+		"moduleResolution": "nodenext",
+		"noEmit": false,
+		"outDir": "./dist",
+		"rootDir": "./src",
+		"sourceMap": true,
+
+		"experimentalDecorators": true,
+		"emitDecoratorMetadata": true,
+
+		// Both must stay off: each one forces `import type` on a decorated
+		// parameter's DTO (ts1286 / ts1272), which erases the value
+		// design:paramtypes carries. See ARCHITECTURE.md § Estrutura do back.
+		"verbatimModuleSyntax": false,
+		"isolatedModules": false,
+		"esModuleInterop": true
 	},
-	"include": ["src"]
+	"include": ["src"],
+	"exclude": ["node_modules", "dist"]
 }

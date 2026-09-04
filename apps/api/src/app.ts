@@ -1,13 +1,15 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { env } from "./lib/env";
-import { registerErrorHandling } from "./middleware/error";
-import { health } from "./routes/health";
+import { INestApplication } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { ZodValidationPipe } from "nestjs-zod";
+import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { Env } from "./lib/env";
 
-export const app = new Hono();
+/** Must run before `app.init()`: pipes and filters registered after it are
+ * silently ignored by the routes already mounted. */
+export function configureApp(app: INestApplication): void {
+	const config = app.get(ConfigService<Env, true>);
 
-app.use("*", cors({ origin: env.CORS_ORIGIN }));
-
-app.route("/health", health);
-
-registerErrorHandling(app);
+	app.enableCors({ origin: config.get("CORS_ORIGIN", { infer: true }) });
+	app.useGlobalPipes(new ZodValidationPipe());
+	app.useGlobalFilters(new AllExceptionsFilter());
+}
