@@ -1,109 +1,59 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+BluPrint — construction-site management. Engineers map site issues as **pins over floor plans**, grouped by unit and by discipline, and export reports for the crews. React SPA + NestJS API in Bun workspaces; mobile-first, because the user is holding a phone inside an unfinished apartment.
 
-## Project
+## Answer from the document, not from the code
 
-BluPrint — construction-site management app. Engineers map site issues as **pins over floor plans**, organized by unit and discipline, and export reports for the crews. Web app, mobile-first (phones in the field, desktop in the office).
+Most of this product is specified and not yet built, so the code will not tell you the rule. Open the section below, answer from it, and cite the `RF-xxx` / `RNF-xx` id or the `§` you used. Both sources of truth change by **pull request**, in the same PR as the code they govern — never by issue; an issue cites the id and links the file, it never copies the requirement text.
 
-## Where to look
-
-Two documents are the sources of truth, and both change only by **pull request**, never by issue. Read the relevant section before answering an architecture or business question — do not infer the rule from the code alone.
-
-| Question | Read |
+| You need | Open |
 | --- | --- |
-| What should the product do? Who can do it? | `docs/requisitos.md` — rules with stable IDs (`RF-xxx`, `RNF-xx`) |
-| Why this rule, and what was decided against | `docs/requisitos.md` § Decisões estruturais |
-| Domain terms (obra, unidade, disciplina, papel efetivo), status/discipline color palettes | `docs/requisitos.md` § Vocabulário, § Paleta |
-| Which library/host/service to use, and why the alternatives lost | `docs/ARCHITECTURE.md` § A stack, § Por que cada escolha |
-| Where a file belongs on the front; when something is promoted to `components/` or `packages/shared` | `docs/ARCHITECTURE.md` § Estrutura do front |
-| Where a file belongs on the API; route vs service vs `lib/` boundaries | `docs/ARCHITECTURE.md` § Estrutura do back |
-| English vs pt-BR, file and folder naming | `docs/ARCHITECTURE.md` § Idioma, § Nomenclatura |
-| Deliberately undecided (plan rendering, image handling, **all hosting and provider choices**) | `docs/ARCHITECTURE.md` § Fora de escopo por enquanto |
+| A product rule, a permission, what a role may do — `RF-1xx` contas/licenciamento/papéis, `2xx` configuração da obra, `3xx` empresas executoras, `4xx` disciplinas e plantas, `5xx` pins, `6xx` unidade, `7xx` relatórios, `8xx` dashboards. RNFs sit in one flat table, no module mapping | `docs/requisitos.md`, the section matching the id's first digit |
+| Why a product rule is that way, and what lost | `docs/requisitos.md` § Decisões estruturais — the de-facto ADR log; there is no `docs/adr/` |
+| A domain word (obra, unidade, disciplina, papel efetivo, Geral), or a status/discipline hex | `docs/requisitos.md` § Vocabulário, § Paleta — the de-facto glossary; there is no `CONTEXT.md`. The two palettes are independent |
+| Which library, runner or linter to use, and why the alternative lost | `docs/ARCHITECTURE.md` § A stack, § Por que cada escolha |
+| Where a web file belongs; when it's promoted to `components/` or `packages/shared` | `docs/ARCHITECTURE.md` § Estrutura do front |
+| Where an API file belongs; controller vs service vs `db/` | `docs/ARCHITECTURE.md` § Estrutura do back |
+| Naming, and which language a given string is written in | `docs/ARCHITECTURE.md` § Nomenclatura, § Idioma |
+| Where to host, which Postgres, which image storage | `docs/ARCHITECTURE.md` § Fora de escopo por enquanto — open on purpose. Settled: the API needs a long-lived process, so ephemeral-function hosts are out |
+| What CI runs, and why it's ordered that way | `docs/ARCHITECTURE.md` § CI |
+| Why a table or column is shaped that way | `docs/modelo-de-dados.md`, the section for that module — reasoning, not law; where it disagrees with a migration, the migration wins |
+| The shared-schema contract for a new route (schema in `packages/shared`, DTO, response parsing) and the Bruno entry it needs | `packages/shared/src/health.ts` → `apps/api/src/health/` → `apps/web/src/features/health/` → `apps/api/bruno/health.bru` is the worked, complete example |
+| Creating, labelling or closing an issue; the project board | `docs/agents/issue-tracker.md` § Repo label conventions, § GitHub Project |
+| Which label marks a triage state | `docs/agents/triage-labels.md` |
 
-Issues cite the requirement ID and link the file; they never copy the requirement text. When a decision changes, update the document in the same PR as the code.
+## Five things that go wrong quietly
 
-`docs/modelo-de-dados.md` is the exception: it sketches how the database is modelled and **why**, but it is **not a source of truth** — the Drizzle schemas and migrations are. Read it for the reasoning behind a table, never as the rule; where it contradicts a migration, the migration wins.
+- **Language.** English for identifiers, files, routes, API error messages and commit subjects; pt-BR for every string a user reads (RNF-05) and everything in `docs/`. Most of `git log` is pt-BR — write the subject in English anyway, as Conventional Commits: `feat(api): connect local Postgres via Drizzle`.
+- **DTOs are value imports, not type imports** — see `.claude/rules/api.md` for why this breaks at runtime, not compile time.
+- **The database exists only on paper**, tracked in issue #5 — see `.claude/rules/db-schema.md` before touching `apps/api/src/db/` or a migration.
+- **Issue labels and the board are manual.** Each issue gets exactly one `tipo:`, exactly one `prio:`, at least one `area:`, then `gh project item-add 3 --owner BluPrint-Engineering --url <url>`.
+- **`gh pr create` skips the PR template.** Build the body from `.github/pull_request_template.md` — it's the checklist for what CI cannot verify. A block that doesn't apply is marked `n/a` and kept, never deleted.
 
-## Layout
+## Conventions for one area
 
-```
-apps/web        React SPA (Vite, TanStack Router + Query, Tailwind v4, shadcn/ui)
-apps/api        Node + NestJS (Express adapter, Jest, ESLint + Prettier)
-apps/api/db     Drizzle: DatabaseModule, schema, migrations (apps/api/drizzle/)
-packages/shared Zod schemas and types both sides agree on — built to dist/, build it first
-apps/api/bruno  versioned Bruno collection — every new route gets an entry in the same PR
-```
-
-The shared-schema contract is the spine: a request/response schema lives in `packages/shared`, the API validates input against it through a `nestjs-zod` DTO behind a global `ZodValidationPipe`, and the web client parses the response through it in `apiFetch`. `healthQuerySchema` / `healthResponseSchema` and the `/health` route are the worked example of the full path — follow them.
-
-`apps/web/src/routeTree.gen.ts` is generated by the TanStack Router plugin and excluded from Biome — never edit it. Biome covers `apps/web` and `packages/shared`; `apps/api` is excluded from it and has its own ESLint + Prettier, because Nest needs type-aware rules Biome cannot run. `apps/web/src/components/ui/` is shadcn output — regenerate with `bunx shadcn add`, don't hand-edit.
+`.claude/rules/{api,web,db-schema}.md` load themselves when you read a file under their area. Read one directly when you're writing a new file from scratch there, or after a compaction — a debugging session that never opens a matching file won't trigger it on its own.
 
 ## Commands
 
-Bun workspaces (Bun 1.4). Root scripts fan out to every workspace that defines them.
-
 ```bash
-docker compose up -d --wait  # Postgres for dev + test, once per session
-bun install
-bun run dev          # builds packages/shared, then web (:5173) + api (:3000) in parallel
-bun run test         # unit + integration — needs the Postgres container up
-bun run test:unit    # hermetic only, never touches the container
-bun run test:int     # integration only
-bun run typecheck
-bun run lint         # biome check . (web, shared) + eslint (api)
-bun run lint:fix
-bun run format
-bun run build
+docker compose up -d --wait  # Postgres, once per session — serves dev and the integration tests
+bun run dev                  # web :5173, api :3000
+bun run test                 # api Jest + web Vitest; test:unit and test:int are api-only
+bun run lint                 # Biome everywhere except apps/api; ESLint + Prettier there
+bun run typecheck            # also: build, lint:fix, format
+bun run --filter @bluprint/api <script>              # one workspace; db:generate and db:migrate live here
+bun run --filter @bluprint/api test -- -t "<name>"   # single test; web uses bunx vitest run -t "<name>"
 ```
 
-`packages/shared` has a build step, so every root script builds it first. On a fresh clone,
-running `bunx vitest` or `tsc` inside a workspace fails to resolve `@bluprint/shared` until
-`bun run --filter @bluprint/shared build` has run once; `bun run dev` keeps it in `tsc --watch`.
-`nest start --watch` restarts the API process on change — it is not `--hot`, so expect about a
-second between save and ready. The API refuses to boot without a reachable Postgres — see
-`apps/api/src/db/database.module.ts`.
-
-Drizzle, from `apps/api`:
-
-```bash
-bun run db:generate  # drizzle-kit generate — new migration from a schema change
-bun run db:migrate   # drizzle-kit migrate — apply pending migrations
-```
-
-Per workspace / single test:
-
-```bash
-bun run --filter @bluprint/api test                          # jest, unit + integration
-bun run --filter @bluprint/api test -- src/app.int-spec.ts    # single api file
-bun run --filter @bluprint/api test -- -t "verbose"           # single api test
-bun run --filter @bluprint/web test                           # vitest run
-bunx vitest run src/features/health/HealthPage.test.tsx       # from apps/web
-bunx vitest run -t "shows the API health status"              # from apps/web
-```
-
-`.env` lives at the repo root and is shared: the API loads it via `ConfigModule.forRoot({ envFilePath: '../../.env', validate })`, which parses it against `envSchema` and aborts the bootstrap before the port opens on a bad value; Vite's `envDir` points at the root. Only `VITE_`-prefixed vars reach the browser. Start from `.env.example`.
-
-TypeScript is strict at the root `tsconfig.json` (including `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`) and inherited by every workspace. `apps/web` overrides only `lib`, `types`, `jsx` and `paths`; `packages/shared` additionally turns on emit. **`apps/api` is the deliberate exception:** it also sets `experimentalDecorators`, `emitDecoratorMetadata`, `module`/`moduleResolution: nodenext`, `outDir`, `noEmit: false`, and turns `verbatimModuleSyntax` and `isolatedModules` **off** — Nest's decorator metadata cannot survive them. It is also pinned to TypeScript **5.9.3** rather than 7.0.2, because the native TS 7 compiler exposes no JavaScript API and `typescript-eslint`, `ts-jest` and the Nest CLI all need one.
-
-Work reaches `main` through pull requests; commit subjects reference the PR number.
-Commits follow **Conventional Commits** and are written **in English** — see
-`docs/ARCHITECTURE.md` § Idioma for the exact shape.
-Every PR fills in `.github/pull_request_template.md` — it is the checklist for what CI
-cannot verify: screenshots (mobile and desktop) for anything touching UI, a Bruno entry
-for every new route, the shared-schema contract, and the permanent RNFs. A block that
-does not apply is marked `n/a`, never deleted.
+Every root script builds `packages/shared` first, because both apps consume it from `dist/`; run `bun run --filter @bluprint/shared build` once before a bare `bunx vitest` or `tsc` inside a workspace, or `@bluprint/shared` fails to resolve and reads like a broken import path. One `.env` at the repo root serves both apps — copy `.env.example`; only `VITE_`-prefixed vars reach the browser.
 
 ## Agent skills
 
-### Issue tracker
+- **Issue tracker** — GitHub issues in `BluPrint-Engineering/bluprint-app`, via `gh`. See `docs/agents/issue-tracker.md`.
+- **Triage labels** — five triage states as a `triagem:` axis, plus `wontfix`. See `docs/agents/triage-labels.md`.
+- **Domain docs** — single-context: `docs/requisitos.md` § Vocabulário is the glossary, § Decisões estruturais the decision log. See `docs/agents/domain.md`.
 
-Issues live as GitHub issues in `BluPrint-Engineering/bluprint-app`, via the `gh` CLI. See `docs/agents/issue-tracker.md`.
+## Keeping this file lean
 
-### Triage labels
-
-Five triage states as a `triagem:` axis, plus the existing `wontfix`. See `docs/agents/triage-labels.md`.
-
-### Domain docs
-
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+A line earns a place here only if it's **not derivable** from something an agent already opens (a manifest, a config, a doc section) **and invariant** — shipping a feature should never require editing this file. A PR that adds more than a line here says why in its description.
