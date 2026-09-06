@@ -17,6 +17,13 @@ import * as schema from "./schema";
 export const DATABASE = Symbol("DATABASE");
 export type Database = NodePgDatabase<typeof schema>;
 
+/** The one place the runtime Drizzle instance is shaped; `auth.config.ts` uses
+ * it too. `casing` has to match `drizzle.config.ts`, which runs in its own
+ * process and cannot import this. */
+export function createDatabase(pool: Pool): Database {
+	return drizzle({ client: pool, schema, casing: "snake_case" });
+}
+
 const POOL = Symbol("PG_POOL");
 
 @Injectable()
@@ -68,7 +75,7 @@ class DatabaseHealthCheck implements OnModuleInit, OnModuleDestroy {
 		{
 			provide: DATABASE,
 			inject: [POOL],
-			useFactory: (pool: Pool): Database => drizzle({ client: pool, schema }),
+			useFactory: createDatabase,
 		},
 		DatabaseHealthCheck,
 	],

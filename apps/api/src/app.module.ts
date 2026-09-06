@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { AuthModule } from "./auth/auth.module";
 import { DatabaseModule } from "./db/database.module";
 import { HealthModule } from "./health/health.module";
 import { envSchema } from "./lib/env";
@@ -13,6 +14,7 @@ import { envSchema } from "./lib/env";
 			validate: (raw) => envSchema.parse(raw),
 		}),
 		DatabaseModule,
+		AuthModule,
 		HealthModule,
 	],
 })

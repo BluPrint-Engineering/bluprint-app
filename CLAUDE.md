@@ -26,7 +26,7 @@ Most of this product is specified and not yet built, so the code will not tell y
 
 - **Language.** English for identifiers, files, routes, API error messages and commit subjects; pt-BR for every string a user reads (RNF-05) and everything in `docs/`. Most of `git log` is pt-BR — write the subject in English anyway, as Conventional Commits: `feat(api): connect local Postgres via Drizzle`.
 - **DTOs are value imports, not type imports** — see `.claude/rules/api.md` for why this breaks at runtime, not compile time.
-- **The database exists only on paper**, tracked in issue #5 — see `.claude/rules/db-schema.md` before touching `apps/api/src/db/` or a migration.
+- **Only Better Auth's four tables exist**; every domain table is still on paper, tracked in issue #5 — see `.claude/rules/db-schema.md` before touching `apps/api/src/db/` or a migration.
 - **Issue labels and the board are manual.** Each issue gets exactly one `tipo:`, exactly one `prio:`, at least one `area:`, then `gh project item-add 3 --owner BluPrint-Engineering --url <url>`.
 - **`gh pr create` skips the PR template.** Build the body from `.github/pull_request_template.md` — it's the checklist for what CI cannot verify. A block that doesn't apply is marked `n/a` and kept, never deleted.
 

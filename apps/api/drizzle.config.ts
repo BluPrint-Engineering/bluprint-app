@@ -11,6 +11,9 @@ if (!databaseUrl) {
 
 export default defineConfig({
 	dialect: "postgresql",
+	// Must match `createDatabase` in db/database.module.ts. Out of sync, the
+	// migration and the query disagree on the column name — and it still builds.
+	casing: "snake_case",
 	schema: "./src/db/schema/index.ts",
 	out: "./drizzle",
 	dbCredentials: {

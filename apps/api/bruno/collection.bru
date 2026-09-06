@@ -1,0 +1,50 @@
+meta {
+  name: BluPrint API
+}
+
+docs {
+  # BluPrint API
+
+  Coleção para testar a API à mão. Os testes automatizados provam o contrato
+  (`apps/api/src/**/*.int-spec.ts`); isto aqui existe para o outro caso — abrir
+  uma rota, olhar o corpo da resposta e depurar cookie e cabeçalho de verdade.
+
+  ## Antes de rodar
+
+  1. `docker compose up -d --wait` — Postgres, uma vez por sessão.
+  2. `bun run dev` — sobe a API em `:3000` e o front em `:5173`.
+  3. Selecione o ambiente **local** no canto superior direito. Sem ele o
+     `{{baseUrl}}` não resolve e o Bruno responde `Invalid URL`.
+
+  O ambiente define duas variáveis: `baseUrl` (`http://localhost:3000`) e
+  `webOrigin` (`http://localhost:5173`, a origem do front).
+
+  ## Ordem sugerida
+
+  | Seq | Requisição | Serve para |
+  | --- | --- | --- |
+  | 1–2 | Health check | A API está de pé e o banco responde |
+  | 3 | Rota desconhecida | O contrato de erro `{"error": "..."}` continua valendo |
+  | 4 | Cadastro | Cria conta e sessão |
+  | 5 | Login | Volta a entrar com a conta do passo 4 |
+  | 6 | Sessão atual | Confirma que o cookie está valendo |
+
+  ## Duas coisas que confundem
+
+  **O cookie é guardado sozinho.** O cadastro e o login devolvem
+  `better-auth.session_token` no `Set-Cookie` e o Bruno o reaproveita nas
+  chamadas seguintes. Para testar como um visitante anônimo, limpe os cookies do
+  Bruno antes.
+
+  **Toda requisição de auth manda `Origin: {{webOrigin}}`.** O Bruno manda
+  `Origin: null` quando ninguém define o header, e o Better Auth recusa `null`
+  com 403 `MISSING_OR_NULL_ORIGIN` — é o que um iframe em sandbox manda. A
+  checagem só roda em requisição **com cookie**, então sem o header a primeira
+  chamada passa e todas as seguintes falham, o que parece aleatório e não é.
+
+  ## O que não está aqui
+
+  O Better Auth gera dezenas de rotas. Estão documentadas as três do caminho
+  feliz — cadastro, login e sessão —, que é o que se quer na mão no primeiro erro
+  de cookie. Documentar o resto seria manutenção sem leitor.
+}

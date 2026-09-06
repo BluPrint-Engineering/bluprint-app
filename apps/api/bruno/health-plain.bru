@@ -16,3 +16,9 @@ assert {
   res.body.database: eq up
   res.body.verbose: isUndefined
 }
+
+docs {
+  O mesmo health check sem `verbose`, que é o formato mínimo da resposta. Existe
+  separado para provar que o parâmetro é de fato opcional e que `verbose` some do
+  corpo quando não é pedido.
+}

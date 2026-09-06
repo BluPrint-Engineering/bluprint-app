@@ -1,0 +1,40 @@
+meta {
+  name: Sessão atual
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/auth/get-session
+  body: none
+  auth: none
+}
+
+headers {
+  Origin: {{webOrigin}}
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Lê a sessão a partir do cookie e devolve o usuário e a sessão dele. É como o
+  front descobre quem está logado ao carregar a página — o token vive num cookie
+  `httpOnly` e não é legível por JavaScript, então consultar esta rota é o único
+  jeito.
+
+  **Respostas que você vai encontrar**
+
+  | Status | Quando |
+  | --- | --- |
+  | 200 com corpo | Cookie válido |
+  | 200 com corpo `null` | Sem cookie, ou sessão expirada — não é erro |
+
+  Sem sessão ela responde 200 com `null`, e não 401: é rota do Better Auth, não
+  do produto. Não passa pelo `AuthGuard` nem pelo `AllExceptionsFilter`, então o
+  corpo de erro dela também não segue o `{"error": "..."}` do resto da API.
+
+  A sessão dura 90 dias e é renovada a cada dia de uso (RNF-04) — confira o
+  `Max-Age` do `Set-Cookie` na aba Headers do cadastro: 7776000 segundos.
+}
