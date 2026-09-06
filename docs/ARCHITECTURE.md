@@ -88,8 +88,9 @@ apps/web/src/
 ```
 apps/api/src/
 ├── main.ts            entrypoint — cria o app Nest, aplica configureApp e abre a porta
-├── app.ts             configureApp(app): CORS, pipe de validação e filtro de erro. O teste chama
-│                       a mesma função — é o que impede um contrato que só vale em produção
+├── app.ts             configureApp(app): prefixo global, CORS, pipe de validação e filtro de
+│                       erro. O teste chama a mesma função — é o que impede um contrato que
+│                       só vale em produção
 ├── app.module.ts      módulo raiz — ConfigModule (env validado no boot) e os módulos de domínio
 ├── <domínio>/         um módulo por domínio: controller, service, module, dto/
 ├── common/            o que atravessa todos os módulos: filtros, pipes, guards, interceptors
@@ -127,8 +128,8 @@ apps/api/src/
   `{"error":"Internal Server Error"}` em 500, no lugar do corpo verboso que o Nest devolve por
   padrão. Se esse filtro sair, o contrato sai junto — em silêncio, porque o front lança em qualquer
   não-2xx sem ler o corpo. Por isso a coleção do Bruno tem um caso de rota desconhecida.
-- **Ordem importa no bootstrap.** `configureApp` roda **antes** de `app.init()`. Pipe e filtro
-  registrados depois são ignorados pelas rotas já montadas, sem erro nenhum.
+- **Ordem importa no bootstrap.** `configureApp` roda **antes** de `app.init()`. Prefixo, pipe e
+  filtro registrados depois são ignorados pelas rotas já montadas, sem erro nenhum.
 - **Schemas Zod de request/response** que o front também precisa moram em `packages/shared` (ex.:
   `healthQuerySchema`, `healthResponseSchema`), importados aqui pelo DTO e lá pelo `apiFetch`. Um
   schema só sobe para lá quando front e API precisam concordar sobre ele — ver "Estrutura do front".
@@ -141,6 +142,26 @@ apps/api/src/
   e `test:int` isolam — o primeiro nunca exige o container de pé.
 
 **Convenção de Bruno:** toda rota nova entra na coleção (`apps/api/bruno/`) no mesmo PR que a cria.
+
+## Origem única: prefixo `api` e proxy
+
+A API monta tudo sob o prefixo global `api` (`configureApp`, em `app.ts`) e o front chama **caminho
+relativo** — `apiFetch` prefixa `/api` e não existe variável de ambiente com a URL da API. Em
+desenvolvimento, o servidor do Vite faz proxy de `/api` para a porta da API (`vite.config.ts`, que lê
+o `PORT` do `.env` da raiz para não duplicar o número).
+
+**Por quê.** Uma origem só. O navegador enxerga apenas `:5173`, então o cookie de sessão é
+first-party, sem CORS com credenciais para acertar e sem `SameSite=None` — que o Safari trata por
+ITP e cujo sintoma é o usuário aparecer deslogado sem erro, no aparelho do cliente e não no nosso. A
+alternativa, token em `localStorage`, funcionaria cross-domain e foi descartada: qualquer XSS
+exfiltraria uma credencial válida por 90 dias.
+
+**Em produção a regra é a mesma:** front e API sob o mesmo domínio raiz. Subdomínios grátis de
+provedores diferentes (`*.pages.dev` + `*.fly.dev`) são domínios raiz distintos e quebram o cookie —
+por isso registrar domínio próprio é requisito do deploy (ver § Hospedagem e provedores).
+
+**Consequência para quem escreve rota:** o caminho na API, na coleção do Bruno e no teste de
+integração inclui o prefixo (`/api/health`); o caminho passado ao `apiFetch` não (`/health`).
 
 ## Idioma
 
@@ -190,6 +211,9 @@ de deploy — nenhuma linha de código de aplicação muda. Trocar de provedor d
 qualquer Postgres. Storage é API compatível com S3 dos dois lados. **O que seria caro é adotar backend
 proprietário** (Firestore, Firebase SQL Connect), porque aí não é migração, é reescrita — por isso
 esses estão descartados abaixo, e não em aberto.
+
+**Uma restrição já fechada:** front e API precisam ficar sob o **mesmo domínio raiz**, o que torna
+registrar domínio próprio um requisito do primeiro deploy — ver § Origem única.
 
 **Em desenvolvimento:** Postgres em container local e storage local compatível com S3. Nenhuma conta
 em nuvem é necessária para rodar o projeto.

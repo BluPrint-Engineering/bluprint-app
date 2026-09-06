@@ -26,9 +26,9 @@ afterAll(async () => {
 	await app.close();
 });
 
-describe("GET /health", () => {
+describe("GET /api/health", () => {
 	test("returns ok status with the database up, matching the shared schema", async () => {
-		const res = await request(server).get("/health");
+		const res = await request(server).get("/api/health");
 
 		expect(res.status).toBe(200);
 		const body = healthResponseSchema.parse(res.body);
@@ -37,7 +37,7 @@ describe("GET /health", () => {
 	});
 
 	test("includes verbose details when requested", async () => {
-		const res = await request(server).get("/health?verbose=true");
+		const res = await request(server).get("/api/health?verbose=true");
 
 		expect(res.status).toBe(200);
 		const body = healthResponseSchema.parse(res.body);
@@ -45,7 +45,7 @@ describe("GET /health", () => {
 	});
 
 	test("rejects an invalid verbose value", async () => {
-		const res = await request(server).get("/health?verbose=maybe");
+		const res = await request(server).get("/api/health?verbose=maybe");
 
 		expect(res.status).toBe(400);
 	});
@@ -53,7 +53,14 @@ describe("GET /health", () => {
 
 describe("unknown routes", () => {
 	test("returns a 404 error", async () => {
-		const res = await request(server).get("/no-such-route");
+		const res = await request(server).get("/api/no-such-route");
+
+		expect(res.status).toBe(404);
+		expect(res.body).toEqual({ error: "Not Found" });
+	});
+
+	test("returns a 404 error for a route outside the api prefix", async () => {
+		const res = await request(server).get("/health");
 
 		expect(res.status).toBe(404);
 		expect(res.body).toEqual({ error: "Not Found" });
