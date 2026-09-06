@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:3000";
+const API_PREFIX = "/api";
 
 export class ApiError extends Error {}
 
@@ -7,7 +7,7 @@ export async function apiFetch<T>(
 	schema: { parse: (data: unknown) => T },
 	init?: RequestInit,
 ): Promise<T> {
-	const res = await fetch(`${API_URL}${path}`, init);
+	const res = await fetch(`${API_PREFIX}${path}`, init);
 
 	if (!res.ok) {
 		throw new ApiError(`Request to ${path} failed with status ${res.status}`);
