@@ -1,0 +1,47 @@
+meta {
+  name: Cadastro (e-mail e senha)
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/api/auth/sign-up/email
+  body: json
+  auth: none
+}
+
+headers {
+  Origin: {{webOrigin}}
+}
+
+body:json {
+  {
+    "email": "engenheira@example.com",
+    "password": "senha-de-obra-123",
+    "name": "Engenheira de Obra"
+  }
+}
+
+docs {
+  Cria a conta e devolve a sessão na mesma resposta — não há passo de verificação
+  de e-mail, e não haverá enquanto não existir provedor de e-mail transacional
+  (issue #11). É a única forma de nascer uma conta hoje; no produto final a conta
+  vem de convite, e este auto-cadastro sai no épico #11.
+
+  O corpo devolve o usuário criado e grava o cookie de sessão, então dá para
+  seguir direto para "Sessão atual" sem passar pelo login.
+
+  **Respostas que você vai encontrar**
+
+  | Status | Quando |
+  | --- | --- |
+  | 200 | Conta criada, sessão devolvida |
+  | 422 | E-mail já cadastrado — troque o e-mail do corpo |
+  | 403 | `Origin` ausente ou `null` (ver docs da coleção) |
+  | 429 | Mais de 5 cadastros no mesmo minuto |
+
+  `isPlatformAdmin` é ignorado se você mandar no corpo. O campo é `input: false`
+  de propósito: quem pode ser super admin é decisão do servidor (RF-101), e é
+  essa fronteira que o RF-105 protege. Tente mandar `"isPlatformAdmin": true` e
+  confira que a resposta volta `false`.
+}

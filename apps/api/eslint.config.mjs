@@ -12,8 +12,12 @@ export default tseslint.config(
 			globals: globals.node,
 			parserOptions: {
 				projectService: {
-					// drizzle.config.ts and test/ sit outside tsconfig.json's `include: ["src"]`.
-					allowDefaultProject: ["drizzle.config.ts", "test/*.ts"],
+					// These sit outside tsconfig.json's `include: ["src"]`.
+					allowDefaultProject: [
+						"drizzle.config.ts",
+						"auth.config.ts",
+						"test/*.ts",
+					],
 				},
 				tsconfigRootDir: import.meta.dirname,
 			},

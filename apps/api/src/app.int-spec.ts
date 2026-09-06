@@ -3,7 +3,7 @@ import { healthResponseSchema } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
-import { configureApp } from "./app";
+import { configureApp, nestApplicationOptions } from "./app";
 import { AppModule } from "./app.module";
 
 let app: INestApplication;
@@ -14,7 +14,7 @@ beforeAll(async () => {
 		imports: [AppModule],
 	}).compile();
 
-	app = moduleRef.createNestApplication();
+	app = moduleRef.createNestApplication(nestApplicationOptions);
 	configureApp(app);
 	await app.init();
 
@@ -48,6 +48,16 @@ describe("GET /api/health", () => {
 		const res = await request(server).get("/api/health?verbose=maybe");
 
 		expect(res.status).toBe(400);
+	});
+});
+
+describe("security headers", () => {
+	test("are applied by helmet, and the framework banner is gone", async () => {
+		const res = await request(server).get("/api/health");
+
+		expect(res.headers["x-content-type-options"]).toBe("nosniff");
+		expect(res.headers["x-frame-options"]).toBe("SAMEORIGIN");
+		expect(res.headers["x-powered-by"]).toBeUndefined();
 	});
 });
 

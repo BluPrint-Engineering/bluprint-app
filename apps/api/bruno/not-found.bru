@@ -14,3 +14,12 @@ assert {
   res.status: eq 404
   res.body.error: eq Not Found
 }
+
+docs {
+  Rota que não existe. Serve para verificar o contrato de erro da API: todo
+  não-2xx responde `{"error": "..."}`, e não o corpo verboso que o Nest devolve
+  por padrão.
+
+  Quem sustenta isso é o `AllExceptionsFilter`. Se ele sair, esta requisição é a
+  primeira a acusar — o front lança em qualquer não-2xx sem ler o corpo.
+}

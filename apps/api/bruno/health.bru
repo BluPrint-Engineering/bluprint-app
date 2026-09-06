@@ -20,3 +20,15 @@ assert {
   res.body.database: eq up
   res.body.verbose.runtime: contains node
 }
+
+docs {
+  Diz se a API está de pé e se ela alcança o Postgres. `status` é `ok` com o
+  banco no ar e `degraded` quando ele cai depois do boot; `database` é `up` ou
+  `down`. A resposta sempre traz `timestamp` e `uptime` em segundos.
+
+  `verbose=true` acrescenta o bloco `verbose`, com `environment` e `runtime`.
+
+  É a rota que o deploy vai usar como healthcheck e a **única pública** da API:
+  todas as outras nascem protegidas pelo `AuthGuard` global, e esta é a exceção
+  explícita, marcada com `@AllowAnonymous()` no controller.
+}

@@ -27,7 +27,7 @@ Monorepo com **Bun workspaces**. O Bun é gerenciador de pacotes e runner de scr
 | Validação | Zod v4 em `packages/shared`, aplicado na API por `nestjs-zod` |
 | ORM | Drizzle, driver `node-postgres` (`pg`) |
 | Banco | PostgreSQL — provedor **em aberto**; em dev, container local |
-| Auth | Better Auth (self-hosted na API) |
+| Auth | Better Auth (self-hosted na API), montado no Nest por `@thallesp/nestjs-better-auth` |
 | Storage de imagem | Object storage compatível com S3 — provedor **em aberto** |
 | Host da API | **em aberto** |
 | Host do front | **em aberto** |
@@ -44,6 +44,7 @@ Monorepo com **Bun workspaces**. O Bun é gerenciador de pacotes e runner de scr
 - **ESLint + Prettier na API, Biome no front** — o Biome não roda regra com informação de tipo, e é justamente isso que a API precisa: `no-floating-promises` numa service `async`, `no-misused-promises` num handler. No front, onde a regra que importa é de React e não de tipo, o Biome continua ganhando por ser um binário só. A divisão também é **imposta**: o `typescript-eslint` não suporta o compilador nativo do TypeScript 7, que não expõe API JavaScript nenhuma, então rodar ESLint na raiz custaria rebaixar o TypeScript do monorepo inteiro. Os dois estão configurados com tab e aspas duplas — a fronteira é de ferramenta, não de estilo. O que se perde é o `organizeImports` automático do Biome, que no ESLint não tem equivalente nativo.
 - **NestJS** — o Hono era a escolha certa enquanto a runtime era Bun: framework mínimo, convenção por nossa conta. Em Node a comparação muda. Ou reescrevemos injeção de dependência, fronteira de módulo, guarda e filtro de erro, ou usamos um framework que já entrega isso e o **impõe por construção** em vez de por code review. O que decidiu foi o que vem pela frente: RF-121/RF-122 (papel por obra) viram guards, o Better Auth vira um módulo, e a fronteira rota/service que este documento já prescrevia deixa de ser combinado e passa a ser estrutura. O preço está explícito e é real — decorators, que tiram `apps/api` do `tsconfig` base do monorepo (ver § Estrutura do back), um passo de build no lugar de rodar o `.ts` direto, e `--watch` com restart no lugar de hot reload. Hono sobre `@hono/node-server` manteria o código e não compraria nada disso.
 - **nestjs-zod** — mantém o Zod de `packages/shared` como a única fonte de validação: `createZodDto()` embrulha o schema num DTO que o `ZodValidationPipe` global lê pelo metadado do decorator. A alternativa nativa do Nest é `class-validator` + `class-transformer`, que duplicaria o contrato em decorators de classe e quebraria a espinha de schema compartilhado — o front deixaria de ser validado pelo mesmo objeto que a API.
+- **Better Auth** — self-hosted, com o adapter Drizzle e montado no Nest pelo pacote community que a doc oficial dele aponta. O motivo, as hospedadas descartadas e o que a montagem impõe estão em § Autenticação, que é longa demais para caber aqui.
 - **Bruno** — coleção fica como arquivo no repo: versionada em git, revisável em PR, sem conta em nuvem nem sync pago.
 
 Os demais itens (React/Vite/Tailwind, TanStack, React Hook Form + Zod, shadcn/ui, Drizzle) não têm alternativa descartada que valha registrar — são a escolha padrão do ecossistema para o papel que cumprem.
@@ -88,10 +89,11 @@ apps/web/src/
 ```
 apps/api/src/
 ├── main.ts            entrypoint — cria o app Nest, aplica configureApp e abre a porta
-├── app.ts             configureApp(app): prefixo global, CORS, pipe de validação e filtro de
-│                       erro. O teste chama a mesma função — é o que impede um contrato que
-│                       só vale em produção
+├── app.ts             configureApp(app): prefixo global, helmet, CORS, pipe de validação e
+│                       filtro de erro, mais nestApplicationOptions. O teste usa os dois — é
+│                       o que impede um contrato que só vale em produção
 ├── app.module.ts      módulo raiz — ConfigModule (env validado no boot) e os módulos de domínio
+├── auth/              instância do Better Auth e o módulo que a monta no Nest (§ Autenticação)
 ├── <domínio>/         um módulo por domínio: controller, service, module, dto/
 ├── common/            o que atravessa todos os módulos: filtros, pipes, guards, interceptors
 ├── db/                DatabaseModule: pool, instância Drizzle, schema, check de conexão no boot
@@ -162,6 +164,104 @@ por isso registrar domínio próprio é requisito do deploy (ver § Hospedagem e
 
 **Consequência para quem escreve rota:** o caminho na API, na coleção do Bruno e no teste de
 integração inclui o prefixo (`/api/health`); o caminho passado ao `apiFetch` não (`/health`).
+
+## Autenticação
+
+**Better Auth self-hosted na API**, com o adapter Drizzle e montado no NestJS pelo pacote
+community `@thallesp/nestjs-better-auth` — o que a documentação oficial do Better Auth aponta, e o
+único caminho documentado, porque **não existe adapter first-party para Nest**. O que decidiu o
+Better Auth foi ser self-hosted: conta, sessão e senha ficam no nosso Postgres, sem provedor externo
+no caminho do login e sem conta em nuvem para desenvolver. As alternativas hospedadas (Auth0, Clerk,
+Supabase Auth) foram descartadas pelo mesmo motivo pelo qual o resto da stack roda local: elas
+tornariam impossível rodar o projeto inteiro offline, e a fronteira de permissão do produto
+(RF-121/RF-122, papel por obra) vive no nosso banco de qualquer jeito.
+
+Onde o código mora: `src/auth/auth.ts` monta a instância a partir do Drizzle injetado,
+`src/auth/auth.module.ts` a entrega ao pacote do Nest por `forRootAsync`, e `auth.config.ts`, na raiz
+do workspace, é o que a CLI do Better Auth lê para gerar o schema — mesmo lugar e mesmo motivo do
+`drizzle.config.ts`.
+
+**Como a sessão viaja.** Cookie `httpOnly` + `SameSite=Lax` (`Secure` em produção), que é o default
+do Better Auth, com **90 dias de validade e renovação a cada 1 dia de uso** (RNF-04). O front nunca
+envia `rememberMe: false` — isso transformaria o cookie em cookie de sessão do navegador e mataria a
+persistência independentemente do prazo. A origem única (§ acima) é o que torna esse cookie
+first-party.
+
+**Quatro coisas que a montagem no Nest impõe**, e que quebram em runtime se alguma sair:
+
+- **`bodyParser: false` na criação do app.** O handler do Better Auth lê o corpo da requisição do
+  stream; um parser que rodou antes o deixa vazio. O `AuthModule` recoloca JSON e urlencoded para
+  todo caminho **exceto** `/api/auth/*`, então as nossas rotas continuam recebendo corpo parseado. A
+  opção mora em `nestApplicationOptions` (`app.ts`) e o teste de integração cria o app com ela — em
+  um só dos dois lugares, só esse lugar quebra.
+- **Guard global.** O pacote registra um `AuthGuard` para todas as rotas. Rota nova nasce protegida
+  por esquecimento; o inverso vaza dado de obra. A exceção é anotada com `@AllowAnonymous()` e hoje
+  é uma só, `health.controller.ts`, com teste que garante que continua pública.
+- **`disableTrustedOriginsCors: true`.** Ligado, o módulo chama `enableCors` durante o `init` e
+  sobrescreve em silêncio o que `configureApp` configurou, com uma lista de métodos mais estreita.
+  CORS fica em um lugar só.
+- **As rotas de auth não passam pelo Nest.** Elas são servidas por middleware antes do router, então
+  não passam pelo `AllExceptionsFilter` nem pelo `ZodValidationPipe`: o corpo de erro delas é o do
+  Better Auth, não `{"error": "..."}`. O front precisa traduzir os dois formatos.
+
+**Defesas ligadas junto:** `helmet` para os cabeçalhos de segurança, o rate limit do próprio Better
+Auth (5 tentativas de login por minuto e por IP, com a ressalva do parágrafo seguinte — a
+biblioteca já traz um default mais estreito, e o nosso é escrito por extenso para que ninguém precise
+caçar de onde veio um 429), e
+`BETTER_AUTH_SECRET` obrigatório no `envSchema`: ausente ou curto, a API não sobe. Segredo fraco é
+sessão forjável, e ele é diferente entre dev e produção.
+
+**`trustedOrigins` recusa origem estranha, e isso aparece em ferramenta de API.** A checagem só roda
+quando a requisição **carrega cookie** — é essa a forma de um ataque CSRF —, então a primeira chamada
+de um cliente novo parece passar e as seguintes não. Com cookie: `Origin` fora da lista responde 403
+`INVALID_ORIGIN`, e `Origin: null` — o que um iframe em sandbox manda, e o que o Bruno manda quando
+ninguém define o header — responde 403 `MISSING_OR_NULL_ORIGIN`. Por isso as três requisições de auth
+da coleção do Bruno mandam `Origin: {{webOrigin}}` explicitamente.
+
+**Buraco conhecido no rate limit, que fecha no #21.** O Better Auth resolve o IP do cliente por
+cabeçalho (`x-forwarded-for` por padrão) e cai para `127.0.0.1` em dev e teste. Em produção, sem
+proxy reverso configurado, ele não resolve IP nenhum e **todas as tentativas caem num balde
+compartilhado por caminho** — o limite continua valendo, mas passa a ser global em vez de por IP, e
+uma pessoa errando a senha em looping tranca o login de todo mundo por um minuto. Consertar exige
+saber qual proxy fica na frente da API, que é decisão do deploy: quando ela existir, entram
+`advanced.ipAddress.ipAddressHeaders` e `advanced.ipAddress.trustedProxies`. Confiar no cabeçalho sem
+`trustedProxies` seria pior do que o estado de hoje — o atacante troca o valor a cada requisição e o
+limite deixa de existir.
+
+**Fora de escopo por decisão, não por esquecimento:** verificação de e-mail e recuperação de senha
+exigem provedor de e-mail transacional, e o primeiro e-mail que o produto precisa mandar de verdade
+é o convite — as duas coisas pertencem ao épico #11. Nessa configuração o cadastro já devolve sessão
+e as rotas de verificação e reset existem porém ficam inertes. **Consequência aceita:** sem
+verificação de e-mail, a proteção contra enumeração de e-mail fica inativa — a API responde
+diferente para e-mail já cadastrado. Impacto baixo num produto cujas contas são de funcionários
+convidados, mas é escolha, e fecha em #11.
+
+### Schema do Better Auth
+
+As quatro tabelas (`user`, `session`, `account`, `verification`) são **geradas**, nunca escritas à
+mão: `bun run --filter @bluprint/api auth:generate` reescreve `src/db/schema/auth.ts` a partir de
+`auth.config.ts`, e a migration sai do `drizzle-kit` como no resto do projeto. A senha mora em
+`account.password`, não em `user`. `is_platform_admin` é campo adicional do usuário com
+`input: false`, e é isso — não code review — que impede alguém de se marcar super admin pelo payload
+de cadastro (RF-101; é o RF-105 que essa fronteira protege). A coluna é `NOT NULL` de propósito: uma
+flag de privilégio que pode ser nula joga um terceiro caso em cima de toda checagem que a lê.
+
+As chaves estrangeiras para `user.id` são `text`, e continuam assim: as tabelas do Better Auth não
+carregam decisão nossa e ficam como a CLI as gera, mesmo quando as nossas usam `uuid`.
+
+**`casing: "snake_case"` precisa estar declarado nos dois lugares** — em `drizzle.config.ts`, que
+gera a migration, e na instância do Drizzle em `db/database.module.ts`. Em um só dos dois, a
+migration cria `email_verified` e a consulta pede `"emailVerified"`: passa no `typecheck`, passa no
+`build`, falha na primeira requisição.
+
+### Piso de versão do Node
+
+**Node 24.9+**, no `engines` do `apps/api` e no CI. O Better Auth e o pacote de integração publicam
+apenas ESM; a API compila para CommonJS e os alcança por `require(esm)`, que existe desde o Node
+22.12. O piso mais alto é do **Jest**: ele só faz `require(esm)` com `vm.SourceTextModule`, que pede
+Node 24.9 e a flag `--experimental-vm-modules` — daí o `NODE_OPTIONS` nos scripts de teste do
+`apps/api`. A alternativa era transpilar `node_modules` pelo `transformIgnorePatterns`, que é mais
+lento e esconde o problema em vez de resolvê-lo.
 
 ## Idioma
 
@@ -295,8 +395,10 @@ o Jest limpar um banco com dado de mão, e o runner nasce vazio e descartável a
 `docker/postgres/init-test-db.sql` não é reproduzido no CI porque `services:` não monta arquivo do
 repo em `docker-entrypoint-initdb.d`, e não precisa ser.
 
-Versões pinadas — Bun `1.4.0`, Node `22` (o piso de `apps/api`'s `engines`) — porque Jest e o Nest CLI
-têm shebang de Node mesmo com Bun rodando os scripts. `permissions: contents: read` no topo;
+Versões pinadas — Bun `1.4.0`, Node `24` (o piso de `apps/api`'s `engines`; ver § Piso de versão do
+Node) — porque Jest e o Nest CLI têm shebang de Node mesmo com Bun rodando os scripts.
+`BETTER_AUTH_SECRET` entra no `env:` do workflow com valor descartável: sem ele o `envSchema` recusa
+o boot e todo teste de integração falha. `permissions: contents: read` no topo;
 `pull_request_target` nunca é usado, porque o repo é público e essa trigger roda código de fork com
 permissão do repo-alvo.
 
