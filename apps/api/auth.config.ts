@@ -16,5 +16,6 @@ export const auth = createAuth(
 		secret: env.BETTER_AUTH_SECRET,
 		baseURL: env.BETTER_AUTH_URL,
 		trustedOrigins: [env.CORS_ORIGIN],
+		allowSelfSignup: env.ALLOW_SELF_SIGNUP,
 	},
 );

@@ -17,6 +17,7 @@ import { createAuth } from "./auth";
 					secret: config.get("BETTER_AUTH_SECRET", { infer: true }),
 					baseURL: config.get("BETTER_AUTH_URL", { infer: true }),
 					trustedOrigins: [config.get("CORS_ORIGIN", { infer: true })],
+					allowSelfSignup: config.get("ALLOW_SELF_SIGNUP", { infer: true }),
 				}),
 				// Left on, this module re-calls `enableCors` during init and
 				// overwrites what `configureApp` set.

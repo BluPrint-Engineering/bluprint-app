@@ -236,6 +236,50 @@ verificação de e-mail, a proteção contra enumeração de e-mail fica inativa
 diferente para e-mail já cadastrado. Impacto baixo num produto cujas contas são de funcionários
 convidados, mas é escolha, e fecha em #11.
 
+### Auto-cadastro é andaime
+
+O `docs/requisitos.md` descreve o produto final, onde ninguém se cadastra sozinho: a organização é
+criada à mão pelo super admin após pagamento (RF-102) e a conta nasce de convite (RF-129, RF-130).
+O auto-cadastro que existe hoje é **andaime deliberado** para destravar o épico #1, e sai em
+#11/#12. Está registrado aqui, e não lá, exatamente por isso.
+
+**A flag.** `ALLOW_SELF_SIGNUP` no `envSchema`, `z.stringbool()` e **default `false`**: um host que
+nunca declare a variável não abre a porta por esquecimento. Desligada, `POST /api/auth/sign-up/email`
+responde **403** `SELF_SIGNUP_DISABLED`, e só o cadastro — login, sessão e logout continuam
+funcionando, que é o que torna a flag segura de virar num ambiente com gente logada. O 403 vem de um
+`hooks.before` em `auth.ts`, e não do `emailAndPassword.disableSignUp` da própria biblioteca, que
+responde 400, nem do `disabledPaths`, que responde 404. Consequência para quem depura: **a rota tem
+dois 403 sem relação nenhuma** — este e o `MISSING_OR_NULL_ORIGIN`/`INVALID_ORIGIN` do
+`trustedOrigins`. Só o `code` do corpo distingue. A flag é lida no boot: trocar o `.env` exige
+reiniciar a API. O CI carrega `ALLOW_SELF_SIGNUP: "true"` no `env:` do workflow, porque lá não
+existe `.env` e sem ela todo teste de integração de auth cai.
+
+**O que o cadastro semeia.** Na mesma requisição nascem a organização daquela pessoa, o vínculo
+`member` com papel padrão `admin` e **três licenças livres** (`auth/signup-provisioning.ts`). Não é
+uma segunda chamada do front: se a rede caísse entre as duas, nasceria usuário órfão, e quem decide
+que alguém é admin de algo é o servidor. O que é andaime aqui é **quem** cria as licenças — a
+licença em si é real desde já, porque é a checagem "existe licença livre?" que decide se a obra
+nasce (RF-110, RF-112).
+
+**Não é uma transação só, e isso é escolha.** O épico previa semear dentro da transação que cria o
+usuário. O Better Auth não permite: todo gancho `create.after` é enfileirado por
+`queueAfterTransactionHook` e drenado **depois** do commit, e o gancho não recebe a transação —
+é a forma da API, não configuração. O que ele garante é que a fila é drenada **antes** de a resposta
+existir. Então o desenho é uma **saga compensada**: as três tabelas nascem numa transação nossa e,
+se ela falhar, o usuário recém-criado é apagado (`session` e `account` caem por cascade) e o erro é
+relançado — 500 sem cookie de sessão. De fora é indistinguível de uma transação só: nenhum usuário
+fica sem organização, e nenhuma sessão é devolvida numa falha. **Resíduo aceito:** se o Postgres
+ficar inalcançável entre o commit do usuário e o `DELETE`, sobra um órfão. É falha de infra, e a
+alternativa custava fiação acoplada a internals não documentados da biblioteca.
+
+O `throw` do gancho precisa ser um `Error` puro e nunca um `APIError` — só o `Error` puro cai na
+resposta 500 sem cabeçalho nenhum, e é isso que garante que nenhum `Set-Cookie` acompanhe um
+cadastro que falhou.
+
+**Para o #11:** o gancho semeia em **toda** criação de usuário, não só no auto-cadastro. O convidado
+entra numa organização que **já existe**, então esse gancho tem de mudar junto com a flag — não é
+garantia que o fluxo de convite herde de graça.
+
 ### Schema do Better Auth
 
 As quatro tabelas (`user`, `session`, `account`, `verification`) são **geradas**, nunca escritas à
@@ -398,7 +442,14 @@ repo em `docker-entrypoint-initdb.d`, e não precisa ser.
 Versões pinadas — Bun `1.4.0`, Node `24` (o piso de `apps/api`'s `engines`; ver § Piso de versão do
 Node) — porque Jest e o Nest CLI têm shebang de Node mesmo com Bun rodando os scripts.
 `BETTER_AUTH_SECRET` entra no `env:` do workflow com valor descartável: sem ele o `envSchema` recusa
-o boot e todo teste de integração falha. `permissions: contents: read` no topo;
+o boot e todo teste de integração falha. `ALLOW_SELF_SIGNUP: "true"` está lá pelo mesmo motivo — o
+default é `false` e sem ela nenhum teste consegue criar conta (ver § Autenticação). Entre aspas: YAML
+sem elas entrega booleano e o `z.stringbool()` recusa não-string.
+
+`drizzle-kit migrate` só olha `DATABASE_URL`. No CI as duas URLs apontam para o mesmo banco, então
+isso não aparece lá; **na máquina local aparece** — depois de puxar uma migration nova é preciso
+rodá-la também contra `DATABASE_URL_TEST`, ou `bun run test:int` falha com `relation ... does not
+exist` enquanto o CI está verde. `permissions: contents: read` no topo;
 `pull_request_target` nunca é usado, porque o repo é público e essa trigger roda código de fork com
 permissão do repo-alvo.
 
