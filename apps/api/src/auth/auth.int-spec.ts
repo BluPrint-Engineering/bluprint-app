@@ -65,6 +65,9 @@ beforeAll(async () => {
 	signUpResponse = await signedIn
 		.post(SIGN_UP)
 		.send({ email, password: PASSWORD, name: "Engenheira de Obra" });
+	// Asserted before the parse: a `.env` without ALLOW_SELF_SIGNUP answers 403,
+	// and the Zod issue about a missing `user` key never mentions sign-up.
+	expect(signUpResponse.status).toBe(200);
 	account = {
 		email,
 		userId: authUserSchema.parse(signUpResponse.body).user.id,

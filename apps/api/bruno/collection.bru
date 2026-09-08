@@ -12,8 +12,11 @@ docs {
   ## Antes de rodar
 
   1. `docker compose up -d --wait` — Postgres, uma vez por sessão.
-  2. `bun run dev` — sobe a API em `:3000` e o front em `:5173`.
-  3. Selecione o ambiente **local** no canto superior direito. Sem ele o
+  2. `.env` com `BETTER_AUTH_SECRET` e `ALLOW_SELF_SIGNUP=true`. Sem a segunda, o
+     passo 4 responde 403 e a coleção parece quebrada — o auto-cadastro é andaime
+     e nasce desligado (ver `docs/ARCHITECTURE.md` § Autenticação).
+  3. `bun run dev` — sobe a API em `:3000` e o front em `:5173`.
+  4. Selecione o ambiente **local** no canto superior direito. Sem ele o
      `{{baseUrl}}` não resolve e o Bruno responde `Invalid URL`.
 
   O ambiente define duas variáveis: `baseUrl` (`http://localhost:3000`) e
@@ -25,7 +28,7 @@ docs {
   | --- | --- | --- |
   | 1–2 | Health check | A API está de pé e o banco responde |
   | 3 | Rota desconhecida | O contrato de erro `{"error": "..."}` continua valendo |
-  | 4 | Cadastro | Cria conta e sessão |
+  | 4 | Cadastro | Cria conta, sessão, organização, vínculo `admin` e três licenças |
   | 5 | Login | Volta a entrar com a conta do passo 4 |
   | 6 | Sessão atual | Confirma que o cookie está valendo |
 

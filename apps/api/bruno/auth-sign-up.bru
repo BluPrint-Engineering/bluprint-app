@@ -16,9 +16,9 @@ headers {
 
 body:json {
   {
-    "email": "engenheira@example.com",
-    "password": "senha-de-obra-123",
-    "name": "Engenheira de Obra"
+    "email": "lucamandelli@example.com",
+    "password": "luca-de-obra-123",
+    "name": "Luca CTO"
   }
 }
 
@@ -27,21 +27,59 @@ docs {
   de e-mail, e não haverá enquanto não existir provedor de e-mail transacional
   (issue #11). É a única forma de nascer uma conta hoje; no produto final a conta
   vem de convite, e este auto-cadastro sai no épico #11.
-
+  
   O corpo devolve o usuário criado e grava o cookie de sessão, então dá para
   seguir direto para "Sessão atual" sem passar pelo login.
-
+  
+  **A mesma requisição cria o tenant inteiro.** Junto com o usuário nascem a
+  organização daquela pessoa, o vínculo com papel padrão `admin` e **três
+  licenças livres**. Não existe segunda chamada do front fazendo isso: se a rede
+  caísse entre as duas, nasceria usuário órfão — e quem decide que alguém é
+  admin de algo é o servidor.
+  
+  Nenhuma rota expõe essas linhas ainda, então a conferência é no banco. O jeito
+  mais rápido é `bun run --filter @bluprint/api db:studio`, que abre as tabelas no
+  navegador. De consulta:
+  
+      docker compose exec postgres psql -U bluprint -d bluprint
+  
+      select o.name, m.role, count(l.id) as licencas
+      from "user" u
+      join member m on m.user_id = u.id
+      join organization o on o.id = m.organization_id
+      left join license l on l.organization_id = o.id
+      where u.email = 'engenheira@example.com'
+      group by o.name, m.role;
+  
+  Espere uma linha, `role = admin` e `licencas = 3`. Entrar de novo pela rota de
+  login **não** semeia de novo — repetir a consulta depois do login continua
+  devolvendo 3.
+  
   **Respostas que você vai encontrar**
-
+  
   | Status | Quando |
   | --- | --- |
-  | 200 | Conta criada, sessão devolvida |
-  | 422 | E-mail já cadastrado — troque o e-mail do corpo |
-  | 403 | `Origin` ausente ou `null` (ver docs da coleção) |
+  | 200 | Conta criada, sessão e tenant devolvidos |
+  | 400 | Senha com menos de 8 caracteres — corpo `PASSWORD_TOO_SHORT` |
+  | 422 | E-mail já cadastrado — corpo `USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL` |
+  | 403 | `ALLOW_SELF_SIGNUP` desligada no servidor — corpo `SELF_SIGNUP_DISABLED` |
+  | 403 | `Origin` ausente ou `null` — corpo `MISSING_OR_NULL_ORIGIN` |
   | 429 | Mais de 5 cadastros no mesmo minuto |
-
+  
+  **Os dois 403 não têm relação nenhuma.** Um é a flag de auto-cadastro, o outro
+  é o `trustedOrigins`. Mesmo status, causas distintas — leia o `code` do corpo
+  antes de mexer no header `Origin`, ou perde meia hora.
+  
+  A flag é lida no boot, e `nest start --watch` observa `apps/api/src` e não o
+  `.env` da raiz: trocar `ALLOW_SELF_SIGNUP` exige reiniciar a API.
+  
   `isPlatformAdmin` é ignorado se você mandar no corpo. O campo é `input: false`
   de propósito: quem pode ser super admin é decisão do servidor (RF-101), e é
   essa fronteira que o RF-105 protege. Tente mandar `"isPlatformAdmin": true` e
   confira que a resposta volta `false`.
+  
+  **Sem `assert` de propósito.** A requisição não é idempotente — o e-mail do
+  corpo precisa ser trocado à mão a cada rodada, e um `res.status: eq 200` ficaria
+  vermelho na segunda, o que treina a ignorar assert vermelho. Quem prova o
+  contrato são os `*.int-spec.ts`.
 }

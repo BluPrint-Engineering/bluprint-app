@@ -16,8 +16,8 @@ headers {
 
 body:json {
   {
-    "email": "engenheira@example.com",
-    "password": "senha-de-obra-123"
+    "email": "lucamandelli@example.com",
+    "password": "luca-de-obra-123"
   }
 }
 
@@ -25,16 +25,16 @@ docs {
   Autentica com e-mail e senha e devolve uma sessão nova, gravando o cookie por
   cima do anterior. Use depois do cadastro para simular quem volta ao app em
   outro aparelho.
-
+  
   **Respostas que você vai encontrar**
-
+  
   | Status | Quando |
   | --- | --- |
   | 200 | Autenticado, cookie de sessão renovado |
   | 401 | Senha errada, ou e-mail que não existe |
   | 403 | `Origin` ausente ou `null` (ver docs da coleção) |
   | 429 | Mais de 5 tentativas no mesmo minuto, por IP |
-
+  
   O 429 é o rate limit fazendo o trabalho dele contra força bruta, não um defeito
   da coleção. Ele libera sozinho depois de um minuto.
 }

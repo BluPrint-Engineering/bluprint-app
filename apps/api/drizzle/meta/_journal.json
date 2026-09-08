@@ -15,6 +15,13 @@
       "when": 1788655820741,
       "tag": "0001_better_auth_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1788825938710,
+      "tag": "0002_organization_member_license",
+      "breakpoints": true
     }
   ]
 }
