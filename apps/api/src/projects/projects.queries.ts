@@ -34,3 +34,16 @@ export function listVisibleProjects(db: Executor, userId: string) {
 			.orderBy(desc(project.createdAt), desc(project.id))
 	);
 }
+
+export async function insertProject(
+	db: Executor,
+	values: { organizationId: string; name: string },
+): Promise<{ id: string; name: string; createdAt: Date }> {
+	const [created] = await db.insert(project).values(values).returning({
+		id: project.id,
+		name: project.name,
+		createdAt: project.createdAt,
+	});
+
+	return created!;
+}
