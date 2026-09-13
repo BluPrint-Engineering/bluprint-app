@@ -7,6 +7,7 @@
 		"packages/*"
 	],
 	"scripts": {
+		"prepare": "lefthook install",
 		"dev": "bun run --filter @bluprint/shared build && bun run --parallel --filter '*' --if-present dev",
 		"build": "bun run --filter @bluprint/shared build && bun run --filter './apps/*' --if-present build",
 		"test": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test",
@@ -19,6 +20,7 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.11",
+		"lefthook": "2.1.12",
 		"typescript": "7.0.2"
 	}
 }

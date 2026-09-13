@@ -1,0 +1,37 @@
+pre-commit:
+  parallel: true
+  jobs:
+    - name: biome
+      glob: "*.{js,jsx,ts,tsx,mjs,cjs,json,jsonc,css}"
+      exclude:
+        - "apps/api/**"
+      run: bunx biome check --write --no-errors-on-unmatched --files-ignore-unknown=true {staged_files}
+      stage_fixed: true
+
+    - name: api
+      root: "apps/api/"
+      glob: "apps/api/**/*.{ts,mjs,js}"
+      group:
+        piped: true
+        jobs:
+          # Type-aware ESLint reads @bluprint/shared from dist/; a stale or
+          # missing build degrades the rules silently (ADR 0008/0018).
+          - run: bun run --filter @bluprint/shared build
+          - run: bunx eslint --fix --no-warn-ignored {staged_files}
+            stage_fixed: true
+          - run: bunx prettier --write --ignore-unknown {staged_files}
+            stage_fixed: true
+
+pre-push:
+  piped: true
+  jobs:
+    - run: bun run typecheck                    # builds @bluprint/shared first
+    - run: bun run test:unit                    # api only, no database needed
+    - run: bun run --filter @bluprint/web test  # web Vitest
+
+commit-msg:
+  jobs:
+    - name: conventional-commits
+      run: |
+        head -n1 {1} | grep -qE '^(feat|fix|docs|refactor|chore|test|ci)(\([a-z0-9-]+\))?!?: .+|^(Merge|Revert|fixup!|squash!|amend!)' \
+          || { echo "Commit subject must be Conventional Commits: type(scope): subject — see docs/ARCHITECTURE.md"; exit 1; }

@@ -139,7 +139,8 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 - **Migrations**: `drizzle-kit migrate` only reads `DATABASE_URL`. After pulling a new migration, run it against `DATABASE_URL_TEST` too, or `test:int` fails with `relation ... does not exist` while CI is green.
 - **Lint/format**: Biome in web and shared; ESLint + Prettier in the API ([0008](adr/0008-eslint-in-api-biome-elsewhere.md)).
 - **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Two tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), and `routes/` follows TanStack Router syntax (`admin.dashboard.tsx`, `$projectId.tsx`: a dot separates segments, `$` marks a parameter).
-- **Commits**: Conventional Commits in the imperative, `type(scope): subject`. Scope is the workspace (`api`, `web`, `shared`), omitted for repo-wide changes. Types in use: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `ci`. The body explains why, not what.
+- **Commits**: Conventional Commits in the imperative, `type(scope): subject`. Scope is the workspace (`api`, `web`, `shared`), omitted for repo-wide changes. Types in use: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `ci`. The body explains why, not what. A `commit-msg` git hook enforces the type list ([0045](adr/0045-local-git-hooks-with-lefthook.md)); adding a type means updating both this line and `lefthook.yml`'s regex.
+- **Local git hooks**: Lefthook ([0045](adr/0045-local-git-hooks-with-lefthook.md)), installed by `bun install`. Lint on commit (staged files only), typecheck + unit tests on push. CI ([0018](adr/0018-ci-runs-root-scripts.md)) is still the real gate; hooks are bypassable with `--no-verify`.
 - **Errors in the UI**: the API returns English error codes and messages; the web app translates them before display.
 
 ## 9. Future Considerations / Roadmap
