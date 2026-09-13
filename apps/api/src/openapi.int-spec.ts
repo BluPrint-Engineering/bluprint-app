@@ -119,6 +119,7 @@ describe("GET /api/docs/openapi.json", () => {
 
 	test("projects inherits the global session requirement", () => {
 		expect(document.paths["/api/projects"]?.get?.security).toBeUndefined();
+		expect(document.paths["/api/projects"]?.post?.security).toBeUndefined();
 		expect(document.security).toEqual([{ session: [] }]);
 	});
 });

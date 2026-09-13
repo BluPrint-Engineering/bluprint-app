@@ -1,7 +1,10 @@
 import { ProjectSummary } from "@bluprint/shared";
-import { Inject, Injectable } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import { ProblemException } from "../common/problems/problem.exception";
 import { DATABASE, Database } from "../db/database.module";
-import { listVisibleProjects } from "./projects.queries";
+import { consumeFreeLicense } from "../licenses/licenses.queries";
+import { findAdminOrganizationId } from "../members/members.queries";
+import { insertProject, listVisibleProjects } from "./projects.queries";
 
 @Injectable()
 export class ProjectsService {
@@ -18,5 +21,38 @@ export class ProjectsService {
 			createdAt: row.createdAt.toISOString(),
 			role: row.effectiveRole ?? "admin",
 		}));
+	}
+
+	async create(userId: string, name: string): Promise<ProjectSummary> {
+		const organizationId = await findAdminOrganizationId(this.db, userId);
+		if (!organizationId) {
+			throw new ForbiddenException();
+		}
+
+		const created = await this.db.transaction(async (tx) => {
+			// Before the license: `license.project_id` references it. The 409 below
+			// rolls this insert back.
+			const project = await insertProject(tx, { organizationId, name });
+
+			const license = await consumeFreeLicense(tx, organizationId, project.id);
+			if (!license) {
+				throw new ProblemException({
+					status: 409,
+					code: "NO_FREE_LICENSE",
+					detail: "The organization has no free license.",
+				});
+			}
+
+			return project;
+		});
+
+		return {
+			id: created.id,
+			name: created.name,
+			createdAt: created.createdAt.toISOString(),
+			// No project_member for the creator: an admin reaches every project
+			// through the organization — docs/adr/0024-admin-is-read-and-export-only.md
+			role: "admin",
+		};
 	}
 }

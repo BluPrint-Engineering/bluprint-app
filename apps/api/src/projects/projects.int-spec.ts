@@ -97,8 +97,8 @@ beforeAll(async () => {
 		role: "manager",
 	});
 
-	// `admin` is also, separately, project_member manager of project one — the
-	// shape #40 leaves behind for whoever creates a project.
+	// `admin` is also project_member manager of project one. Creating a project
+	// never grants this (#40); it exists to prove the effective role wins.
 	await db.insert(projectMember).values({
 		projectId: projectOne,
 		userId: admin.userId,
