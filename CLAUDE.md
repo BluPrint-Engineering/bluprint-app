@@ -28,7 +28,7 @@ A decision, the architecture or the spec changes by **pull request**, in the sam
 
 ## Conventions for one area
 
-`.claude/rules/{api,web,db-schema,code-comments}.md` load themselves when you read a file under their paths. Read one directly when writing a new file from scratch there, or after a compaction.
+`.claude/rules/{api,web,db-schema}.md` load themselves when you read a file under their paths. Read one directly when writing a new file from scratch there, or after a compaction. `.claude/rules/code-comments.md` has no path scope and is always loaded: it governs every comment you write, in any file.
 
 ## Commands
 

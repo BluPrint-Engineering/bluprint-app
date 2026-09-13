@@ -1,9 +1,3 @@
----
-paths:
-  - "apps/**/*.{ts,tsx}"
-  - "packages/**/*.ts"
----
-
 # Code comments
 
 A comment earns its place only when it is load-bearing: deleting it loses something the code cannot say. Three kinds qualify:
