@@ -54,10 +54,11 @@ no topo:
 - **`organization` não tem `slug`.** Nada endereça organização por nome ainda, e um slug inventado
   pelo andaime do auto-cadastro seria linha para o #12 limpar. Também não há `unique` em `name`:
   o RF-102 tem humano cadastrando, e duas construtoras podem se chamar igual.
-- **`license.project_id` chega no #39**, junto com a tabela `project` que ele referencia, para não
-  existir coluna sem integridade referencial no meio do caminho. Lá ela entra anulável, com FK e com
-  o `UNIQUE` — que é o guarda real por trás do `SKIP LOCKED` do #40 e não deve ser descartado como
-  redundante. Até lá toda licença é livre, porque nada consome licença ainda.
+- **`license.project_id` chegou na migration `0003` (#39)**, junto com a tabela `project` que ele
+  referencia, para não existir coluna sem integridade referencial no meio do caminho. Entrou
+  anulável, com FK e com o `UNIQUE` — que é o guarda real por trás do `SKIP LOCKED` do #40 e não deve
+  ser descartado como redundante. Até o #40 mergear, toda licença segue livre, porque nada consome
+  licença ainda.
 - **As nossas tabelas usam `timestamptz`** enquanto as geradas do Better Auth usam `timestamp` sem
   fuso. A divergência é de propósito: as delas não carregam decisão nossa.
 

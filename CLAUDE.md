@@ -18,7 +18,7 @@ Most of this product is specified and not yet built, so the code will not tell y
 | Where to host, which Postgres, which image storage | `docs/ARCHITECTURE.md` § Fora de escopo por enquanto — open on purpose. Settled: the API needs a long-lived process, so ephemeral-function hosts are out |
 | What CI runs, and why it's ordered that way | `docs/ARCHITECTURE.md` § CI |
 | Why a table or column is shaped that way | `docs/modelo-de-dados.md`, the section for that module — reasoning, not law; where it disagrees with a migration, the migration wins |
-| The shared-schema contract for a new route (schema in `packages/shared`, DTO, response parsing) and the Bruno entry it needs | `packages/shared/src/health.ts` → `apps/api/src/health/` → `apps/web/src/features/health/` → `apps/api/bruno/health.bru` is the worked, complete example |
+| The shared-schema contract for a new route (schema in `packages/shared`, DTO, response parsing) and the Bruno entry it needs | `packages/shared/src/health/` → `apps/api/src/health/` → `apps/web/src/features/health/` → `apps/api/bruno/health.bru` is the worked, complete example |
 | Creating, labelling or closing an issue; the project board | `docs/agents/issue-tracker.md` § Repo label conventions, § GitHub Project |
 | Which label marks a triage state | `docs/agents/triage-labels.md` |
 
@@ -26,7 +26,7 @@ Most of this product is specified and not yet built, so the code will not tell y
 
 - **Language.** English for identifiers, files, routes, API error messages and commit subjects; pt-BR for every string a user reads (RNF-05) and everything in `docs/`. Most of `git log` is pt-BR — write the subject in English anyway, as Conventional Commits: `feat(api): connect local Postgres via Drizzle`.
 - **DTOs are value imports, not type imports** — see `.claude/rules/api.md` for why this breaks at runtime, not compile time.
-- **Only `organization`, `member` and `license` exist beyond Better Auth's four**; `project` and everything below it is designed in `docs/modelo-de-dados.md` but not migrated yet — see `.claude/rules/db-schema.md` before touching `apps/api/src/db/` or a migration.
+- **Only `organization`, `member`, `license`, `project` and `project_member` exist beyond Better Auth's four**; everything below `project` in `docs/modelo-de-dados.md` is designed but not migrated yet — see `.claude/rules/db-schema.md` before touching `apps/api/src/db/` or a migration.
 - **Issue labels and the board are manual.** Each issue gets exactly one `tipo:`, exactly one `prio:`, at least one `area:`, then `gh project item-add 3 --owner BluPrint-Engineering --url <url>`.
 - **`gh pr create` skips the PR template.** Build the body from `.github/pull_request_template.md` — it's the checklist for what CI cannot verify. A block that doesn't apply is marked `n/a` and kept, never deleted.
 

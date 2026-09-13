@@ -1,7 +1,9 @@
 import { HealthResponse } from "@bluprint/shared";
 import { Controller, Get, Query } from "@nestjs/common";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+import { ZodSerializerDto } from "nestjs-zod";
 import { HealthQueryDto } from "./dto/health-query.dto";
+import { HealthResponseDto } from "./dto/health-response.dto";
 import { HealthService } from "./health.service";
 
 /** Every other route is protected by the global `AuthGuard`; health is the one
@@ -12,6 +14,7 @@ export class HealthController {
 	constructor(private readonly health: HealthService) {}
 
 	@Get()
+	@ZodSerializerDto(HealthResponseDto)
 	check(@Query() query: HealthQueryDto): Promise<HealthResponse> {
 		return this.health.check(query.verbose);
 	}

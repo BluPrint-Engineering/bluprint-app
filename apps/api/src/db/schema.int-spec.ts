@@ -5,7 +5,14 @@ import { eq } from "drizzle-orm";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 import { DATABASE, Database } from "./database.module";
-import { license, member, organization, user } from "./schema";
+import {
+	license,
+	member,
+	organization,
+	project,
+	projectMember,
+	user,
+} from "./schema";
 
 const UUID_V7 =
 	/^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
@@ -17,6 +24,7 @@ let db: Database;
  * uuid column would accept — which is what proves the foreign key stayed text. */
 const userId = `test-user-${randomUUID()}`;
 let organizationId: string;
+let projectId: string;
 
 beforeAll(async () => {
 	const moduleRef = await Test.createTestingModule({
@@ -102,5 +110,81 @@ describe("license", () => {
 
 		expect(found?.organizationId).toBe(organizationId);
 		expect(found?.id).toMatch(UUID_V7);
+	});
+
+	test("two free licenses (null project_id) coexist in the same organization", async () => {
+		const created = await db
+			.insert(license)
+			.values([{ organizationId }, { organizationId }])
+			.returning({ id: license.id });
+
+		expect(created).toHaveLength(2);
+
+		await db.delete(license).where(eq(license.id, created[0]!.id));
+		await db.delete(license).where(eq(license.id, created[1]!.id));
+	});
+});
+
+describe("project", () => {
+	test("writes and reads back the same row", async () => {
+		const [created] = await db
+			.insert(project)
+			.values({ organizationId, name: "Casa Moinhos" })
+			.returning({ id: project.id });
+		projectId = created!.id;
+
+		const found = await db.query.project.findFirst({
+			where: eq(project.id, projectId),
+		});
+
+		expect(found?.name).toBe("Casa Moinhos");
+		expect(found?.organizationId).toBe(organizationId);
+		expect(found?.id).toMatch(UUID_V7);
+	});
+});
+
+describe("project_member", () => {
+	test("writes and reads back the effective role and Better Auth's user id", async () => {
+		await db
+			.insert(projectMember)
+			.values({ projectId, userId, role: "manager" });
+
+		const found = await db.query.projectMember.findFirst({
+			where: eq(projectMember.userId, userId),
+		});
+
+		expect(found?.role).toBe("manager");
+		expect(found?.userId).toBe(userId);
+		expect(found?.projectId).toBe(projectId);
+	});
+});
+
+describe("license.projectId", () => {
+	test("writes and reads back a license consumed by a project", async () => {
+		const [created] = await db
+			.insert(license)
+			.values({ organizationId, projectId })
+			.returning({ id: license.id });
+
+		const found = await db.query.license.findFirst({
+			where: eq(license.id, created!.id),
+		});
+
+		expect(found?.projectId).toBe(projectId);
+
+		await db.delete(license).where(eq(license.id, created!.id));
+	});
+
+	test("rejects a second license pointing at the same project (#40's SKIP LOCKED guard)", async () => {
+		const [first] = await db
+			.insert(license)
+			.values({ organizationId, projectId })
+			.returning({ id: license.id });
+
+		await expect(
+			db.insert(license).values({ organizationId, projectId }),
+		).rejects.toThrow();
+
+		await db.delete(license).where(eq(license.id, first!.id));
 	});
 });
