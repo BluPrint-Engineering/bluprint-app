@@ -78,7 +78,7 @@ beforeAll(async () => {
 
 	// `linked` reaches project one and two through project_member, not through
 	// member — proving authorization reads the project membership, never the
-	// organization membership. Different roles in each project.
+	// organization membership.
 	await db.insert(member).values({
 		organizationId,
 		userId: linked.userId,

@@ -12,8 +12,8 @@ export function listVisibleProjects(db: Executor, userId: string) {
 				effectiveRole: projectMember.role,
 			})
 			.from(project)
-			// Requires the caller to belong to the organization that owns the
-			// project — this join is the isolation boundary: no row, no match.
+			// The tenant isolation boundary: without it, a project_member row alone
+			// would reach another organization's project.
 			.innerJoin(
 				member,
 				and(
@@ -28,11 +28,8 @@ export function listVisibleProjects(db: Executor, userId: string) {
 					eq(projectMember.userId, userId),
 				),
 			)
-			// A project_member row is sufficient on its own — a plain
-			// manager/assistant with no org-level admin role still gets in. The
-			// admin check is the fallback for when it's absent; when both are
-			// true — an admin who is also project_member — the effective role
-			// still wins below.
+			// Organization membership alone admits only an admin; a default role
+			// never authorizes: docs/adr/0022-roles-live-on-project-membership.md
 			.where(or(isNotNull(projectMember.id), eq(member.role, "admin")))
 			.orderBy(desc(project.createdAt), desc(project.id))
 	);

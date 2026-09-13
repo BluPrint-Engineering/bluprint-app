@@ -23,8 +23,8 @@ export async function provisionTenant(
 	});
 }
 
-// Once the `user` row is committed, this is the only way left to keep a
-// failed signup from leaving someone without an organization.
+// Compensates a failed `provisionTenant`:
+// docs/adr/0012-signup-seeding-as-compensated-saga.md
 export async function discardUser(db: Database, userId: string): Promise<void> {
 	await deleteUser(db, userId);
 }
