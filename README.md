@@ -38,7 +38,7 @@ Every root script builds `packages/shared` first, because both apps consume it f
 ```
 apps/
 ├── web/              React SPA (Vite)
-└── api/              NestJS API on Node; bruno/ holds the API collection, drizzle/ the migrations
+└── api/              NestJS API on Node; docs at /api/docs, drizzle/ the migrations
 packages/shared/       Zod schemas and types both apps agree on; built to dist/ before anything else
 docs/                  ARCHITECTURE.md, data-model.md, requisitos.md (pt-BR product spec), adr/, agents/
 docker/postgres/       init script that creates the test database

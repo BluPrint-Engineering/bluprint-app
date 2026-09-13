@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Server } from "node:http";
-import { projectListSchema } from "@bluprint/shared";
+import { problemDetailsSchema, projectListSchema } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { eq } from "drizzle-orm";
@@ -172,7 +172,7 @@ describe("GET /api/projects", () => {
 		const res = await request(server).get(PROJECTS);
 
 		expect(res.status).toBe(401);
-		expect(res.body).toEqual({ error: "Unauthorized" });
+		expect(problemDetailsSchema.parse(res.body).code).toBe("UNAUTHORIZED");
 	});
 
 	test("never leaks a field outside the shared response schema", async () => {

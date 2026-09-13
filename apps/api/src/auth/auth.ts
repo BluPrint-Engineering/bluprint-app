@@ -2,6 +2,7 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { Database } from "../db/database.module";
+import { withProblemDetails } from "./auth-problem-details";
 import { discardUser, provisionTenant } from "./signup-provisioning";
 
 const MINUTE = 60;
@@ -20,7 +21,7 @@ export interface AuthOptions {
 }
 
 export function createAuth(db: Database, options: AuthOptions) {
-	return betterAuth({
+	const auth = betterAuth({
 		// `transaction` is off by default in the adapter, which makes `user`,
 		// `account` and `session` three separate autocommits.
 		database: drizzleAdapter(db, { provider: "pg", transaction: true }),
@@ -97,4 +98,6 @@ export function createAuth(db: Database, options: AuthOptions) {
 			},
 		},
 	});
+
+	return { ...auth, handler: withProblemDetails(auth.handler) };
 }

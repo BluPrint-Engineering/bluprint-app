@@ -24,6 +24,7 @@ Closes #
 
 <!-- No API change? Write n/a on this line and leave the boxes as they are. -->
 
-- [ ] New route has an entry in the Bruno collection — `.bru` path: 
+- [ ] New route is documented in OpenAPI (`@ApiTags`, `@ApiOperation`, `@ZodResponse`, `@ApiErrorResponses`) — checked at `/api/docs`
+- [ ] A failure the client acts on throws `ProblemException` with a stable `code`, and the web maps that `code` to pt-BR
 - [ ] New route follows the contract: schema in `packages/shared`, `nestjs-zod` DTO in the API, parsed in the web app's `apiFetch` (`/health` is the complete example)
 - [ ] The action records author, project and time

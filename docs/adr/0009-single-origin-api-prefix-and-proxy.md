@@ -5,7 +5,7 @@ The API mounts everything under the global prefix `api` (`configureApp` in `app.
 ## Consequences
 
 - In production the web app and the API must share the same registrable domain. Free subdomains from different providers (`*.pages.dev` + `*.fly.dev`) are different domains and break the cookie, so owning a domain is a requirement of the first deploy.
-- The path in the API, in the Bruno collection and in integration tests includes the prefix (`/api/health`); the path passed to `apiFetch` does not (`/health`).
+- The path in the API, in the OpenAPI document and in integration tests includes the prefix (`/api/health`); the path passed to `apiFetch` does not (`/health`).
 
 ## Considered Options
 
