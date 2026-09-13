@@ -135,6 +135,13 @@ apps/api/src/
 - **Schemas Zod de request/response** que o front também precisa moram em `packages/shared` (ex.:
   `healthQuerySchema`, `healthResponseSchema`), importados aqui pelo DTO e lá pelo `apiFetch`. Um
   schema só sobe para lá quando front e API precisam concordar sobre ele — ver "Estrutura do front".
+  Dentro do pacote, **uma pasta por domínio** com seu `index.ts` (`health/`, `projects/`) e **um
+  arquivo por contrato**, com o nome do DTO que o consome sem o `.dto` — `health/health-query.ts` é o
+  schema de `apps/api/src/health/dto/health-query.dto.ts`. O que atravessa domínios fica na raiz
+  (`roles.ts`, usado por `member` e `project_member`). Nunca pasta por tipo (`requests/`,
+  `responses/`): espalha um domínio por três lugares, pelo mesmo motivo que `controllers/` e
+  `services/` na raiz. Todo consumidor importa de `@bluprint/shared`, então mover arquivo dentro do
+  pacote não muda import nenhum fora dele.
 - **Todo controller declara o que devolve com um DTO de resposta**, criado por `createZodDto()` sobre
   o schema de saída e aplicado com `@ZodSerializerDto()` (ver `apps/api/src/projects/`). O
   `ZodSerializerInterceptor`, registrado uma vez em `app.ts`, valida o retorno do handler contra esse

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { effectiveRoles } from "./roles.js";
+import { effectiveRoles } from "../roles.js";
 
 /** RF-134: the role reported for a project is the effective one when the
  * caller has a vínculo with the project (RF-122), and `admin` when access

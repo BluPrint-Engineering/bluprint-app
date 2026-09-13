@@ -1,3 +1,3 @@
-export * from "./health.js";
-export * from "./projects.js";
+export * from "./health/index.js";
+export * from "./projects/index.js";
 export * from "./roles.js";

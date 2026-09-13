@@ -18,7 +18,7 @@ Most of this product is specified and not yet built, so the code will not tell y
 | Where to host, which Postgres, which image storage | `docs/ARCHITECTURE.md` § Fora de escopo por enquanto — open on purpose. Settled: the API needs a long-lived process, so ephemeral-function hosts are out |
 | What CI runs, and why it's ordered that way | `docs/ARCHITECTURE.md` § CI |
 | Why a table or column is shaped that way | `docs/modelo-de-dados.md`, the section for that module — reasoning, not law; where it disagrees with a migration, the migration wins |
-| The shared-schema contract for a new route (schema in `packages/shared`, DTO, response parsing) and the Bruno entry it needs | `packages/shared/src/health.ts` → `apps/api/src/health/` → `apps/web/src/features/health/` → `apps/api/bruno/health.bru` is the worked, complete example |
+| The shared-schema contract for a new route (schema in `packages/shared`, DTO, response parsing) and the Bruno entry it needs | `packages/shared/src/health/` → `apps/api/src/health/` → `apps/web/src/features/health/` → `apps/api/bruno/health.bru` is the worked, complete example |
 | Creating, labelling or closing an issue; the project board | `docs/agents/issue-tracker.md` § Repo label conventions, § GitHub Project |
 | Which label marks a triage state | `docs/agents/triage-labels.md` |
 
