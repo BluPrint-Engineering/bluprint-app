@@ -1,7 +1,8 @@
 import { INestApplication, NestApplicationOptions } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { Reflector } from "@nestjs/core";
 import helmet from "helmet";
-import { ZodValidationPipe } from "nestjs-zod";
+import { ZodSerializerInterceptor, ZodValidationPipe } from "nestjs-zod";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { Env } from "./lib/env";
 
@@ -22,4 +23,5 @@ export function configureApp(app: INestApplication): void {
 	app.enableCors({ origin: config.get("CORS_ORIGIN", { infer: true }) });
 	app.useGlobalPipes(new ZodValidationPipe());
 	app.useGlobalFilters(new AllExceptionsFilter());
+	app.useGlobalInterceptors(new ZodSerializerInterceptor(app.get(Reflector)));
 }

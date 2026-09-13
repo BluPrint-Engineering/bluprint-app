@@ -1,0 +1,57 @@
+meta {
+  name: Minhas obras
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/api/projects
+  body: none
+  auth: none
+}
+
+assert {
+  res.status: eq 200
+}
+
+docs {
+  Lista as obras visíveis para quem chama, com o papel de quem chama em cada
+  uma (RF-134). Rode depois do cadastro ou do login — o cookie de sessão do
+  passo anterior é o que autentica esta chamada.
+
+  **Respostas que você vai encontrar**
+
+  | Status | Quando |
+  | --- | --- |
+  | 200 com `[]` | Sessão válida, nenhuma obra visível ainda |
+  | 200 com obras | Sessão válida, uma ou mais obras visíveis |
+  | 401 | Sem cookie de sessão, ou sessão expirada |
+
+  **O papel depende de como o acesso chegou.** Quem tem vínculo com a obra
+  (`project_member`) recebe o papel efetivo daquele vínculo — `manager` ou
+  `assistant` (RF-122, RF-124). Quem não tem vínculo com a obra, mas é `admin`
+  da organização, enxerga a obra mesmo assim e recebe `admin` (RF-111, RF-114).
+  Sem vínculo com a organização, a obra nem aparece — é o isolamento de dados
+  entre construtoras (RNF-03).
+
+  **A issue #40 (criar obra) ainda não existe.** Até lá, a única forma de ter
+  algo para listar é semear uma obra à mão. Depois do cadastro do passo 4:
+
+      docker compose exec postgres psql -U bluprint -d bluprint
+
+      -- pega a organização de quem acabou de se cadastrar
+      select o.id as organization_id, m.user_id
+      from organization o
+      join member m on m.organization_id = o.id
+      where m.role = 'admin'
+      order by m.created_at desc
+      limit 1;
+
+      -- cria a obra nessa organização
+      insert into project (organization_id, name)
+      values ('<organization_id acima>', 'Casa Moinhos');
+
+  Rode esta requisição de novo: a obra aparece com `role: "admin"`, porque
+  quem a criou por SQL não ganhou vínculo `project_member` — é exatamente a
+  lacuna que o #40 fecha.
+}
