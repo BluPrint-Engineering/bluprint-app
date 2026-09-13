@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { Server } from "node:http";
-import { healthResponseSchema } from "@bluprint/shared";
+import { healthResponseSchema, problemDetailsSchema } from "@bluprint/shared";
 import { Body, Controller, Get, INestApplication, Post } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Session, UserSession } from "@thallesp/nestjs-better-auth";
@@ -130,7 +130,7 @@ describe("route protection", () => {
 		const res = await request(server).get("/api/probe");
 
 		expect(res.status).toBe(401);
-		expect(res.body).toEqual({ error: "Unauthorized" });
+		expect(problemDetailsSchema.parse(res.body).code).toBe("UNAUTHORIZED");
 	});
 
 	test("lets a signed-in caller through", async () => {
@@ -164,13 +164,18 @@ describe("body parsing on our own routes", () => {
 // Last, and in one block: the limiter counts every attempt in this process, so
 // anything running after would inherit a spent budget.
 describe("signing in", () => {
-	test("rejects the wrong password", async () => {
+	test("rejects the wrong password, with Better Auth's code as problem details", async () => {
 		const res = await request(server)
 			.post(SIGN_IN)
 			.send({ email: account.email, password: "senha-errada-123" });
 
 		expect(res.status).toBe(401);
 		expect(res.headers["set-cookie"]).toBeUndefined();
+		expect(res.headers["content-type"]).toContain("application/problem+json");
+		expect(problemDetailsSchema.parse(res.body)).toMatchObject({
+			code: "INVALID_EMAIL_OR_PASSWORD",
+			instance: SIGN_IN,
+		});
 	});
 
 	test("accepts the right password and hands back a session", async () => {
@@ -194,19 +199,24 @@ describe("signing in", () => {
 			.send({ email: account.email, password: PASSWORD });
 
 		expect(res.status).toBe(403);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("INVALID_ORIGIN");
 	});
 
 	test("blocks repeated attempts before they can guess", async () => {
-		const statuses: number[] = [];
+		let limited: request.Response | undefined;
 
-		for (let attempt = 0; attempt < 12; attempt++) {
+		for (let attempt = 0; attempt < 12 && !limited; attempt++) {
 			const res = await request(server)
 				.post(SIGN_IN)
 				.send({ email: account.email, password: "senha-errada-123" });
-			statuses.push(res.status);
-			if (res.status === 429) break;
+			if (res.status === 429) limited = res;
 		}
 
-		expect(statuses).toContain(429);
+		expect(limited).toBeDefined();
+		// Not redundant with the 401 above: see auth-problem-details.ts.
+		expect(problemDetailsSchema.parse(limited?.body).code).toBe(
+			"TOO_MANY_REQUESTS",
+		);
+		expect(limited?.headers["x-retry-after"]).toBeDefined();
 	}, 60_000);
 });

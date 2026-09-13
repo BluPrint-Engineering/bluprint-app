@@ -6,7 +6,13 @@ import { effectiveRoles } from "../roles.js";
  * organization membership. Kept apart from `defaultRoleSchema` on purpose —
  * the default role never authorizes anything, and this schema is what a
  * client sees. */
-export const projectAccessRoleSchema = z.enum([...effectiveRoles, "admin"]);
+export const projectAccessRoleSchema = z
+	.enum([...effectiveRoles, "admin"])
+	.meta({
+		id: "ProjectAccessRole",
+		description:
+			"The caller's role in this project: their project membership's role, or `admin` when access comes only from the organization membership.",
+	});
 
 export const projectSummarySchema = z.object({
 	id: z.uuid(),

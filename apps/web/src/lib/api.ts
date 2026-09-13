@@ -1,6 +1,21 @@
+import { type ProblemDetails, problemDetailsSchema } from "@bluprint/shared";
+
 const API_PREFIX = "/api";
 
-export class ApiError extends Error {}
+/** `problem` is undefined when something in front of the API (a proxy, a
+ * gateway) answered instead. */
+export class ApiError extends Error {
+	constructor(
+		readonly status: number,
+		readonly problem: ProblemDetails | undefined,
+	) {
+		super(
+			problem?.detail ??
+				problem?.title ??
+				`Request failed with status ${status}`,
+		);
+	}
+}
 
 export async function apiFetch<T>(
 	path: string,
@@ -10,7 +25,8 @@ export async function apiFetch<T>(
 	const res = await fetch(`${API_PREFIX}${path}`, init);
 
 	if (!res.ok) {
-		throw new ApiError(`Request to ${path} failed with status ${res.status}`);
+		const body: unknown = await res.json().catch(() => undefined);
+		throw new ApiError(res.status, problemDetailsSchema.safeParse(body).data);
 	}
 
 	return schema.parse(await res.json());

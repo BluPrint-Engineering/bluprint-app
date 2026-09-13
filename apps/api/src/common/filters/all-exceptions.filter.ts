@@ -1,4 +1,3 @@
-import { STATUS_CODES } from "node:http";
 import {
 	ArgumentsHost,
 	Catch,
@@ -6,26 +5,43 @@ import {
 	HttpException,
 	HttpStatus,
 } from "@nestjs/common";
-import { Response } from "express";
+import { Request, Response } from "express";
+import {
+	instanceOf,
+	PROBLEM_JSON,
+	problemDetails,
+} from "../problems/problem-details";
+import { ProblemException } from "../problems/problem.exception";
 
-/** Keeps every error body as `{ "error": "<HTTP reason>" }` instead of Nest's
- * default. Bare `@Catch()` so it also takes the router's NotFoundException. */
+/** Bare `@Catch()` so it also takes the router's NotFoundException. The body:
+ * docs/adr/0047-errors-are-rfc-9457-problem-details.md */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
 	catch(exception: unknown, host: ArgumentsHost): void {
-		const isHttp = exception instanceof HttpException;
-		const status = isHttp
-			? exception.getStatus()
-			: HttpStatus.INTERNAL_SERVER_ERROR;
+		const http = host.switchToHttp();
+		const instance = instanceOf(http.getRequest<Request>().originalUrl);
 
-		if (!isHttp) {
+		const problem =
+			exception instanceof ProblemException
+				? problemDetails({ ...exception.problem, instance })
+				: problemDetails({
+						// A plain HttpException's message never reaches the client: it is
+						// free text that could carry internals.
+						status:
+							exception instanceof HttpException
+								? exception.getStatus()
+								: HttpStatus.INTERNAL_SERVER_ERROR,
+						instance,
+					});
+
+		if (problem.status >= 500) {
 			console.error(exception);
 		}
 
-		host
-			.switchToHttp()
+		http
 			.getResponse<Response>()
-			.status(status)
-			.json({ error: STATUS_CODES[status] ?? "Error" });
+			.status(problem.status)
+			.type(PROBLEM_JSON)
+			.json(problem);
 	}
 }

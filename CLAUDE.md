@@ -12,7 +12,7 @@ Most of the product is specified but not built, so the code will not always tell
 | Why something is the way it is, and what lost | `docs/adr/` — `ls` the titles, open the one that matches |
 | Where a file belongs, the stack, naming, commits | `docs/ARCHITECTURE.md` |
 | Why a table or column is shaped that way | `docs/data-model.md` — reasoning, not law; the migration wins |
-| The shared-schema contract for a new route | `packages/shared/src/health/` → `apps/api/src/health/` → `apps/web/src/features/health/` → `apps/api/bruno/health.bru`, the complete worked example |
+| The shared-schema contract for a new route | `packages/shared/src/health/` → `apps/api/src/health/` → `apps/web/src/features/health/`, documented at `/api/docs` — the complete worked example |
 | Creating, labelling or closing an issue; the project board | `docs/agents/issue-tracker.md` |
 | The product spec (pt-BR, `RF-xxx`/`RNF-xx` ids) | `docs/requisitos.md` — only when refining or breaking down tickets, or when an issue cites an id |
 

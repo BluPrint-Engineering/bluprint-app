@@ -8,7 +8,7 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 /
 ├── apps/
 │   ├── web/              React SPA (Vite)
-│   └── api/              NestJS API on Node; bruno/ holds the API collection, drizzle/ the migrations
+│   └── api/              NestJS API on Node; openapi.ts + auth/auth.openapi.ts serve /api/docs, drizzle/ the migrations
 ├── packages/shared/      Zod schemas and types both apps agree on; built to dist/ before anything else
 ├── docs/                 ARCHITECTURE.md, data-model.md, requisitos.md (pt-BR product spec), adr/, agents/
 ├── docker/postgres/      init script that creates the test database
@@ -44,9 +44,10 @@ main.ts          creates the Nest app, applies configureApp, opens the port
 app.ts           configureApp(app) + nestApplicationOptions: prefix, helmet, CORS, validation pipe,
                  serializer, error filter; tests use both, so no contract only holds in production
 app.module.ts    root module: ConfigModule (env validated at boot) and domain modules
-auth/            Better Auth instance and the module that mounts it
+openapi.ts       builds and serves the OpenAPI document at /api/docs, merging auth/auth.openapi.ts by hand
+auth/            Better Auth instance, the module that mounts it, and its hand-written OpenAPI paths
 <domain>/        one module per domain: controller, service, module, dto/, <domain>.queries.ts
-common/          cross-cutting filters, pipes, guards, interceptors
+common/          cross-cutting filters, pipes, guards, interceptors; problems/ holds the error contract
 db/              DatabaseModule: pool, Drizzle instance, schema, boot connection check
 lib/             stateful or talks to the world: env schema, clients
 utils/           pure functions, no state or I/O
@@ -54,7 +55,7 @@ utils/           pure functions, no state or I/O
 
 - **The module is the unit of organization, not the layer**: `controllers/` and `services/` at the root spread one domain over three places.
 - **Controller** declares the route, validates input through a DTO and calls the service. **Service** holds business logic and never touches Express. **Queries** hold all database access as functions that take the executor ([0005](adr/0005-queries-take-the-executor.md)). `DatabaseModule` is `@Global()`, exports Drizzle under the `DATABASE` token and checks the connection at boot ([0006](adr/0006-database-check-at-boot.md)).
-- **Contracts**: request DTOs wrap shared schemas ([0003](adr/0003-shared-zod-via-nestjs-zod.md)); every route declares a response DTO ([0004](adr/0004-response-dto-on-every-route.md)); `AllExceptionsFilter` in `common/filters/` turns errors into `{"error": "..."}`. Conventions and gotchas: `.claude/rules/api.md`.
+- **Contracts**: request DTOs wrap shared schemas ([0003](adr/0003-shared-zod-via-nestjs-zod.md)); every route declares a response DTO ([0004](adr/0004-response-dto-on-every-route.md)); every error is RFC 9457 problem details with a stable `code`, thrown as `ProblemException` ([0047](adr/0047-errors-are-rfc-9457-problem-details.md)). Conventions and gotchas: `.claude/rules/api.md`.
 - **`lib/` vs `utils/`**: `lib/` *is* something (state or I/O), `utils/` is pure and testable without mocks. Only what another module injects becomes `@Injectable()`.
 
 ### `packages/shared/src`
@@ -73,7 +74,7 @@ flowchart LR
   api -.->|planned| s3[(Object storage, provider TBD)]
 ```
 
-The browser only ever sees one origin, so the session cookie is first-party ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)). The API mounts everything under `/api`; `apiFetch` adds the prefix, so its callers pass `/health`, while Bruno and integration tests use `/api/health`.
+The browser only ever sees one origin, so the session cookie is first-party ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)). The API mounts everything under `/api`; `apiFetch` adds the prefix, so its callers pass `/health`, while the OpenAPI document and integration tests use `/api/health`.
 
 ## 3. Core Components
 
@@ -98,7 +99,7 @@ Serves the web app's contracts, enforces authentication and per-project authoriz
 | Validation | Zod v4 from `packages/shared` via `nestjs-zod` ([0003](adr/0003-shared-zod-via-nestjs-zod.md)) |
 | ORM | Drizzle with `node-postgres` |
 | Auth | Better Auth, self-hosted ([0010](adr/0010-self-hosted-better-auth.md)) |
-| API docs | Bruno collection in `apps/api/bruno/` ([0017](adr/0017-bruno-as-api-documentation.md)) |
+| API docs | OpenAPI via `@nestjs/swagger`, served at `/api/docs` ([0046](adr/0046-openapi-via-nestjs-swagger.md)) |
 
 ### 3.3 Shared (`packages/shared`)
 
@@ -131,6 +132,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 - **Authorization**: a global `AuthGuard` protects every route; `@AllowAnonymous()` opts one out, and only `health` does. Roles are read from the project membership ([0022](adr/0022-roles-live-on-project-membership.md)); response DTOs strip fields outside the contract ([0004](adr/0004-response-dto-on-every-route.md)).
 - **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, with a known gap until a proxy is chosen (#21); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it.
 - **Platform admin** never sees project content ([0021](adr/0021-platform-admin-sees-only-metadata.md)).
+- **API docs** (`/api/docs`) are on by default in development and off in production, via `API_DOCS_ENABLED` ([0046](adr/0046-openapi-via-nestjs-swagger.md)).
 
 ## 8. Development & Testing Environment
 
@@ -141,7 +143,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 - **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Two tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), and `routes/` follows TanStack Router syntax (`admin.dashboard.tsx`, `$projectId.tsx`: a dot separates segments, `$` marks a parameter).
 - **Commits**: Conventional Commits in the imperative, `type(scope): subject`. Scope is the workspace (`api`, `web`, `shared`), omitted for repo-wide changes. Types in use: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `ci`. The body explains why, not what. A `commit-msg` git hook enforces the type list ([0045](adr/0045-local-git-hooks-with-lefthook.md)); adding a type means updating both this line and `lefthook.yml`'s regex.
 - **Local git hooks**: Lefthook ([0045](adr/0045-local-git-hooks-with-lefthook.md)), installed by `bun install`. Lint on commit (staged files only), typecheck + unit tests on push. CI ([0018](adr/0018-ci-runs-root-scripts.md)) is still the real gate; hooks are bypassable with `--no-verify`.
-- **Errors in the UI**: the API returns English error codes and messages; the web app translates them before display.
+- **Errors in the UI**: the API answers problem details in English; `apiFetch` throws an `ApiError` carrying them, and a screen maps `problem.code` to pt-BR, never `detail` ([0047](adr/0047-errors-are-rfc-9457-problem-details.md)).
 
 ## 9. Future Considerations / Roadmap
 

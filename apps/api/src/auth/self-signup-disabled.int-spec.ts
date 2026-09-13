@@ -14,6 +14,10 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
+// The dynamic import compiles the whole app graph inside this hook, which
+// outgrows Jest's 5s default when every suite runs in parallel.
+const BOOT_TIMEOUT = 30_000;
+
 beforeAll(async () => {
 	process.env.ALLOW_SELF_SIGNUP = "false";
 	// Imported here and not at the top: `ConfigModule.forRoot` snapshots
@@ -32,7 +36,7 @@ beforeAll(async () => {
 
 	server = app.getHttpServer() as Server;
 	db = app.get<Database>(DATABASE);
-});
+}, BOOT_TIMEOUT);
 
 afterAll(async () => {
 	await app.close();

@@ -1,5 +1,5 @@
 import { Server } from "node:http";
-import { healthResponseSchema } from "@bluprint/shared";
+import { healthResponseSchema, problemDetailsSchema } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import request from "supertest";
@@ -44,10 +44,18 @@ describe("GET /api/health", () => {
 		expect(body.verbose?.runtime).toContain("node");
 	});
 
-	test("rejects an invalid verbose value", async () => {
+	test("rejects an invalid verbose value, pointing at the query param", async () => {
 		const res = await request(server).get("/api/health?verbose=maybe");
 
 		expect(res.status).toBe(400);
+		expect(res.headers["content-type"]).toContain("application/problem+json");
+		const problem = problemDetailsSchema.parse(res.body);
+		expect(problem).toMatchObject({
+			status: 400,
+			code: "VALIDATION_FAILED",
+			instance: "/api/health",
+		});
+		expect(problem.errors?.map((e) => e.pointer)).toEqual(["/query/verbose"]);
 	});
 });
 
@@ -62,17 +70,24 @@ describe("security headers", () => {
 });
 
 describe("unknown routes", () => {
-	test("returns a 404 error", async () => {
-		const res = await request(server).get("/api/no-such-route");
+	test("answers problem details with the status alone, the query string kept out of instance", async () => {
+		const res = await request(server).get("/api/no-such-route?token=secret");
 
 		expect(res.status).toBe(404);
-		expect(res.body).toEqual({ error: "Not Found" });
+		expect(res.headers["content-type"]).toContain("application/problem+json");
+		expect(res.body).toEqual({
+			type: "about:blank",
+			title: "Not Found",
+			status: 404,
+			code: "NOT_FOUND",
+			instance: "/api/no-such-route",
+		});
 	});
 
 	test("returns a 404 error for a route outside the api prefix", async () => {
 		const res = await request(server).get("/health");
 
 		expect(res.status).toBe(404);
-		expect(res.body).toEqual({ error: "Not Found" });
+		expect(problemDetailsSchema.parse(res.body).code).toBe("NOT_FOUND");
 	});
 });
