@@ -61,14 +61,14 @@ async function tenantOf(userId: string) {
 }
 
 describe("signing up", () => {
-	test("creates one organization and one admin membership (RF-121)", async () => {
+	test("creates one organization and one admin membership", async () => {
 		const { links } = await tenantOf(account.userId);
 
 		expect(links).toHaveLength(1);
 		expect(links[0]?.role).toBe("admin");
 	});
 
-	test("creates three free licenses for that organization (RF-110)", async () => {
+	test("creates three free licenses for that organization", async () => {
 		const { licenses } = await tenantOf(account.userId);
 
 		expect(licenses).toHaveLength(3);

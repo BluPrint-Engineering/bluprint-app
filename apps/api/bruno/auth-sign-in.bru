@@ -1,5 +1,5 @@
 meta {
-  name: Login (e-mail e senha)
+  name: Sign in (email and password)
   type: http
   seq: 5
 }
@@ -22,19 +22,19 @@ body:json {
 }
 
 docs {
-  Autentica com e-mail e senha e devolve uma sessão nova, gravando o cookie por
-  cima do anterior. Use depois do cadastro para simular quem volta ao app em
-  outro aparelho.
-  
-  **Respostas que você vai encontrar**
-  
-  | Status | Quando |
+  Authenticates with email and password and returns a new session, writing the
+  cookie over the previous one. Use it after sign-up to simulate someone coming
+  back to the app on another device.
+
+  **Responses you will see**
+
+  | Status | When |
   | --- | --- |
-  | 200 | Autenticado, cookie de sessão renovado |
-  | 401 | Senha errada, ou e-mail que não existe |
-  | 403 | `Origin` ausente ou `null` (ver docs da coleção) |
-  | 429 | Mais de 5 tentativas no mesmo minuto, por IP |
-  
-  O 429 é o rate limit fazendo o trabalho dele contra força bruta, não um defeito
-  da coleção. Ele libera sozinho depois de um minuto.
+  | 200 | Authenticated, session cookie renewed |
+  | 401 | Wrong password, or an email that does not exist |
+  | 403 | `Origin` missing or `null` (see the collection docs) |
+  | 429 | More than 5 attempts in the same minute, per IP |
+
+  The 429 is the rate limit doing its job against brute force, not a defect in
+  the collection. It clears on its own after a minute.
 }

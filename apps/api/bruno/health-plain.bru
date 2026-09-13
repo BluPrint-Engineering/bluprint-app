@@ -1,5 +1,5 @@
 meta {
-  name: Health check (sem verbose)
+  name: Health check (no verbose)
   type: http
   seq: 2
 }
@@ -18,7 +18,7 @@ assert {
 }
 
 docs {
-  O mesmo health check sem `verbose`, que é o formato mínimo da resposta. Existe
-  separado para provar que o parâmetro é de fato opcional e que `verbose` some do
-  corpo quando não é pedido.
+  The same health check without `verbose`, the minimal response shape. It exists
+  separately to prove the parameter really is optional and that `verbose`
+  disappears from the body when not requested.
 }

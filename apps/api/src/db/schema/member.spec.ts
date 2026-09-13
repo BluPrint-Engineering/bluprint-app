@@ -8,7 +8,7 @@ describe("member roles", () => {
 		);
 	});
 
-	test("the effective role cannot be admin (RF-116)", () => {
+	test("the effective role cannot be admin", () => {
 		expect(effectiveRoleSchema.safeParse("admin").success).toBe(false);
 	});
 

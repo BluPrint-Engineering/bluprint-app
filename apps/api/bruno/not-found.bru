@@ -1,5 +1,5 @@
 meta {
-  name: Rota desconhecida
+  name: Unknown route
   type: http
   seq: 3
 }
@@ -16,10 +16,10 @@ assert {
 }
 
 docs {
-  Rota que não existe. Serve para verificar o contrato de erro da API: todo
-  não-2xx responde `{"error": "..."}`, e não o corpo verboso que o Nest devolve
-  por padrão.
+  A route that does not exist. It checks the API's error contract: every non-2xx
+  answers `{"error": "..."}`, not the verbose body Nest returns by default.
 
-  Quem sustenta isso é o `AllExceptionsFilter`. Se ele sair, esta requisição é a
-  primeira a acusar — o front lança em qualquer não-2xx sem ler o corpo.
+  `AllExceptionsFilter` is what holds this up. If it goes away, this request is
+  the first to notice — the web app throws on any non-2xx without reading the
+  body.
 }

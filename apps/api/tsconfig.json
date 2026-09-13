@@ -17,7 +17,7 @@
 
 		// Both must stay off: each one forces `import type` on a decorated
 		// parameter's DTO (ts1286 / ts1272), which erases the value
-		// design:paramtypes carries. See ARCHITECTURE.md § Estrutura do back.
+		// design:paramtypes carries. See docs/adr/0003-shared-zod-via-nestjs-zod.md.
 		"verbatimModuleSyntax": false,
 		"isolatedModules": false,
 		"esModuleInterop": true
