@@ -1,6 +1,8 @@
-import { eq } from "drizzle-orm";
 import { Database } from "../db/database.module";
-import { license, member, organization, user } from "../db/schema";
+import { insertLicenses } from "../licenses/licenses.queries";
+import { insertMember } from "../members/members.queries";
+import { insertOrganization } from "../organizations/organizations.queries";
+import { deleteUser } from "./auth.queries";
 
 const FREE_LICENSES = 3;
 
@@ -10,24 +12,19 @@ export async function provisionTenant(
 	name: string,
 ): Promise<void> {
 	await db.transaction(async (tx) => {
-		const [created] = await tx
-			.insert(organization)
-			.values({ name })
-			.returning({ id: organization.id });
-		const organizationId = created!.id;
+		const organization = await insertOrganization(tx, { name });
 
-		await tx.insert(member).values({ organizationId, userId, role: "admin" });
-		await tx
-			.insert(license)
-			.values(
-				Array.from({ length: FREE_LICENSES }, () => ({ organizationId })),
-			);
+		await insertMember(tx, {
+			organizationId: organization.id,
+			userId,
+			role: "admin",
+		});
+		await insertLicenses(tx, organization.id, FREE_LICENSES);
 	});
 }
 
-// Writes to `user`, which Better Auth owns: once its row is committed this is
-// the only way left to keep a failed signup from leaving someone without an
-// organization. `session` and `account` cascade off it.
+// Once the `user` row is committed, this is the only way left to keep a
+// failed signup from leaving someone without an organization.
 export async function discardUser(db: Database, userId: string): Promise<void> {
-	await db.delete(user).where(eq(user.id, userId));
+	await deleteUser(db, userId);
 }
