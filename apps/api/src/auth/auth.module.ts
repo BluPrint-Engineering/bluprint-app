@@ -7,7 +7,7 @@ import { createAuth } from "./auth";
 
 /** Importing this also registers a global `AuthGuard` and re-adds the body
  * parsers `nestApplicationOptions` turns off — neither is visible from here.
- * See `docs/ARCHITECTURE.md` § Autenticação. */
+ * See docs/adr/0010-self-hosted-better-auth.md. */
 @Module({
 	imports: [
 		BetterAuthModule.forRootAsync({

@@ -18,7 +18,7 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-/** Four accounts, one per role this route has to distinguish (RF-134). Shared
+/** Four accounts, one per role this route has to distinguish. Shared
  * across tests because sign-up is rate limited at 5/min. */
 let admin: { userId: string; agent: ReturnType<typeof request.agent> };
 let linked: { userId: string; agent: ReturnType<typeof request.agent> };
@@ -77,8 +77,8 @@ beforeAll(async () => {
 	projectThree = created[2]!.id;
 
 	// `linked` reaches project one and two through project_member, not through
-	// member — proving RF-122 reads the vínculo with the project, never the
-	// vínculo with the organization. Different roles in each project (RF-124).
+	// member — proving authorization reads the project membership, never the
+	// organization membership. Different roles in each project.
 	await db.insert(member).values({
 		organizationId,
 		userId: linked.userId,
@@ -90,7 +90,7 @@ beforeAll(async () => {
 	]);
 
 	// `unlinked` belongs to the same organization but to no project — must see
-	// nothing (RF-134: gerente só enxerga as obras a que foi vinculado).
+	// nothing: managers and assistants only see projects they are members of.
 	await db.insert(member).values({
 		organizationId,
 		userId: unlinked.userId,
@@ -114,7 +114,7 @@ afterAll(async () => {
 });
 
 describe("GET /api/projects", () => {
-	test("a project member sees only the projects vinculated to them, with the effective role (RF-122, RF-124)", async () => {
+	test("a project member sees only their projects, with the effective role", async () => {
 		const res = await linked.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
@@ -129,14 +129,14 @@ describe("GET /api/projects", () => {
 		expect(projects).toHaveLength(2);
 	});
 
-	test("an organization member with no project vínculo sees nothing (RF-134)", async () => {
+	test("an organization member with no project membership sees nothing", async () => {
 		const res = await unlinked.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
 		expect(projectListSchema.parse(res.body)).toEqual([]);
 	});
 
-	test("the organization admin sees every project, reported as admin (RF-111, RF-114)", async () => {
+	test("the organization admin sees every project, reported as admin", async () => {
 		const res = await admin.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
@@ -161,7 +161,7 @@ describe("GET /api/projects", () => {
 		);
 	});
 
-	test("a caller from another organization sees nothing (RNF-03)", async () => {
+	test("a caller from another organization sees nothing", async () => {
 		const res = await outsider.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);

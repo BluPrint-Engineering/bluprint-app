@@ -98,7 +98,7 @@ describe("signing up", () => {
 		expect(authUserSchema.parse(session.body).user.email).toBe(account.email);
 	});
 
-	test("keeps the session cookie alive for 90 days (RNF-04)", () => {
+	test("keeps the session cookie alive for 90 days", () => {
 		const ninetyDaysInSeconds = 60 * 60 * 24 * 90;
 
 		expect(sessionCookie(signUpResponse)).toContain(
@@ -110,7 +110,7 @@ describe("signing up", () => {
 		expect(sessionCookie(signUpResponse)).toContain("HttpOnly");
 	});
 
-	test("ignores isPlatformAdmin sent in the payload (RF-101, RF-105)", async () => {
+	test("ignores isPlatformAdmin sent in the payload", async () => {
 		const res = await request(server)
 			.post(SIGN_UP)
 			.send({

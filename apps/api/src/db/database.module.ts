@@ -24,7 +24,7 @@ export type Database = NodePgDatabase<typeof schema>;
 export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
 /** First parameter of every `*.queries.ts` function — see
- * `docs/ARCHITECTURE.md` § Estrutura do back for why. */
+ * docs/adr/0005-queries-take-the-executor.md for why. */
 export type Executor = Database | Transaction;
 
 /** The one place the runtime Drizzle instance is shaped; `auth.config.ts` uses

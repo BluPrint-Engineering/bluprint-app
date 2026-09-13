@@ -18,7 +18,7 @@ env:
   DATABASE_URL_TEST: postgresql://bluprint:bluprint@localhost:5432/bluprint
   # Throwaway value: CI only needs `envSchema` to accept it so the API boots.
   BETTER_AUTH_SECRET: ci-only-secret-not-used-anywhere-else
-  # Self-signup defaults to off (docs/ARCHITECTURE.md § Autenticação), and every
+  # Self-signup defaults to off (docs/adr/0011-self-signup-is-scaffolding.md), and every
   # auth integration test needs to create an account. Quoted because unquoted
   # YAML hands `z.stringbool()` a real boolean, which it rejects.
   ALLOW_SELF_SIGNUP: "true"

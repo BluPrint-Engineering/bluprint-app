@@ -8,7 +8,7 @@ describe("project_member roles", () => {
 		);
 	});
 
-	test("the enum cannot hold admin (RF-116)", () => {
+	test("the enum cannot hold admin", () => {
 		expect(projectMemberRole.enumValues).not.toContain("admin");
 	});
 

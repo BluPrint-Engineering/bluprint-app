@@ -22,13 +22,15 @@ assert {
 }
 
 docs {
-  Diz se a API está de pé e se ela alcança o Postgres. `status` é `ok` com o
-  banco no ar e `degraded` quando ele cai depois do boot; `database` é `up` ou
-  `down`. A resposta sempre traz `timestamp` e `uptime` em segundos.
+  Tells whether the API is up and whether it reaches Postgres. `status` is `ok`
+  with the database up and `degraded` when it goes down after boot; `database`
+  is `up` or `down`. The response always carries `timestamp` and `uptime` in
+  seconds.
 
-  `verbose=true` acrescenta o bloco `verbose`, com `environment` e `runtime`.
+  `verbose=true` adds the `verbose` block, with `environment` and `runtime`.
 
-  É a rota que o deploy vai usar como healthcheck e a **única pública** da API:
-  todas as outras nascem protegidas pelo `AuthGuard` global, e esta é a exceção
-  explícita, marcada com `@AllowAnonymous()` no controller.
+  It is the route deployment will use as a healthcheck and the API's **only
+  public route**: every other one is born protected by the global `AuthGuard`,
+  and this is the explicit exception, marked with `@AllowAnonymous()` in the
+  controller.
 }

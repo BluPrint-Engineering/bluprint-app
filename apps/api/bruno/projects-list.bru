@@ -1,5 +1,5 @@
 meta {
-  name: Minhas obras
+  name: My projects
   type: http
   seq: 7
 }
@@ -15,31 +15,32 @@ assert {
 }
 
 docs {
-  Lista as obras visíveis para quem chama, com o papel de quem chama em cada
-  uma (RF-134). Rode depois do cadastro ou do login — o cookie de sessão do
-  passo anterior é o que autentica esta chamada.
+  Lists the projects visible to the caller, with the caller's role in each. Run
+  it after sign-up or sign-in — the session cookie from the previous step is
+  what authenticates this call.
 
-  **Respostas que você vai encontrar**
+  **Responses you will see**
 
-  | Status | Quando |
+  | Status | When |
   | --- | --- |
-  | 200 com `[]` | Sessão válida, nenhuma obra visível ainda |
-  | 200 com obras | Sessão válida, uma ou mais obras visíveis |
-  | 401 | Sem cookie de sessão, ou sessão expirada |
+  | 200 with `[]` | Valid session, no visible project yet |
+  | 200 with projects | Valid session, one or more visible projects |
+  | 401 | No session cookie, or an expired session |
 
-  **O papel depende de como o acesso chegou.** Quem tem vínculo com a obra
-  (`project_member`) recebe o papel efetivo daquele vínculo — `manager` ou
-  `assistant` (RF-122, RF-124). Quem não tem vínculo com a obra, mas é `admin`
-  da organização, enxerga a obra mesmo assim e recebe `admin` (RF-111, RF-114).
-  Sem vínculo com a organização, a obra nem aparece — é o isolamento de dados
-  entre construtoras (RNF-03).
+  **The role depends on how access arrived.** A caller with a project
+  membership (`project_member`) gets that membership's effective role —
+  `manager` or `assistant`. A caller with no project membership who is the
+  organization's `admin` still sees the project and gets `admin`. Without an
+  organization membership the project does not appear at all — that is data
+  isolation between organizations.
 
-  **A issue #40 (criar obra) ainda não existe.** Até lá, a única forma de ter
-  algo para listar é semear uma obra à mão. Depois do cadastro do passo 4:
+  **Issue #40 (create project) does not exist yet.** Until then, the only way to
+  have something to list is to seed a project by hand. After the sign-up in
+  step 4:
 
       docker compose exec postgres psql -U bluprint -d bluprint
 
-      -- pega a organização de quem acabou de se cadastrar
+      -- the organization of whoever just signed up
       select o.id as organization_id, m.user_id
       from organization o
       join member m on m.organization_id = o.id
@@ -47,11 +48,11 @@ docs {
       order by m.created_at desc
       limit 1;
 
-      -- cria a obra nessa organização
+      -- create the project in that organization
       insert into project (organization_id, name)
-      values ('<organization_id acima>', 'Casa Moinhos');
+      values ('<organization_id above>', 'Casa Moinhos');
 
-  Rode esta requisição de novo: a obra aparece com `role: "admin"`, porque
-  quem a criou por SQL não ganhou vínculo `project_member` — é exatamente a
-  lacuna que o #40 fecha.
+  Run this request again: the project shows up with `role: "admin"`, because
+  whoever created it through SQL got no `project_member` membership — exactly
+  the gap #40 closes.
 }

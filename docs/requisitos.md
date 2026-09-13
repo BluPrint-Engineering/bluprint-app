@@ -21,15 +21,6 @@ Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença N
 | **Assistente de obra** | Assistente de engenharia (o Gui) | Só as obras em que foi vinculado |
 | **Obreiro** | Quem executa o serviço | Sem conta — recebe relatório em PDF |
 
-## Vocabulário
-
-- **Organização** (ou Construtora) — o cliente que contrata as licenças. Ex.: Melnick.
-- **Empresa executora** (ou empreiteira) — quem toca o serviço na unidade. Ex.: Hellers, Wack.
-- **Obra** (ou projeto) — o empreendimento. Uma licença = uma obra. Ex.: Casa Moinhos.
-- **Papel padrão** — o papel da pessoa no cadastro da organização; serve de sugestão.
-- **Papel efetivo** — o papel da pessoa dentro de uma obra específica; é o que vale para permissão.
-- **Geral** — a disciplina antes chamada de "arquitetônica". É a planta que aceita pin de qualquer disciplina.
-
 ## Paleta
 
 Duas paletas independentes, em objetos diferentes: **status pinta a célula da unidade** no dashboard, **disciplina pinta o pin** sobre a planta.
@@ -236,7 +227,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RNF-09 | Compressão automática das fotos no upload, sem perder legibilidade do problema | M |
 | RNF-10 | Escala alvo: obra com múltiplas torres, ~500 unidades e dezenas de milhares de pins e fotos sem degradação | M |
 | RNF-11 | Abrir a planta com os pins renderizados em até ~3s em 4G | S |
-| RNF-12 | Funcionamento com conectividade ruim ou intermitente (áreas internas de obra, subsolo). No navegador não existe sincronização com o app fechado — ver a decisão de plataforma | S |
+| RNF-12 | Funcionamento com conectividade ruim ou intermitente (áreas internas de obra, subsolo). No navegador não existe sincronização com o app fechado — ver `docs/adr/0038-offline-limit-in-the-browser.md` | S |
 | RNF-13 | Backup diário e política de retenção das fotos e dos dados da obra | S |
 | RNF-14 | Conformidade com a LGPD: fotos, dados dos usuários, base legal, exclusão a pedido e a barreira de acesso do super admin (RF-105) | S |
 | RNF-15 | Custo de armazenamento de imagens previsível e monitorado (fotos são o maior volume) | S |
@@ -249,31 +240,6 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 
 ---
 
-## Decisões estruturais
-
-- **Licença é da organização** (RF-110), uma por obra. A saída de um funcionário não leva a obra junto.
-- **Cadastro de organização é manual**, feito pelo super admin após contato e pagamento (RF-102). Self-service fica como evolução (RF-108).
-- **Super admin não vê o conteúdo das obras** (RF-105) — só organizações, licenças e contagem de projetos.
-- **Papel é por obra, com papel padrão na organização** (RF-121 a RF-124). A permissão sempre lê o vínculo com a obra; o papel padrão só sugere. Promover alguém não muda retroativamente as obras em que já está.
-- **Hierarquia de convite** (RF-126): admin convida gerente, gerente convida assistente, assistente não convida.
-- **Admin é leitura e exportação no operacional** (RF-114 a RF-116): vê dashboards, exporta qualquer relatório, não mexe em pin.
-- **Estrutura da obra é editável por todos os vinculados** (RF-205), inclusive o admin.
-- **Sem exigência de e-mail corporativo** (RF-125).
-- **"Gerente geral"** da primeira meeting = admin da construtora, não é persona separada.
-- **Empresa executora segue a mesma lógica do papel** (RF-302, RF-303): padrão por unidade + disciplina, override no pin. O padrão é preenchido unidade a unidade, porque na prática cada uma tem sua empreiteira por disciplina.
-- **"Geral" é o novo nome de "arquitetônica"** e não existe pin com disciplina Geral (RF-401, RF-407).
-- **Pin no lugar errado não se perde** (RF-411): a disciplina fica gravada no pin, não na planta. Vale para qualquer disciplina, não só hidráulica e elétrica.
-- **Planta e pin não penduram só em unidade** (RF-414, RF-202, RF-405, RF-702, RF-808). Andar e área comum são escopos de primeira classe: hall, garagem, salão de festas e fachada concentram parte grande das pendências de acabamento. É decisão de modelo, não de tela — se planta e pin só souberem viver dentro de unidade, incluir andar e área comum depois vira migração. No dashboard, área comum não entra na grade de unidades: vive em **faixa própria**, medida por pendências, porque não tem número, status de venda nem o ciclo de status da unidade (RF-808, RF-601).
-- **Planta nova não substitui a antiga** (RF-412). As coordenadas de um pin só fazem sentido sobre a imagem em que ele foi criado; reaproveitar os pins numa planta nova move a pendência de lugar sem ninguém perceber. As duas plantas convivem na mesma disciplina, o usuário escolhe em qual trabalha, e só o gerente da obra apaga — nem o admin, que no operacional é leitura e exportação (RF-116).
-- **Editar pin é colaborativo, excluir não** (RF-508). Quem passa depois na unidade completa a descrição ou corrige o cômodo, e travar isso no autor emperraria o campo. A exclusão apaga foto que não se refaz, então fica com quem registrou e com quem responde pela obra — mesma lógica do arquivamento de estrutura (RF-210).
-- **O ciclo até o obreiro fecha pelo aparelho, não por e-mail** (RF-706). O obreiro recebe o relatório por WhatsApp. Envio de e-mail pela plataforma significaria domínio, remetente, entregabilidade e caixa de spam — infraestrutura que só existiria para replicar, pior, o compartilhamento nativo do celular.
-- **A marca no relatório é a do BluPrint** (RF-707). O relatório é o único artefato do produto que circula fora da plataforma — vai impresso para a mão do pedreiro e por WhatsApp para empreiteiras que não são clientes. Tirar a marca ou pôr a da construtora é item de plano pago no futuro, não bug.
-- **Duas paletas independentes** (ver Paleta no topo): status pinta a célula da unidade, disciplina pinta o pin. "Em checklist" deixou de ser azul e virou célula sem preenchimento, liberando o azul para a hidráulica.
-- **Excluir estrutura vazia é fácil, destruir trabalho de campo é difícil** (RF-209 a RF-214). Item sem conteúdo some na hora; item com pins ou plantas é arquivado, nunca apagado. Foto de obra não se refaz — quando alguém perceber o erro, o problema registrado pode já ter sido corrigido.
-- **Plataforma: aplicação web mobile-first** (RNF-01, RNF-02, RNF-20). Um código só, React + Tailwind, usado no celular em campo e no desktop no escritório. App nativo é evolução pós-produção.
-- **Limite consciente do offline no navegador** (RF-511, RNF-12, RNF-21). A fila local existe, mas o Safari do iPhone não sincroniza com o app fechado e pode descartar o armazenamento local após dias sem uso. Portanto: a fila sobe quando o assistente reabre o app com sinal, e a interface mostra o que está pendente. Offline completo e em segundo plano é uma das razões para o app nativo depois.
-- **Métrica de assistente é volume, não desempenho** (RF-806): mede o que a pessoa levantou, e o painel deve ser rotulado assim. Quem trabalha numa torre em melhor estado encontra menos pendências.
-
 ## Pontos em aberto
 
 Nenhum no momento. A última pendência foi fechada em 01/09: a área comum no dashboard geral entra em faixa própria (RF-808).
@@ -283,4 +249,5 @@ Nenhum no momento. A última pendência foi fechada em 01/09: a área comum no d
 - Este arquivo é a **fonte da verdade** dos requisitos. Mudança de regra entra por **pull request** aqui, não em issue.
 - Requisito **não vira issue um a um**: um flow pode virar uma task só, e um requisito que atravessa modelo, tela e validação vira várias.
 - A issue **cita o ID** (RF-xxx / RNF-xx) e linka este arquivo; nunca copia o texto do requisito — duas versões da mesma regra é como elas divergem.
+- O **glossário** (termo em inglês usado no código ↔ termo deste documento) está em `CONTEXT.md`, e o **porquê** das decisões de produto e técnicas está em `docs/adr/`.
 - **IDs são estáveis**: requisito novo entra no fim do bloco do seu módulo, sem renumerar os existentes.

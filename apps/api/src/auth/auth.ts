@@ -35,12 +35,13 @@ export function createAuth(db: Database, options: AuthOptions) {
 		// No verification and no password reset: both need an email provider,
 		// which arrives with the invite in #11.
 		emailAndPassword: { enabled: true },
-		// RNF-04. The client must never send `rememberMe: false` — that turns the
-		// cookie into a browser-session cookie and this window stops mattering.
+		// People in the field stay logged in. The client must never send
+		// `rememberMe: false` — that turns the cookie into a browser-session
+		// cookie and this window stops mattering.
 		session: { expiresIn: 90 * DAY, updateAge: DAY },
 		user: {
 			additionalFields: {
-				// RF-101, the boundary RF-105 protects. `input: false` is what keeps
+				// Only the server makes someone platform admin. `input: false` is what keeps
 				// the field off the signup payload; `required` makes it NOT NULL.
 				isPlatformAdmin: {
 					type: "boolean",
@@ -84,8 +85,8 @@ export function createAuth(db: Database, options: AuthOptions) {
 			},
 		},
 		// Enabled explicitly — the default is off outside production. Buckets are
-		// keyed by an IP read from a header; see ARCHITECTURE.md § Autenticação for
-		// what that costs until #21 puts a proxy in front.
+		// keyed by an IP read from a header; what that costs until #21 puts a
+		// proxy in front: docs/adr/0010-self-hosted-better-auth.md.
 		rateLimit: {
 			enabled: true,
 			window: MINUTE,
