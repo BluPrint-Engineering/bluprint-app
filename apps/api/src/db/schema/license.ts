@@ -10,12 +10,8 @@ export const license = pgTable(
 		organizationId: uuid()
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
-		// Nullable: null is a free license, filled is a consumed one. The unique
-		// index is what actually stops two licenses from attaching to the same
-		// project — a `SELECT ... FOR UPDATE SKIP LOCKED` dequeue only prevents a
-		// race between two callers reading the same free row; it does nothing if
-		// the writing logic has a bug and reuses a project id. Not redundant with
-		// that locking query — don't drop it.
+		// Null is a free license. The unique index below is the real guard behind
+		// #40's SKIP LOCKED, not a redundancy: docs/data-model.md
 		projectId: uuid().references(() => project.id),
 		createdAt: createdAt(),
 	},

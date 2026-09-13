@@ -41,8 +41,8 @@ export function createAuth(db: Database, options: AuthOptions) {
 		session: { expiresIn: 90 * DAY, updateAge: DAY },
 		user: {
 			additionalFields: {
-				// Only the server makes someone platform admin. `input: false` is what keeps
-				// the field off the signup payload; `required` makes it NOT NULL.
+				// `input: false` keeps the field off the sign-up payload:
+				// docs/adr/0013-better-auth-tables-are-generated.md
 				isPlatformAdmin: {
 					type: "boolean",
 					required: true,
@@ -52,8 +52,8 @@ export function createAuth(db: Database, options: AuthOptions) {
 			},
 		},
 		hooks: {
-			// The library's own `emailAndPassword.disableSignUp` answers 400 and
-			// `disabledPaths` answers 404; the scaffold has to answer 403.
+			// TODO(#11): remove with self-signup. Why a hook answering 403:
+			// docs/adr/0011-self-signup-is-scaffolding.md
 			before: createAuthMiddleware((ctx) => {
 				if (!options.allowSelfSignup && ctx.path === SIGN_UP_PATH) {
 					throw new APIError("FORBIDDEN", {
@@ -67,12 +67,10 @@ export function createAuth(db: Database, options: AuthOptions) {
 		databaseHooks: {
 			user: {
 				create: {
-					// Better Auth drains this hook after the user row commits but
-					// before it builds the response, so undoing the user is the only
-					// way left to keep a failed provisioning from leaving an account
-					// behind. Throw a plain Error, never an APIError: only the plain
-					// one takes better-call's headerless 500, which hands back no
-					// session cookie.
+					// TODO(#11): seeds on every user creation, invited people included.
+					// Runs after the user commits; rethrow a plain Error, never an
+					// APIError, or the failed sign-up can still set a session cookie.
+					// See docs/adr/0012-signup-seeding-as-compensated-saga.md
 					after: async (created) => {
 						try {
 							await provisionTenant(db, created.id, created.name);
