@@ -17,6 +17,8 @@ bun run dev   # web on :5173, api on :3000
 
 One `.env` at the repo root serves both apps; only `VITE_`-prefixed variables reach the browser.
 
+`bun install` also wires up local git hooks (Lefthook): lint on commit, typecheck + unit tests on push. See [0045](docs/adr/0045-local-git-hooks-with-lefthook.md).
+
 ## Commands
 
 ```bash
