@@ -12,9 +12,6 @@ export async function insertLicenses(
 		.values(Array.from({ length: count }, () => ({ organizationId })));
 }
 
-// One statement, never a read then a write: two concurrent creations would
-// both pick the same free row. SKIP LOCKED sends the loser to the next free
-// row or to none; `license_project_id_uidx` still holds if this is removed.
 export async function consumeFreeLicense(
 	db: Executor,
 	organizationId: string,

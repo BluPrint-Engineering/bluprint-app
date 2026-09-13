@@ -9,7 +9,6 @@ export async function insertMember(
 	await db.insert(member).values(values);
 }
 
-// First match on purpose: nothing yet makes a person admin of two organizations.
 export async function findAdminOrganizationId(
 	db: Executor,
 	userId: string,
