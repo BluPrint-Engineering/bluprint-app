@@ -19,6 +19,9 @@ coverage/
 .env.*
 !.env.example
 
+# Worktrees do Claude Code
+.claude/worktrees/
+
 # Logs
 *.log
 npm-debug.log*

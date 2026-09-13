@@ -1,0 +1,9 @@
+# Arquivos ignorados pelo git que o Claude Code copia para cada worktree novo.
+# Só copia arquivos (nunca pastas como node_modules/): rode `bun install` no worktree.
+
+# Ambiente — um .env na raiz serve as duas apps
+.env
+.env.*
+
+# Permissões locais do Claude Code
+.claude/settings.local.json
