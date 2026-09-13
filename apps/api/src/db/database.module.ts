@@ -17,6 +17,16 @@ import * as schema from "./schema";
 export const DATABASE = Symbol("DATABASE");
 export type Database = NodePgDatabase<typeof schema>;
 
+/** What `db.transaction()` hands its callback. Derived from `Database` instead
+ * of spelled out as `NodePgTransaction<...>` because that type's own generic
+ * arguments change between Drizzle's relations v1 and v2 — this stays correct
+ * across the upgrade. */
+export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
+
+/** First parameter of every `*.queries.ts` function — see
+ * `docs/ARCHITECTURE.md` § Estrutura do back for why. */
+export type Executor = Database | Transaction;
+
 /** The one place the runtime Drizzle instance is shaped; `auth.config.ts` uses
  * it too. `casing` has to match `drizzle.config.ts`, which runs in its own
  * process and cannot import this. */

@@ -94,7 +94,8 @@ apps/api/src/
 │                       o que impede um contrato que só vale em produção
 ├── app.module.ts      módulo raiz — ConfigModule (env validado no boot) e os módulos de domínio
 ├── auth/              instância do Better Auth e o módulo que a monta no Nest (§ Autenticação)
-├── <domínio>/         um módulo por domínio: controller, service, module, dto/
+├── <domínio>/         um módulo por domínio: controller, service, module, dto/,
+│                       <domínio>.queries.ts
 ├── common/            o que atravessa todos os módulos: filtros, pipes, guards, interceptors
 ├── db/                DatabaseModule: pool, instância Drizzle, schema, check de conexão no boot
 ├── lib/               tem estado ou fala com o mundo: schema de env, clientes
@@ -115,9 +116,22 @@ apps/api/src/
 - **Service** contém a regra de negócio e nunca toca em `Request`, `Response` nem em nada do
   Express — isso é o que permite testá-la instanciando a classe, sem subir uma request HTTP.
   `health.service.spec.ts` é o exemplo trabalhado dessa fronteira.
-- **`db/`** é acessado só por services — a fronteira entre service e banco é essa pasta. O
-  `DatabaseModule` é `@Global()` e exporta a instância do Drizzle sob o token `DATABASE`; qualquer
-  service injeta esse token, sem precisar importar o módulo. No boot, um `SELECT 1` roda antes da
+- **Queries.** Todo acesso ao banco de um domínio mora em `<domínio>.queries.ts`, como **funções
+  exportadas** — nunca uma classe `@Injectable()` — que recebem `db` ou `tx` no primeiro parâmetro
+  (`Executor`, em `db/database.module.ts`). O motivo é a transação: uma classe repository injetada
+  guarda `this.db` fixo e roda **fora** da transação que a service abriu, então um `throw` que
+  dispara o rollback não desfaz o que ela já gravou — sem erro, sem aviso, passando no typecheck.
+  Passar o executor como parâmetro evita isso sem cerimônia de DI. A service chama a query — o
+  controller nunca chama. A query busca, grava e devolve; não decide: `if (!license) throw new
+  ConflictException()` fica na service, e garantias de concorrência e integridade (`FOR UPDATE SKIP
+  LOCKED`, `UNIQUE`, filtro por organização no `WHERE`) ficam na query, porque isso é o banco
+  garantindo dado íntegro, não decisão de negócio. Um domínio que precisa de dado de outro importa
+  as queries do domínio dono da tabela, nunca de `common/`. `projects/projects.queries.ts` é o
+  exemplo trabalhado; `auth/signup-provisioning.ts` é o de uma transação que chama queries de três
+  domínios diferentes.
+- **`db/`** é acessado só por services, através das queries do domínio — a fronteira entre service e
+  banco é essa pasta. O `DatabaseModule` é `@Global()` e exporta a instância do Drizzle sob o token
+  `DATABASE`; qualquer service injeta esse token, sem precisar importar o módulo. No boot, um `SELECT 1` roda antes da
   porta abrir — `DATABASE_URL` que não responde é configuração errada, e é pega no mesmo momento em
   que `envSchema.parse` já pega o resto. Isso é **checagem no código**, não `depends_on` do Compose:
   o Compose só ordena entre containers e a API roda no host; mesmo em container, ele garante só que o
@@ -270,11 +284,14 @@ reiniciar a API. O CI carrega `ALLOW_SELF_SIGNUP: "true"` no `env:` do workflow,
 existe `.env` e sem ela todo teste de integração de auth cai.
 
 **O que o cadastro semeia.** Na mesma requisição nascem a organização daquela pessoa, o vínculo
-`member` com papel padrão `admin` e **três licenças livres** (`auth/signup-provisioning.ts`). Não é
-uma segunda chamada do front: se a rede caísse entre as duas, nasceria usuário órfão, e quem decide
-que alguém é admin de algo é o servidor. O que é andaime aqui é **quem** cria as licenças — a
-licença em si é real desde já, porque é a checagem "existe licença livre?" que decide se a obra
-nasce (RF-110, RF-112).
+`member` com papel padrão `admin` e **três licenças livres**. `auth/signup-provisioning.ts` só
+orquestra a transação; cada gravação é query do domínio dono da tabela —
+`organizations/organizations.queries.ts`, `members/members.queries.ts` e
+`licenses/licenses.queries.ts` — porque quem grava em `user` para desfazer o cadastro é
+`auth/auth.queries.ts`, e `user` é do Better Auth. Não é uma segunda chamada do front: se a rede
+caísse entre as duas, nasceria usuário órfão, e quem decide que alguém é admin de algo é o
+servidor. O que é andaime aqui é **quem** cria as licenças — a licença em si é real desde já,
+porque é a checagem "existe licença livre?" que decide se a obra nasce (RF-110, RF-112).
 
 **Não é uma transação só, e isso é escolha.** O épico previa semear dentro da transação que cria o
 usuário. O Better Auth não permite: todo gancho `create.after` é enfileirado por

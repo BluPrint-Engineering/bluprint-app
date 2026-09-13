@@ -1,7 +1,7 @@
 import { HealthResponse } from "@bluprint/shared";
 import { Inject, Injectable } from "@nestjs/common";
-import { sql } from "drizzle-orm";
 import { DATABASE, Database } from "../db/database.module";
+import { pingDatabase } from "./health.queries";
 
 @Injectable()
 export class HealthService {
@@ -28,7 +28,7 @@ export class HealthService {
 
 	private async checkDatabase(): Promise<"up" | "down"> {
 		try {
-			await this.db.execute(sql`select 1`);
+			await pingDatabase(this.db);
 			return "up";
 		} catch {
 			return "down";
