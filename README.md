@@ -27,7 +27,7 @@ bun run test:unit   # api only, no database needed
 bun run test:int    # api only, boots against Postgres
 bun run lint        # Biome everywhere except apps/api; ESLint + Prettier there
 bun run typecheck   # also: build, lint:fix, format
-bun run --filter @bluprint/api <script>              # one workspace; db:generate and db:migrate live here
+bun run --filter @bluprint/api <script>              # one workspace; db:generate, db:migrate and db:seed live here
 bun run --filter @bluprint/api test -- -t "<name>"   # single test; web uses bunx vitest run -t "<name>"
 ```
 

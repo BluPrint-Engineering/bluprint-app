@@ -18,7 +18,8 @@
 		"auth:generate": "auth generate --config ./auth.config.ts --output ./src/db/schema/auth.ts --yes && prettier --write ./src/db/schema/auth.ts",
 		"db:generate": "bun run --filter @bluprint/shared build && drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
-		"db:studio": "drizzle-kit studio"
+		"db:studio": "drizzle-kit studio",
+		"db:seed": "bun run --filter @bluprint/shared build && bun src/db/seed/seed.ts"
 	},
 	"dependencies": {
 		"@better-auth/drizzle-adapter": "^1.7.2",
