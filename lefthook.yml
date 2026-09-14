@@ -15,7 +15,7 @@ pre-commit:
         piped: true
         jobs:
           # Type-aware ESLint reads @bluprint/shared from dist/; a stale or
-          # missing build degrades the rules silently (ADR 0008/0018).
+          # missing build degrades the rules silently (ADR 0008).
           - run: bun run --filter @bluprint/shared build
           - run: bunx eslint --fix --no-warn-ignored {staged_files}
             stage_fixed: true
