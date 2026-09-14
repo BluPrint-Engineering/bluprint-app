@@ -1,0 +1,9 @@
+:root{
+  --duration-fast:120ms; /* @kind other */
+  --duration:180ms; /* @kind other */
+  --duration-slow:280ms; /* @kind other */
+  --ease-standard:cubic-bezier(.2,0,.2,1); /* @kind other */
+  --ease-out:cubic-bezier(0,0,.2,1); /* @kind other */
+  --press-translate:1px; /* @kind spacing */ /* buttons nudge down 1px on press, as in apps/web button.tsx */
+}
+@media (prefers-reduced-motion:reduce){:root{--duration-fast:0ms; /* @kind other */ --duration:0ms; /* @kind other */ --duration-slow:0ms /* @kind other */}}

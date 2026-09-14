@@ -1,0 +1,21 @@
+/* Two independent DOMAIN palettes (docs/requisitos.md, ADR-0035). Status paints a unit cell on the
+   dashboard; discipline paints a pin on a plan. They never share meaning and are never UI colors.
+   RNF-07: never signal by color alone — always a label, icon or legend alongside. */
+:root{
+  /* Unit status */
+  --status-checklist-fill:transparent;
+  --status-checklist-border:#CBD5E1;
+  --status-released:#F97316;
+  --status-in-progress:#EF4444;
+  --status-recheck:#8B5CF6;
+  --status-done:#22C55E;
+
+  /* Discipline (pin over a plan). Geral has no pin color of its own. */
+  --discipline-plumbing:#2563EB;
+  --discipline-electrical:#D97706;
+  --pin-done:#6B7280;
+
+  /* Pin drawn over a white plan in direct sun: solid fill + dark outline (RNF-08) */
+  --pin-outline:rgb(8 24 48 / .85);
+  --pin-outline-width:2px;
+}

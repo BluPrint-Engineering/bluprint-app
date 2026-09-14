@@ -1,0 +1,27 @@
+<!-- @dsCard group="Brand" viewport="700x260" name="Brand band" subtitle="The mobile header in both themes — the gradient runs corner to corner; dark also dissolves into the page" -->
+<link rel="stylesheet" href="../styles.css"><style>
+body{margin:0;padding:16px 18px;background:var(--background);color:var(--foreground);font-family:var(--font-sans)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pane{border-radius:var(--radius-xl);overflow:hidden;box-shadow:var(--ring-hairline)}
+.band{background:var(--brand-band-bleed),var(--brand-band);border-radius:var(--brand-band-radius);display:grid;justify-items:center;gap:12px;padding:18px 16px var(--brand-band-pad)}
+.badge{display:grid;grid-template-areas:"m";place-items:center;width:66px;height:66px;border-radius:var(--radius-full);background:var(--brand-badge-surface);box-shadow:var(--brand-badge-shadow)}
+.badge img{grid-area:m;height:40px;width:auto}
+.badge .m-light{display:block}
+.badge .m-dark{display:none}
+.dark .badge .m-light{display:none}
+.dark .badge .m-dark{display:block}
+.word{width:110px}
+.foot{padding:10px 12px;background:var(--background);font-size:11px;color:var(--muted-foreground)}
+.dark{background:var(--background)}
+.lbl{font-size:11px;color:var(--muted-foreground);margin-bottom:6px}
+</style>
+<div class="row">
+  <div><div class="lbl">light</div><div class="pane"><div class="band">
+    <span class="badge"><img class="m-light" src="../assets/logo-mark.svg" alt=""><img class="m-dark" src="../assets/logo-mark-white.svg" alt=""></span>
+    <img class="word" src="../assets/wordmark-white.svg" alt="BluPrint"></div>
+    <div class="foot">badge branco · gradiente do canto claro ao profundo, aresta reta</div></div></div>
+  <div class="dark"><div class="lbl">dark</div><div class="pane"><div class="band">
+    <span class="badge"><img class="m-light" src="../assets/logo-mark.svg" alt=""><img class="m-dark" src="../assets/logo-mark-white.svg" alt=""></span>
+    <img class="word" src="../assets/wordmark-white.svg" alt="BluPrint"></div>
+    <div class="foot" style="background:var(--background);color:var(--muted-foreground)">badge escuro, aro azul · faixa dissolve no fundo</div></div></div>
+</div>
