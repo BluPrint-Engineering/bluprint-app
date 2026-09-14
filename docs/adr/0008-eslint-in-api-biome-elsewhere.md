@@ -6,4 +6,4 @@ Biome runs no type-aware rules, and the API needs exactly those: `no-floating-pr
 
 - Both tools use tabs and double quotes: the boundary is tooling, not style.
 - ESLint has no native equivalent of Biome's automatic `organizeImports`.
-- ESLint in `apps/api` is type-aware, so it needs `packages/shared` built; without it, `@bluprint/shared` resolves as `any` and the rules degrade silently (see [0018](0018-ci-runs-root-scripts.md)).
+- ESLint in `apps/api` is type-aware, so it needs `packages/shared` built; without it, `@bluprint/shared` resolves as `any` and the rules degrade silently. The root `lint` and `lint:fix` scripts build it first, same as every other root script.

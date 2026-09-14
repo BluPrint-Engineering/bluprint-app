@@ -3,11 +3,10 @@
 `.github/workflows/ci.yml` has a single job, id `ci`, on every `pull_request` and on `push` to `main`. It calls the root scripts, not the tools behind them, so a new workspace needs no YAML edit and "passes here" and "passes there" are the same command. Order:
 
 1. `bun install --frozen-lockfile`
-2. An explicit `@bluprint/shared` build. The root `lint` does not build it, and `apps/api`'s ESLint is type-aware: without it a clean checkout resolves `@bluprint/shared` as `any` and the rules degrade silently.
-3. `bun run lint`
-4. `bun run typecheck`, **before** `build` on purpose: it exercises the **committed** `routeTree.gen.ts`, which is what a clean checkout and the editor see.
-5. `bun run build`, then `git diff --exit-code` on `routeTree.gen.ts`, which fails if the committed file was stale.
-6. `bun run --filter @bluprint/api db:migrate`, then `bun run test`.
+2. `bun run lint`
+3. `bun run typecheck`, **before** `build` on purpose: it exercises the **committed** `routeTree.gen.ts`, which is what a clean checkout and the editor see.
+4. `bun run build`, then `git diff --exit-code` on `routeTree.gen.ts`, which fails if the committed file was stale.
+5. `bun run --filter @bluprint/api db:migrate`, then `bun run test`.
 
 ## Consequences
 
