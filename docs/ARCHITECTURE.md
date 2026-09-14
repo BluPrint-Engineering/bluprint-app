@@ -136,7 +136,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 
 ## 8. Development & Testing Environment
 
-- **Setup**: `docker compose up -d --wait`, then `bun run dev` (web :5173, API :3000). One `.env` at the root serves both apps.
+- **Setup**: `docker compose up -d --wait`, then `bun run --filter @bluprint/api db:migrate` and, optionally, `db:seed` for a database with sample data. Then `bun run dev` (web :5173, API :3000). One `.env` at the root serves both apps.
 - **Tests**: Vitest + Testing Library in web; Jest + Supertest in the API ([0007](adr/0007-jest-for-api-vitest-for-web.md)). In the API, `*.spec.ts` is unit-only (no database, no HTTP; mock the injected dependency, never Drizzle's query-builder chain) and `*.int-spec.ts` boots the real `AppModule` against Postgres. `test:unit` never needs the container.
 - **Migrations**: `drizzle-kit migrate` only reads `DATABASE_URL`. After pulling a new migration, run it against `DATABASE_URL_TEST` too, or `test:int` fails with `relation ... does not exist` while CI is green.
 - **Lint/format**: Biome in web and shared; ESLint + Prettier in the API ([0008](adr/0008-eslint-in-api-biome-elsewhere.md)).
