@@ -2,13 +2,15 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/geist";
+@import "@fontsource-variable/geist-mono";
 
 @custom-variant dark (&:is(.dark *));
 @source "../../../../packages/shared/src";
 
 @theme inline {
 	--font-heading: var(--font-sans);
-	--font-sans: "Geist Variable", sans-serif;
+	--font-sans: "Geist Variable", system-ui, sans-serif;
+	--font-mono: "Geist Mono Variable", ui-monospace, monospace;
 	--color-sidebar-ring: var(--sidebar-ring);
 	--color-sidebar-border: var(--sidebar-border);
 	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -17,15 +19,13 @@
 	--color-sidebar-primary: var(--sidebar-primary);
 	--color-sidebar-foreground: var(--sidebar-foreground);
 	--color-sidebar: var(--sidebar);
-	--color-chart-5: var(--chart-5);
-	--color-chart-4: var(--chart-4);
-	--color-chart-3: var(--chart-3);
-	--color-chart-2: var(--chart-2);
-	--color-chart-1: var(--chart-1);
 	--color-ring: var(--ring);
 	--color-input: var(--input);
 	--color-border: var(--border);
 	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
+	--color-success: var(--success);
+	--color-warning: var(--warning);
 	--color-accent-foreground: var(--accent-foreground);
 	--color-accent: var(--accent);
 	--color-muted-foreground: var(--muted-foreground);
@@ -40,82 +40,228 @@
 	--color-card: var(--card);
 	--color-foreground: var(--foreground);
 	--color-background: var(--background);
+	--color-brand-blue: var(--brand-blue);
+	--color-brand-blue-light: var(--brand-blue-light);
+	--color-brand-blue-deep: var(--brand-blue-deep);
+	--color-brand-ink: var(--brand-ink);
+	--color-field-surface: var(--field-surface);
+	--color-overlay: var(--overlay);
 	--radius-sm: calc(var(--radius) * 0.6);
 	--radius-md: calc(var(--radius) * 0.8);
 	--radius-lg: var(--radius);
 	--radius-xl: calc(var(--radius) * 1.4);
 	--radius-2xl: calc(var(--radius) * 1.8);
-	--radius-3xl: calc(var(--radius) * 2.2);
-	--radius-4xl: calc(var(--radius) * 2.6);
+	--radius-full: 999px;
+}
+
+/* Mobile-first type scale (RNF-01, RNF-08): body never below 16px, the phone is read at arm's length
+   in the sun. Static — same in both themes — so it lives in its own @theme, not @theme inline. */
+@theme {
+	--text-2xs: 0.6875rem; /* 11px, legends only */
+	--text-xs: 0.75rem;
+	--text-sm: 0.875rem;
+	--text-base: 1rem;
+	--text-lg: 1.125rem;
+	--text-xl: 1.375rem;
+	--text-2xl: 1.75rem;
+	--text-3xl: 2.25rem;
+	--leading-tight: 1.15;
+	--leading-snug: 1.3;
+	--leading-normal: 1.5;
+	--tracking-tight: -0.02em;
+	--tracking-normal: 0;
+	--tracking-wide: 0.04em;
+	--ease-standard: cubic-bezier(0.2, 0, 0.2, 1);
+	--ease-out: cubic-bezier(0, 0, 0.2, 1);
 }
 
 :root {
-	--background: oklch(1 0 0);
-	--foreground: oklch(0.145 0 0);
-	--card: oklch(1 0 0);
-	--card-foreground: oklch(0.145 0 0);
-	--popover: oklch(1 0 0);
-	--popover-foreground: oklch(0.145 0 0);
-	--primary: oklch(0.205 0 0);
-	--primary-foreground: oklch(0.985 0 0);
-	--secondary: oklch(0.97 0 0);
-	--secondary-foreground: oklch(0.205 0 0);
-	--muted: oklch(0.97 0 0);
-	--muted-foreground: oklch(0.556 0 0);
-	--accent: oklch(0.97 0 0);
-	--accent-foreground: oklch(0.205 0 0);
-	--destructive: oklch(0.577 0.245 27.325);
-	--border: oklch(0.922 0 0);
-	--input: oklch(0.922 0 0);
-	--ring: oklch(0.708 0 0);
-	--chart-1: oklch(0.87 0 0);
-	--chart-2: oklch(0.556 0 0);
-	--chart-3: oklch(0.439 0 0);
-	--chart-4: oklch(0.371 0 0);
-	--chart-5: oklch(0.269 0 0);
+	--background: #ffffff;
+	--foreground: #081830;
+	--card: #ffffff;
+	--card-foreground: #081830;
+	--popover: #ffffff;
+	--popover-foreground: #081830;
+	--primary: #0068f0;
+	--primary-foreground: #ffffff;
+	--secondary: #edf1f7;
+	--secondary-foreground: #16263d;
+	--muted: #f6f8fb;
+	--muted-foreground: #64748b;
+	--accent: #ebf3fe;
+	--accent-foreground: #0052c2;
+	--destructive: #d22b2b;
+	--destructive-foreground: #ffffff;
+	--success: #17803d;
+	--warning: #b45309;
+	--border: #dde4ed;
+	--input: #c3cddb;
+	--ring: #0068f0;
 	--radius: 0.625rem;
-	--sidebar: oklch(0.985 0 0);
-	--sidebar-foreground: oklch(0.145 0 0);
-	--sidebar-primary: oklch(0.205 0 0);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.97 0 0);
-	--sidebar-accent-foreground: oklch(0.205 0 0);
-	--sidebar-border: oklch(0.922 0 0);
-	--sidebar-ring: oklch(0.708 0 0);
+	--sidebar: #f6f8fb;
+	--sidebar-foreground: #081830;
+	--sidebar-primary: #0068f0;
+	--sidebar-primary-foreground: #ffffff;
+	--sidebar-accent: #edf1f7;
+	--sidebar-accent-foreground: #16263d;
+	--sidebar-border: #dde4ed;
+	--sidebar-ring: #0068f0;
+
+	/* Brand — sampled from the logo (bluprint-design skill, uploads/bluprint-full-logo.webp) */
+	--brand-blue: #0068f0;
+	--brand-blue-light: #0a8cfe;
+	--brand-blue-deep: #0040e8;
+	--brand-ink: #081830;
+	--brand-gradient: linear-gradient(
+		155deg,
+		var(--brand-blue-light) 0%,
+		var(--brand-blue) 45%,
+		var(--brand-blue-deep) 100%
+	);
+	/* Aimed at the box's own corners, not a fixed angle: a 402x204 header and a tall side panel
+	   both read light top-left -> deep bottom-right. A fixed 155deg flattens on a wide short band. */
+	--brand-band: linear-gradient(
+		to bottom right,
+		var(--brand-blue-light) 0%,
+		var(--brand-blue) 45%,
+		var(--brand-blue-deep) 100%
+	);
+	--brand-band-bleed: none;
+	--brand-band-pad: var(--space-6);
+	--brand-badge-surface: #ffffff;
+	--brand-badge-shadow: 0 6px 18px rgb(3 22 52 / 0.2);
+	--field-surface: #ffffff;
+	--overlay: rgb(8 24 48 / 0.55);
+
+	/* Elevation: shadows differ per theme, so they stay plain vars and are consumed as
+	   shadow-(--shadow-md), never aliased into @theme — Tailwind inlines @theme values statically
+	   and a .dark override would be silently ignored. */
+	--ring-hairline: inset 0 0 0 1px rgb(8 24 48 / 0.1);
+	--shadow-none: none;
+	--shadow-sm: 0 1px 2px rgb(8 24 48 / 0.06);
+	--shadow-md: 0 4px 12px rgb(8 24 48 / 0.1);
+	--shadow-lg: 0 12px 32px rgb(8 24 48 / 0.16);
+	--shadow-focus: 0 0 0 3px rgb(0 104 240 / 0.35);
+	--shadow-focus-danger: 0 0 0 3px rgb(210 43 43 / 0.25);
+
+	/* Spacing, consumed as arbitrary values (p-(--page-pad), h-(--control-h)) rather than aliased
+	   into Tailwind's own spacing scale, which is a multiplier, not a named set. */
+	--space-0: 0;
+	--space-1: 0.25rem;
+	--space-2: 0.5rem;
+	--space-3: 0.75rem;
+	--space-4: 1rem;
+	--space-5: 1.25rem;
+	--space-6: 1.5rem;
+	--space-8: 2rem;
+	--space-10: 2.5rem;
+	--space-12: 3rem;
+	--space-16: 4rem;
+	/* Touch (RNF-06): 44px floor, 52px for the primary action in a glove */
+	--tap-min: 44px;
+	--control-h-sm: 36px;
+	--control-h: 44px;
+	--control-h-lg: 52px;
+	--icon-tap: 44px;
+	--page-pad: var(--space-4);
+	--page-pad-desktop: var(--space-8);
+	--card-spacing: var(--space-4);
+	--card-spacing-sm: var(--space-3);
+	--form-gap: var(--space-4);
+	--content-max: 26rem;
+	--content-max-wide: 72rem;
+
+	--duration-fast: 120ms;
+	--duration: 180ms;
+	--duration-slow: 280ms;
+	/* Buttons nudge down 1px on press, as in button.tsx's active:translate-y-px */
+	--press-translate: 1px;
 }
 
 .dark {
-	--background: oklch(0.145 0 0);
-	--foreground: oklch(0.985 0 0);
-	--card: oklch(0.205 0 0);
-	--card-foreground: oklch(0.985 0 0);
-	--popover: oklch(0.205 0 0);
-	--popover-foreground: oklch(0.985 0 0);
-	--primary: oklch(0.922 0 0);
-	--primary-foreground: oklch(0.205 0 0);
-	--secondary: oklch(0.269 0 0);
-	--secondary-foreground: oklch(0.985 0 0);
-	--muted: oklch(0.269 0 0);
-	--muted-foreground: oklch(0.708 0 0);
-	--accent: oklch(0.269 0 0);
-	--accent-foreground: oklch(0.985 0 0);
-	--destructive: oklch(0.704 0.191 22.216);
-	--border: oklch(1 0 0 / 10%);
-	--input: oklch(1 0 0 / 15%);
-	--ring: oklch(0.556 0 0);
-	--chart-1: oklch(0.87 0 0);
-	--chart-2: oklch(0.556 0 0);
-	--chart-3: oklch(0.439 0 0);
-	--chart-4: oklch(0.371 0 0);
-	--chart-5: oklch(0.269 0 0);
-	--sidebar: oklch(0.205 0 0);
-	--sidebar-foreground: oklch(0.985 0 0);
-	--sidebar-primary: oklch(0.488 0.243 264.376);
-	--sidebar-primary-foreground: oklch(0.985 0 0);
-	--sidebar-accent: oklch(0.269 0 0);
-	--sidebar-accent-foreground: oklch(0.985 0 0);
-	--sidebar-border: oklch(1 0 0 / 10%);
-	--sidebar-ring: oklch(0.556 0 0);
+	--background: #081830;
+	--foreground: #edf1f7;
+	--card: #0e2340;
+	--card-foreground: #edf1f7;
+	--popover: #0e2340;
+	--popover-foreground: #edf1f7;
+	--primary: #2e8cff;
+	--primary-foreground: #04101f;
+	--secondary: #16263d;
+	--secondary-foreground: #edf1f7;
+	--muted: #122744;
+	--muted-foreground: #94a3b8;
+	--accent: #16324f;
+	--accent-foreground: #9fcbff;
+	--destructive: #ff6b6b;
+	--destructive-foreground: #1a0606;
+	--success: #4ade80;
+	--warning: #fbbf24;
+	--border: rgb(255 255 255 / 0.12);
+	--input: rgb(255 255 255 / 0.22);
+	--ring: #2e8cff;
+	--sidebar: #0b1c33;
+	--sidebar-foreground: #edf1f7;
+	--sidebar-primary: #2e8cff;
+	--sidebar-primary-foreground: #04101f;
+	--sidebar-accent: #16263d;
+	--sidebar-accent-foreground: #edf1f7;
+	--sidebar-border: rgb(255 255 255 / 0.12);
+	--sidebar-ring: #2e8cff;
+
+	--brand-band: linear-gradient(
+		to bottom right,
+		#12385f 0%,
+		#0b2647 45%,
+		#07182e 100%
+	);
+	/* Redeclared, not inherited: var(--background) resolves where the property is DECLARED, so a
+	   :root-only version would fade to white inside .dark instead of to the dark page color. */
+	--brand-band-bleed: linear-gradient(
+		to bottom,
+		transparent calc(100% - 36px),
+		var(--background) 100%
+	);
+	--brand-band-pad: var(--space-10);
+	--brand-badge-surface: #0b2038;
+	--brand-badge-shadow:
+		inset 0 0 0 1.5px rgb(46 140 255 / 0.55), 0 0 22px rgb(46 140 255 / 0.28);
+	--field-surface: #f6f8fb;
+	--overlay: rgb(2 8 18 / 0.7);
+
+	--ring-hairline: inset 0 0 0 1px rgb(255 255 255 / 0.12);
+	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);
+	--shadow-md: 0 4px 12px rgb(0 0 0 / 0.5);
+	--shadow-lg: 0 12px 32px rgb(0 0 0 / 0.6);
+	--shadow-focus: 0 0 0 3px rgb(46 140 255 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	:root {
+		--duration-fast: 0ms;
+		--duration: 0ms;
+		--duration-slow: 0ms;
+	}
+}
+
+/* Domain palettes (docs/adr/0035-two-independent-palettes.md): status paints a unit cell on the
+   dashboard, discipline paints a pin on a plan. Never aliased into the UI colors above — blue as
+   *hidráulica* and blue as --primary are different blues on purpose (RNF-07: never color alone). */
+:root {
+	--status-checklist-fill: transparent;
+	--status-checklist-border: #cbd5e1;
+	--status-released: #f97316;
+	--status-in-progress: #ef4444;
+	--status-recheck: #8b5cf6;
+	--status-done: #22c55e;
+
+	--discipline-plumbing: #2563eb;
+	--discipline-electrical: #d97706;
+	--pin-done: #6b7280;
+
+	/* Pin drawn over a white plan in direct sun: solid fill + dark outline (RNF-08) */
+	--pin-outline: rgb(8 24 48 / 0.85);
+	--pin-outline-width: 2px;
 }
 
 @layer base {
@@ -123,9 +269,24 @@
 		@apply border-border outline-ring/50;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-background text-foreground text-base leading-normal antialiased;
 	}
 	html {
 		@apply font-sans;
+	}
+	h1,
+	h2,
+	h3,
+	h4 {
+		@apply font-heading tracking-tight leading-snug;
+	}
+	h1 {
+		@apply text-2xl font-semibold;
+	}
+	h2 {
+		@apply text-xl font-semibold;
+	}
+	h3 {
+		@apply text-lg font-semibold;
 	}
 }
