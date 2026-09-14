@@ -1,0 +1,18 @@
+/* radix-nova separates surfaces with a hairline ring, not a shadow. Shadows are reserved for
+   things that float over the plan: sheets, popovers, the floating "new pin" action. */
+:root{
+  --ring-hairline:inset 0 0 0 1px rgb(8 24 48 / .10); /* @kind shadow */
+  --shadow-none:none;
+  --shadow-sm:0 1px 2px rgb(8 24 48 / .06);
+  --shadow-md:0 4px 12px rgb(8 24 48 / .10);
+  --shadow-lg:0 12px 32px rgb(8 24 48 / .16);
+  --shadow-focus:0 0 0 3px rgb(0 104 240 / .35);
+  --shadow-focus-danger:0 0 0 3px rgb(210 43 43 / .25);
+}
+.dark{
+  --ring-hairline:inset 0 0 0 1px rgb(255 255 255 / .12); /* @kind shadow */
+  --shadow-sm:0 1px 2px rgb(0 0 0 / .4);
+  --shadow-md:0 4px 12px rgb(0 0 0 / .5);
+  --shadow-lg:0 12px 32px rgb(0 0 0 / .6);
+  --shadow-focus:0 0 0 3px rgb(46 140 255 / .45);
+}

@@ -1,0 +1,111 @@
+/* Brand + UI theme. Sampled from the BluPrint logo (uploads/bluprint-full-logo.webp).
+   Domain palettes (unit status, discipline) live in domain-palettes.css and are NEVER used as UI color. */
+:root{
+  /* Brand */
+  --brand-blue:#0068F0;
+  --brand-blue-light:#0A8CFE;
+  --brand-blue-deep:#0040E8;
+  --brand-ink:#081830;
+  --brand-gradient:linear-gradient(155deg,var(--brand-blue-light) 0%,var(--brand-blue) 45%,var(--brand-blue-deep) 100%);
+  /* Brand band + logo badge. Dark mode dims the band and turns the badge into a lit ring
+     instead of a white disc, which would be the brightest object on a night screen. */
+  /* The band reuses the brand gradient but aims it at the box's own corners instead of a fixed
+     angle, so a wide short header and a tall side panel both read light top-left -> deep
+     bottom-right. A fixed 155deg flattens out on a 402x204 band. */
+  --brand-band:linear-gradient(to bottom right,var(--brand-blue-light) 0%,var(--brand-blue) 45%,var(--brand-blue-deep) 100%); /* @kind color */
+  /* How the band ENDS. The right answer depends on how far the band sits from the page:
+     in light mode they are opposites (saturated blue against white), and fading between them
+     travels through a washed-out pale blue that reads as a printing error — so light mode ends
+     on a clean edge and lets the gradient itself carry the depth. Dark mode fades; see .dark. */
+  --brand-band-bleed:none; /* @kind color */
+  --brand-band-radius:0; /* @kind radius */
+  --brand-band-pad:var(--space-6); /* @kind spacing */
+  --brand-badge-surface:#FFFFFF;
+  --brand-badge-shadow:0 6px 18px rgb(3 22 52 / .20);
+
+  /* Blue ramp */
+  --blue-50:#EBF3FE;--blue-100:#D6E6FD;--blue-200:#A9CCFC;--blue-300:#6FACFB;
+  --blue-400:#2E8CFF;--blue-500:#0068F0;--blue-600:#0052C2;--blue-700:#0040E8;
+  --blue-800:#052C7A;--blue-900:#07214F;
+
+  /* Cool neutrals, tinted toward the brand ink */
+  --n-0:#FFFFFF;--n-50:#F6F8FB;--n-100:#EDF1F7;--n-200:#DDE4ED;--n-300:#C3CDDB;
+  --n-400:#94A3B8;--n-500:#64748B;--n-600:#47566B;--n-700:#2D3B50;--n-800:#16263D;--n-900:#081830;
+
+  /* Semantic UI (shadcn/radix-nova variable names, as in apps/web/src/styles/globals.css) */
+  --background:var(--n-0);
+  --foreground:var(--n-900);
+  --card:var(--n-0);
+  --card-foreground:var(--n-900);
+  --popover:var(--n-0);
+  --popover-foreground:var(--n-900);
+  --primary:var(--brand-blue);
+  --primary-foreground:#FFFFFF;
+  --secondary:var(--n-100);
+  --secondary-foreground:var(--n-800);
+  --muted:var(--n-50);
+  --muted-foreground:var(--n-500);
+  --accent:var(--blue-50);
+  --accent-foreground:var(--blue-600);
+  --destructive:#D22B2B;
+  --destructive-foreground:#FFFFFF;
+  --success:#17803D;
+  --warning:#B45309;
+  --border:var(--n-200);
+  --input:var(--n-300);
+  --ring:var(--brand-blue);
+  --sidebar:var(--n-50);
+  --sidebar-foreground:var(--n-900);
+  --sidebar-primary:var(--brand-blue);
+  --sidebar-primary-foreground:#FFFFFF;
+  --sidebar-accent:var(--n-100);
+  --sidebar-accent-foreground:var(--n-800);
+  --sidebar-border:var(--n-200);
+  --sidebar-ring:var(--brand-blue);
+  --overlay:rgb(8 24 48 / .55);
+
+  /* Field surface: white paper under a floor plan, always lighter than the page */
+  --field-surface:#FFFFFF;
+}
+.dark{
+  --brand-band:linear-gradient(to bottom right,#12385F 0%,#0B2647 45%,#07182E 100%); /* @kind color */
+  /* Here band and page are neighbours (#07182E against #081830), so the seam can simply dissolve.
+     Redeclared, not inherited: the inner var(--background) is substituted where the property is
+     DECLARED, so a :root-only version would fade to white inside a scoped .dark container. */
+  --brand-band-bleed:linear-gradient(to bottom,transparent calc(100% - 36px),var(--background) 100%); /* @kind color */
+  --brand-band-radius:0; /* @kind radius */
+  --brand-band-pad:var(--space-10); /* @kind spacing */
+  --brand-badge-surface:#0B2038;
+  --brand-badge-shadow:inset 0 0 0 1.5px rgb(46 140 255 / .55),0 0 22px rgb(46 140 255 / .28);
+  --background:var(--n-900);
+  --foreground:var(--n-100);
+  --card:#0E2340;
+  --card-foreground:var(--n-100);
+  --popover:#0E2340;
+  --popover-foreground:var(--n-100);
+  --primary:#2E8CFF;
+  --primary-foreground:#04101F;
+  --secondary:#16263D;
+  --secondary-foreground:var(--n-100);
+  --muted:#122744;
+  --muted-foreground:var(--n-400);
+  --accent:#16324F;
+  --accent-foreground:#9FCBFF;
+  --destructive:#FF6B6B;
+  --destructive-foreground:#1A0606;
+  --success:#4ADE80;
+  --warning:#FBBF24;
+  --border:rgb(255 255 255 / .12);
+  --input:rgb(255 255 255 / .22);
+  --ring:#2E8CFF;
+  --sidebar:#0B1C33;
+  --sidebar-foreground:var(--n-100);
+  --sidebar-primary:#2E8CFF;
+  --sidebar-primary-foreground:#04101F;
+  --sidebar-accent:#16263D;
+  --sidebar-accent-foreground:var(--n-100);
+  --sidebar-border:rgb(255 255 255 / .12);
+  --sidebar-ring:#2E8CFF;
+  --overlay:rgb(2 8 18 / .7);
+  --field-surface:#F6F8FB;
+}

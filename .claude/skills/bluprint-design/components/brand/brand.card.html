@@ -1,0 +1,22 @@
+<!-- @dsCard group="Components" viewport="700x200" name="Logo" subtitle="Mark and lockup tones, from the vector assets" -->
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:18px 20px;background:var(--background);font-family:var(--font-sans)}.grp{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.cap{font-size:11px;color:var(--muted-foreground);margin:14px 0 6px}.cap:first-child{margin-top:0}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<div id="root"></div>
+<script type="text/babel">
+const { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Label, Field, Checkbox, Alert, Spinner, Logo } = window.BluPrintDesignSystem_d4fa62;
+function Demo(){return <div style={{display:'flex',gap:0,alignItems:'stretch',borderRadius:'var(--radius-xl)',overflow:'hidden'}}>
+  <div style={{flex:1,padding:20,display:'grid',placeItems:'center',gap:10,background:'var(--card)',boxShadow:'var(--ring-hairline)'}}>
+    <Logo size={56} basePath="../../assets" />
+    <Logo size={28} wordmark basePath="../../assets" />
+  </div>
+  <div style={{flex:1,padding:20,display:'grid',placeItems:'center',gap:10,background:'var(--brand-ink)'}}>
+    <Logo tone="white" size={56} basePath="../../assets" />
+    <Logo tone="white" size={28} wordmark basePath="../../assets" />
+  </div>
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>

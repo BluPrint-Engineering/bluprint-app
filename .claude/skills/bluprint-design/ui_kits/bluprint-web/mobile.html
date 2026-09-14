@@ -1,0 +1,61 @@
+<!-- @dsCard group="Web app" viewport="880x700" name="Mobile — entrar / criar conta" subtitle="The same screens at 402px in a phone browser: stacked mark, form flat on the page, 52px action" -->
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>BluPrint — telas no celular</title>
+<link rel="stylesheet" href="../../styles.css">
+<style>
+body{margin:0;padding:24px;background:var(--muted);color:var(--foreground);font-family:var(--font-sans)}
+.wrap{display:flex;gap:40px;flex-wrap:wrap;justify-content:center}
+.col{display:grid;gap:10px;justify-items:center}
+.scale-box{height:566px;overflow:hidden}
+.scale{transform:scale(.64);transform-origin:top center}
+.cap{font-size:var(--text-sm);font-weight:500;text-align:center}
+.cap small{display:block;font-weight:400;color:var(--muted-foreground);font-size:var(--text-xs)}
+.chrome{height:100%;display:flex;flex-direction:column;background:#0B0B0D}
+.chrome__gap{height:56px;flex:none}
+.chrome__url{flex:none;display:flex;justify-content:center;padding:0 14px 10px}
+.chrome__pill{flex:1;height:40px;border-radius:var(--radius-full);background:#1C1C1E;color:#EBEBF5;display:flex;align-items:center;justify-content:center;gap:7px;font-size:14px}
+.chrome__pill span.lk{width:13px;height:13px;background:currentColor;-webkit-mask:url(../../assets/icons/lock.svg) center/contain no-repeat;mask:url(../../assets/icons/lock.svg) center/contain no-repeat;opacity:.7}
+.chrome__frame{flex:1;min-height:0}
+.chrome__frame iframe{width:100%;height:100%;border:0;display:block}
+.chrome__tools{flex:none;height:62px;display:flex;align-items:center;justify-content:space-around;padding:0 20px 12px;color:#8E8E93}
+.chrome__tools i{width:22px;height:22px;background:currentColor;display:block}
+</style></head><body>
+<div id="root"></div>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" data-presets="react">
+const ICONS = "../../assets/icons";
+function ToolIcon({ name }) {
+  const url = `url(${ICONS}/${name}.svg)`;
+  return <i style={{ WebkitMask: `${url} center/contain no-repeat`, mask: `${url} center/contain no-repeat` }} />;
+}
+function PhoneBrowser({ src }) {
+  return (
+    <div className="chrome">
+      <div className="chrome__gap" />
+      <div className="chrome__url"><div className="chrome__pill"><span className="lk" />bluprint.app</div></div>
+      <div className="chrome__frame"><iframe src={src} title={src}></iframe></div>
+      <div className="chrome__tools">
+        <ToolIcon name="arrow-left" /><ToolIcon name="chevron-right" /><ToolIcon name="refresh-cw" /><ToolIcon name="plus" />
+      </div>
+    </div>
+  );
+}
+function Screens() {
+  const Device = window.IOSDevice;
+  return (
+    <div className="wrap">
+      <div className="col">
+        <div className="scale-box"><div className="scale"><Device dark><PhoneBrowser src="login.html" /></Device></div></div>
+        <div className="cap">Entrar<small>issue #42 · navegador no celular, 402 pt</small></div>
+      </div>
+      <div className="col">
+        <div className="scale-box"><div className="scale"><Device dark><PhoneBrowser src="signup.html" /></Device></div></div>
+        <div className="cap">Criar conta<small>issue #43 · com convite pendente</small></div>
+      </div>
+    </div>
+  );
+}
+ReactDOM.createRoot(document.getElementById("root")).render(<Screens />);
+</script></body></html>

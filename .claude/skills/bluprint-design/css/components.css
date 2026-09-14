@@ -1,0 +1,92 @@
+/* Component classes for the BluPrint primitives. Values follow apps/web (shadcn radix-nova):
+   rounded-lg, hairline ring on cards, 1px press nudge, 3px focus ring. Heights are raised from the
+   shadcn desktop defaults to the field-usable floor (44px) — see readme.md, "Intentional additions". */
+
+/* Button ------------------------------------------------------------------ */
+.bp-btn{display:inline-flex;align-items:center;justify-content:center;gap:var(--space-2);flex-shrink:0;border:1px solid transparent;border-radius:var(--radius-lg);background-clip:padding-box;font-family:var(--font-sans);font-size:var(--text-base);font-weight:var(--weight-medium);line-height:1;white-space:nowrap;cursor:pointer;user-select:none;transition:background-color var(--duration) var(--ease-standard),color var(--duration) var(--ease-standard),border-color var(--duration) var(--ease-standard)}
+.bp-btn:focus-visible{outline:none;border-color:var(--ring);box-shadow:var(--shadow-focus)}
+.bp-btn:active:not(:disabled){transform:translateY(var(--press-translate))}
+.bp-btn:disabled{pointer-events:none;opacity:.5}
+/* Busy is not disabled: the button is working, so its label must stay readable. */
+.bp-btn[aria-busy="true"]{opacity:1;cursor:progress}
+.bp-btn svg{flex-shrink:0;width:1.25em;height:1.25em}
+.bp-btn--default{background:var(--primary);color:var(--primary-foreground)}
+.bp-btn--default:hover{background:color-mix(in oklch,var(--primary),#000 12%)}
+.bp-btn--outline{border-color:var(--input);background:var(--background);color:var(--foreground)}
+.bp-btn--outline:hover{background:var(--muted)}
+.bp-btn--secondary{background:var(--secondary);color:var(--secondary-foreground)}
+.bp-btn--secondary:hover{background:color-mix(in oklch,var(--secondary),var(--foreground) 5%)}
+.bp-btn--ghost{background:transparent;color:var(--foreground)}
+.bp-btn--ghost:hover{background:var(--muted)}
+.bp-btn--destructive{background:color-mix(in srgb,var(--destructive) 10%,transparent);color:var(--destructive)}
+.bp-btn--destructive:hover{background:color-mix(in srgb,var(--destructive) 20%,transparent)}
+.bp-btn--link{background:transparent;color:var(--primary);text-underline-offset:4px;padding:0;height:auto;min-height:0}
+.bp-btn--link:hover{text-decoration:underline}
+.bp-btn--sm{height:var(--control-h-sm);padding:0 var(--space-3);font-size:var(--text-sm);border-radius:var(--radius-md)}
+.bp-btn--md{height:var(--control-h);padding:0 var(--space-4)}
+.bp-btn--lg{height:var(--control-h-lg);padding:0 var(--space-5);font-size:var(--text-lg)}
+.bp-btn--icon{height:var(--icon-tap);width:var(--icon-tap);padding:0}
+.bp-btn--icon-sm{height:var(--control-h-sm);width:var(--control-h-sm);padding:0;border-radius:var(--radius-md)}
+.bp-btn--block{width:100%;flex:1 1 0;min-width:0}
+
+/* Card -------------------------------------------------------------------- */
+.bp-card{display:flex;flex-direction:column;gap:var(--card-spacing);overflow:hidden;border-radius:var(--radius-xl);background:var(--card);color:var(--card-foreground);padding-block:var(--card-spacing);font-size:var(--text-sm);box-shadow:var(--ring-hairline)}
+.bp-card--sm{gap:var(--card-spacing-sm);padding-block:var(--card-spacing-sm)}
+.bp-card--sm .bp-card__header,.bp-card--sm .bp-card__content{padding-inline:var(--card-spacing-sm)}
+.bp-card--sm .bp-card__footer{padding:var(--card-spacing-sm);margin-bottom:calc(var(--card-spacing-sm) * -1)}
+.bp-card--raised{box-shadow:var(--ring-hairline),var(--shadow-md)}
+.bp-card__header{display:grid;gap:var(--space-1);padding-inline:var(--card-spacing)}
+.bp-card__title{font-family:var(--font-heading);font-size:var(--text-lg);font-weight:var(--weight-semibold);line-height:var(--leading-snug);letter-spacing:var(--tracking-tight)}
+.bp-card__desc{font-size:var(--text-sm);color:var(--muted-foreground)}
+.bp-card__content{padding-inline:var(--card-spacing)}
+.bp-card__footer{display:flex;align-items:center;gap:var(--space-3);padding:var(--card-spacing);border-top:1px solid var(--border);background:color-mix(in srgb,var(--muted) 50%,transparent);margin-bottom:calc(var(--card-spacing) * -1)}
+
+/* Field, Label, Input ----------------------------------------------------- */
+.bp-field{display:flex;flex-direction:column;gap:var(--space-2)}
+.bp-label{font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--foreground)}
+.bp-label__optional{color:var(--muted-foreground);font-weight:var(--weight-regular)}
+.bp-input{width:100%;height:var(--control-h);padding:0 var(--space-3);border:1px solid var(--input);border-radius:var(--radius-lg);background:var(--background);color:var(--foreground);font-family:var(--font-sans);font-size:var(--text-base);transition:border-color var(--duration) var(--ease-standard),box-shadow var(--duration) var(--ease-standard)}
+.bp-input::placeholder{color:var(--muted-foreground)}
+.bp-input:focus{outline:none;border-color:var(--ring);box-shadow:var(--shadow-focus)}
+.bp-input:disabled{background:var(--muted);color:var(--muted-foreground);cursor:not-allowed}
+.bp-input--invalid{border-color:var(--destructive)}
+.bp-input--invalid:focus{border-color:var(--destructive);box-shadow:var(--shadow-focus-danger)}
+.bp-input--with-affix{padding-inline-end:calc(var(--icon-tap) + var(--space-1))}
+.bp-input-wrap{position:relative;display:flex;align-items:center}
+.bp-input-affix{position:absolute;inset-inline-end:var(--space-1);display:inline-flex;align-items:center;justify-content:center}
+.bp-hint{font-size:var(--text-sm);color:var(--muted-foreground)}
+.bp-error{display:flex;align-items:flex-start;gap:var(--space-2);font-size:var(--text-sm);font-weight:var(--weight-medium);color:var(--destructive)}
+.bp-error svg{width:1.15em;height:1.15em;flex-shrink:0;margin-top:.08em}
+
+/* Checkbox ---------------------------------------------------------------- */
+.bp-checkbox{display:flex;align-items:flex-start;gap:var(--space-3);min-height:var(--tap-min);padding-block:var(--space-2);cursor:pointer;font-size:var(--text-base)}
+.bp-checkbox input{appearance:none;width:24px;height:24px;flex-shrink:0;margin:0;border:1px solid var(--input);border-radius:var(--radius-sm);background:var(--background);cursor:pointer;display:grid;place-content:center;transition:background-color var(--duration-fast) var(--ease-standard),border-color var(--duration-fast) var(--ease-standard)}
+.bp-checkbox input:checked{background:var(--primary);border-color:var(--primary)}
+.bp-checkbox input:checked::after{content:"";width:12px;height:7px;border:2px solid var(--primary-foreground);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-2px)}
+.bp-checkbox input:focus-visible{outline:none;border-color:var(--ring);box-shadow:var(--shadow-focus)}
+
+/* Alert ------------------------------------------------------------------- */
+.bp-alert{display:flex;gap:var(--space-3);padding:var(--space-3) var(--space-4);border-radius:var(--radius-lg);font-size:var(--text-sm);line-height:var(--leading-normal);border:1px solid transparent}
+.bp-alert svg{width:20px;height:20px;flex-shrink:0;margin-top:1px}
+.bp-alert__title{font-weight:var(--weight-semibold)}
+.bp-alert--danger{background:color-mix(in srgb,var(--destructive) 10%,transparent);border-color:color-mix(in srgb,var(--destructive) 30%,transparent);color:var(--destructive)}
+.bp-alert--info{background:var(--accent);border-color:color-mix(in srgb,var(--primary) 25%,transparent);color:var(--accent-foreground)}
+.bp-alert--success{background:color-mix(in srgb,var(--success) 12%,transparent);border-color:color-mix(in srgb,var(--success) 30%,transparent);color:var(--success)}
+.dark .bp-alert--info{background:color-mix(in srgb,var(--primary) 20%,var(--card));border-color:color-mix(in srgb,var(--primary) 55%,transparent);color:#D6E9FF}
+.dark .bp-alert--info .bp-alert__title{color:#FFFFFF}
+.dark .bp-alert--danger{background:color-mix(in srgb,var(--destructive) 18%,var(--card));border-color:color-mix(in srgb,var(--destructive) 50%,transparent)}
+.dark .bp-alert--success{background:color-mix(in srgb,var(--success) 16%,var(--card));border-color:color-mix(in srgb,var(--success) 45%,transparent)}
+
+/* Spinner ----------------------------------------------------------------- */
+.bp-spinner{display:inline-block;border-radius:var(--radius-full);border:2px solid color-mix(in srgb,currentColor 25%,transparent);border-top-color:currentColor;animation:bp-spin 700ms linear infinite}
+@keyframes bp-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.bp-spinner{animation-duration:2s}}
+
+/* Logo -------------------------------------------------------------------- */
+.bp-logo{display:inline-flex;align-items:center;gap:var(--space-3)}
+.bp-logo img{display:block}
+
+/* Links ------------------------------------------------------------------- */
+a{color:var(--primary)}
+a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}
+.dark a:hover{color:color-mix(in oklch,var(--primary),#fff 20%)}
