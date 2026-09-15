@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import prettier from "eslint-config-prettier/flat";
 import globals from "globals";
+import jsdoc from "eslint-plugin-jsdoc";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
@@ -8,6 +9,7 @@ export default tseslint.config(
 	js.configs.recommended,
 	...tseslint.configs.recommendedTypeChecked,
 	{
+		plugins: { jsdoc },
 		languageOptions: {
 			globals: globals.node,
 			parserOptions: {
@@ -29,6 +31,8 @@ export default tseslint.config(
 			"@typescript-eslint/consistent-type-imports": "off",
 			// Already covered by tsc's noUnusedLocals/noUnusedParameters.
 			"@typescript-eslint/no-unused-vars": "off",
+			// see docs/adr/0048-hooks-enforce-agent-guardrails.md
+			"jsdoc/informative-docs": "error",
 		},
 	},
 	{
