@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { ADMIN_STORAGE_STATE } from "./auth-state";
 import {
 	API_BASE_URL,
 	DATABASE_URL_E2E,
@@ -20,8 +21,23 @@ export default defineConfig({
 		trace: "on-first-retry",
 	},
 	projects: [
-		{ name: "iPhone 13", use: { ...devices["iPhone 13"] } },
-		{ name: "Desktop Chrome", use: { ...devices["Desktop Chrome"] } },
+		{ name: "setup", testMatch: /auth\.setup\.ts/ },
+		{
+			name: "iPhone 13",
+			use: {
+				...devices["iPhone 13"],
+				storageState: ADMIN_STORAGE_STATE,
+			},
+			dependencies: ["setup"],
+		},
+		{
+			name: "Desktop Chrome",
+			use: {
+				...devices["Desktop Chrome"],
+				storageState: ADMIN_STORAGE_STATE,
+			},
+			dependencies: ["setup"],
+		},
 	],
 	webServer: [
 		{
