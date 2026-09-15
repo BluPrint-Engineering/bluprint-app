@@ -40,6 +40,7 @@ bun run lint                 # Biome everywhere except apps/api; ESLint + Pretti
 bun run typecheck            # also: build, lint:fix, format
 bun run --filter @bluprint/api <script>              # one workspace; db:generate, db:migrate and db:seed live here
 bun run --filter @bluprint/api test -- -t "<name>"   # single test; web uses bunx vitest run -t "<name>"
+bun run e2e                  # Playwright on :3100/:5273 against bluprint_e2e; builds first
 ```
 
 Every root script builds `packages/shared` first, because both apps consume it from `dist/`; run `bun run --filter @bluprint/shared build` once before a bare `bunx vitest` or `tsc` inside a workspace, or `@bluprint/shared` fails to resolve and reads like a broken import path. One `.env` at the repo root serves both apps — copy `.env.example`; only `VITE_`-prefixed vars reach the browser.
