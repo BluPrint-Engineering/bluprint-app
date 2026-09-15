@@ -6,7 +6,7 @@ E2E runs inside the existing `ci` job, after `bun run test`, rather than a job o
 
 The database is created, migrated and seeded by `prepare-database.ts`, run as a step of the `e2e` script (`bun prepare-database.ts && playwright test`) — **not** through Playwright's own `globalSetup`. Playwright starts `webServer` before running `globalSetup`, and the API's boot-time database check ([0006](0006-database-check-at-boot.md)) would crash the API process on a database that doesn't exist yet. This means `playwright test` or `playwright test --ui` run directly, instead of `bun run e2e`, skip database preparation.
 
-The smoke test in `health.spec.ts` opens the health page anonymously; the first real flow is sign-in, and it will reuse a Playwright `storageState` captured once rather than signing in per test, because Better Auth rate-limits `/sign-in/email` to 5 attempts per minute per IP.
+The smoke test in `health.spec.ts` opened the health page anonymously as a placeholder; the first real flow is sign-in ([#42](https://github.com/BluPrint-Engineering/bluprint-app/issues/42)), in `login.spec.ts`. A `setup` project (`auth.setup.ts`) signs in once and saves a Playwright `storageState` that the other projects depend on and reuse, rather than signing in per test, because Better Auth rate-limits `/sign-in/email` to 5 attempts per minute per IP.
 
 ## Consequences
 

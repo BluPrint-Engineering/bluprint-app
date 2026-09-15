@@ -12,7 +12,12 @@ export default defineConfig(({ mode }) => {
 	const { PORT, WEB_PORT } = loadEnv(mode, envDir, "");
 
 	return {
-		plugins: [tanstackRouter(), react(), tailwindcss()],
+		plugins: [
+			// a route file's own test lives beside it, e.g. routes/login.test.tsx
+			tanstackRouter({ routeFileIgnorePattern: "\\.test\\.tsx$" }),
+			react(),
+			tailwindcss(),
+		],
 		envDir,
 		resolve: {
 			alias: {

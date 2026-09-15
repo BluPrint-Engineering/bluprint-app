@@ -4,6 +4,13 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>BluPrint</title>
+		<script>
+			// blocking and inline (runs before first paint); keep "bp-theme" in sync with THEME_KEY in features/auth/useTheme.ts
+			try {
+				if (localStorage.getItem("bp-theme") === "dark")
+					document.documentElement.classList.add("dark");
+			} catch {}
+		</script>
 	</head>
 	<body>
 		<div id="root"></div>
