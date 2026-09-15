@@ -18,9 +18,7 @@ export function codeForStatus(status: number): string {
 		.replace(/[^A-Z0-9]+/g, "_");
 }
 
-/** `type` stays `about:blank`, whose title is by definition the reason phrase;
- * `code` carries the specific meaning instead — see
- * docs/adr/0047-errors-are-rfc-9457-problem-details.md */
+/** see docs/adr/0047-errors-are-rfc-9457-problem-details.md */
 export function problemDetails({
 	status,
 	code,

@@ -13,8 +13,7 @@ import {
 } from "../problems/problem-details";
 import { ProblemException } from "../problems/problem.exception";
 
-/** Bare `@Catch()` so it also takes the router's NotFoundException. The body:
- * docs/adr/0047-errors-are-rfc-9457-problem-details.md */
+/** Bare @Catch() so it also takes the router's NotFoundException; see docs/adr/0047-errors-are-rfc-9457-problem-details.md. */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
 	catch(exception: unknown, host: ArgumentsHost): void {
@@ -25,8 +24,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 			exception instanceof ProblemException
 				? problemDetails({ ...exception.problem, instance })
 				: problemDetails({
-						// A plain HttpException's message never reaches the client: it is
-						// free text that could carry internals.
+						// a plain HttpException's message never reaches the client: it could carry internals
 						status:
 							exception instanceof HttpException
 								? exception.getStatus()

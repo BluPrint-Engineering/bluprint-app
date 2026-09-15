@@ -23,8 +23,7 @@ export async function provisionTenant(
 	});
 }
 
-// Compensates a failed `provisionTenant`:
-// docs/adr/0012-signup-seeding-as-compensated-saga.md
+// compensates a failed provisionTenant — see docs/adr/0012-signup-seeding-as-compensated-saga.md
 export async function discardUser(db: Database, userId: string): Promise<void> {
 	await deleteUser(db, userId);
 }

@@ -5,13 +5,10 @@ import {
 
 type Handler = (request: Request) => Promise<Response>;
 
-/** Better Auth's name for `VALIDATION_FAILED`; its body carries a message but
- * no per-field `errors`. */
+// Better Auth's name for VALIDATION_FAILED; its body has a message but no per-field errors
 const BETTER_AUTH_VALIDATION_CODE = "VALIDATION_ERROR";
 
-/** Wraps the handler, not a plugin's `onResponse`: the rate limiter answers 429
- * before any plugin hook runs. See
- * docs/adr/0047-errors-are-rfc-9457-problem-details.md */
+/** Wraps the handler, not onResponse: the rate limiter answers 429 before any plugin hook runs. */
 export function withProblemDetails(handler: Handler): Handler {
 	return async (request) => {
 		const response = await handler(request);

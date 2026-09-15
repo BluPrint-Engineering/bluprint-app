@@ -20,8 +20,7 @@ const UUID_V7 =
 let app: INestApplication;
 let db: Database;
 
-/** Better Auth's `user.id` has no database default, so it carries a value no
- * uuid column would accept — which is what proves the foreign key stayed text. */
+// text because Better Auth owns user.id; any value is accepted since the column has no db default
 const userId = `test-user-${randomUUID()}`;
 let organizationId: string;
 let projectId: string;

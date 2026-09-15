@@ -1,11 +1,7 @@
 import { z } from "zod";
 import { effectiveRoles } from "../roles.js";
 
-/** The role reported for a project is the effective one when the caller has a
- * project membership, and `admin` when access comes only from the
- * organization membership. Kept apart from `defaultRoleSchema` on purpose —
- * the default role never authorizes anything, and this schema is what a
- * client sees. */
+/** Kept apart from defaultRoleSchema: the default role never authorizes anything, this schema is what a client sees. */
 export const projectAccessRoleSchema = z
 	.enum([...effectiveRoles, "admin"])
 	.meta({

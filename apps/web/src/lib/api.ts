@@ -2,8 +2,7 @@ import { type ProblemDetails, problemDetailsSchema } from "@bluprint/shared";
 
 const API_PREFIX = "/api";
 
-/** `problem` is undefined when something in front of the API (a proxy, a
- * gateway) answered instead. */
+/** `problem` is undefined when something in front of the API (a proxy, a gateway) answered instead. */
 export class ApiError extends Error {
 	constructor(
 		readonly status: number,

@@ -9,9 +9,7 @@ interface Issue {
 	message: string;
 }
 
-/** Wraps `nestjs-zod`'s pipe rather than configuring it: its exception factory
- * never learns whether the input was the body, the query or a param, and the
- * pointer needs it. */
+/** see docs/adr/0047-errors-are-rfc-9457-problem-details.md */
 export class RequestValidationPipe implements PipeTransform {
 	private readonly zod = new ZodValidationPipe();
 

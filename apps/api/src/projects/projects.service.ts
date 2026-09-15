@@ -16,8 +16,7 @@ export class ProjectsService {
 		return rows.map((row) => ({
 			id: row.id,
 			name: row.name,
-			// The serializer parses against `z.iso.datetime()` before JSON ever
-			// happens — a `Date` would fail that check with a 500.
+			// z.iso.datetime() needs a string, not a Date, or the serializer 500s
 			createdAt: row.createdAt.toISOString(),
 			role: row.effectiveRole ?? "admin",
 		}));

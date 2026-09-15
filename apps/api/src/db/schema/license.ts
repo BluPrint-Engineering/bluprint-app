@@ -10,8 +10,7 @@ export const license = pgTable(
 		organizationId: uuid()
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
-		// Null is a free license. The unique index below is the real guard behind
-		// #40's SKIP LOCKED, not a redundancy: docs/data-model.md
+		// null = free; the unique index below is the real guard behind #40's SKIP LOCKED, not redundant — see docs/data-model.md
 		projectId: uuid().references(() => project.id),
 		createdAt: createdAt(),
 	},

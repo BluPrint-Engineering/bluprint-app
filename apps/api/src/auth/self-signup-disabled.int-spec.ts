@@ -14,16 +14,12 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-// The dynamic import compiles the whole app graph inside this hook, which
-// outgrows Jest's 5s default when every suite runs in parallel.
+// compiling the whole app graph inside the hook outgrows Jest's 5s default under parallel suites
 const BOOT_TIMEOUT = 30_000;
 
 beforeAll(async () => {
 	process.env.ALLOW_SELF_SIGNUP = "false";
-	// Imported here and not at the top: `ConfigModule.forRoot` snapshots
-	// `process.env` while `app.module.ts` is being required, and ts-jest hoists
-	// every require above the file body. A static import reads the .env value and
-	// the test passes for the wrong reason.
+	// dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads; a static import reads .env and passes for the wrong reason
 	const { AppModule } = await import("../app.module.js");
 
 	const moduleRef = await Test.createTestingModule({

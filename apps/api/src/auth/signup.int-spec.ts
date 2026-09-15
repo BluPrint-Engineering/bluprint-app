@@ -18,8 +18,7 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-/** Shared because sign-up is rate limited at 5/min: an account per test would
- * spend the budget the forced-failure test needs. */
+// shared: an account per test would spend the rate-limit budget the forced-failure test needs
 let account: { email: string; userId: string };
 
 beforeAll(async () => {
@@ -99,8 +98,7 @@ describe("signing in again", () => {
 });
 
 describe("when provisioning fails", () => {
-	// The forced error prints a `# SERVER_ERROR:` stack — that is the failure
-	// being injected, not the test failing.
+	// the printed `# SERVER_ERROR:` stack is the injected failure, not the test failing
 	test("leaves no user behind, and no session", async () => {
 		const email = `${randomUUID()}@example.com`;
 		jest
@@ -114,8 +112,7 @@ describe("when provisioning fails", () => {
 		expect(failed.status).toBeGreaterThanOrEqual(400);
 		expect(failed.headers["set-cookie"]).toBeUndefined();
 
-		// The same address signing up cleanly is the black-box proof: a surviving
-		// user row would answer 422, not 200.
+		// black-box proof of no leftover row: a surviving user would answer 422, not 200
 		const retry = await request(server)
 			.post(SIGN_UP)
 			.send({ email, password: PASSWORD, name: "Engenheira de Obra" });

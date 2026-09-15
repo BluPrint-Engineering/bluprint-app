@@ -22,8 +22,7 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-/** One account per case, in its own organization (sign-up seeds one). Shared
- * across tests because sign-up is rate limited at 5/min. */
+// one account per case, own organization from sign-up, shared: sign-up is rate limited at 5/min
 let creator: { userId: string; agent: ReturnType<typeof request.agent> };
 let exhausted: { userId: string; agent: ReturnType<typeof request.agent> };
 let contended: { userId: string; agent: ReturnType<typeof request.agent> };
