@@ -23,13 +23,12 @@ const STACKED: Record<LogoTone, string> = {
 export type LogoTone = "gradient" | "blue" | "white" | "ink";
 
 export interface LogoProps extends React.ComponentPropsWithoutRef<"span"> {
-	/** `gradient` on light surfaces, `white` on brand blue or dark, `ink`/`blue` for flat single-color use. */
+	/** gradient on light surfaces, white on brand blue or dark, ink/blue for flat single-colour use */
 	tone?: LogoTone;
-	/** Mark height in px. The lockups scale from it. */
+	/** Mark height in px; the lockups scale from it. */
 	size?: number;
-	/** Mark + wordmark side by side. */
 	wordmark?: boolean;
-	/** Mark above the wordmark, as in the original brand file. Wins over `wordmark`. */
+	/** Wins over `wordmark`. */
 	stacked?: boolean;
 }
 

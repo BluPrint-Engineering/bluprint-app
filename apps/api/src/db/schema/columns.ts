@@ -1,9 +1,7 @@
 import { sql } from "drizzle-orm";
 import { timestamp, uuid } from "drizzle-orm/pg-core";
 
-// Raw SQL because Drizzle has no uuid v7 builder. Pins Postgres 18, and
-// drizzle-kit never connects — a lower version fails at db:migrate, not at
-// db:generate.
+// raw SQL: Drizzle has no uuid v7 builder; needs Postgres 18, and a lower version fails at db:migrate, not db:generate
 export const uuidV7PrimaryKey = () =>
 	uuid()
 		.primaryKey()

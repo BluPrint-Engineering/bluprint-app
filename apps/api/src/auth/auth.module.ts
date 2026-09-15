@@ -5,9 +5,7 @@ import { DATABASE, Database } from "../db/database.module";
 import { Env } from "../lib/env";
 import { createAuth } from "./auth";
 
-/** Importing this also registers a global `AuthGuard` and re-adds the body
- * parsers `nestApplicationOptions` turns off — neither is visible from here.
- * See docs/adr/0010-self-hosted-better-auth.md. */
+/** Also registers a global AuthGuard and re-adds the body parsers nestApplicationOptions turns off. */
 @Module({
 	imports: [
 		BetterAuthModule.forRootAsync({
@@ -19,8 +17,7 @@ import { createAuth } from "./auth";
 					trustedOrigins: [config.get("CORS_ORIGIN", { infer: true })],
 					allowSelfSignup: config.get("ALLOW_SELF_SIGNUP", { infer: true }),
 				}),
-				// Left on, this module re-calls `enableCors` during init and
-				// overwrites what `configureApp` set.
+				// without this, the module re-calls enableCors during init and overrides configureApp's CORS
 				disableTrustedOriginsCors: true,
 			}),
 		}),

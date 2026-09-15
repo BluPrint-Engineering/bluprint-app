@@ -18,8 +18,7 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-/** Four accounts, one per role this route has to distinguish. Shared
- * across tests because sign-up is rate limited at 5/min. */
+// one account per role this route distinguishes, shared: sign-up is rate limited at 5/min
 let admin: { userId: string; agent: ReturnType<typeof request.agent> };
 let linked: { userId: string; agent: ReturnType<typeof request.agent> };
 let unlinked: { userId: string; agent: ReturnType<typeof request.agent> };
@@ -76,9 +75,7 @@ beforeAll(async () => {
 	projectTwo = created[1]!.id;
 	projectThree = created[2]!.id;
 
-	// `linked` reaches project one and two through project_member, not through
-	// member — proving authorization reads the project membership, never the
-	// organization membership.
+	// linked's access and roles come from project_member below, never this organization membership
 	await db.insert(member).values({
 		organizationId,
 		userId: linked.userId,
@@ -89,8 +86,7 @@ beforeAll(async () => {
 		{ projectId: projectTwo, userId: linked.userId, role: "assistant" },
 	]);
 
-	// `unlinked` belongs to the same organization but to no project — must see
-	// nothing: managers and assistants only see projects they are members of.
+	// same organization, no project: managers and assistants only see projects they belong to
 	await db.insert(member).values({
 		organizationId,
 		userId: unlinked.userId,

@@ -20,7 +20,6 @@ export const projectMember = pgTable(
 		projectId: uuid()
 			.notNull()
 			.references(() => project.id, { onDelete: "cascade" }),
-		// text, not uuid: Better Auth owns user.id.
 		userId: text()
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),

@@ -38,9 +38,7 @@ function runApiScript(script: "db:migrate" | "db:seed"): void {
 	});
 }
 
-// Run before `playwright test`, not as its `globalSetup`: Playwright starts
-// `webServer` before `globalSetup` runs, and the API's boot-time database
-// check would crash on a database that doesn't exist yet.
+// run before `playwright test`, not as globalSetup: webServer starts first and would crash on a missing database
 async function main(): Promise<void> {
 	await ensureDatabaseExists();
 	runApiScript("db:migrate");

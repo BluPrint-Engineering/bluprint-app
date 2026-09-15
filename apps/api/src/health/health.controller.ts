@@ -8,8 +8,7 @@ import { HealthQueryDto } from "./dto/health-query.dto";
 import { HealthResponseDto } from "./dto/health-response.dto";
 import { HealthService } from "./health.service";
 
-/** Every other route is protected by the global `AuthGuard`; health is the one
- * deliberate exception, and `app.int-spec.ts` keeps it that way. */
+/** Health is the one deliberate exception to the global AuthGuard; app.int-spec.ts keeps it that way. */
 @AllowAnonymous()
 @ApiTags("Health")
 @Controller("health")
@@ -17,8 +16,7 @@ export class HealthController {
 	constructor(private readonly health: HealthService) {}
 
 	@Get()
-	// `{}`, not omitted: openapi.ts applies the global "session" requirement to
-	// every route by default.
+	// `{}`, not omitted: openapi.ts applies the global "session" requirement to every route by default
 	@ApiSecurity({})
 	@ApiOperation({
 		summary: "Health check",

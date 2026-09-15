@@ -1,7 +1,6 @@
 import type { DefaultRole, EffectiveRole } from "@bluprint/shared";
 
-// Every seeded account signs up with this password — never used outside a
-// local/dev database, so a fixed value is fine.
+// fine as a fixed value: never used outside a local/dev database
 export const SEED_PASSWORD = "bluprint123";
 
 export interface SeedPerson {
@@ -9,7 +8,7 @@ export interface SeedPerson {
 	email: string;
 }
 
-/** BluPrint staff: no organization, sees metadata only (docs/adr/0021). */
+/** see docs/adr/0021-platform-admin-sees-only-metadata.md */
 export const platformAdmin: SeedPerson = {
 	name: "Suporte BluPrint",
 	email: "suporte@bluprint.test",
@@ -32,16 +31,13 @@ interface SeedProject {
 
 interface SeedOrganization {
 	name: string;
-	// Total licenses inserted; a project below consumes one each. What's left
-	// over is the organization's free-license count.
+	// total inserted; each project below consumes one, the rest is the free-license count
 	licenses: number;
 	members: SeedOrgMember[];
 	projects: SeedProject[];
 }
 
-// Helena appears in two organizations with a different default and a
-// different effective role in each — the case that proves a role never
-// carries across a membership boundary (docs/adr/0022).
+// Helena's roles differ by organization and by project — see docs/adr/0022-roles-live-on-project-membership.md
 const helena: SeedPerson = {
 	name: "Helena Martins",
 	email: "helena@consultoria.test",
@@ -65,7 +61,6 @@ export const people: SeedPerson[] = [
 export const organizations: SeedOrganization[] = [
 	{
 		name: "Construtora Horizonte",
-		// 3 projects consume 3 of these, leaving 2 free.
 		licenses: 5,
 		members: [
 			{ email: "ana@horizonte.test", role: "admin" },
@@ -74,8 +69,7 @@ export const organizations: SeedOrganization[] = [
 			{ email: "diego@horizonte.test", role: "manager" },
 			{ email: "elisa@horizonte.test", role: "assistant" },
 			{ email: "fabio@horizonte.test", role: "assistant" },
-			// Invited before any project existed: default role only, no
-			// project_member row anywhere yet.
+			// invited before any project existed: default role only, no project_member row yet
 			{ email: "gabriela@horizonte.test", role: "assistant" },
 			{ email: helena.email, role: "assistant" },
 		],
@@ -105,8 +99,7 @@ export const organizations: SeedOrganization[] = [
 	},
 	{
 		name: "Vértice Engenharia",
-		// Both licenses consumed by the two projects below: creating a third
-		// project answers 409 NO_FREE_LICENSE.
+		// both consumed by the two projects below: a third project answers 409 NO_FREE_LICENSE
 		licenses: 2,
 		members: [
 			{ email: "igor@vertice.test", role: "admin" },
@@ -115,8 +108,7 @@ export const organizations: SeedOrganization[] = [
 		],
 		projects: [
 			{
-				// Same name as a project in Horizonte, on purpose: proves tenant
-				// isolation reads organization_id, never the project name.
+				// same name as a Horizonte project, on purpose: proves tenant isolation reads organization_id
 				name: "Residencial Jardins",
 				members: [
 					{ email: "julia@vertice.test", role: "manager" },

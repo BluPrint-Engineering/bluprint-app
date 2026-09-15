@@ -8,15 +8,12 @@ import { RequestValidationPipe } from "./common/pipes/request-validation.pipe";
 import { Env } from "./lib/env";
 import { apiDocsEnabled, setupApiDocs } from "./openapi";
 
-/** The Better Auth handler reads the request stream itself, so Nest's parser
- * must be off; `AuthModule` puts it back for every path but `/api/auth/*`. Tests
- * create the app with these same options. */
+/** Better Auth reads the raw request stream; AuthModule restores the parser for every path but /api/auth/*. */
 export const nestApplicationOptions: NestApplicationOptions = {
 	bodyParser: false,
 };
 
-/** Must run before `app.init()`: the prefix, pipes and filters registered after
- * it are silently ignored by the routes already mounted. */
+/** Must run before app.init(): the prefix, pipes and filters registered after are silently ignored by mounted routes. */
 export function configureApp(app: INestApplication): void {
 	const config = app.get(ConfigService<Env, true>);
 
@@ -27,9 +24,7 @@ export function configureApp(app: INestApplication): void {
 	app.useGlobalFilters(new AllExceptionsFilter());
 	app.useGlobalInterceptors(new ZodSerializerInterceptor(app.get(Reflector)));
 
-	// After helmet and CORS: `SwaggerModule.setup` adds its routes straight to
-	// the underlying Express instance, in registration order, so mounting it
-	// any earlier would serve /api/docs with neither.
+	// after helmet/CORS: SwaggerModule mounts straight onto Express, in registration order
 	if (apiDocsEnabled(config)) {
 		setupApiDocs(app);
 	}

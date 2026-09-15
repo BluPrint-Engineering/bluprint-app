@@ -4,8 +4,7 @@ import { createAuth } from "./src/auth/auth";
 import { createDatabase } from "./src/db/database.module";
 import { envSchema } from "./src/lib/env";
 
-// Read only by the Better Auth CLI, which runs outside the Nest ConfigModule —
-// same reason drizzle.config.ts exists. The pool never opens a connection.
+// read only by the Better Auth CLI, outside the Nest ConfigModule — same reason drizzle.config.ts exists
 config({ path: ["../../.env.local", "../../.env"] });
 
 const env = envSchema.parse(process.env);

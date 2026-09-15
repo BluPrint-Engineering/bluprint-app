@@ -17,19 +17,13 @@ import * as schema from "./schema";
 export const DATABASE = Symbol("DATABASE");
 export type Database = NodePgDatabase<typeof schema>;
 
-/** What `db.transaction()` hands its callback. Derived from `Database` instead
- * of spelled out as `NodePgTransaction<...>` because that type's own generic
- * arguments change between Drizzle's relations v1 and v2 — this stays correct
- * across the upgrade. */
+/** Derived, not spelled out as `NodePgTransaction<...>`: that type's generics change between Drizzle's relations v1 and v2. */
 export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
 
-/** First parameter of every `*.queries.ts` function — see
- * docs/adr/0005-queries-take-the-executor.md for why. */
+/** see docs/adr/0005-queries-take-the-executor.md */
 export type Executor = Database | Transaction;
 
-/** The one place the runtime Drizzle instance is shaped; `auth.config.ts` uses
- * it too. `casing` has to match `drizzle.config.ts`, which runs in its own
- * process and cannot import this. */
+/** Casing must match drizzle.config.ts, which can't import this (runs in its own process). */
 export function createDatabase(pool: Pool): Database {
 	return drizzle({ client: pool, schema, casing: "snake_case" });
 }
@@ -72,8 +66,7 @@ class DatabaseHealthCheck implements OnModuleInit, OnModuleDestroy {
 					connectionString: config.get("DATABASE_URL", { infer: true }),
 					connectionTimeoutMillis: 5_000,
 				});
-				// pg emits "error" on the pool when an idle client's connection drops.
-				// Without a listener, Node treats it as fatal and crashes the process.
+				// unhandled, pg's pool "error" on a dropped idle-client connection crashes the process
 				pool.on("error", (error: Error) => {
 					new Logger("DatabasePool").error(
 						`Idle client error: ${error.message}`,

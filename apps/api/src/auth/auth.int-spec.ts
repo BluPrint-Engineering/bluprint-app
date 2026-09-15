@@ -9,8 +9,7 @@ import { z } from "zod";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 
-/** Deliberately undecorated: a route written without a thought about auth must
- * still refuse an anonymous caller. */
+// deliberately undecorated: a route written without a thought about auth must still refuse anonymous
 @Controller("probe")
 class ProbeController {
 	@Get()
@@ -42,8 +41,7 @@ const PASSWORD = "senha-de-obra-123";
 let app: INestApplication;
 let server: Server;
 
-/** Shared because sign-up and sign-in are rate limited: an account per test
- * would spend the budget the brute-force test needs. */
+// shared: an account per test would spend the rate-limit budget the brute-force test needs
 let account: { email: string; userId: string };
 let signUpResponse: request.Response;
 let signedIn: ReturnType<typeof request.agent>;
@@ -65,8 +63,7 @@ beforeAll(async () => {
 	signUpResponse = await signedIn
 		.post(SIGN_UP)
 		.send({ email, password: PASSWORD, name: "Engenheira de Obra" });
-	// Asserted before the parse: a `.env` without ALLOW_SELF_SIGNUP answers 403,
-	// and the Zod issue about a missing `user` key never mentions sign-up.
+	// asserted before the parse: ALLOW_SELF_SIGNUP off answers 403, and the Zod issue on a missing `user` won't say why
 	expect(signUpResponse.status).toBe(200);
 	account = {
 		email,
@@ -161,8 +158,7 @@ describe("body parsing on our own routes", () => {
 	});
 });
 
-// Last, and in one block: the limiter counts every attempt in this process, so
-// anything running after would inherit a spent budget.
+// last, in one block: the limiter counts every attempt in this process, so anything after inherits a spent budget
 describe("signing in", () => {
 	test("rejects the wrong password, with Better Auth's code as problem details", async () => {
 		const res = await request(server)
@@ -190,8 +186,7 @@ describe("signing in", () => {
 		expect(authUserSchema.parse(session.body).user.email).toBe(account.email);
 	});
 
-	// Only fires on a cookie-bearing request — the shape of a CSRF attempt — so a
-	// fresh client's first call always looks like it passes.
+	// a fresh client's first call has no cookie yet, so it looks like it passes
 	test("refuses a cookie-bearing request from an untrusted origin", async () => {
 		const res = await signedIn
 			.post(SIGN_IN)

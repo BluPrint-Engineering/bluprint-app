@@ -19,9 +19,7 @@ config({ path: ["../../.env.local", "../../.env"] });
 
 const env = envSchema.parse(process.env);
 
-// This script TRUNCATEs every seeded table. Refusing anything but a local
-// hostname is the only guard between a typo'd DATABASE_URL and a wiped
-// staging or production database.
+// only guard between a typo'd DATABASE_URL and TRUNCATE hitting staging or production
 const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
 
 function assertLocalDatabase(databaseUrl: string): void {
@@ -33,11 +31,7 @@ function assertLocalDatabase(databaseUrl: string): void {
 	}
 }
 
-/** Creates one account through the real sign-up route, then undoes the
- * self-signup scaffolding (docs/adr/0012) it provisions for every new user —
- * a free-standing organization, an admin membership and three licenses.
- * TODO(#11): once self-signup leaves, seeding an account stops provisioning
- * a throwaway organization and this cleanup step disappears with it. */
+// TODO(#11): the discard step goes with self-signup; see docs/adr/0012-signup-seeding-as-compensated-saga.md
 async function signUpAndDiscardScaffolding(
 	db: Database,
 	auth: ReturnType<typeof createAuth>,
@@ -64,8 +58,7 @@ async function main(): Promise<void> {
 	assertLocalDatabase(env.DATABASE_URL);
 
 	const pool = new Pool({ connectionString: env.DATABASE_URL });
-	// Same as database.module.ts: without a listener, pg's "error" event on an
-	// idle client's dropped connection is fatal and crashes the process.
+	// see database.module.ts's pool "error" listener
 	pool.on("error", (error: Error) => {
 		console.error(`Idle client error: ${error.message}`);
 	});
@@ -78,9 +71,7 @@ async function main(): Promise<void> {
 	});
 
 	try {
-		// `organization` cascades to member, license, project and project_member;
-		// `user` cascades to session and account. Order matters only in that both
-		// roots must be named.
+		// organization cascades to member/license/project/project_member; user cascades to session/account
 		await db.execute(
 			sql`TRUNCATE TABLE "user", "verification", "organization" CASCADE`,
 		);
@@ -105,9 +96,7 @@ async function main(): Promise<void> {
 				await insertLicenses(tx, createdOrganization.id, org.licenses);
 
 				for (const orgMember of org.members) {
-					// Not `insertMember`: its role is narrowed to "admin" for the
-					// signup-provisioning caller, and here it ranges over every
-					// default role.
+					// not insertMember: its role is narrowed to "admin" for the signup-provisioning caller
 					await tx.insert(member).values({
 						organizationId: createdOrganization.id,
 						userId: userIdByEmail.get(orgMember.email)!,
@@ -127,8 +116,7 @@ async function main(): Promise<void> {
 						createdProject.id,
 					);
 					if (!license) {
-						// A fixture bug, not a runtime condition: `org.licenses` above
-						// must cover every project listed for that organization.
+						// fixture bug: org.licenses above must cover every project listed for it
 						throw new Error(
 							`No free license left for "${seedProject.name}" in "${org.name}" — add one to fixture.ts.`,
 						);
@@ -145,8 +133,7 @@ async function main(): Promise<void> {
 			}
 		});
 
-		// Sign-up leaves a session behind for each account; nobody is meant to
-		// still be logged in once the seed finishes.
+		// sign-up leaves a session behind for each account; none should stay logged in
 		await db.delete(session);
 
 		console.log(

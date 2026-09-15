@@ -11,11 +11,7 @@ import {
 } from "../common/problems/problem-details";
 import { ProblemDetailsDto } from "../common/problems/problem-details.dto";
 
-/** Better Auth mounts these routes itself, outside Nest's router, so
- * `@nestjs/swagger` never sees them — hand-documented instead, sign-up,
- * sign-in and session only: see docs/adr/0046-openapi-via-nestjs-swagger.md.
- * `openapi.int-spec.ts` fails if Better Auth renames one of these paths. */
-
+// hand-documented: @nestjs/swagger never scans Better Auth's routes; openapi.int-spec.ts fails on a renamed path
 const userSchema: SchemaObject = {
 	type: "object",
 	description: "The account created or authenticated.",

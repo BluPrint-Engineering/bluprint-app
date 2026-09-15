@@ -60,8 +60,7 @@ export function apiDocsEnabled(config: ConfigService<Env, true>): boolean {
 	return flag ?? process.env.NODE_ENV !== "production";
 }
 
-/** Bypasses Nest's `AuthGuard` and needs no CSP exception, both by
- * construction — see docs/adr/0046-openapi-via-nestjs-swagger.md. */
+/** see docs/adr/0046-openapi-via-nestjs-swagger.md */
 export function setupApiDocs(app: INestApplication): void {
 	const config = new DocumentBuilder()
 		.setTitle("BluPrint API")
