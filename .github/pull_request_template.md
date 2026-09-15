@@ -12,8 +12,8 @@ Closes #
 
 <!-- No interface change? Write n/a on this line and leave the boxes as they are. -->
 
-- [ ] **Mobile** screenshot (field use is on a phone, one-handed)
-- [ ] **Desktop** screenshot
+- [ ] **Mobile** screenshot — from the CI `playwright-report` artifact (iPhone 13); attach one by hand only for a state the E2E suite doesn't reach
+- [ ] **Desktop** screenshot — from the CI `playwright-report` artifact (Desktop Chrome); attach one by hand only for a state the E2E suite doesn't reach
 - [ ] GIF of the flow, if the PR changes an interaction
 - [ ] Interface text in pt-BR
 - [ ] Large touch targets, reachable with one hand

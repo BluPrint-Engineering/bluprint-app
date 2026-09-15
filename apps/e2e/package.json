@@ -1,0 +1,17 @@
+{
+	"name": "@bluprint/e2e",
+	"private": true,
+	"type": "module",
+	"scripts": {
+		"e2e": "bun prepare-database.ts && playwright test",
+		"typecheck": "tsc --noEmit"
+	},
+	"devDependencies": {
+		"@playwright/test": "^1.63.0",
+		"@types/node": "^24.10.1",
+		"@types/pg": "^8.23.1",
+		"dotenv": "^17.4.2",
+		"pg": "^8.23.0",
+		"typescript": "7.0.2"
+	}
+}

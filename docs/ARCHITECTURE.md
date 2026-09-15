@@ -8,7 +8,8 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 /
 ├── apps/
 │   ├── web/              React SPA (Vite)
-│   └── api/              NestJS API on Node; openapi.ts + auth/auth.openapi.ts serve /api/docs, drizzle/ the migrations
+│   ├── api/              NestJS API on Node; openapi.ts + auth/auth.openapi.ts serve /api/docs, drizzle/ the migrations
+│   └── e2e/              Playwright, run through the root `e2e` script
 ├── packages/shared/      Zod schemas and types both apps agree on; built to dist/ before anything else
 ├── docs/                 ARCHITECTURE.md, data-model.md, requisitos.md (pt-BR product spec), adr/, agents/
 ├── docker/postgres/      init script that creates the test database
@@ -139,6 +140,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 - **Setup**: `docker compose up -d --wait`, then `bun run --filter @bluprint/api db:migrate` and, optionally, `db:seed` for a database with sample data. Then `bun run dev` (web :5173, API :3000). One `.env` at the root serves both apps.
 - **Worktrees** ([0049](adr/0049-per-worktree-isolation.md)): a `SessionStart` hook runs `bun run worktree:setup` the first time a session opens in a linked worktree, giving it its own ports and `bluprint_wt_*` databases in a git-ignored `.env.local`; `bun run worktree:prune` drops the databases of a worktree that's gone. Cookies aren't port-scoped, so testing more than one worktree by hand needs a separate browser profile per worktree.
 - **Tests**: Vitest + Testing Library in web; Jest + Supertest in the API ([0007](adr/0007-jest-for-api-vitest-for-web.md)). In the API, `*.spec.ts` is unit-only (no database, no HTTP; mock the injected dependency, never Drizzle's query-builder chain) and `*.int-spec.ts` boots the real `AppModule` against Postgres. `test:unit` never needs the container.
+- **End-to-end**: `apps/e2e`, Playwright against the built app on `iPhone 13` (WebKit) and `Desktop Chrome`, its own `bluprint_e2e` database and ports ([0050](adr/0050-playwright-for-end-to-end.md)). `bun run e2e` builds first, prepares the database (`prepare-database.ts`, since Playwright starts its servers before its own `globalSetup` would run), then runs Playwright; running `playwright test` directly skips that preparation. CI publishes the HTML report and screenshots as the `playwright-report` artifact.
 - **Migrations**: `drizzle-kit migrate` only reads `DATABASE_URL`. After pulling a new migration, run it against `DATABASE_URL_TEST` too, or `test:int` fails with `relation ... does not exist` while CI is green.
 - **Lint/format**: Biome in web and shared; ESLint + Prettier in the API ([0008](adr/0008-eslint-in-api-biome-elsewhere.md)).
 - **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Two tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), and `routes/` follows TanStack Router syntax (`admin.dashboard.tsx`, `$projectId.tsx`: a dot separates segments, `$` marks a parameter).
