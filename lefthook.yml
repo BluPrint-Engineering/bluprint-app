@@ -25,6 +25,14 @@ pre-commit:
 pre-push:
   piped: true
   jobs:
+    - name: branch-name
+      # Aliased into commit-msg's job below, so a new type is one edit, not two.
+      env: &commit_types
+        COMMIT_TYPES: "feat|fix|docs|refactor|chore|test|ci"
+      run: |
+        branch=$(git rev-parse --abbrev-ref HEAD)
+        [ "$branch" = "main" ] || echo "$branch" | grep -qE "^($COMMIT_TYPES)/([0-9]+-)?[a-z0-9-]+$" \
+          || { echo "Branch '$branch' doesn't match <type>/[<issue>-]<slug> — see docs/ARCHITECTURE.md. Rename it: git branch -m <type>/<issue>-<slug>"; exit 1; }
     - run: bun run typecheck                    # builds @bluprint/shared first
     - run: bun run test:unit                    # api only, no database needed
     - run: bun run --filter @bluprint/web test  # web Vitest
@@ -32,6 +40,7 @@ pre-push:
 commit-msg:
   jobs:
     - name: conventional-commits
+      env: *commit_types
       run: |
-        head -n1 {1} | grep -qE '^(feat|fix|docs|refactor|chore|test|ci)(\([a-z0-9-]+\))?!?: .+|^(Merge|Revert|fixup!|squash!|amend!)' \
+        head -n1 {1} | grep -qE "^($COMMIT_TYPES)(\([a-z0-9-]+\))?!?: .+|^(Merge|Revert|fixup!|squash!|amend!)" \
           || { echo "Commit subject must be Conventional Commits: type(scope): subject — see docs/ARCHITECTURE.md"; exit 1; }

@@ -10,8 +10,8 @@ import { ProjectsModule } from "./projects/projects.module";
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
-			// Relative to the workspace cwd — the root .env that Vite also reads.
-			envFilePath: "../../.env",
+			// Earlier entries win: .env.local overrides .env — docs/adr/0049.
+			envFilePath: ["../../.env.local", "../../.env"],
 			validate: (raw) => envSchema.parse(raw),
 		}),
 		DatabaseModule,

@@ -17,7 +17,9 @@
 		"e2e": "bun run --filter @bluprint/shared build && bun run --filter @bluprint/api build && bun run --filter @bluprint/web build && bun run --filter @bluprint/e2e e2e",
 		"lint": "bun run --filter @bluprint/shared build && biome check . && bun run --filter @bluprint/api lint",
 		"lint:fix": "bun run --filter @bluprint/shared build && biome check --write . && bun run --filter @bluprint/api lint:fix",
-		"format": "biome format --write . && bun run --filter @bluprint/api format"
+		"format": "biome format --write . && bun run --filter @bluprint/api format",
+		"worktree:setup": "bun scripts/worktree.ts setup",
+		"worktree:prune": "bun scripts/worktree.ts prune"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.11",
