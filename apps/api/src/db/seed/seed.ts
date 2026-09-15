@@ -15,7 +15,7 @@ import { member, organization, projectMember, session, user } from "../schema";
 import { SEED_PASSWORD, organizations, people, platformAdmin } from "./fixture";
 
 // Same cwd assumption as auth.config.ts and test/setup-env.ts.
-config({ path: "../../.env" });
+config({ path: ["../../.env.local", "../../.env"] });
 
 const env = envSchema.parse(process.env);
 

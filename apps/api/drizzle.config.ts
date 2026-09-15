@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
 // drizzle-kit runs in its own process, outside the Nest ConfigModule.
-config({ path: "../../.env" });
+config({ path: ["../../.env.local", "../../.env"] });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {

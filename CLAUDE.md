@@ -34,7 +34,7 @@ A decision, the architecture or the spec changes by **pull request**, in the sam
 
 ```bash
 docker compose up -d --wait  # Postgres, once per session — serves dev and the integration tests
-bun run dev                  # web :5173, api :3000
+bun run dev                  # web :5173, api :3000 by default; a worktree gets its own from .env.local
 bun run test                 # api Jest + web Vitest; test:unit and test:int are api-only
 bun run lint                 # Biome everywhere except apps/api; ESLint + Prettier there
 bun run typecheck            # also: build, lint:fix, format
