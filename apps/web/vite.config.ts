@@ -8,8 +8,8 @@ import { defineConfig } from "vitest/config";
 const envDir = resolve(import.meta.dirname, "../..");
 
 export default defineConfig(({ mode }) => {
-	// Empty prefix: PORT has no VITE_ prefix, so it is only readable here.
-	const { PORT } = loadEnv(mode, envDir, "");
+	// Empty prefix: PORT/WEB_PORT have no VITE_ prefix, so they are only readable here.
+	const { PORT, WEB_PORT } = loadEnv(mode, envDir, "");
 
 	return {
 		plugins: [tanstackRouter(), react(), tailwindcss()],
@@ -20,7 +20,8 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		server: {
-			port: 5173,
+			port: Number(WEB_PORT) || 5173,
+			strictPort: true,
 			proxy: {
 				"/api": { target: `http://localhost:${PORT || 3000}` },
 			},
