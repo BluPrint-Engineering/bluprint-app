@@ -1,7 +1,7 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { DatabaseAdapter } from "../db/database.module";
-import { organization } from "../db/schema";
+import { organization } from "./organization.entity";
 
 @Injectable()
 export class OrganizationsRepository {

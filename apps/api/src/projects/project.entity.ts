@@ -1,6 +1,6 @@
 import { index, pgTable, text, uuid } from "drizzle-orm/pg-core";
-import { createdAt, uuidV7PrimaryKey } from "./columns";
-import { organization } from "./organization";
+import { createdAt, uuidV7PrimaryKey } from "../db/columns";
+import { organization } from "../organizations/organization.entity";
 
 export const project = pgTable(
 	"project",

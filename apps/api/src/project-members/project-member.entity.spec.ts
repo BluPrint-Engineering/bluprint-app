@@ -1,5 +1,5 @@
 import { effectiveRoleSchema, projectAccessRoleSchema } from "@bluprint/shared";
-import { projectMemberRole } from "./project-member";
+import { projectMemberRole } from "./project-member.entity";
 
 describe("project_member roles", () => {
 	test("the Postgres enum lists exactly the shared effective roles", () => {

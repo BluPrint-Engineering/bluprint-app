@@ -1,6 +1,6 @@
 # Better Auth's tables are generated and stay as generated
 
-`user`, `session`, `account` and `verification` are never written by hand: `bun run --filter @bluprint/api auth:generate` rewrites `src/db/schema/auth.ts` from `auth.config.ts`, and the migration comes from `drizzle-kit` like every other. They carry no decision of ours, so they stay exactly as the CLI generates them, even where our tables differ.
+`user`, `session`, `account` and `verification` are never written by hand: `bun run --filter @bluprint/api auth:generate` rewrites `src/auth/auth.entity.ts` from `auth.config.ts`, and the migration comes from `drizzle-kit` like every other. They carry no decision of ours, so they stay exactly as the CLI generates them, even where our tables differ.
 
 ## Consequences
 

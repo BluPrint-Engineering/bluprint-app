@@ -15,7 +15,7 @@
 		"lint": "eslint . && prettier --check .",
 		"lint:fix": "eslint . --fix && prettier --write .",
 		"format": "prettier --write .",
-		"auth:generate": "auth generate --config ./auth.config.ts --output ./src/db/schema/auth.ts --yes && prettier --write ./src/db/schema/auth.ts",
+		"auth:generate": "auth generate --config ./auth.config.ts --output ./src/auth/auth.entity.ts --yes && prettier --write ./src/auth/auth.entity.ts",
 		"db:generate": "bun run --filter @bluprint/shared build && drizzle-kit generate",
 		"db:migrate": "drizzle-kit migrate",
 		"db:studio": "drizzle-kit studio",

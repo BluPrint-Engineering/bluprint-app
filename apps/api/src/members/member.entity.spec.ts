@@ -1,5 +1,5 @@
 import { defaultRoleSchema, effectiveRoleSchema } from "@bluprint/shared";
-import { memberRole } from "./member";
+import { memberRole } from "./member.entity";
 
 describe("member roles", () => {
 	test("the Postgres enum lists exactly the shared default roles", () => {

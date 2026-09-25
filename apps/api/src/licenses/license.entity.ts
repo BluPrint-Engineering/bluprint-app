@@ -1,7 +1,7 @@
 import { index, pgTable, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import { createdAt, uuidV7PrimaryKey } from "./columns";
-import { organization } from "./organization";
-import { project } from "./project";
+import { createdAt, uuidV7PrimaryKey } from "../db/columns";
+import { organization } from "../organizations/organization.entity";
+import { project } from "../projects/project.entity";
 
 export const license = pgTable(
 	"license",
