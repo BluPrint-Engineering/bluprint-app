@@ -1,10 +1,10 @@
 import { Transactional } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { UseCls } from "nestjs-cls";
-import { LicensesRepository } from "../licenses/licenses.repository";
-import { MembersRepository } from "../members/members.repository";
-import { OrganizationsRepository } from "../organizations/organizations.repository";
-import { UsersRepository } from "./users.repository";
+import { LicensesRepository } from "../../licenses/licenses.repository";
+import { MembersRepository } from "../../members/members.repository";
+import { OrganizationsRepository } from "../../organizations/organizations.repository";
+import { UsersRepository } from "../users.repository";
 
 const FREE_LICENSES = 3;
 

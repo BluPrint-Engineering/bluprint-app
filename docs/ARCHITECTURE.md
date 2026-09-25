@@ -46,7 +46,8 @@ app.ts           configureApp(app) + nestApplicationOptions: prefix, helmet, COR
                  serializer, error filter; tests use both, so no contract only holds in production
 app.module.ts    root module: ConfigModule (env validated at boot), ClsModule (transactions) and domain modules
 openapi.ts       builds and serves the OpenAPI document at /api/docs, merging auth/auth.openapi.ts by hand
-auth/            Better Auth instance, the module that mounts it, its hand-written OpenAPI paths, its generated tables
+auth/            Better Auth instance, the module that mounts it, its hand-written OpenAPI paths, its generated tables;
+                 password-policy/ and signup/ (the self-signup scaffolding) beside them
 <domain>/        one module per domain: controller, service, repository, module, entity, dto/
 common/          cross-cutting filters, pipes, guards, interceptors; problems/ holds the error contract
 db/              DatabaseModule: pool, Drizzle instance, the entity barrel, shared columns, boot connection check
@@ -55,6 +56,7 @@ utils/           pure functions, no state or I/O
 ```
 
 - **The module is the unit of organization, not the layer**: `controllers/` and `services/` at the root spread one domain over three places.
+- **A responsibility inside a domain gets a subfolder once it has two or more files**, code and its tests together (`auth/password-policy/`); a lone file stays at the domain root. The domain's controller, service, repository and module stay at the root. A helper one domain uses belongs in that domain, not in `utils/`.
 - **Controller** declares the route, validates input through a DTO and calls the service. **Service** holds business logic and never touches Express. **Repository** holds all database access as an injectable class reading the current transaction from CLS, so a `@Transactional()` service method puts every repository call in one transaction ([0051](adr/0051-transaction-aware-repositories-via-cls.md)). `DatabaseModule` is `@Global()`, exports Drizzle under the `DATABASE` token and checks the connection at boot ([0006](adr/0006-database-check-at-boot.md)).
 - **Contracts**: request DTOs wrap shared schemas ([0003](adr/0003-shared-zod-via-nestjs-zod.md)); every route declares a response DTO ([0004](adr/0004-response-dto-on-every-route.md)); every error is RFC 9457 problem details with a stable `code`, thrown as `ProblemException` ([0047](adr/0047-errors-are-rfc-9457-problem-details.md)). Conventions and gotchas: `.claude/rules/api.md`.
 - **`lib/` vs `utils/`**: `lib/` *is* something (state or I/O), `utils/` is pure and testable without mocks. Only what another module injects becomes `@Injectable()`.

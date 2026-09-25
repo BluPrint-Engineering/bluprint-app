@@ -1,21 +1,23 @@
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from "@bluprint/shared";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
+import { haveIBeenPwned } from "better-auth/plugins";
 import { Database } from "../db/database.module";
+import { SIGN_UP_PATH } from "./auth-paths";
 import { withProblemDetails } from "./auth-problem-details";
+import { rejectGuessablePassword } from "./password-policy/password-policy";
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
-
-/** ctx.path strips the `/api/auth` base Better Auth mounts under. */
-const SIGN_UP_PATH = "/sign-up/email";
 
 export interface AuthOptions {
 	secret: string;
 	baseURL: string;
 	trustedOrigins: string[];
 	allowSelfSignup: boolean;
+	checkBreachedPasswords: boolean;
 	onUserCreated: (user: { id: string; name: string }) => Promise<void>;
 }
 
@@ -30,7 +32,13 @@ export function createAuth(db: Database, options: AuthOptions) {
 			// pinned: Better Auth disables this itself when NODE_ENV is "test"
 			disableOriginCheck: false,
 		},
-		emailAndPassword: { enabled: true },
+		emailAndPassword: {
+			enabled: true,
+			minPasswordLength: PASSWORD_MIN_LENGTH,
+			maxPasswordLength: PASSWORD_MAX_LENGTH,
+		},
+		// fails closed: while the HIBP API is unreachable, setting a password answers 500 (ADR 0052)
+		plugins: [haveIBeenPwned({ enabled: options.checkBreachedPasswords })],
 		session: { expiresIn: 90 * DAY, updateAge: DAY },
 		user: {
 			additionalFields: {
@@ -44,15 +52,15 @@ export function createAuth(db: Database, options: AuthOptions) {
 			},
 		},
 		hooks: {
-			// TODO(#11): remove with self-signup (ADR 0011)
-			before: createAuthMiddleware((ctx) => {
+			before: createAuthMiddleware(async (ctx) => {
+				// TODO(#11): remove with self-signup (ADR 0011)
 				if (!options.allowSelfSignup && ctx.path === SIGN_UP_PATH) {
 					throw new APIError("FORBIDDEN", {
 						message: "Self-service sign-up is disabled",
 						code: "SELF_SIGNUP_DISABLED",
 					});
 				}
-				return Promise.resolve();
+				await rejectGuessablePassword(ctx);
 			}),
 		},
 		databaseHooks: {

@@ -1,4 +1,9 @@
 import {
+	PASSWORD_MAX_LENGTH,
+	PASSWORD_MIN_LENGTH,
+	PASSWORD_TOO_GUESSABLE_CODE,
+} from "@bluprint/shared";
+import {
 	ComponentsObject,
 	getSchemaPath,
 	PathsObject,
@@ -102,7 +107,13 @@ export const authPaths: PathsObject = {
 							type: "object",
 							properties: {
 								email: { type: "string", format: "email" },
-								password: { type: "string", minLength: 8 },
+								password: {
+									type: "string",
+									minLength: PASSWORD_MIN_LENGTH,
+									maxLength: PASSWORD_MAX_LENGTH,
+									description:
+										"Refused when easy to guess (a common password, a sequence, or one whose core is BluPrint's name or the person's own name or e-mail) or found in a breach on Have I Been Pwned. No composition rules (docs/adr/0052-password-policy.md).",
+								},
 								name: { type: "string" },
 							},
 							required: ["email", "password", "name"],
@@ -140,12 +151,25 @@ export const authPaths: PathsObject = {
 					},
 				},
 				"400": problemResponse(
-					"The body failed Better Auth's own validation, or the password is shorter than 8 characters.",
+					"The body failed Better Auth's own validation, or the password breaks the policy: outside 8–64 characters, easy to guess, or breached.",
 					400,
 					{
 						passwordTooShort: {
 							code: "PASSWORD_TOO_SHORT",
 							detail: "Password too short",
+						},
+						passwordTooLong: {
+							code: "PASSWORD_TOO_LONG",
+							detail: "Password too long",
+						},
+						passwordTooGuessable: {
+							code: PASSWORD_TOO_GUESSABLE_CODE,
+							detail: "Password is too easy to guess",
+						},
+						passwordCompromised: {
+							code: "PASSWORD_COMPROMISED",
+							detail:
+								"The password you entered has been compromised. Please choose a different password.",
 						},
 						invalidBody: {
 							code: "VALIDATION_FAILED",
@@ -181,6 +205,19 @@ export const authPaths: PathsObject = {
 					SIGN_UP,
 				),
 				"429": tooManyAttempts(SIGN_UP),
+				"500": problemResponse(
+					"The breach check could not reach Have I Been Pwned, or it answered an error, so no account was created; retry later. No `code`: the detail varies. It fails closed on purpose (docs/adr/0052-password-policy.md).",
+					500,
+					{
+						breachCheckUnreachable: {
+							detail: "Failed to check password. Please try again later.",
+						},
+						breachCheckAnsweredError: {
+							detail: "Failed to check password. Status: 503",
+						},
+					},
+					SIGN_UP,
+				),
 			},
 		},
 	},

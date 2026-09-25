@@ -4,11 +4,11 @@ import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { eq } from "drizzle-orm";
 import request from "supertest";
-import { configureApp, nestApplicationOptions } from "../app";
-import { AppModule } from "../app.module";
-import { DATABASE, Database } from "../db/database.module";
-import { license, member, organization, user } from "../db/schema";
-import { MembersRepository } from "../members/members.repository";
+import { configureApp, nestApplicationOptions } from "../../app";
+import { AppModule } from "../../app.module";
+import { DATABASE, Database } from "../../db/database.module";
+import { license, member, organization, user } from "../../db/schema";
+import { MembersRepository } from "../../members/members.repository";
 import { SignupProvisioning } from "./signup-provisioning";
 
 const SIGN_UP = "/api/auth/sign-up/email";

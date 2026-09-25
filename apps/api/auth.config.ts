@@ -16,6 +16,7 @@ export const auth = createAuth(
 		baseURL: env.BETTER_AUTH_URL,
 		trustedOrigins: [env.CORS_ORIGIN],
 		allowSelfSignup: env.ALLOW_SELF_SIGNUP,
+		checkBreachedPasswords: env.PASSWORD_BREACH_CHECK,
 		// the CLI only generates tables; it never creates a user
 		onUserCreated: () => Promise.resolve(),
 	},

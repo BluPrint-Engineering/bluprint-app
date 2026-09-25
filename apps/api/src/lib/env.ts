@@ -10,6 +10,8 @@ export const envSchema = z.object({
 	BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
 	// stringbool, not coerce.boolean: coercion turns "false" into true and opens self-signup in production
 	ALLOW_SELF_SIGNUP: z.stringbool().default(false),
+	// defaults on, so a host that never declares it still refuses breached passwords (ADR 0052)
+	PASSWORD_BREACH_CHECK: z.stringbool().default(true),
 	// no default: apiDocsEnabled derives one from NODE_ENV (ADR 0046)
 	API_DOCS_ENABLED: z.stringbool().optional(),
 });

@@ -61,6 +61,8 @@ async function main(): Promise<void> {
 
 	// signUpAndDiscardScaffolding needs self-signup on; dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads
 	process.env.ALLOW_SELF_SIGNUP = "true";
+	// the seed's one password is known not to be breached, so it runs offline
+	process.env.PASSWORD_BREACH_CHECK = "false";
 	const { AppModule } = await import("../../app.module.js");
 
 	const app = await NestFactory.createApplicationContext(AppModule, {
