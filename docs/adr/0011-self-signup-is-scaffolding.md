@@ -6,6 +6,7 @@ In the finished product nobody signs up alone: the platform admin creates the or
 
 - The 403 comes from a `hooks.before` in `auth.ts`. That route now has two unrelated 403s: this one and the `trustedOrigins` ones; only the body's `code` tells them apart.
 - The flag is read at boot: changing `.env` requires restarting the API.
+- The web app has a twin, `VITE_ALLOW_SELF_SIGNUP`, parsed the same way with the same `false` default: off, `/signup` redirects to `/login`, whose footer explains that access comes by invitation. It only works alongside the API flag, is inlined by Vite at build time, so a bad value fails the build instead of the API's boot, and the two move together: declared side by side in `.env.example`, both on for the e2e run (`playwright.config.ts` for the API, the root `e2e` script for the web build), and both removed in #87, the invitation signup that breaks down #11.
 - CI sets `ALLOW_SELF_SIGNUP: "true"` (quoted: unquoted YAML yields a boolean, which `z.stringbool()` rejects), because every auth integration test creates an account.
 
 ## Considered Options

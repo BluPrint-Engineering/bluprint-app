@@ -1,5 +1,4 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -17,6 +16,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth";
 import { authCardClassName } from "./components/AuthShell";
+import { PasswordInput } from "./components/PasswordInput";
 import { signInErrorMessage } from "./signInErrorMessage";
 
 const loginFormSchema = z.object({
@@ -27,7 +27,6 @@ type LoginFormValues = z.infer<typeof loginFormSchema>;
 
 export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 	const [apiError, setApiError] = useState<string | null>(null);
-	const [showPassword, setShowPassword] = useState(false);
 	const {
 		register,
 		handleSubmit,
@@ -88,31 +87,13 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 					</Field>
 					<Field data-invalid={!!errors.password}>
 						<FieldLabel htmlFor="password">Senha</FieldLabel>
-						<div className="relative">
-							<Input
-								id="password"
-								type={showPassword ? "text" : "password"}
-								autoComplete="current-password"
-								placeholder="Sua senha"
-								aria-invalid={!!errors.password}
-								className="pr-(--control-h)"
-								{...register("password")}
-							/>
-							<Button
-								type="button"
-								variant="ghost"
-								size="icon"
-								className="absolute inset-y-0 right-0 text-muted-foreground"
-								aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-								onClick={() => setShowPassword((shown) => !shown)}
-							>
-								{showPassword ? (
-									<EyeOff className="size-4" />
-								) : (
-									<Eye className="size-4" />
-								)}
-							</Button>
-						</div>
+						<PasswordInput
+							id="password"
+							autoComplete="current-password"
+							placeholder="Sua senha"
+							aria-invalid={!!errors.password}
+							{...register("password")}
+						/>
 						{errors.password && <FieldError errors={[errors.password]} />}
 					</Field>
 					<Button

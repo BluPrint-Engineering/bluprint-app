@@ -51,6 +51,8 @@ export default defineConfig({
 				DATABASE_URL: DATABASE_URL_E2E,
 				CORS_ORIGIN: WEB_BASE_URL,
 				BETTER_AUTH_URL: API_BASE_URL,
+				// signup.spec.ts creates an account; paired with VITE_ALLOW_SELF_SIGNUP in the root e2e script
+				ALLOW_SELF_SIGNUP: "true",
 			},
 		},
 		{
