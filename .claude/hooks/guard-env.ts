@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// PreToolUse guard for Read/Edit/Write/Grep/Glob; see docs/adr/0048-hooks-enforce-agent-guardrails.md.
+// PreToolUse guard for Read/Edit/Write/Grep/Glob (ADR 0048).
 import { block, isEnvFile, readStdinJson, runHook } from "./lib";
 
 interface PreToolUseInput {

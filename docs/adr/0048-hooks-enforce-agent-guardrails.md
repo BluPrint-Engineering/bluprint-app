@@ -6,7 +6,7 @@ Three Bun TypeScript hooks in `.claude/hooks/`, registered in a committed `.clau
 
 - `guard-bash.ts` (`PreToolUse`, `Bash`): blocks `gh pr merge`, `git push` to `main`, `--force`/`-f` (`--force-with-lease` stays allowed off `main`), `--no-verify`, `LEFTHOOK=0`, `drizzle-kit push`/`drop`, and shell reads or writes of `.env`.
 - `guard-env.ts` (`PreToolUse`, `Read|Edit|Write|Grep|Glob`): blocks any path whose basename is `.env`.
-- `comment-nudge.ts` (`PostToolUse`, `Edit|Write` on `.ts`/`.tsx`): never blocks; hands back the comments an edit just added, against the tightened `.claude/rules/code-comments.md`.
+- `comment-nudge.ts` (`PostToolUse`, `Edit|Write` on `.ts`/`.tsx`): never blocks; hands back the comments an edit just added, and tells a bare ADR pointer (a comment that only references an ADR) apart from other comments, against `.claude/rules/code-comments.md`.
 
 `.claude/settings.json` is committed, not personal: every agent gets it regardless of `settings.local.json`. `jsdoc/informative-docs` (`eslint-plugin-jsdoc`) backs the same comment rule for the API with a real lint failure, since Biome has no JSDoc-content rule for the web app.
 
@@ -15,7 +15,7 @@ A fourth guardrail lives in Lefthook, not a Claude Code hook: `pre-push` rejects
 ## Consequences
 
 - **Rules-only, not judgment.** The hooks parse the command or the path; they don't know intent. A determined rewrite of a blocked command (a typo'd flag, an unusual quoting) can still slip through — this is a guardrail, not a sandbox.
-- **`comment-nudge.ts` never blocks.** It's a nudge against the delete test in `.claude/rules/code-comments.md`, not a gate; a human still reviews the diff before commit.
+- **`comment-nudge.ts` never blocks.** It's a nudge ("state the fact or delete it" for a bare pointer, a delete test for any other comment) against `.claude/rules/code-comments.md`, not a gate; a human still reviews the diff before commit.
 - **Bypassable only by a human.** `--no-verify` and `LEFTHOOK=0` still work outside an agent's tool calls (a human's own shell), same as [0045](0045-local-git-hooks-with-lefthook.md); CI stays the real gate.
 
 ## Considered Options

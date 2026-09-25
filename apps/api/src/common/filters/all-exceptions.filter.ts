@@ -13,7 +13,7 @@ import {
 } from "../problems/problem-details";
 import { ProblemException } from "../problems/problem.exception";
 
-/** Bare @Catch() so it also takes the router's NotFoundException; see docs/adr/0047-errors-are-rfc-9457-problem-details.md. */
+/** Bare @Catch() so it also takes the router's NotFoundException (ADR 0047) */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
 	catch(exception: unknown, host: ArgumentsHost): void {

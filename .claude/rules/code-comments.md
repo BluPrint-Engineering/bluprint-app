@@ -1,10 +1,13 @@
 # Code comments
 
-Default: no comment. Add one only when deleting it would lose something a reader of the code, the function or variable's own name, its test and the ADRs cannot get back.
+A comment earns its place by telling the reader what the code, its names and its tests can't: why it's this way, a hidden hazard, a unit or precondition, a workaround and where it came from. A comment that restates the code or only points elsewhere costs reading time and goes stale.
 
-- **One line, maximum — JSDoc included.** Longer rationale belongs in an ADR; point to it: `// see docs/adr/0051-transaction-aware-repositories-via-cls.md`.
-- **Always allowed**: a `// see docs/adr/...` pointer, and `TODO(#n)` for scaffolding.
-- **JSDoc** only when it states something the signature can't: a hidden hazard, a unit, a precondition. Never a JSDoc that restates the parameter names or return type.
-- **Never** restate what an issue or an ADR already says, and never restate what the code already says — rename instead.
+- **State the fact itself.** A line comment is one line.
+- **Cite ADRs, don't point to them.** Append `(ADR 0013)` to a comment that already stands on its own; a comment that is only a reference to an ADR says nothing, so state the hazard or delete it. The ADR names the modules it governs, so the link runs from the decision to the code.
+- **Prefer code over comment**: a clearer name, an explaining variable, an assertion for an invariant.
+- **JSDoc** when it adds what the signature can't: a unit, nullability, a precondition, a hazard. It may span several lines when the contract needs them. JSDoc that restates parameter names or the return type stays out.
+- **`TODO(#n)`** always carries its issue.
+- **Comment only code you're writing or changing**, and when you change code, update or delete the comments that describe it.
+- **What changed goes in the commit**, not the comment ("added", "now uses", "fixed").
 
-History lives in git; removed code is deleted, not commented out. Comments are in English. A test's name is its comment.
+Removed code is deleted, not commented out. Comments are in English. A test's name is its comment.

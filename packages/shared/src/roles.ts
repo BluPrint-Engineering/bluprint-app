@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-/** Authorization reads this set alone; see docs/adr/0024-admin-is-read-and-export-only.md. */
+/** Authorization reads this set alone (ADR 0024) */
 export const effectiveRoles = ["manager", "assistant"] as const;
 
 export const defaultRoles = ["admin", ...effectiveRoles] as const;

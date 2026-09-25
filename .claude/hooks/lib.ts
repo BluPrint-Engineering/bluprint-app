@@ -1,4 +1,4 @@
-// Shared helpers for .claude/hooks/*.ts; see docs/adr/0048-hooks-enforce-agent-guardrails.md.
+// Shared helpers for .claude/hooks/*.ts (ADR 0048).
 import path from "node:path";
 
 export async function readStdinJson<T>(): Promise<T> {

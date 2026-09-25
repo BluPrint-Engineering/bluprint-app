@@ -8,7 +8,6 @@ import { UsersRepository } from "./users.repository";
 
 const FREE_LICENSES = 3;
 
-/** see docs/adr/0012-signup-seeding-as-compensated-saga.md */
 @Injectable()
 export class SignupProvisioning {
 	constructor(
@@ -18,7 +17,6 @@ export class SignupProvisioning {
 		private readonly users: UsersRepository,
 	) {}
 
-	// see docs/adr/0051-transaction-aware-repositories-via-cls.md
 	@UseCls()
 	async provisionOrDiscard(user: { id: string; name: string }): Promise<void> {
 		try {

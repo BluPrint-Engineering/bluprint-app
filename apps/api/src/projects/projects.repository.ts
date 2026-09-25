@@ -33,7 +33,7 @@ export class ProjectsRepository {
 						eq(projectMember.userId, userId),
 					),
 				)
-				// see docs/adr/0022-roles-live-on-project-membership.md
+				// an org admin sees every project; anyone else only those they're a member of (ADR 0022)
 				.where(or(isNotNull(projectMember.id), eq(member.role, "admin")))
 				.orderBy(desc(project.createdAt), desc(project.id))
 		);

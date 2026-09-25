@@ -1,4 +1,3 @@
-// docs/adr/0049-per-worktree-isolation.md
 import { createHash } from "node:crypto";
 import {
 	closeSync,
@@ -111,7 +110,7 @@ export function parseEnvFile(path: string): Record<string, string> {
 	return result;
 }
 
-// process.env wins, then .env.local, then .env — docs/adr/0049.
+// process.env wins, then .env.local, then .env (ADR 0049)
 export function resolveDatabaseUrl(cwd: string): string {
 	const sources = [
 		process.env as Record<string, string | undefined>,
@@ -209,7 +208,7 @@ function releaseLock(path: string): void {
 	}
 }
 
-// Serializes slot selection only, not install/build/DB work — docs/adr/0049.
+// Serializes slot selection only, not install/build/DB work (ADR 0049)
 export async function withSetupLock<T>(
 	commonDir: string,
 	fn: () => Promise<T>,

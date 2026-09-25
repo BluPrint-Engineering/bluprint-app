@@ -33,7 +33,7 @@ function assertLocalDatabase(databaseUrl: string): void {
 	}
 }
 
-// TODO(#11): the discard step goes with self-signup; see docs/adr/0012-signup-seeding-as-compensated-saga.md
+// TODO(#11): the discard step goes with self-signup (ADR 0012)
 async function signUpAndDiscardScaffolding(
 	db: Database,
 	auth: Auth,

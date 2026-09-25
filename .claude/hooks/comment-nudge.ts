@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// PostToolUse nudge for Edit/Write; see docs/adr/0048-hooks-enforce-agent-guardrails.md.
+// PostToolUse nudge for Edit/Write (ADR 0048).
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { readStdinJson, runHook } from "./lib";
@@ -17,6 +17,20 @@ interface PostToolUseInput {
 
 const NUDGE =
 	"Per .claude/rules/code-comments.md: would deleting this lose something the code, a name or a test can't say? If not, delete it.";
+
+const POINTER_NUDGE =
+	"Per .claude/rules/code-comments.md: a pointer alone says nothing. State the hazard in the comment and cite the ADR as a suffix, e.g. (ADR 0013); or delete it.";
+
+// A comment whose whole content is `docs/adr/...` or `ADR nnnn`, optionally prefixed by "see".
+const BARE_ADR_POINTER = /^(?:see\s+)?\(?(?:docs\/adr\/\S+?|ADR\s*\d{4})\)?\.?$/i;
+
+function isBareAdrPointer(comment: string): boolean {
+	const content = comment
+		.replace(/^\/\/|^\/\*+|\*+\/$/g, "")
+		.replace(/^\s*\*/gm, "")
+		.trim();
+	return BARE_ADR_POINTER.test(content);
+}
 
 function isRelevantFile(filePath: string): boolean {
 	if (!/\.(ts|tsx)$/.test(filePath)) {
@@ -118,16 +132,28 @@ function readGitBlob(root: string, spec: string): string | null {
 	return result.status === 0 ? result.stdout : null;
 }
 
+function bullets(comments: string[]): string {
+	return comments.map((c) => `- ${c.trim()}`).join("\n");
+}
+
 function emit(comments: string[]): void {
 	if (comments.length === 0) {
 		return;
 	}
-	const list = comments.map((c) => `- ${c.trim()}`).join("\n");
+	const pointers = comments.filter(isBareAdrPointer);
+	const others = comments.filter((c) => !isBareAdrPointer(c));
+	const sections: string[] = [];
+	if (pointers.length > 0) {
+		sections.push(`ADR pointers added by this edit:\n${bullets(pointers)}\n\n${POINTER_NUDGE}`);
+	}
+	if (others.length > 0) {
+		sections.push(`Comments added by this edit:\n${bullets(others)}\n\n${NUDGE}`);
+	}
 	console.log(
 		JSON.stringify({
 			hookSpecificOutput: {
 				hookEventName: "PostToolUse",
-				additionalContext: `Comments added by this edit:\n${list}\n\n${NUDGE}`,
+				additionalContext: sections.join("\n\n"),
 			},
 		}),
 	);

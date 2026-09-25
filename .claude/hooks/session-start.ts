@@ -1,4 +1,4 @@
-// docs/adr/0049 — cwd comes from the hook's JSON input, not CLAUDE_PROJECT_DIR.
+// cwd comes from the hook's JSON input, not CLAUDE_PROJECT_DIR (ADR 0049).
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { $ } from "bun";

@@ -18,7 +18,6 @@ export function codeForStatus(status: number): string {
 		.replace(/[^A-Z0-9]+/g, "_");
 }
 
-/** see docs/adr/0047-errors-are-rfc-9457-problem-details.md */
 export function problemDetails({
 	status,
 	code,

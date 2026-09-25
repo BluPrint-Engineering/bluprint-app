@@ -1,4 +1,3 @@
-// docs/adr/0049-per-worktree-isolation.md
 import { copyFileSync, existsSync, constants as fsConstants } from "node:fs";
 import { resolve } from "node:path";
 import { $ } from "bun";
