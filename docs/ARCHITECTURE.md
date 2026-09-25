@@ -21,7 +21,7 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 
 A Bun workspaces monorepo; Bun runs scripts, the API runs on Node ([0001](adr/0001-bun-workspaces-node-runtime.md)).
 
-A screen's handoff in `docs/design/screens/<screen>/` is a high-fidelity reference to rebuild in `apps/web` with its own stack, never code to import; its `README.md` is the spec. The prototypes load the design system from `.claude/skills/bluprint-design/`, so serve the repo root to open them. A Claude Design export adds or replaces one screen folder; the `_ds/` copy it ships is dropped.
+A screen's handoff in `docs/design/screens/<screen>/` is a high-fidelity reference to rebuild in `apps/web` with its own stack, never code to import; its `README.md` is the spec. The prototypes load the design system from `.claude/skills/bluprint-design/`, so serve the repo root to open them. A Claude Design export adds or replaces one screen folder and the `_ds/` copy it ships is dropped; `/import-design` does both kinds of export, screens and the design system.
 
 ### `apps/web/src`
 
