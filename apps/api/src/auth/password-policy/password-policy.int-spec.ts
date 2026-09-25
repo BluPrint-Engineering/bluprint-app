@@ -11,6 +11,7 @@ import { user } from "../../db/schema";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const CHANGE_PASSWORD = "/api/auth/change-password";
+const RESET_PASSWORD = "/api/auth/reset-password";
 const STRONG_PASSWORD = "prumo-nivel-esquadro";
 const BREACHED_PASSWORD = "andaime-vazado-na-rede";
 
@@ -127,6 +128,19 @@ describe("changing the password", () => {
 				currentPassword: STRONG_PASSWORD,
 				newPassword: "engenheira-2026",
 			});
+
+		expect(res.status).toBe(400);
+		expect(problemDetailsSchema.parse(res.body).code).toBe(
+			"PASSWORD_TOO_GUESSABLE",
+		);
+	});
+});
+
+describe("resetting the password", () => {
+	test("applies the context-free blocklist before the reset token is checked", async () => {
+		const res = await request(server)
+			.post(RESET_PASSWORD)
+			.send({ newPassword: "bluprint123", token: randomUUID() });
 
 		expect(res.status).toBe(400);
 		expect(problemDetailsSchema.parse(res.body).code).toBe(

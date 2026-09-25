@@ -91,36 +91,48 @@ function basesOf(folded: string): string[] {
 	return bases;
 }
 
-function isRepeatedOrSequential(password: string): boolean {
-	const chars = [...password];
+/** The whole password is one short unit over and over: "12341234", "abcabcab". */
+function isRepeatedPattern(chars: string[]): boolean {
 	for (let unit = 1; unit <= chars.length / 2; unit++) {
+		const pattern = chars.slice(0, unit).join("");
 		if (
 			chars.length % unit === 0 &&
-			password ===
-				chars
-					.slice(0, unit)
-					.join("")
-					.repeat(chars.length / unit)
+			pattern.repeat(chars.length / unit) === chars.join("")
 		) {
 			return true;
 		}
 	}
+	return false;
+}
 
-	// one run of a repeated or consecutive character, with fewer than 4 others around it: "abcdefg1"
-	let longestRun = 1;
+/** Length of the longest run that repeats a character or steps by one: 7 in "abcdefg1", 8 in "11111111a". */
+function longestRunLength(chars: string[]): number {
+	let longest = 1;
 	let run = 1;
 	let previousStep: number | undefined;
 	for (let index = 1; index < chars.length; index++) {
 		const step =
 			(chars[index]?.charCodeAt(0) ?? 0) -
 			(chars[index - 1]?.charCodeAt(0) ?? 0);
-		const continues =
-			Math.abs(step) <= 1 && (run === 1 || step === previousStep);
-		run = continues ? run + 1 : Math.abs(step) <= 1 ? 2 : 1;
+		const isRunStep = Math.abs(step) <= 1;
+		if (isRunStep && (run === 1 || step === previousStep)) {
+			run += 1;
+		} else {
+			// a run step in a new direction starts a fresh run with the previous character
+			run = isRunStep ? 2 : 1;
+		}
 		previousStep = step;
-		longestRun = Math.max(longestRun, run);
+		longest = Math.max(longest, run);
 	}
-	return chars.length - longestRun < MIN_CONTEXT_WORD_LENGTH;
+	return longest;
+}
+
+function isRepeatedOrSequential(password: string): boolean {
+	const chars = [...password];
+	return (
+		isRepeatedPattern(chars) ||
+		chars.length - longestRunLength(chars) < MIN_CONTEXT_WORD_LENGTH
+	);
 }
 
 /** Who the password belongs to; either half may be unknown, as on a password reset. */
