@@ -59,9 +59,7 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 		<Card className={authCardClassName}>
 			<CardHeader>
 				<CardTitle>Entrar</CardTitle>
-				<CardDescription>
-					Use o e-mail com que você foi convidado para a obra.
-				</CardDescription>
+				<CardDescription>Entre com seu e-mail e senha.</CardDescription>
 			</CardHeader>
 			<CardContent>
 				<form
@@ -127,12 +125,9 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 					</Button>
 				</form>
 			</CardContent>
-			<CardFooter className="justify-center gap-2 text-sm">
-				<span className="text-muted-foreground">Não tem conta?</span>
-				<Button variant="link" asChild>
-					{/* TODO(#43): swap for a typed router Link once /signup exists */}
-					<a href="/signup">Criar conta</a>
-				</Button>
+			{/* accounts only exist through an invitation, so there is no signup link here (RF-106, RF-130) */}
+			<CardFooter className="justify-center text-center text-sm text-pretty text-muted-foreground">
+				Não tem conta? O acesso é por convite da sua construtora.
 			</CardFooter>
 		</Card>
 	);

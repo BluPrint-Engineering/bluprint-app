@@ -25,6 +25,10 @@ _Avoid_: vínculo
 A person's link to a project; holds their effective role.
 _Avoid_: vínculo, assignment
 
+**Invitation** (pt-BR: *convite*):
+The only way a person gets an account or joins an organization. Names the organization and a role, and optionally one project.
+_Avoid_: sign-up, registration
+
 **Default role** (pt-BR: *papel padrão*):
 The role on the organization membership. It only suggests a role in the interface and never authorizes anything.
 
