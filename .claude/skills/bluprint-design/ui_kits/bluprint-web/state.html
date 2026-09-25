@@ -89,7 +89,7 @@ function Frozen() {
     <AuthShell>
       {state === "signup"
         ? <SignupScreen invite={INVITE_L} forceLoading onLogin={() => {}} onDone={() => {}} />
-        : <LoginScreen forceLoading onSignup={() => {}} onDone={() => {}} />}
+        : <LoginScreen forceLoading onDone={() => {}} />}
     </AuthShell>
   );
 }
