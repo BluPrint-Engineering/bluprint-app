@@ -4,9 +4,9 @@ import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { eq } from "drizzle-orm";
 import request from "supertest";
-import { configureApp, nestApplicationOptions } from "../app";
-import { DATABASE, Database } from "../db/database.module";
-import { user } from "../db/schema";
+import { configureApp, nestApplicationOptions } from "../../app";
+import { DATABASE, Database } from "../../db/database.module";
+import { user } from "../../db/schema";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 
@@ -20,7 +20,7 @@ const BOOT_TIMEOUT = 30_000;
 beforeAll(async () => {
 	process.env.ALLOW_SELF_SIGNUP = "false";
 	// dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads; a static import reads .env and passes for the wrong reason
-	const { AppModule } = await import("../app.module.js");
+	const { AppModule } = await import("../../app.module.js");
 
 	const moduleRef = await Test.createTestingModule({
 		imports: [AppModule],

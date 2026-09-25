@@ -7,7 +7,7 @@ import { configureApp, nestApplicationOptions } from "./app";
 let app: INestApplication;
 let server: Server;
 
-// see auth/self-signup-disabled.int-spec.ts for BOOT_TIMEOUT and the dynamic import
+// see auth/signup/self-signup-disabled.int-spec.ts for BOOT_TIMEOUT and the dynamic import
 const BOOT_TIMEOUT = 30_000;
 
 beforeAll(async () => {

@@ -6,7 +6,7 @@ import { haveIBeenPwned } from "better-auth/plugins";
 import { Database } from "../db/database.module";
 import { SIGN_UP_PATH } from "./auth-paths";
 import { withProblemDetails } from "./auth-problem-details";
-import { rejectGuessablePassword } from "./password-policy";
+import { rejectGuessablePassword } from "./password-policy/password-policy";
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;

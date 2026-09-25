@@ -7,7 +7,7 @@ import {
 	CHANGE_PASSWORD_PATH,
 	RESET_PASSWORD_PATH,
 	SIGN_UP_PATH,
-} from "./auth-paths";
+} from "../auth-paths";
 
 type AuthMiddlewareContext = Parameters<typeof getSessionFromCtx>[0];
 

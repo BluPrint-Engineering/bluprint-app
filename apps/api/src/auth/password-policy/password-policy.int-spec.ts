@@ -5,9 +5,9 @@ import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { eq } from "drizzle-orm";
 import request from "supertest";
-import { configureApp, nestApplicationOptions } from "../app";
-import { DATABASE, Database } from "../db/database.module";
-import { user } from "../db/schema";
+import { configureApp, nestApplicationOptions } from "../../app";
+import { DATABASE, Database } from "../../db/database.module";
+import { user } from "../../db/schema";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const CHANGE_PASSWORD = "/api/auth/change-password";
@@ -52,7 +52,7 @@ beforeAll(async () => {
 	process.env.PASSWORD_BREACH_CHECK = "true";
 	stubPwnedPasswords();
 	// dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads
-	const { AppModule } = await import("../app.module.js");
+	const { AppModule } = await import("../../app.module.js");
 
 	const moduleRef = await Test.createTestingModule({
 		imports: [AppModule],

@@ -8,7 +8,7 @@ Each domain's database access lives in `<domain>.queries.ts` as exported functio
 
 - The service calls queries; the controller never does. A query fetches, writes and returns; it does not decide (`if (!license) throw new ConflictException()` belongs in the service). Concurrency and integrity guarantees (`FOR UPDATE SKIP LOCKED`, `UNIQUE`, the organization filter in `WHERE`) belong in the query, because that is the database keeping data sound, not a business decision.
 - A domain that needs another domain's data imports the queries of the domain that owns the table, never from `common/`.
-- `projects/projects.queries.ts` is the worked example; `auth/signup-provisioning.ts` is a transaction calling queries from three domains.
+- `projects/projects.queries.ts` is the worked example; `auth/signup/signup-provisioning.ts` is a transaction calling queries from three domains.
 
 ## Considered Options
 
