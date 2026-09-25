@@ -1,27 +1,7 @@
-import {
-	createMemoryHistory,
-	createRouter,
-	RouterProvider,
-} from "@tanstack/react-router";
-import { render, screen, waitFor } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { routeTree } from "@/routeTree.gen";
-
-function stubGetSession(session: unknown) {
-	const fetchMock = vi.fn((input: RequestInfo | URL) => {
-		const body = String(input).includes("/get-session") ? session : {};
-		return Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
-	});
-	vi.stubGlobal("fetch", fetchMock);
-	return fetchMock;
-}
-
-function renderAt(path: string) {
-	const history = createMemoryHistory({ initialEntries: [path] });
-	const router = createRouter({ routeTree, history });
-	render(<RouterProvider router={router} />);
-	return router;
-}
+import { renderAt, signedIn, stubAuthApi } from "@/test/renderApp";
 
 describe("/signup route", () => {
 	afterEach(() => {
@@ -31,9 +11,9 @@ describe("/signup route", () => {
 
 	test("redirects to the login when self-signup is off", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", undefined);
-		stubGetSession(null);
+		stubAuthApi(null);
 
-		const router = renderAt("/signup");
+		const { router } = renderAt("/signup");
 
 		await waitFor(() => {
 			expect(
@@ -47,7 +27,7 @@ describe("/signup route", () => {
 
 	test("renders the signup form when self-signup is on and there is no session", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
-		stubGetSession(null);
+		stubAuthApi(null);
 
 		renderAt("/signup");
 
@@ -72,12 +52,32 @@ describe("/signup route", () => {
 
 	test("redirects to / when a session already exists", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
-		stubGetSession({
-			session: { id: "s1" },
-			user: { id: "u1", email: "ana@horizonte.test" },
-		});
+		stubAuthApi(signedIn);
 
-		const router = renderAt("/signup");
+		const { router } = renderAt("/signup");
+
+		await waitFor(() => {
+			expect(screen.getByText("Obras")).toBeInTheDocument();
+		});
+		expect(router.state.location.pathname).toBe("/");
+	});
+
+	test("lands on / after signing up, not back on the signup", async () => {
+		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
+		stubAuthApi(null);
+
+		const { router } = renderAt("/signup");
+		await userEvent.type(
+			await screen.findByLabelText("Nome completo"),
+			"Ana Horizonte",
+		);
+		await userEvent.type(screen.getByLabelText("E-mail"), "ana@horizonte.test");
+		await userEvent.type(
+			screen.getByLabelText("Senha"),
+			"correct horse battery",
+		);
+		await userEvent.click(screen.getByLabelText(/Aceito os termos/));
+		await userEvent.click(screen.getByRole("button", { name: "Criar conta" }));
 
 		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();

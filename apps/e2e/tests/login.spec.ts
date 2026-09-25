@@ -28,6 +28,19 @@ test.describe("signed out", () => {
 	});
 });
 
+test.describe("signed out, opening a protected screen", () => {
+	test.use({ storageState: { cookies: [], origins: [] } });
+
+	test("lands on the login, remembering where it was going", async ({
+		page,
+	}) => {
+		await page.goto("/");
+
+		await expect(page).toHaveURL("/login?redirect=%2F");
+		await expect(page.getByLabel("E-mail")).toBeVisible();
+	});
+});
+
 test.describe("already signed in", () => {
 	test("skips the login screen and keeps the session on reload", async ({
 		page,
