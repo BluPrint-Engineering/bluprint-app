@@ -27,7 +27,7 @@ routes/          TanStack Router file-based route tree
 features/<x>/    everything that belongs to ONE screen: components, hooks, api.ts; barrel at the root
 components/ui/   shadcn/ui, added by the CLI then adjusted to the design system's tokens
 components/      reusable components used by 2+ features
-lib/             stateful or talks to the world: HTTP client, queryClient, cn()
+lib/             stateful or talks to the world: HTTP client, the app factory (QueryClient + router), cn()
 utils/           pure functions, no state or I/O
 styles/          globals.css: Tailwind and theme tokens
 ```

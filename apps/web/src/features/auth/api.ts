@@ -1,9 +1,6 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth";
 
-/** The session check could not reach a verdict: network or server trouble, which is not "signed out". */
-export class SessionCheckError extends Error {}
-
 /**
  * The only way to read the session, in the guard and on the public screens alike.
  * Resolves to `null` for a definite "no session" and throws for anything else, so a 500 or a dropped
@@ -14,7 +11,7 @@ export const sessionQueryOptions = queryOptions({
 	queryFn: async () => {
 		// Better Auth's client resolves to `{ data, error }` on an HTTP error instead of throwing
 		const { data, error } = await authClient.getSession();
-		if (error) throw new SessionCheckError(error.message);
+		if (error) throw new Error(error.message ?? "Session check failed");
 		return data;
 	},
 	// a revoked session can go unnoticed for this long on navigation; any 401 closes the window
@@ -26,4 +23,14 @@ export const sessionQueryOptions = queryOptions({
 /** Drops the cached session, so a sign-in, sign-up or 401 is never followed by a stale answer. */
 export function discardSession(queryClient: QueryClient) {
 	queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey });
+}
+
+/**
+ * Reads the session for a public screen, where it is only a shortcut past the form: no retries, and
+ * an unverifiable session counts as none, so the form shows at once.
+ */
+export function peekSession(queryClient: QueryClient) {
+	return queryClient
+		.query({ ...sessionQueryOptions, retry: false })
+		.catch(() => null);
 }

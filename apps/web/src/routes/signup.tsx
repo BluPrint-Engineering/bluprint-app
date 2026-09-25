@@ -2,9 +2,9 @@ import { createFileRoute, redirect, useRouter } from "@tanstack/react-router";
 import {
 	AuthShell,
 	discardSession,
+	peekSession,
 	SessionSplash,
 	SignupPage,
-	sessionQueryOptions,
 } from "@/features/auth";
 import { selfSignupAllowed } from "@/lib/env";
 
@@ -12,10 +12,7 @@ export const Route = createFileRoute("/signup")({
 	beforeLoad: async ({ context }) => {
 		// the login footer already explains that access comes by invitation
 		if (!selfSignupAllowed()) throw redirect({ to: "/login" });
-		// only a shortcut past the form: offline or API-down falls through to it, not the error boundary
-		const session = await context.queryClient
-			.query({ ...sessionQueryOptions, retry: false })
-			.catch(() => null);
+		const session = await peekSession(context.queryClient);
 		if (session) throw redirect({ to: "/" });
 	},
 	pendingComponent: SessionSplash,
