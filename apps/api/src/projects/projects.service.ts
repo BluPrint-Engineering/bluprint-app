@@ -1,17 +1,21 @@
 import { ProjectSummary } from "@bluprint/shared";
-import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
+import { Transactional } from "@nestjs-cls/transactional";
+import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
-import { DATABASE, Database } from "../db/database.module";
-import { consumeFreeLicense } from "../licenses/licenses.queries";
-import { findAdminOrganizationId } from "../members/members.queries";
-import { insertProject, listVisibleProjects } from "./projects.queries";
+import { LicensesRepository } from "../licenses/licenses.repository";
+import { MembersRepository } from "../members/members.repository";
+import { ProjectsRepository } from "./projects.repository";
 
 @Injectable()
 export class ProjectsService {
-	constructor(@Inject(DATABASE) private readonly db: Database) {}
+	constructor(
+		private readonly projects: ProjectsRepository,
+		private readonly members: MembersRepository,
+		private readonly licenses: LicensesRepository,
+	) {}
 
 	async listVisible(userId: string): Promise<ProjectSummary[]> {
-		const rows = await listVisibleProjects(this.db, userId);
+		const rows = await this.projects.listVisible(userId);
 
 		return rows.map((row) => ({
 			id: row.id,
@@ -22,31 +26,28 @@ export class ProjectsService {
 		}));
 	}
 
+	@Transactional()
 	async create(userId: string, name: string): Promise<ProjectSummary> {
-		const organizationId = await findAdminOrganizationId(this.db, userId);
+		const organizationId = await this.members.findAdminOrganizationId(userId);
 		if (!organizationId) {
 			throw new ForbiddenException();
 		}
 
-		const created = await this.db.transaction(async (tx) => {
-			const project = await insertProject(tx, { organizationId, name });
+		const project = await this.projects.insert({ organizationId, name });
 
-			const license = await consumeFreeLicense(tx, organizationId, project.id);
-			if (!license) {
-				throw new ProblemException({
-					status: 409,
-					code: "NO_FREE_LICENSE",
-					detail: "The organization has no free license.",
-				});
-			}
-
-			return project;
-		});
+		const license = await this.licenses.consumeFree(organizationId, project.id);
+		if (!license) {
+			throw new ProblemException({
+				status: 409,
+				code: "NO_FREE_LICENSE",
+				detail: "The organization has no free license.",
+			});
+		}
 
 		return {
-			id: created.id,
-			name: created.name,
-			createdAt: created.createdAt.toISOString(),
+			id: project.id,
+			name: project.name,
+			createdAt: project.createdAt.toISOString(),
 			role: "admin",
 		};
 	}

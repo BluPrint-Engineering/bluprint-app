@@ -44,10 +44,10 @@ styles/          globals.css: Tailwind and theme tokens
 main.ts          creates the Nest app, applies configureApp, opens the port
 app.ts           configureApp(app) + nestApplicationOptions: prefix, helmet, CORS, validation pipe,
                  serializer, error filter; tests use both, so no contract only holds in production
-app.module.ts    root module: ConfigModule (env validated at boot) and domain modules
+app.module.ts    root module: ConfigModule (env validated at boot), ClsModule (transactions) and domain modules
 openapi.ts       builds and serves the OpenAPI document at /api/docs, merging auth/auth.openapi.ts by hand
 auth/            Better Auth instance, the module that mounts it, and its hand-written OpenAPI paths
-<domain>/        one module per domain: controller, service, module, dto/, <domain>.queries.ts
+<domain>/        one module per domain: controller, service, repository, module, dto/
 common/          cross-cutting filters, pipes, guards, interceptors; problems/ holds the error contract
 db/              DatabaseModule: pool, Drizzle instance, schema, boot connection check
 lib/             stateful or talks to the world: env schema, clients
@@ -55,7 +55,7 @@ utils/           pure functions, no state or I/O
 ```
 
 - **The module is the unit of organization, not the layer**: `controllers/` and `services/` at the root spread one domain over three places.
-- **Controller** declares the route, validates input through a DTO and calls the service. **Service** holds business logic and never touches Express. **Queries** hold all database access as functions that take the executor ([0005](adr/0005-queries-take-the-executor.md)). `DatabaseModule` is `@Global()`, exports Drizzle under the `DATABASE` token and checks the connection at boot ([0006](adr/0006-database-check-at-boot.md)).
+- **Controller** declares the route, validates input through a DTO and calls the service. **Service** holds business logic and never touches Express. **Repository** holds all database access as an injectable class reading the current transaction from CLS, so a `@Transactional()` service method puts every repository call in one transaction ([0051](adr/0051-transaction-aware-repositories-via-cls.md)). `DatabaseModule` is `@Global()`, exports Drizzle under the `DATABASE` token and checks the connection at boot ([0006](adr/0006-database-check-at-boot.md)).
 - **Contracts**: request DTOs wrap shared schemas ([0003](adr/0003-shared-zod-via-nestjs-zod.md)); every route declares a response DTO ([0004](adr/0004-response-dto-on-every-route.md)); every error is RFC 9457 problem details with a stable `code`, thrown as `ProblemException` ([0047](adr/0047-errors-are-rfc-9457-problem-details.md)). Conventions and gotchas: `.claude/rules/api.md`.
 - **`lib/` vs `utils/`**: `lib/` *is* something (state or I/O), `utils/` is pure and testable without mocks. Only what another module injects becomes `@Injectable()`.
 
@@ -98,7 +98,7 @@ Serves the web app's contracts, enforces authentication and per-project authoriz
 | --- | --- |
 | Framework | NestJS, Express adapter ([0002](adr/0002-nestjs-over-hono.md)) |
 | Validation | Zod v4 from `packages/shared` via `nestjs-zod` ([0003](adr/0003-shared-zod-via-nestjs-zod.md)) |
-| ORM | Drizzle with `node-postgres` |
+| ORM | Drizzle with `node-postgres`; transactions via `@nestjs-cls/transactional` ([0051](adr/0051-transaction-aware-repositories-via-cls.md)) |
 | Auth | Better Auth, self-hosted ([0010](adr/0010-self-hosted-better-auth.md)) |
 | API docs | OpenAPI via `@nestjs/swagger`, served at `/api/docs` ([0046](adr/0046-openapi-via-nestjs-swagger.md)) |
 

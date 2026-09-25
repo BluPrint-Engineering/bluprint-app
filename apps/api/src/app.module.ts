@@ -1,7 +1,10 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
+import { ClsPluginTransactional } from "@nestjs-cls/transactional";
+import { TransactionalAdapterDrizzleOrm } from "@nestjs-cls/transactional-adapter-drizzle-orm";
+import { ClsModule } from "nestjs-cls";
 import { AuthModule } from "./auth/auth.module";
-import { DatabaseModule } from "./db/database.module";
+import { DATABASE, DatabaseModule } from "./db/database.module";
 import { HealthModule } from "./health/health.module";
 import { envSchema } from "./lib/env";
 import { ProjectsModule } from "./projects/projects.module";
@@ -15,6 +18,19 @@ import { ProjectsModule } from "./projects/projects.module";
 			validate: (raw) => envSchema.parse(raw),
 		}),
 		DatabaseModule,
+		// see docs/adr/0051-transaction-aware-repositories-via-cls.md
+		ClsModule.forRoot({
+			global: true,
+			middleware: { mount: true },
+			plugins: [
+				new ClsPluginTransactional({
+					imports: [DatabaseModule],
+					adapter: new TransactionalAdapterDrizzleOrm({
+						drizzleInstanceToken: DATABASE,
+					}),
+				}),
+			],
+		}),
 		AuthModule,
 		HealthModule,
 		ProjectsModule,

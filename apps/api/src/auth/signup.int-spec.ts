@@ -7,8 +7,9 @@ import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 import { DATABASE, Database } from "../db/database.module";
-import { license, member, user } from "../db/schema";
-import * as provisioning from "./signup-provisioning";
+import { license, member, organization, user } from "../db/schema";
+import { MembersRepository } from "../members/members.repository";
+import { SignupProvisioning } from "./signup-provisioning";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const SIGN_IN = "/api/auth/sign-in/email";
@@ -102,7 +103,7 @@ describe("when provisioning fails", () => {
 	test("leaves no user behind, and no session", async () => {
 		const email = `${randomUUID()}@example.com`;
 		jest
-			.spyOn(provisioning, "provisionTenant")
+			.spyOn(app.get(SignupProvisioning), "provisionTenant")
 			.mockRejectedValueOnce(new Error("provisioning is down"));
 
 		const failed = await request(server)
@@ -121,5 +122,23 @@ describe("when provisioning fails", () => {
 		await db
 			.delete(user)
 			.where(eq(user.id, (retry.body as { user: { id: string } }).user.id));
+	});
+
+	test("leaves no organization behind when a later write fails", async () => {
+		const name = `Engenheira ${randomUUID()}`;
+		jest
+			.spyOn(app.get(MembersRepository), "insert")
+			.mockRejectedValueOnce(new Error("membership write failed"));
+
+		const failed = await request(server)
+			.post(SIGN_UP)
+			.send({ email: `${randomUUID()}@example.com`, password: PASSWORD, name });
+
+		expect(failed.status).toBeGreaterThanOrEqual(400);
+		expect(
+			await db.query.organization.findFirst({
+				where: eq(organization.name, name),
+			}),
+		).toBeUndefined();
 	});
 });
