@@ -22,7 +22,7 @@ A decision, the architecture or the spec changes by **pull request**, in the sam
 
 - **Language.** English everywhere — code, comments, docs, commit subjects, API error messages. pt-BR only for strings a user reads and for `docs/requisitos.md`. Commits are Conventional Commits: `feat(api): connect local Postgres via Drizzle`.
 - **DTOs are value imports, not type imports** — see `.claude/rules/api.md` for why this breaks at runtime, not compile time.
-- **Only `organization`, `member`, `license`, `project` and `project_member` exist beyond Better Auth's four**; the rest of `docs/data-model.md` is designed but not migrated — see `.claude/rules/db-schema.md` before touching `apps/api/src/db/` or a migration.
+- **Only `organization`, `member`, `license`, `project` and `project_member` exist beyond Better Auth's four**; the rest of `docs/data-model.md` is designed but not migrated — see `.claude/rules/db-schema.md` before touching an `*.entity.ts`, `apps/api/src/db/` or a migration.
 - **Issue labels and the board are manual.** Each issue gets exactly one `tipo:`, exactly one `prio:`, at least one `area:`, then `gh project item-add 3 --owner BluPrint-Engineering --url <url>`.
 - **`gh pr create` skips the PR template.** Build the body from `.github/pull_request_template.md` — it's the checklist for what CI cannot verify. A block that doesn't apply is marked `n/a` and kept, never deleted.
 

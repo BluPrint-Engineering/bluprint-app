@@ -46,10 +46,10 @@ app.ts           configureApp(app) + nestApplicationOptions: prefix, helmet, COR
                  serializer, error filter; tests use both, so no contract only holds in production
 app.module.ts    root module: ConfigModule (env validated at boot), ClsModule (transactions) and domain modules
 openapi.ts       builds and serves the OpenAPI document at /api/docs, merging auth/auth.openapi.ts by hand
-auth/            Better Auth instance, the module that mounts it, and its hand-written OpenAPI paths
-<domain>/        one module per domain: controller, service, repository, module, dto/
+auth/            Better Auth instance, the module that mounts it, its hand-written OpenAPI paths, its generated tables
+<domain>/        one module per domain: controller, service, repository, module, entity, dto/
 common/          cross-cutting filters, pipes, guards, interceptors; problems/ holds the error contract
-db/              DatabaseModule: pool, Drizzle instance, schema, boot connection check
+db/              DatabaseModule: pool, Drizzle instance, the entity barrel, shared columns, boot connection check
 lib/             stateful or talks to the world: env schema, clients
 utils/           pure functions, no state or I/O
 ```
@@ -110,7 +110,7 @@ The Zod schemas and types both apps validate against. TypeScript everywhere, str
 
 ### 4.1 PostgreSQL
 
-Primary database, Drizzle schema in `apps/api/src/db/schema/`, migrations in `apps/api/drizzle/`. Migrated tables: Better Auth's `user`, `session`, `account`, `verification` ([0013](adr/0013-better-auth-tables-are-generated.md)) plus `organization`, `member`, `license`, `project`, `project_member`. The designed model and its reasoning: [`data-model.md`](data-model.md). Provider TBD; local container in development.
+Primary database, each table a `<name>.entity.ts` in the feature that owns it, listed for Drizzle and `drizzle-kit` by the barrel `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/`. Migrated tables: Better Auth's `user`, `session`, `account`, `verification` ([0013](adr/0013-better-auth-tables-are-generated.md)) plus `organization`, `member`, `license`, `project`, `project_member`. The designed model and its reasoning: [`data-model.md`](data-model.md). Provider TBD; local container in development.
 
 ### 4.2 Object storage
 

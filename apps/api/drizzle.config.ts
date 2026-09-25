@@ -13,7 +13,7 @@ export default defineConfig({
 	dialect: "postgresql",
 	// must match createDatabase in db/database.module.ts, or migration and query disagree on column names
 	casing: "snake_case",
-	schema: "./src/db/schema/index.ts",
+	schema: "./src/db/schema.ts",
 	out: "./drizzle",
 	dbCredentials: {
 		url: databaseUrl,

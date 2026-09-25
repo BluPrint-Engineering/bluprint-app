@@ -7,9 +7,9 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { user } from "./auth";
-import { createdAt, uuidV7PrimaryKey } from "./columns";
-import { project } from "./project";
+import { user } from "../auth/auth.entity";
+import { createdAt, uuidV7PrimaryKey } from "../db/columns";
+import { project } from "../projects/project.entity";
 
 export const projectMemberRole = pgEnum("project_member_role", effectiveRoles);
 

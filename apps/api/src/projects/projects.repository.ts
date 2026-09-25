@@ -2,7 +2,9 @@ import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, desc, eq, isNotNull, or } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
-import { member, project, projectMember } from "../db/schema";
+import { member } from "../members/member.entity";
+import { projectMember } from "../project-members/project-member.entity";
+import { project } from "./project.entity";
 
 @Injectable()
 export class ProjectsRepository {

@@ -2,7 +2,7 @@ import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, eq, isNull } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
-import { license } from "../db/schema";
+import { license } from "./license.entity";
 
 @Injectable()
 export class LicensesRepository {

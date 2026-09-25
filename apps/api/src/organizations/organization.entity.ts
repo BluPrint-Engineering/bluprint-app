@@ -1,5 +1,5 @@
 import { pgTable, text } from "drizzle-orm/pg-core";
-import { createdAt, uuidV7PrimaryKey } from "./columns";
+import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 
 export const organization = pgTable("organization", {
 	id: uuidV7PrimaryKey(),
