@@ -1,0 +1,23 @@
+<!-- @dsCard group="Components" viewport="700x240" name="Pagination · Segmented control" subtitle="Desktop page numbers; 2–4 exclusive choices" -->
+<link rel="stylesheet" href="../../styles.css">
+<style>body{margin:0;padding:18px 20px;background:var(--background);color:var(--foreground);font-family:var(--font-sans)}.grp{display:flex;gap:10px;flex-wrap:wrap;align-items:center}.cap{font-size:11px;color:var(--muted-foreground);margin:14px 0 6px}.cap:first-child{margin-top:0}</style>
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script src="../../_ds_bundle.js"></script>
+<div id="root"></div>
+<script type="text/babel">
+const NS = window.BluPrintDesignSystem_d4fa62;
+const I = n => <NS.Icon name={n} size={20} />;
+function Demo(){const {Pagination,SegmentedControl}=NS;const [p,setP]=React.useState(5);const [s,setS]=React.useState('in_progress');
+const opts=[{value:'in_progress',label:'Em andamento'},{value:'delivered',label:'Entregue'},{value:'all',label:'Todas'}];
+return <div>
+  <div className="cap">pagination — 36px, desktop only</div>
+  <Pagination page={p} pageCount={12} onPageChange={setP} />
+  <div className="cap">changing page — target shows a spinner, controls locked</div>
+  <Pagination page={2} pageCount={4} loadingPage={3} />
+  <div className="cap">segmented control — md 44px (field) · sm (desktop toolbar)</div>
+  <div className="grp"><SegmentedControl label="Status" value={s} onChange={setS} options={opts} /><SegmentedControl size="sm" label="Status" value={s} onChange={setS} options={opts} /></div>
+</div>}
+ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);
+</script>

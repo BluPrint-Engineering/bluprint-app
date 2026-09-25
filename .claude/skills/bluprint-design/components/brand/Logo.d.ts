@@ -13,7 +13,7 @@ export interface LogoProps extends React.ComponentPropsWithoutRef<"span"> {
   wordmark?: boolean;
   /** Mark above the wordmark, as in the original brand file. Wins over `wordmark`. */
   stacked?: boolean;
-  /** Where the SVGs live, relative to the page. Default `"assets"`. */
+  /** Optional. Load the SVG from this folder instead of the embedded art. Not needed. */
   basePath?: string;
 }
 export declare function Logo(props: LogoProps): JSX.Element;
