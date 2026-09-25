@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0;height:100%}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div ref="{{ rootRef }}" class="{{ themeClass }}" style="position:relative; display:flex; flex-direction:{{ dir }}; align-items:stretch; min-height:{{ minH }}; height:{{ fixedH }}; overflow:{{ overflow }}; background:var(--background); color:var(--foreground); font-family:var(--font-sans)">
+  <aside style="{{ asideStyle }}">
+    <header style="{{ headerStyle }}">
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" dc-props="{{ toggleProps }}" hint-size="44px,44px">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ toggleIcon }}" size="{{ 20 }}" hint-size="20px,20px"></x-import>
+      </x-import>
+    </header>
+    <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+      <span aria-hidden="true" style="display:grid; place-items:center; width:72px; height:72px; border-radius:var(--radius-full); background:var(--brand-badge-surface); box-shadow:var(--brand-badge-shadow); transition:background var(--duration) var(--ease-out),box-shadow var(--duration) var(--ease-out)">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" tone="{{ badgeTone }}" size="{{ 44 }}" hint-size="36px,44px"></x-import>
+      </span>
+      <span role="img" aria-label="BluPrint" style="display:block; height:36px; width:101px; overflow:hidden; position:relative">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" stacked="{{ true }}" tone="white" size="{{ 72.45 }}" style="position:absolute; left:0; bottom:0" hint-size="101px,118px"></x-import>
+      </span>
+    </sc-if>
+    <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" wordmark="{{ true }}" tone="white" size="{{ 54 }}" style="align-self:center" hint-size="196px,54px"></x-import>
+      <p style="margin:0; max-width:34ch; font-size:var(--text-base); line-height:var(--leading-normal); color:rgb(255 255 255 / .92)">Pendências da obra mapeadas com pins sobre plantas, por unidade e por disciplina.</p>
+    </sc-if>
+  </aside>
+  <main style="{{ mainStyle }}">
+    <div style="width:100%; max-width:var(--content-max)">
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" dc-props="{{ cardProps }}" hint-size="100%,600px">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardHeader" dc-props="{{ padProps }}" hint-size="100%,60px">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardTitle" dc-props="{{ titleProps }}" hint-size="100%,36px">Criar conta</x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardDescription" hint-size="100%,20px">Sua conta é única. O papel em cada obra vem do convite.</x-import>
+        </x-import>
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" dc-props="{{ padProps }}" hint-size="100%,440px">
+          <form onSubmit="{{ onSubmit }}" noValidate="{{ true }}" style="display:grid; gap:var(--form-gap)">
+            <sc-if value="{{ apiError }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Alert" tone="danger" title="Não foi possível criar a conta" hint-size="100%,64px">
+                <p style="margin:0">{{ apiError }}<sc-if value="{{ emailTaken }}" hint-placeholder-val="{{ false }}"> <a href="Entrar.dc.html" style="font-weight:500; text-decoration:underline; color:inherit">Entrar</a></sc-if></p>
+              </x-import>
+            </sc-if>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Nome completo" html-for="name" error="{{ errors.name }}" hint-size="100%,72px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="name" auto-complete="name" enter-key-hint="next" placeholder="Como aparece nos relatórios" value="{{ name }}" onChange="{{ onName }}" invalid="{{ nameInvalid }}" hint-size="100%,44px"></x-import>
+            </x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="E-mail" html-for="email" error="{{ errors.email }}" hint-size="100%,72px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="email" type="email" input-mode="email" auto-complete="email" enter-key-hint="next" placeholder="voce@construtora.com.br" value="{{ email }}" onChange="{{ onEmail }}" invalid="{{ emailInvalid }}" hint-size="100%,44px"></x-import>
+            </x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Senha" html-for="password" hint="De 8 a 64 caracteres. Uma frase fácil de lembrar funciona bem." error="{{ errors.password }}" hint-size="100%,92px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="password" type="{{ pwType }}" auto-complete="new-password" enter-key-hint="go" value="{{ password }}" onChange="{{ onPassword }}" invalid="{{ passwordInvalid }}" affix="{{ eyeButton }}" hint-size="100%,44px"></x-import>
+            </x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" error="{{ errors.acceptTerms }}" hint-size="100%,44px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Checkbox" id="acceptTerms" label="Aceito os termos de uso e a política de privacidade" checked="{{ acceptTerms }}" onChange="{{ onTerms }}" aria-invalid="{{ termsInvalid }}" hint-size="100%,44px"></x-import>
+            </x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="submit" size="lg" block="{{ true }}" disabled="{{ submitting }}" hint-size="100%,52px">{{ submitLabel }}</x-import>
+          </form>
+        </x-import>
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardFooter" dc-props="{{ footerProps }}" hint-size="100%,40px">
+          <span style="color:var(--muted-foreground)">Já tem conta?</span>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" as="a" href="Entrar.dc.html" variant="link" hint-size="48px,20px">Entrar</x-import>
+        </x-import>
+      </x-import>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;errors&quot;,&quot;guessable&quot;,&quot;email-taken&quot;,&quot;compromised&quot;,&quot;submitting&quot;],&quot;default&quot;:&quot;default&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;framed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  state = { w: 1280, dark: null, name: "", email: "", password: "", acceptTerms: false, shown: false, errors: {}, apiError: null, apiCode: null, submitting: false };
+
+  componentDidMount() {
+    const el = this.rootRef.current;
+    if (el && window.ResizeObserver) {
+      this.ro = new ResizeObserver(([e]) => this.setState({ w: e.contentRect.width }));
+      this.ro.observe(el);
+    }
+    this.applyDemo(this.props.state);
+  }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this.t); }
+  componentDidUpdate(prev) {
+    if (prev.state !== this.props.state) this.applyDemo(this.props.state);
+    if (prev.theme !== this.props.theme) this.setState({ dark: null });
+  }
+
+  applyDemo(s) {
+    const filled = { name: "Carla Mendes", email: "carla@construtoraatlas.com.br", password: "frase longa da obra", acceptTerms: true };
+    const base = { errors: {}, apiError: null, apiCode: null, submitting: false, name: "", email: "", password: "", acceptTerms: false };
+    if (s === "errors") Object.assign(base, { name: "Ca", email: "carla@", password: "1234", errors: { name: "Informe o seu nome completo.", email: "Informe um e-mail válido.", password: "A senha precisa de pelo menos 8 caracteres.", acceptTerms: "Aceite os termos para continuar." } });
+    if (s === "guessable") Object.assign(base, filled, { password: "carla123", errors: { password: "Essa senha é fácil de adivinhar. Evite senhas comuns, sequências e o seu nome ou e-mail." } });
+    if (s === "email-taken") Object.assign(base, filled, { apiCode: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", apiError: "Já existe uma conta com este e-mail." });
+    if (s === "compromised") Object.assign(base, filled, { apiCode: "PASSWORD_COMPROMISED", apiError: "Essa senha já apareceu em vazamentos de outros sites. Escolha outra." });
+    if (s === "submitting") Object.assign(base, filled, { submitting: true });
+    this.setState(base);
+  }
+
+  validate() {
+    const { name, email, password, acceptTerms } = this.state;
+    const errors = {};
+    if (name.trim().length < 3) errors.name = "Informe o seu nome completo.";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) errors.email = "Informe um e-mail válido.";
+    if (password.length < 8) errors.password = "A senha precisa de pelo menos 8 caracteres.";
+    else if (password.length > 64) errors.password = "A senha pode ter no máximo 64 caracteres.";
+    else {
+      const p = password.toLowerCase();
+      const first = name.trim().split(/\s+/)[0]?.toLowerCase() || "\u0000";
+      const local = email.split("@")[0].toLowerCase() || "\u0000";
+      if (["12345678", "123456789", "senha123", "password", "qwertyui"].includes(p) || p.includes(first) || p.includes(local))
+        errors.password = "Essa senha é fácil de adivinhar. Evite senhas comuns, sequências e o seu nome ou e-mail.";
+    }
+    if (!acceptTerms) errors.acceptTerms = "Aceite os termos para continuar.";
+    return errors;
+  }
+
+  onSubmit = (e) => {
+    e.preventDefault();
+    const errors = this.validate();
+    this.setState({ errors, apiError: null, apiCode: null });
+    if (Object.keys(errors).length) return;
+    this.setState({ submitting: true });
+    clearTimeout(this.t);
+    this.t = setTimeout(() => {
+      if (/^usado@/i.test(this.state.email)) return this.setState({ submitting: false, apiCode: "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL", apiError: "Já existe uma conta com este e-mail." });
+      if (this.props.framed) return this.setState({ submitting: false });
+      window.location.href = "../obras/Obras.dc.html?role=manager&state=empty&theme=" + (this.isDark() ? "dark" : "light");
+    }, 900);
+  };
+
+  isDark() { return this.state.dark ?? (this.props.theme === "dark"); }
+
+  renderVals() {
+    const DS = window.BluPrintDesignSystem_d4fa62 || {};
+    const vp = this.props.viewport ?? "auto";
+    const desk = vp === "desktop" || (vp !== "mobile" && this.state.w >= 900);
+    const dark = this.isDark();
+    const framed = !!this.props.framed;
+    const errors = this.state.errors;
+    const toggle = () => this.setState({ dark: !dark });
+
+    const asideStyle = desk
+      ? { display: "grid", flex: "none", flexBasis: "44%", alignContent: "space-between", justifyItems: "start", gap: "var(--space-6)", padding: "var(--space-12) var(--space-10)", color: "#fff", backgroundImage: "var(--brand-band-bleed), var(--brand-band)" }
+      : { display: "grid", justifyItems: "center", gap: "var(--space-3)", padding: "0 var(--page-pad) var(--brand-band-pad)", color: "#fff", backgroundImage: "var(--brand-band-bleed), var(--brand-band)" };
+    const headerStyle = desk
+      ? { position: "absolute", top: 10, right: 10, zIndex: 3, display: "flex" }
+      : { display: "flex", minHeight: 48, width: "100%", alignItems: "center", justifyContent: "flex-end", paddingTop: "max(var(--space-1), env(safe-area-inset-top))", color: "rgb(255 255 255 / .9)" };
+    const mainStyle = desk
+      ? { position: "relative", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--page-pad-desktop)", overflowY: framed ? "auto" : "visible" }
+      : { flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "var(--space-6) var(--page-pad) var(--space-10)" };
+
+    const eyeButton = DS.Button ? React.createElement(DS.Button, {
+      type: "button", variant: "ghost", size: "icon", style: { color: "var(--muted-foreground)" },
+      "aria-label": this.state.shown ? "Ocultar senha" : "Mostrar senha",
+      onClick: () => this.setState(st => ({ shown: !st.shown })),
+    }, React.createElement(DS.Icon, { name: this.state.shown ? "eye-off" : "eye", size: 16 })) : null;
+
+    return {
+      rootRef: this.rootRef,
+      themeClass: dark ? "dark" : "",
+      dir: desk ? "row" : "column",
+      minH: framed ? "0" : "100dvh",
+      fixedH: framed ? "100%" : "auto",
+      overflow: framed ? (desk ? "hidden" : "auto") : "visible",
+      isDesktop: desk, isMobile: !desk,
+      asideStyle, headerStyle, mainStyle,
+      badgeTone: dark ? "white" : "gradient",
+      toggleIcon: dark ? "sun" : "moon",
+      toggleProps: {
+        type: "button", variant: "ghost", size: "icon", onClick: toggle,
+        "aria-label": dark ? "Usar tema claro" : "Usar tema escuro",
+        style: { color: desk ? "var(--muted-foreground)" : "inherit" },
+      },
+      cardProps: desk ? { style: { gap: "var(--space-5)" } } : { style: { gap: "var(--space-5)", borderRadius: 0, background: "transparent", paddingBlock: 0, boxShadow: "none" } },
+      padProps: desk ? {} : { style: { paddingInline: 0 } },
+      titleProps: { style: { fontSize: "var(--text-2xl)", fontWeight: 500, letterSpacing: 0 } },
+      footerProps: desk ? { style: { justifyContent: "center", gap: "var(--space-2)" } } : { style: { justifyContent: "center", gap: "var(--space-2)", borderTop: 0, background: "transparent", padding: "var(--space-2)", margin: 0 } },
+      onSubmit: this.onSubmit,
+      apiError: this.state.apiError,
+      emailTaken: this.state.apiCode === "USER_ALREADY_EXISTS_USE_ANOTHER_EMAIL",
+      errors,
+      name: this.state.name, email: this.state.email, password: this.state.password, acceptTerms: this.state.acceptTerms,
+      onName: e => this.setState({ name: e.target.value }),
+      onEmail: e => this.setState({ email: e.target.value }),
+      onPassword: e => this.setState({ password: e.target.value }),
+      onTerms: e => this.setState({ acceptTerms: e.target.checked }),
+      nameInvalid: !!errors.name, emailInvalid: !!errors.email, passwordInvalid: !!errors.password, termsInvalid: !!errors.acceptTerms,
+      pwType: this.state.shown ? "text" : "password",
+      eyeButton,
+      submitting: this.state.submitting,
+      submitLabel: this.state.submitting ? "Criando conta…" : "Criar conta",
+    };
+  }
+}
+</script>
+</body>
+</html>

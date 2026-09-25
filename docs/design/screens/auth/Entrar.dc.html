@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0;height:100%}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div ref="{{ rootRef }}" class="{{ themeClass }}" style="position:relative; display:flex; flex-direction:{{ dir }}; align-items:stretch; min-height:{{ minH }}; height:{{ fixedH }}; overflow:{{ overflow }}; background:var(--background); color:var(--foreground); font-family:var(--font-sans)">
+  <sc-if value="{{ isSplash }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:1; display:grid; place-items:center; padding:0 var(--page-pad)">
+      <div style="display:grid; justify-items:center; gap:var(--space-4); color:var(--muted-foreground); text-align:center">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" size="{{ 48 }}" hint-size="40px,48px"></x-import>
+        <sc-if value="{{ isFailed }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="circle-alert" size="{{ 24 }}" hint-size="24px,24px"></x-import>
+          <div style="display:grid; gap:var(--space-1)">
+            <h1 style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); color:var(--foreground)">Não foi possível verificar sua sessão</h1>
+            <p style="margin:0; font-size:var(--text-sm)">Confira sua conexão e tente de novo.</p>
+          </div>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" onClick="{{ retrySession }}" hint-size="160px,52px">Tentar de novo</x-import>
+        </sc-if>
+        <sc-if value="{{ isChecking }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid; justify-items:center; gap:var(--space-1)">
+            <span style="display:flex; align-items:center; gap:var(--space-2); font-size:var(--text-sm)">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Spinner" size="{{ 18 }}" hint-size="18px,18px"></x-import>
+              {{ splashText }}
+            </span>
+            <sc-if value="{{ offline }}" hint-placeholder-val="{{ false }}">
+              <p style="margin:0; font-size:var(--text-sm)">Continuamos assim que a internet voltar.</p>
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ isShell }}" hint-placeholder-val="{{ true }}">
+    <aside style="{{ asideStyle }}">
+      <header style="{{ headerStyle }}">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" dc-props="{{ toggleProps }}" hint-size="44px,44px">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ toggleIcon }}" size="{{ 20 }}" hint-size="20px,20px"></x-import>
+        </x-import>
+      </header>
+      <sc-if value="{{ isMobile }}" hint-placeholder-val="{{ true }}">
+        <span aria-hidden="true" style="display:grid; place-items:center; width:72px; height:72px; border-radius:var(--radius-full); background:var(--brand-badge-surface); box-shadow:var(--brand-badge-shadow); transition:background var(--duration) var(--ease-out),box-shadow var(--duration) var(--ease-out)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" tone="{{ badgeTone }}" size="{{ 44 }}" hint-size="36px,44px"></x-import>
+        </span>
+        <span role="img" aria-label="BluPrint" style="display:block; height:36px; width:101px; overflow:hidden; position:relative">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" stacked="{{ true }}" tone="white" size="{{ 72.45 }}" style="position:absolute; left:0; bottom:0" hint-size="101px,118px"></x-import>
+        </span>
+      </sc-if>
+      <sc-if value="{{ isDesktop }}" hint-placeholder-val="{{ false }}">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" wordmark="{{ true }}" tone="white" size="{{ 54 }}" style="align-self:center" hint-size="196px,54px"></x-import>
+        <p style="margin:0; max-width:34ch; font-size:var(--text-base); line-height:var(--leading-normal); color:rgb(255 255 255 / .92)">Pendências da obra mapeadas com pins sobre plantas, por unidade e por disciplina.</p>
+      </sc-if>
+    </aside>
+    <main style="{{ mainStyle }}">
+      <div style="width:100%; max-width:var(--content-max)">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" dc-props="{{ cardProps }}" hint-size="100%,420px">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardHeader" dc-props="{{ padProps }}" hint-size="100%,44px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardTitle" dc-props="{{ titleProps }}" hint-size="100%,21px">Entrar</x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardDescription" hint-size="100%,20px">Entre com seu e-mail e senha.</x-import>
+          </x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" dc-props="{{ padProps }}" hint-size="100%,260px">
+            <form onSubmit="{{ onSubmit }}" noValidate="{{ true }}" style="display:grid; gap:var(--form-gap)">
+              <sc-if value="{{ apiError }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Alert" tone="danger" title="Não foi possível entrar" hint-size="100%,64px">{{ apiError }}</x-import>
+              </sc-if>
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="E-mail" html-for="email" error="{{ errors.email }}" hint-size="100%,72px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="email" type="email" input-mode="email" auto-complete="email" placeholder="voce@construtora.com.br" value="{{ email }}" onChange="{{ onEmail }}" invalid="{{ emailInvalid }}" hint-size="100%,44px"></x-import>
+              </x-import>
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Senha" html-for="password" error="{{ errors.password }}" hint-size="100%,72px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="password" type="{{ pwType }}" auto-complete="current-password" placeholder="Sua senha" value="{{ password }}" onChange="{{ onPassword }}" invalid="{{ passwordInvalid }}" affix="{{ eyeButton }}" hint-size="100%,44px"></x-import>
+              </x-import>
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="submit" size="lg" block="{{ true }}" disabled="{{ submitting }}" hint-size="100%,52px">{{ submitLabel }}</x-import>
+            </form>
+          </x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardFooter" dc-props="{{ footerProps }}" hint-size="100%,40px">
+            <span style="color:var(--muted-foreground); font-size:var(--text-sm); text-align:center; text-wrap:pretty">Não tem conta? O acesso é por convite da sua construtora.</span>
+          </x-import>
+        </x-import>
+      </div>
+    </main>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;default&quot;,&quot;errors&quot;,&quot;api-error&quot;,&quot;rate-limited&quot;,&quot;submitting&quot;,&quot;session-check&quot;,&quot;session-offline&quot;,&quot;session-failed&quot;],&quot;default&quot;:&quot;default&quot;,&quot;tsType&quot;:&quot;string&quot;},&quot;framed&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  state = { w: 1280, dark: null, email: "", password: "", shown: false, errors: {}, apiError: null, submitting: false, online: true };
+
+  componentDidMount() {
+    const el = this.rootRef.current;
+    if (el && window.ResizeObserver) {
+      this.ro = new ResizeObserver(([e]) => this.setState({ w: e.contentRect.width }));
+      this.ro.observe(el);
+    }
+    this.applyDemo(this.props.state);
+  }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); clearTimeout(this.t); }
+  componentDidUpdate(prev) {
+    if (prev.state !== this.props.state) this.applyDemo(this.props.state);
+    if (prev.theme !== this.props.theme) this.setState({ dark: null });
+  }
+
+  applyDemo(s) {
+    const base = { errors: {}, apiError: null, submitting: false, email: "", password: "" };
+    if (s === "errors") Object.assign(base, { errors: { email: "Informe um e-mail válido.", password: "Informe a sua senha." } });
+    if (s === "api-error") Object.assign(base, { email: "carla@construtoraatlas.com.br", password: "senhaerrada", apiError: "E-mail ou senha incorretos." });
+    if (s === "rate-limited") Object.assign(base, { email: "carla@construtoraatlas.com.br", password: "senhaerrada", apiError: "Muitas tentativas seguidas. Aguarde um minuto e tente de novo." });
+    if (s === "submitting") Object.assign(base, { email: "carla@construtoraatlas.com.br", password: "frase longa da obra", submitting: true });
+    this.setState(base);
+  }
+
+  validate() {
+    const errors = {};
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.state.email.trim())) errors.email = "Informe um e-mail válido.";
+    if (!this.state.password) errors.password = "Informe a sua senha.";
+    return errors;
+  }
+
+  onSubmit = (e) => {
+    e.preventDefault();
+    const errors = this.validate();
+    this.setState({ errors, apiError: null });
+    if (Object.keys(errors).length) return;
+    this.setState({ submitting: true });
+    clearTimeout(this.t);
+    this.t = setTimeout(() => {
+      const pw = this.state.password;
+      if (pw === "errada" || pw === "senhaerrada") return this.setState({ submitting: false, apiError: "E-mail ou senha incorretos." });
+      if (this.props.framed) return this.setState({ submitting: false });
+      const role = /gerente|assistente/i.test(this.state.email) ? "manager" : "admin";
+      window.location.href = "../obras/Obras.dc.html?role=" + role + "&theme=" + (this.isDark() ? "dark" : "light");
+    }, 900);
+  };
+
+  isDark() { return this.state.dark ?? (this.props.theme === "dark"); }
+
+  renderVals() {
+    const DS = window.BluPrintDesignSystem_d4fa62 || {};
+    const vp = this.props.viewport ?? "auto";
+    const desk = vp === "desktop" || (vp !== "mobile" && this.state.w >= 900);
+    const dark = this.isDark();
+    const s = this.props.state ?? "default";
+    const isSplash = s === "session-check" || s === "session-offline" || s === "session-failed";
+    const framed = !!this.props.framed;
+    const errors = this.state.errors;
+    const toggle = () => this.setState({ dark: !dark });
+
+    const asideStyle = desk
+      ? { display: "grid", flex: "none", flexBasis: "44%", alignContent: "space-between", justifyItems: "start", gap: "var(--space-6)", padding: "var(--space-12) var(--space-10)", color: "#fff", backgroundImage: "var(--brand-band-bleed), var(--brand-band)" }
+      : { display: "grid", justifyItems: "center", gap: "var(--space-3)", padding: "0 var(--page-pad) var(--brand-band-pad)", color: "#fff", backgroundImage: "var(--brand-band-bleed), var(--brand-band)" };
+    const headerStyle = desk
+      ? { position: "absolute", top: 10, right: 10, zIndex: 3, display: "flex" }
+      : { display: "flex", minHeight: 48, width: "100%", alignItems: "center", justifyContent: "flex-end", paddingTop: "max(var(--space-1), env(safe-area-inset-top))", color: "rgb(255 255 255 / .9)" };
+    const mainStyle = desk
+      ? { position: "relative", flex: 1, display: "flex", alignItems: "center", justifyContent: "center", padding: "var(--page-pad-desktop)" }
+      : { flex: 1, display: "flex", alignItems: "flex-start", justifyContent: "center", padding: "var(--space-6) var(--page-pad) var(--space-10)" };
+
+    const eyeButton = DS.Button ? React.createElement(DS.Button, {
+      type: "button", variant: "ghost", size: "icon", style: { color: "var(--muted-foreground)" },
+      "aria-label": this.state.shown ? "Ocultar senha" : "Mostrar senha",
+      onClick: () => this.setState(st => ({ shown: !st.shown })),
+    }, React.createElement(DS.Icon, { name: this.state.shown ? "eye-off" : "eye", size: 16 })) : null;
+
+    return {
+      rootRef: this.rootRef,
+      themeClass: dark ? "dark" : "",
+      dir: desk ? "row" : "column",
+      minH: framed ? "0" : "100dvh",
+      fixedH: framed ? "100%" : "auto",
+      overflow: framed ? (desk ? "hidden" : "auto") : "visible",
+      isSplash, isShell: !isSplash,
+      isFailed: s === "session-failed",
+      isChecking: s === "session-check" || s === "session-offline",
+      offline: s === "session-offline",
+      splashText: s === "session-offline" ? "Sem conexão." : "Verificando sua sessão…",
+      retrySession: () => {},
+      isDesktop: desk, isMobile: !desk,
+      asideStyle, headerStyle, mainStyle,
+      badgeTone: dark ? "white" : "gradient",
+      toggleIcon: dark ? "sun" : "moon",
+      toggleProps: {
+        type: "button", variant: "ghost", size: "icon", onClick: toggle,
+        "aria-label": dark ? "Usar tema claro" : "Usar tema escuro",
+        style: { color: desk ? "var(--muted-foreground)" : "inherit" },
+      },
+      cardProps: desk ? { style: { gap: "var(--space-5)" } } : { style: { gap: "var(--space-5)", borderRadius: 0, background: "transparent", paddingBlock: 0, boxShadow: "none" } },
+      padProps: desk ? {} : { style: { paddingInline: 0 } },
+      titleProps: { style: { fontSize: "var(--text-base)", fontWeight: 500, letterSpacing: 0 } },
+      footerProps: desk ? { style: { justifyContent: "center" } } : { style: { justifyContent: "center", borderTop: 0, background: "transparent", padding: "var(--space-2)", margin: 0 } },
+      onSubmit: this.onSubmit,
+      apiError: this.state.apiError,
+      errors,
+      email: this.state.email,
+      password: this.state.password,
+      onEmail: e => this.setState({ email: e.target.value }),
+      onPassword: e => this.setState({ password: e.target.value }),
+      emailInvalid: !!errors.email,
+      passwordInvalid: !!errors.password,
+      pwType: this.state.shown ? "text" : "password",
+      eyeButton,
+      submitting: this.state.submitting,
+      submitLabel: this.state.submitting ? "Entrando…" : "Entrar",
+    };
+  }
+}
+</script>
+</body>
+</html>
