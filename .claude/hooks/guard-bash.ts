@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// PreToolUse guard for Bash; see docs/adr/0048-hooks-enforce-agent-guardrails.md.
+// PreToolUse guard for Bash (ADR 0048).
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { block, isEnvFile, readStdinJson, runHook } from "./lib";
@@ -264,7 +264,7 @@ const GH_VALUE_FLAGS = new Set(["-R", "--repo", "--hostname"]);
 const SHELLS_WITH_C = new Set(["bash", "sh", "zsh"]);
 const LEFTHOOK_FALSY = new Set(["0", "false"]);
 
-// A falsy `LEFTHOOK=` (any case) or any `LEFTHOOK_EXCLUDE=` disables Lefthook's hooks; see docs/adr/0045.
+// A falsy `LEFTHOOK=` (any case) or any `LEFTHOOK_EXCLUDE=` disables Lefthook's hooks (ADR 0045).
 function lefthookBypassReason(assignment: string): string | null {
 	const disable = /^LEFTHOOK=(.*)$/.exec(assignment);
 	if (disable && LEFTHOOK_FALSY.has((disable[1] ?? "").toLowerCase())) {

@@ -17,6 +17,7 @@ Three places produce the body, all through `problemDetails()` in `apps/api/src/c
 - `instance` is the request path without its query string, which can carry tokens.
 - Validation answers 400 on both sides. Better Auth's own body validation arrives as `VALIDATION_FAILED` too, but with a `detail` and no `errors`: its message is not structured enough to split per field.
 - Every error response in the OpenAPI document is problem+json, and `openapi.int-spec.ts` fails one that is not.
+- The body's shape is `problemDetailsSchema` in `packages/shared/src/errors/problem-details.ts`, the one definition the API and the web app both read.
 
 ## Considered Options
 

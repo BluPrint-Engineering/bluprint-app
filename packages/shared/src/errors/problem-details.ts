@@ -10,7 +10,6 @@ export const fieldErrorSchema = z.object({
 	detail: z.string().meta({ example: "Invalid input" }),
 });
 
-/** see docs/adr/0047-errors-are-rfc-9457-problem-details.md */
 export const problemDetailsSchema = z.object({
 	type: z.string().meta({ example: "about:blank" }),
 	title: z.string().meta({

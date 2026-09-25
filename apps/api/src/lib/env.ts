@@ -10,7 +10,7 @@ export const envSchema = z.object({
 	BETTER_AUTH_URL: z.url().default("http://localhost:3000"),
 	// stringbool, not coerce.boolean: coercion turns "false" into true and opens self-signup in production
 	ALLOW_SELF_SIGNUP: z.stringbool().default(false),
-	// no default: apiDocsEnabled derives one from NODE_ENV — see docs/adr/0046-openapi-via-nestjs-swagger.md
+	// no default: apiDocsEnabled derives one from NODE_ENV (ADR 0046)
 	API_DOCS_ENABLED: z.stringbool().optional(),
 });
 

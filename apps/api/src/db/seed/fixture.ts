@@ -8,7 +8,7 @@ export interface SeedPerson {
 	email: string;
 }
 
-/** see docs/adr/0021-platform-admin-sees-only-metadata.md */
+// the one user seed.ts flags is_platform_admin (ADR 0021)
 export const platformAdmin: SeedPerson = {
 	name: "Suporte BluPrint",
 	email: "suporte@bluprint.test",
@@ -37,7 +37,7 @@ interface SeedOrganization {
 	projects: SeedProject[];
 }
 
-// Helena's roles differ by organization and by project — see docs/adr/0022-roles-live-on-project-membership.md
+// Helena's roles differ by organization and by project (ADR 0022)
 const helena: SeedPerson = {
 	name: "Helena Martins",
 	email: "helena@consultoria.test",

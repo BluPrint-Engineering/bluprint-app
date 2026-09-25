@@ -40,7 +40,7 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 	async function onSubmit(values: LoginFormValues) {
 		setApiError(null);
 		try {
-			// never rememberMe: false, or the cookie demotes to a browser-session one; see docs/adr/0010-self-hosted-better-auth.md
+			// never rememberMe: false, or the cookie demotes to a browser-session one (ADR 0010)
 			const { error } = await authClient.signIn.email({
 				email: values.email,
 				password: values.password,

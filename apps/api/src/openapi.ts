@@ -54,13 +54,12 @@ transactional email provider exists (#11), and documenting them here would be
 maintenance with no reader.
 `.trim();
 
-/** Why off in production: docs/adr/0046-openapi-via-nestjs-swagger.md */
+/** Defaults to off in production so the route map is not public (ADR 0046) */
 export function apiDocsEnabled(config: ConfigService<Env, true>): boolean {
 	const flag = config.get("API_DOCS_ENABLED", { infer: true });
 	return flag ?? process.env.NODE_ENV !== "production";
 }
 
-/** see docs/adr/0046-openapi-via-nestjs-swagger.md */
 export function setupApiDocs(app: INestApplication): void {
 	const config = new DocumentBuilder()
 		.setTitle("BluPrint API")

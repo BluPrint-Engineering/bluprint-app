@@ -13,12 +13,11 @@ import { ProjectsModule } from "./projects/projects.module";
 	imports: [
 		ConfigModule.forRoot({
 			isGlobal: true,
-			// Earlier entries win: .env.local overrides .env — docs/adr/0049.
+			// Earlier entries win: .env.local overrides .env (ADR 0049)
 			envFilePath: ["../../.env.local", "../../.env"],
 			validate: (raw) => envSchema.parse(raw),
 		}),
 		DatabaseModule,
-		// see docs/adr/0051-transaction-aware-repositories-via-cls.md
 		ClsModule.forRoot({
 			global: true,
 			middleware: { mount: true },

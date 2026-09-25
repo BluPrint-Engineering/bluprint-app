@@ -30,13 +30,11 @@ export function createAuth(db: Database, options: AuthOptions) {
 			// pinned: Better Auth disables this itself when NODE_ENV is "test"
 			disableOriginCheck: false,
 		},
-		// see docs/adr/0010-self-hosted-better-auth.md
 		emailAndPassword: { enabled: true },
-		// see docs/adr/0010-self-hosted-better-auth.md
 		session: { expiresIn: 90 * DAY, updateAge: DAY },
 		user: {
 			additionalFields: {
-				// see docs/adr/0013-better-auth-tables-are-generated.md
+				// input: false is what stops a sign-up payload from setting it (ADR 0013)
 				isPlatformAdmin: {
 					type: "boolean",
 					required: true,
@@ -46,7 +44,7 @@ export function createAuth(db: Database, options: AuthOptions) {
 			},
 		},
 		hooks: {
-			// TODO(#11): remove with self-signup; see docs/adr/0011-self-signup-is-scaffolding.md
+			// TODO(#11): remove with self-signup (ADR 0011)
 			before: createAuthMiddleware((ctx) => {
 				if (!options.allowSelfSignup && ctx.path === SIGN_UP_PATH) {
 					throw new APIError("FORBIDDEN", {
@@ -60,7 +58,7 @@ export function createAuth(db: Database, options: AuthOptions) {
 		databaseHooks: {
 			user: {
 				create: {
-					// TODO(#11): seeds every new user, invited too; see docs/adr/0012-signup-seeding-as-compensated-saga.md
+					// TODO(#11): seeds every new user, invited too (ADR 0012)
 					after: (created) => options.onUserCreated(created),
 				},
 			},

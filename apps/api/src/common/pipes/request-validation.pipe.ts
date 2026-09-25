@@ -9,7 +9,6 @@ interface Issue {
 	message: string;
 }
 
-/** see docs/adr/0047-errors-are-rfc-9457-problem-details.md */
 export class RequestValidationPipe implements PipeTransform {
 	private readonly zod = new ZodValidationPipe();
 
