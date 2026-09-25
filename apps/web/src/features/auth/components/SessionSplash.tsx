@@ -14,12 +14,15 @@ export function SessionSplash() {
 		<div className="grid min-h-dvh place-items-center gap-(--space-3) bg-background">
 			<div className="grid justify-items-center gap-(--space-4) text-muted-foreground">
 				<img src="/brand/logo-mark.svg" alt="" className="h-12" />
-				<span className="flex items-center gap-(--space-2) text-sm">
-					<Spinner className="size-4.5" />
-					{online
-						? "Verificando sua sessão…"
-						: "Sem conexão. Continuamos assim que a internet voltar."}
-				</span>
+				<div className="grid justify-items-center gap-(--space-1) text-center">
+					<span className="flex items-center gap-(--space-2) text-sm">
+						<Spinner className="size-4.5" />
+						{online ? "Verificando sua sessão…" : "Sem conexão."}
+					</span>
+					{!online && (
+						<p className="text-sm">Continuamos assim que a internet voltar.</p>
+					)}
+				</div>
 			</div>
 		</div>
 	);

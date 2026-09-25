@@ -130,10 +130,9 @@ describe("/login route", () => {
 
 		renderAt("/login");
 
+		expect(await screen.findByText("Sem conexão.")).toBeInTheDocument();
 		expect(
-			await screen.findByText(
-				"Sem conexão. Continuamos assim que a internet voltar.",
-			),
+			screen.getByText("Continuamos assim que a internet voltar."),
 		).toBeInTheDocument();
 
 		act(() => onlineManager.setOnline(true));

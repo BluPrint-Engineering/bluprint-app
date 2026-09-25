@@ -107,10 +107,9 @@ describe("protected layout", () => {
 
 		renderAt("/");
 
+		expect(await screen.findByText("Sem conexão.")).toBeInTheDocument();
 		expect(
-			await screen.findByText(
-				"Sem conexão. Continuamos assim que a internet voltar.",
-			),
+			screen.getByText("Continuamos assim que a internet voltar."),
 		).toBeInTheDocument();
 		expect(
 			screen.queryByRole("button", { name: "Tentar de novo" }),
