@@ -1,7 +1,7 @@
 import { ProjectSummary } from "@bluprint/shared";
 import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
-import { Session, UserSession } from "@thallesp/nestjs-better-auth";
+import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
 import { CreateProjectDto } from "./dto/create-project.dto";

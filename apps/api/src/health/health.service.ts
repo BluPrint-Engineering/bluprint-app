@@ -1,13 +1,12 @@
 import { HealthResponse } from "@bluprint/shared";
-import { Inject, Injectable } from "@nestjs/common";
-import { DATABASE, Database } from "../db/database.module";
-import { pingDatabase } from "./health.queries";
+import { Injectable } from "@nestjs/common";
+import { HealthRepository } from "./health.repository";
 
 @Injectable()
 export class HealthService {
 	private readonly startedAt = Date.now();
 
-	constructor(@Inject(DATABASE) private readonly db: Database) {}
+	constructor(private readonly repository: HealthRepository) {}
 
 	async check(verbose?: boolean): Promise<HealthResponse> {
 		const database = await this.checkDatabase();
@@ -28,7 +27,7 @@ export class HealthService {
 
 	private async checkDatabase(): Promise<"up" | "down"> {
 		try {
-			await pingDatabase(this.db);
+			await this.repository.ping();
 			return "up";
 		} catch {
 			return "down";

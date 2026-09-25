@@ -4,7 +4,7 @@ The sign-up request also creates that person's organization, an `admin` membersh
 
 ## Consequences
 
-- `auth/signup-provisioning.ts` only orchestrates. Each write is a query of the domain that owns the table (`organizations`, `members`, `licenses`), and deleting the user is `auth/auth.queries.ts`, because `user` belongs to Better Auth.
+- `SignupProvisioning` in `auth/signup-provisioning.ts` only orchestrates. Its `@Transactional()` method writes through the repositories of the features that own the tables (`organizations`, `members`, `licenses`); on failure its entry point deletes the user through `auth/users.repository.ts`, outside that transaction, because `user` belongs to Better Auth ([0051](0051-transaction-aware-repositories-via-cls.md)).
 - The hook must throw a plain `Error`, never an `APIError`: only a plain `Error` reaches the 500 with no headers, which guarantees no `Set-Cookie` on a failed sign-up.
 - **Accepted residue:** if Postgres becomes unreachable between the user commit and the `DELETE`, an orphan remains. It is an infrastructure failure, and the alternative meant wiring coupled to undocumented library internals.
 - What is scaffolding is **who** creates the licenses; the license itself is real, because "is there a free license?" decides whether a project can be created.

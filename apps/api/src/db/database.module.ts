@@ -8,8 +8,10 @@ import {
 	OnModuleInit,
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
+import { TransactionalAdapter } from "@nestjs-cls/transactional";
 import { drizzle, NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql } from "drizzle-orm";
+import { PgTransactionConfig } from "drizzle-orm/pg-core";
 import { Pool } from "pg";
 import { Env } from "../lib/env";
 import * as schema from "./schema";
@@ -17,11 +19,12 @@ import * as schema from "./schema";
 export const DATABASE = Symbol("DATABASE");
 export type Database = NodePgDatabase<typeof schema>;
 
-/** Derived, not spelled out as `NodePgTransaction<...>`: that type's generics change between Drizzle's relations v1 and v2. */
-export type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
-
-/** see docs/adr/0005-queries-take-the-executor.md */
-export type Executor = Database | Transaction;
+/** Not `TransactionalAdapterDrizzleOrm<Database>`: under exactOptionalPropertyTypes its `tx` infers as `never`. */
+export type DatabaseAdapter = TransactionalAdapter<
+	Database,
+	Database,
+	PgTransactionConfig
+>;
 
 /** Casing must match drizzle.config.ts, which can't import this (runs in its own process). */
 export function createDatabase(pool: Pool): Database {

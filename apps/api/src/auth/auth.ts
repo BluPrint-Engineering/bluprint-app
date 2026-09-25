@@ -3,7 +3,6 @@ import { betterAuth } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { Database } from "../db/database.module";
 import { withProblemDetails } from "./auth-problem-details";
-import { discardUser, provisionTenant } from "./signup-provisioning";
 
 const MINUTE = 60;
 const HOUR = 60 * MINUTE;
@@ -17,6 +16,7 @@ export interface AuthOptions {
 	baseURL: string;
 	trustedOrigins: string[];
 	allowSelfSignup: boolean;
+	onUserCreated: (user: { id: string; name: string }) => Promise<void>;
 }
 
 export function createAuth(db: Database, options: AuthOptions) {
@@ -61,15 +61,7 @@ export function createAuth(db: Database, options: AuthOptions) {
 			user: {
 				create: {
 					// TODO(#11): seeds every new user, invited too; see docs/adr/0012-signup-seeding-as-compensated-saga.md
-					after: async (created) => {
-						try {
-							await provisionTenant(db, created.id, created.name);
-						} catch (error) {
-							await discardUser(db, created.id);
-							// rethrow a plain Error, never APIError, or a failed sign-up can still set a session cookie
-							throw error;
-						}
-					},
+					after: (created) => options.onUserCreated(created),
 				},
 			},
 		},
