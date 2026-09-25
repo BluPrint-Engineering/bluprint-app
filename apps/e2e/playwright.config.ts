@@ -53,6 +53,8 @@ export default defineConfig({
 				BETTER_AUTH_URL: API_BASE_URL,
 				// signup.spec.ts creates an account; paired with VITE_ALLOW_SELF_SIGNUP in the root e2e script
 				ALLOW_SELF_SIGNUP: "true",
+				// the suite must not depend on the real HIBP API being up; its wiring is covered by password-policy.int-spec.ts
+				PASSWORD_BREACH_CHECK: "false",
 			},
 		},
 		{

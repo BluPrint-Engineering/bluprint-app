@@ -62,7 +62,7 @@ async function renderSignupPage(onSuccess = vi.fn()) {
 async function fillAndSubmit({
 	name = "Ana Souza",
 	email = "ana@horizonte.test",
-	password = "bluprint123",
+	password = "tres-lajes-e-um-prumo",
 	acceptTerms = true,
 } = {}) {
 	const user = userEvent.setup();
@@ -107,7 +107,7 @@ describe("SignupPage", () => {
 		expect(sentBody).toMatchObject({
 			name: "Ana Souza",
 			email: "ana@horizonte.test",
-			password: "bluprint123",
+			password: "tres-lajes-e-um-prumo",
 		});
 	});
 
@@ -179,16 +179,49 @@ describe("SignupPage", () => {
 		).toBeInTheDocument();
 	});
 
-	test("rejects a password longer than Better Auth accepts without calling the API", async () => {
+	test("rejects a password longer than 64 characters without calling the API", async () => {
 		const fetchMock = stubSignUpFetch({ status: 200, body: {} });
 		await renderSignupPage();
 
-		await fillAndSubmit({ password: "a".repeat(129) });
+		await fillAndSubmit({ password: "prumo-".repeat(11) });
 
 		expect(
-			await screen.findByText("A senha pode ter no máximo 128 caracteres."),
+			await screen.findByText("A senha pode ter no máximo 64 caracteres."),
 		).toBeInTheDocument();
 		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	test.each([
+		["built on the product's name", "bluprint123"],
+		["built on the person's own name", "Souza!2026"],
+	])("rejects a password %s without calling the API", async (_, password) => {
+		const fetchMock = stubSignUpFetch({ status: 200, body: {} });
+		await renderSignupPage();
+
+		await fillAndSubmit({ password });
+
+		expect(
+			await screen.findByText(
+				"Essa senha é fácil de adivinhar. Evite senhas comuns, sequências e o seu nome ou e-mail.",
+			),
+		).toBeInTheDocument();
+		expect(fetchMock).not.toHaveBeenCalled();
+	});
+
+	test("translates a breached password from the API", async () => {
+		stubSignUpFetch({
+			status: 400,
+			body: problem({ status: 400, code: "PASSWORD_COMPROMISED" }),
+		});
+		await renderSignupPage();
+
+		await fillAndSubmit();
+
+		expect(
+			await screen.findByText(
+				"Essa senha já apareceu em vazamentos de outros sites. Escolha outra.",
+			),
+		).toBeInTheDocument();
 	});
 
 	test("translates a rate-limit response", async () => {

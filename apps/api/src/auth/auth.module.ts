@@ -23,6 +23,9 @@ import { SignupProvisioningModule } from "./signup-provisioning.module";
 					baseURL: config.get("BETTER_AUTH_URL", { infer: true }),
 					trustedOrigins: [config.get("CORS_ORIGIN", { infer: true })],
 					allowSelfSignup: config.get("ALLOW_SELF_SIGNUP", { infer: true }),
+					checkBreachedPasswords: config.get("PASSWORD_BREACH_CHECK", {
+						infer: true,
+					}),
 					onUserCreated: (user) => provisioning.provisionOrDiscard(user),
 				}),
 				// without this, the module re-calls enableCors during init and overrides configureApp's CORS

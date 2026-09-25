@@ -1,7 +1,7 @@
 import type { DefaultRole, EffectiveRole } from "@bluprint/shared";
 
 // fine as a fixed value: never used outside a local/dev database
-export const SEED_PASSWORD = "bluprint123";
+export const SEED_PASSWORD = "canteiro-de-obras-azul";
 
 export interface SeedPerson {
 	name: string;

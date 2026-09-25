@@ -1,3 +1,8 @@
+import {
+	isGuessablePassword,
+	PASSWORD_MAX_LENGTH,
+	PASSWORD_MIN_LENGTH,
+} from "@bluprint/shared";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
@@ -26,23 +31,30 @@ import { authCardClassName } from "./components/AuthShell";
 import { PasswordInput } from "./components/PasswordInput";
 import {
 	EMAIL_TAKEN_CODE,
+	PASSWORD_TOO_GUESSABLE_MESSAGE,
 	PASSWORD_TOO_LONG_MESSAGE,
 	PASSWORD_TOO_SHORT_MESSAGE,
 	signUpErrorMessage,
 } from "./signUpErrorMessage";
 
-const signupFormSchema = z.object({
-	name: z.string().trim().min(3, "Informe o seu nome completo."),
-	email: z.email("Informe um e-mail válido."),
-	// Better Auth's own bounds, so the server never rejects what the form accepted
-	password: z
-		.string()
-		.min(8, PASSWORD_TOO_SHORT_MESSAGE)
-		.max(128, PASSWORD_TOO_LONG_MESSAGE),
-	acceptTerms: z
-		.boolean()
-		.refine((accepted) => accepted, "Aceite os termos para continuar."),
-});
+// the same bounds and blocklist the API enforces, so only a breached password reaches the server to fail
+const signupFormSchema = z
+	.object({
+		name: z.string().trim().min(3, "Informe o seu nome completo."),
+		email: z.email("Informe um e-mail válido."),
+		password: z
+			.string()
+			.min(PASSWORD_MIN_LENGTH, PASSWORD_TOO_SHORT_MESSAGE)
+			.max(PASSWORD_MAX_LENGTH, PASSWORD_TOO_LONG_MESSAGE),
+		acceptTerms: z
+			.boolean()
+			.refine((accepted) => accepted, "Aceite os termos para continuar."),
+	})
+	.refine(
+		({ password, name, email }) =>
+			!isGuessablePassword(password, { name, email }),
+		{ path: ["password"], message: PASSWORD_TOO_GUESSABLE_MESSAGE },
+	);
 type SignupFormValues = z.infer<typeof signupFormSchema>;
 
 export function SignupPage({ onSuccess }: { onSuccess: () => void }) {
@@ -151,7 +163,8 @@ export function SignupPage({ onSuccess }: { onSuccess: () => void }) {
 							<FieldError id="password-error" errors={[errors.password]} />
 						) : (
 							<FieldDescription id="password-hint">
-								Mínimo de 8 caracteres
+								De {PASSWORD_MIN_LENGTH} a {PASSWORD_MAX_LENGTH} caracteres. Uma
+								frase fácil de lembrar funciona bem.
 							</FieldDescription>
 						)}
 					</Field>

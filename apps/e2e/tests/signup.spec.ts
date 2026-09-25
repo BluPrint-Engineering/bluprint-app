@@ -15,7 +15,9 @@ test.describe("signed out", () => {
 
 		await page.getByLabel("Nome completo").fill("Bruno Teste");
 		await page.getByLabel("E-mail").fill(email);
-		await page.getByLabel("Senha", { exact: true }).fill("bluprint123");
+		await page
+			.getByLabel("Senha", { exact: true })
+			.fill("tres-lajes-e-um-prumo");
 		await page
 			.getByRole("checkbox", {
 				name: "Aceito os termos de uso e a política de privacidade",
