@@ -20,7 +20,8 @@
               "components/core/**",
               "components/feedback/**",
               "components/forms/**",
-              "ui_kits/bluprint-web/**"
+              "components/navigation/**",
+              "components/overlay/**"
             ],
             "message": "Import design-system components from 'index.js', not component internals."
           }
@@ -50,6 +51,22 @@
         "message": "<Alert> tone must be one of 'danger' | 'info' | 'success'."
       },
       {
+        "selector": "JSXOpeningElement[name.name='Avatar'] > JSXAttribute > JSXIdentifier[name!=/^(?:name|src|size|key|ref|className|style|children)$/]",
+        "message": "<Avatar> doesn't accept that prop. Declared props: name, src, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Avatar'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md|lg)$/]",
+        "message": "<Avatar> size must be one of 'sm' | 'md' | 'lg'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|dot|icon|count|key|ref|className|style|children)$/]",
+        "message": "<Badge> doesn't accept that prop. Declared props: tone, dot, icon, count."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Badge'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:primary|neutral|success|danger|outline)$/]",
+        "message": "<Badge> tone must be one of 'primary' | 'neutral' | 'success' | 'danger' | 'outline'."
+      },
+      {
         "selector": "JSXOpeningElement[name.name='Button'] > JSXAttribute > JSXIdentifier[name!=/^(?:variant|size|block|loading|iconStart|iconEnd|as|key|ref|className|style|children)$/]",
         "message": "<Button> doesn't accept that prop. Declared props: variant, size, block, loading, iconStart, iconEnd, as."
       },
@@ -72,6 +89,14 @@
       {
         "selector": "JSXOpeningElement[name.name='Checkbox'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|description|key|ref|className|style|children)$/]",
         "message": "<Checkbox> doesn't accept that prop. Declared props: label, description."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DropdownMenu'] > JSXAttribute > JSXIdentifier[name!=/^(?:trigger|open|defaultOpen|onOpenChange|align|locked|width|label|className|children|key|ref|className|style|children)$/]",
+        "message": "<DropdownMenu> doesn't accept that prop. Declared props: trigger, open, defaultOpen, onOpenChange, align, locked, width, label, className, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='DropdownMenu'] > JSXAttribute[name.name='align'] > Literal[value!=/^(?:start|end)$/]",
+        "message": "<DropdownMenu> align must be one of 'start' | 'end'."
       },
       {
         "selector": "JSXOpeningElement[name.name='Field'] > JSXAttribute > JSXIdentifier[name!=/^(?:label|htmlFor|optional|hint|error|key|ref|className|style|children)$/]",
@@ -98,8 +123,48 @@
         "message": "<Logo> tone must be one of 'gradient' | 'blue' | 'white' | 'ink'."
       },
       {
+        "selector": "JSXOpeningElement[name.name='Pagination'] > JSXAttribute > JSXIdentifier[name!=/^(?:page|pageCount|onPageChange|loadingPage|label|className|key|ref|className|style|children)$/]",
+        "message": "<Pagination> doesn't accept that prop. Declared props: page, pageCount, onPageChange, loadingPage, label, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SearchInput'] > JSXAttribute > JSXIdentifier[name!=/^(?:value|onChange|onClear|size|key|ref|className|style|children)$/]",
+        "message": "<SearchInput> doesn't accept that prop. Declared props: value, onChange, onClear, size."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SearchInput'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<SearchInput> size must be one of 'sm' | 'md'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SegmentedControl'] > JSXAttribute > JSXIdentifier[name!=/^(?:options|value|onChange|size|block|label|className|key|ref|className|style|children)$/]",
+        "message": "<SegmentedControl> doesn't accept that prop. Declared props: options, value, onChange, size, block, label, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='SegmentedControl'] > JSXAttribute[name.name='size'] > Literal[value!=/^(?:sm|md)$/]",
+        "message": "<SegmentedControl> size must be one of 'sm' | 'md'."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Sheet'] > JSXAttribute > JSXIdentifier[name!=/^(?:open|onClose|title|description|footer|contained|className|children|key|ref|className|style|children)$/]",
+        "message": "<Sheet> doesn't accept that prop. Declared props: open, onClose, title, description, footer, contained, className, children."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Skeleton'] > JSXAttribute > JSXIdentifier[name!=/^(?:width|height|radius|circle|key|ref|className|style|children)$/]",
+        "message": "<Skeleton> doesn't accept that prop. Declared props: width, height, radius, circle."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Skeleton'] > JSXAttribute[name.name='radius'] > Literal[value!=/^(?:sm|md|lg|xl|full)$/]",
+        "message": "<Skeleton> radius must be one of 'sm' | 'md' | 'lg' | 'xl' | 'full'."
+      },
+      {
         "selector": "JSXOpeningElement[name.name='Spinner'] > JSXAttribute > JSXIdentifier[name!=/^(?:size|label|className|key|ref|className|style|children)$/]",
         "message": "<Spinner> doesn't accept that prop. Declared props: size, label, className."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Toast'] > JSXAttribute > JSXIdentifier[name!=/^(?:tone|title|action|onDismiss|key|ref|className|style|children)$/]",
+        "message": "<Toast> doesn't accept that prop. Declared props: tone, title, action, onDismiss."
+      },
+      {
+        "selector": "JSXOpeningElement[name.name='Toast'] > JSXAttribute[name.name='tone'] > Literal[value!=/^(?:default|danger|success)$/]",
+        "message": "<Toast> tone must be one of 'default' | 'danger' | 'success'."
       }
     ]
   },
@@ -118,6 +183,12 @@
       "Alert": {
         "replaces": []
       },
+      "Avatar": {
+        "replaces": []
+      },
+      "Badge": {
+        "replaces": []
+      },
       "Button": {
         "replaces": []
       },
@@ -125,6 +196,9 @@
         "replaces": []
       },
       "Checkbox": {
+        "replaces": []
+      },
+      "DropdownMenu": {
         "replaces": []
       },
       "Field": {
@@ -142,7 +216,25 @@
       "Logo": {
         "replaces": []
       },
+      "Pagination": {
+        "replaces": []
+      },
+      "SearchInput": {
+        "replaces": []
+      },
+      "SegmentedControl": {
+        "replaces": []
+      },
+      "Sheet": {
+        "replaces": []
+      },
+      "Skeleton": {
+        "replaces": []
+      },
       "Spinner": {
+        "replaces": []
+      },
+      "Toast": {
         "replaces": []
       }
     },

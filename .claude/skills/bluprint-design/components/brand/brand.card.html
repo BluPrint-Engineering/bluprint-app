@@ -10,12 +10,12 @@
 const { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Label, Field, Checkbox, Alert, Spinner, Logo } = window.BluPrintDesignSystem_d4fa62;
 function Demo(){return <div style={{display:'flex',gap:0,alignItems:'stretch',borderRadius:'var(--radius-xl)',overflow:'hidden'}}>
   <div style={{flex:1,padding:20,display:'grid',placeItems:'center',gap:10,background:'var(--card)',boxShadow:'var(--ring-hairline)'}}>
-    <Logo size={56} basePath="../../assets" />
-    <Logo size={28} wordmark basePath="../../assets" />
+    <Logo size={56} />
+    <Logo size={28} wordmark />
   </div>
   <div style={{flex:1,padding:20,display:'grid',placeItems:'center',gap:10,background:'var(--brand-ink)'}}>
-    <Logo tone="white" size={56} basePath="../../assets" />
-    <Logo tone="white" size={28} wordmark basePath="../../assets" />
+    <Logo tone="white" size={56} />
+    <Logo tone="white" size={28} wordmark />
   </div>
 </div>}
 ReactDOM.createRoot(document.getElementById('root')).render(<Demo />);

@@ -2,8 +2,8 @@ One-line: renders the BluPrint logo from the vector assets — never retype, red
 
 ```jsx
 <Logo size={56} />                                        {/* mark only, gradient */}
-<Logo size={32} wordmark basePath="../../assets" />       {/* horizontal lockup */}
-<Logo size={64} stacked tone="white" basePath="../../assets" />
+<Logo size={32} wordmark />       {/* horizontal lockup */}
+<Logo size={64} stacked tone="white" />
 ```
 
 - The wordmark is SVG geometry traced from the brand file, so it is font-independent.

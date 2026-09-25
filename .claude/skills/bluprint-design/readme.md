@@ -10,7 +10,7 @@ This design system was built for [issue #41 — *1.6 Fundação visual: tokens, 
 | --- | --- |
 | [`BluPrint-Engineering/bluprint-app`](https://github.com/BluPrint-Engineering/bluprint-app) (`main`) | The whole system. `apps/web/src/styles/globals.css` (shadcn **radix-nova**, Geist, `--radius:0.625rem`), `apps/web/src/components/ui/{button,card}.tsx`, `components.json` (lucide icons), `CLAUDE.md`, `CONTEXT.md`, `docs/requisitos.md`, `docs/data-model.md`, `docs/adr/` |
 | Issues [#41](https://github.com/BluPrint-Engineering/bluprint-app/issues/41), [#42](https://github.com/BluPrint-Engineering/bluprint-app/issues/42), [#43](https://github.com/BluPrint-Engineering/bluprint-app/issues/43) | Acceptance criteria for the foundation and the two auth screens |
-| `uploads/bluprint-full-logo.webp`, `uploads/bluprint-logo.webp` | The brand. Colors were sampled pixel-by-pixel from these files; the vector marks in `assets/` are traced from them |
+| `assets/bluprint-lockup-original.webp`, `assets/bluprint-mark-original.webp` (the raster originals) | The brand. Colors were sampled pixel-by-pixel from these files; the vector marks in `assets/` are traced from them |
 | [Miro board](https://miro.com/app/board/uXjVHrUOxfg=/) (referenced in `docs/data-model.md`) | **Not read** — no access. If it holds screen designs, it should be reviewed against this system |
 
 Read the repository if you are going to design for BluPrint: `docs/requisitos.md` is the product's source of truth (pt-BR, `RF-xxx` ids), `CONTEXT.md` is the glossary that decides what things are called, and `docs/adr/` records why each decision went the way it did. The product is **specified far ahead of what is built** — at the time of writing, `apps/web` contains only a health-check page, one Button and one Card.
@@ -23,7 +23,7 @@ One product, one codebase: a **mobile-first React web app** (Vite + TanStack Rou
 2. **Office app** — dashboards (unit map by status, common-area strip), project structure, people, contractors. *Specified in RF-8xx / RF-2xx, not built.*
 3. **Worker report** — the PDF, the only artifact that leaves the platform. Carries BluPrint's brand, must stay legible printed in black and white (ADR-0034, RF-704).
 
-The only surface with a refined spec today is authentication, and that is what `ui_kits/bluprint-web/` recreates.
+This project holds only the design system. Screens (Entrar #42, Criar conta #43, Obras #45 and whatever comes next) live in a separate screens project that links this one. When a screen needs a primitive that is missing, it is added here, not there.
 
 ## Index
 
@@ -32,15 +32,16 @@ The only surface with a refined spec today is authentication, and that is what `
 | `styles.css` | The single entry point. Nothing but `@import` lines |
 | `tokens/` | `colors.css` (brand + light/dark UI), `domain-palettes.css` (unit status, discipline), `typography.css`, `spacing.css`, `radius.css`, `elevation.css`, `motion.css`, `fonts.css` |
 | `css/` | `base.css` (resets, body, headings, links), `components.css` (the `.bp-*` classes the components use) |
-| `assets/` | Vector logos (`logo-mark*.svg`, `wordmark*.svg`, `logo-lockup*.svg`, `logo-stacked*.svg`), the two raster originals, `icons/` (18 lucide glyphs) |
-| `components/core/` | **Button**, **Card** (+ `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`), **Icon** |
-| `components/forms/` | **Field**, **Input**, **Label**, **Checkbox** |
-| `components/feedback/` | **Alert**, **Spinner** |
+| `assets/` | Vector logos (`logo-mark*.svg`, `wordmark*.svg`, `logo-lockup*.svg`, `logo-stacked*.svg`), the two raster originals, `icons/` (24 lucide glyphs). The glyphs and logo SVGs are also embedded in `Icon` and `Logo`, so screens render them without this folder; `assets/` is the source for the repo (`public/brand/`) and for regenerating those components |
+| `components/core/` | **Button**, **Card** (+ `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`), **Icon**, **Avatar**, **Badge** |
+| `components/forms/` | **Field**, **Input**, **Label**, **Checkbox**, **SearchInput** |
+| `components/feedback/` | **Alert**, **Spinner**, **Skeleton**, **Toast** (+ `Toaster`) |
+| `components/overlay/` | **DropdownMenu** (+ `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`), **Sheet** |
+| `components/navigation/` | **Pagination**, **SegmentedControl** |
 | `components/brand/` | **Logo** |
-| `ui_kits/bluprint-web/` | Click-through recreation of Entrar / Criar conta + the post-login obra list, plus `mobile.html` (the same screens at 402 px in phone frames) and `loading.html` (every loading state, web and mobile). See its own README |
 | `guidelines/` | The foundation specimen cards rendered in the Design System tab |
 | `SKILL.md` | Agent-skill front matter, so this folder works as a Claude Code skill |
-| `HANDOFF.md` | What to do with all of this in `apps/web` — where each piece lands, what transfers verbatim, what gets rebuilt |
+| `HANDOFF.md` | What to do with this system in `apps/web`: where each piece lands, what transfers verbatim, what gets rebuilt |
 | `github.md` | Source-repo association and sync record |
 
 ### Component inventory, and why it is this size
@@ -55,7 +56,9 @@ The only surface with a refined spec today is authentication, and that is what `
 - **Icon** — a wrapper over the lucide glyphs in `assets/icons/`, matching `iconLibrary: "lucide"` in `components.json`.
 - **Logo** — the brand mark, so no screen retypes or redraws it.
 
-Nothing else was invented. There is no Toast, Tabs, Avatar, Dialog primitive or Table here, because no screen in the repo asks for one yet. When the plan viewer and dashboards get specs, the pin, the status cell and the discipline legend become components — they are domain objects with their own palettes and belong here, not in a screen.
+**Added for the obra list ([#45](https://github.com/BluPrint-Engineering/bluprint-app/issues/45))** — `Avatar`, `Badge`, `Skeleton`, `Toast`, `DropdownMenu`, `Sheet`, `Pagination`, `SegmentedControl`, `SearchInput`. Each maps to a shadcn primitive (`avatar`, `badge`, `skeleton`, `sonner`, `dropdown-menu`, `drawer`, `pagination`, `toggle-group`, `input`), and six more lucide glyphs came with them: `search`, `sliders-horizontal`, `x`, `chevron-left`, `chevron-down`, `check`.
+
+Nothing else was invented. There is no Tabs, Dialog primitive or Table here, because no screen asks for one yet. When the plan viewer and dashboards get specs, the pin, the status cell and the discipline legend become components — they are domain objects with their own palettes and belong here, not in a screen.
 
 ## Content fundamentals
 
@@ -114,7 +117,7 @@ Nothing else was invented. There is no Toast, Tabs, Avatar, Dialog primitive or 
 
 ## Iconography
 
-**Lucide**, at its default 24px box and 1.5px stroke — the app declares `iconLibrary: "lucide"` in `components.json` and imports `lucide-react`. The 18 glyphs the screens here need were copied from the [lucide repository](https://github.com/lucide-icons/lucide) into `assets/icons/`: `eye`, `eye-off`, `mail`, `lock`, `user`, `circle-alert`, `circle-check`, `map-pin`, `chevron-right`, `log-out`, `plus`, `arrow-left`, `sun`, `moon`, `hard-hat`, `refresh-cw`, `wifi-off`, `building`. Need another? Copy the SVG from lucide by its kebab-case name; do not draw one.
+**Lucide**, at its default 24px box and 1.5px stroke — the app declares `iconLibrary: "lucide"` in `components.json` and imports `lucide-react`. The 24 glyphs the screens here need were copied from the [lucide repository](https://github.com/lucide-icons/lucide) into `assets/icons/`: `eye`, `eye-off`, `mail`, `lock`, `user`, `circle-alert`, `circle-check`, `map-pin`, `chevron-right`, `log-out`, `plus`, `arrow-left`, `sun`, `moon`, `hard-hat`, `refresh-cw`, `wifi-off`, `building`, `search`, `sliders-horizontal`, `x`, `chevron-left`, `chevron-down`, `check`. Need another? Copy the SVG from lucide by its kebab-case name; do not draw one.
 
 Rules: icons are 20px inline and 24px inside a 44px tap target; they inherit `currentColor` (the `Icon` component uses a CSS mask to keep that behavior); an icon never stands alone as the only signal of state; **no emoji and no unicode glyphs as icons**, anywhere, including the report. There is no icon font and no sprite sheet in the repo.
 
@@ -132,3 +135,25 @@ Rules: icons are 20px inline and 24px inside a 44px tap target; they inherit `cu
 The wordmark carries no font dependency, so it renders identically in the app, in a PDF and in a design tool. Two known simplifications against the raster: the mark's ribbon shading is reduced to one gradient plus a highlight, and the letterforms are reconstructed from measured circles and stems — within a couple of units of the original at every point, but not a curve-for-curve copy of the designer's file. For print at large scale, the raster original is still the safest source.
 
 Clear space around the mark is one counter-circle radius on every side. Minimum mark height: 24px on screen. Never recolor the mark outside the four tones provided, never place the gradient mark on a mid-blue background (use `-white`), never stretch or rotate it.
+
+## Components
+
+- Button
+- Card (CardHeader, CardTitle, CardDescription, CardContent, CardFooter)
+- Icon
+- Avatar
+- Badge
+- Label
+- Input
+- Field
+- Checkbox
+- SearchInput
+- Alert
+- Spinner
+- Skeleton
+- Toast (Toaster)
+- DropdownMenu (DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator)
+- Sheet
+- Pagination
+- SegmentedControl
+- Logo

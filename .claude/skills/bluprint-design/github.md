@@ -4,25 +4,22 @@ path: apps/web, docs, CONTEXT.md, CLAUDE.md
 
 ## Last sync
 
-date: 2026-09-14T20:45:00Z
-tree: d511566b98ef
+date: 2026-09-25T12:00:00Z
 
 ### Updated in this project
 
-- Token set written from `apps/web/src/styles/globals.css` (radix-nova, Geist, `--radius:0.625rem`), rebased on the logo's blues with a light and a dark theme.
-- Domain palettes (unit status, discipline) lifted verbatim from `docs/requisitos.md` and kept separate from UI color, per ADR-0035.
-- `Button` and `Card` recreated from `apps/web/src/components/ui/`; form, feedback, icon and logo primitives added for issues #42/#43.
-- UI kit recreating the login (#42) and signup (#43) screens, pt-BR, mobile-first with a denser desktop split.
-
-Scope note: #41 + #42 + #43 only. The obra dashboard (RF-801/804/808) and the plan viewer are deliberately not designed yet.
+- Primitives added for the obra list (#45): Avatar, Badge, Skeleton, Toast, DropdownMenu, Sheet, Pagination, SegmentedControl, SearchInput.
+- Screens (#42, #43) moved out to the screens project; this project is now only the design system.
 
 ## Screen map
 
-| Screen / file | Built from |
+| File | Built from |
 | --- | --- |
-| `ui_kits/bluprint-web/LoginScreen.jsx`, `login.html` | issue #42, RF-125, RNF-04/05/06, `apps/web/src/components/ui/button.tsx` |
-| `ui_kits/bluprint-web/SignupScreen.jsx`, `InviteDialog.jsx`, `signup.html` | issue #43, RF-130/131/132/133 |
-| `ui_kits/bluprint-web/ProjectsScreen.jsx` | RF-134 (thin: issues #44/#45 unrefined) |
 | `tokens/*.css`, `css/components.css` | `apps/web/src/styles/globals.css`, `components.json`, `apps/web/src/components/ui/{button,card}.tsx`, issue #41 |
+| `components/**` | shadcn primitives (radix-nova), issues #42/#43/#45 |
 | `tokens/domain-palettes.css`, `guidelines/colors-{status,discipline}.card.html` | `docs/requisitos.md` (Paleta), ADR-0035, ADR-0028 |
-| `assets/logo-*.svg` | `uploads/bluprint-*.webp` (traced) |
+| `assets/logo-*.svg` | `assets/bluprint-*-original.webp` (traced) |
+
+## Sync history
+
+- 2026-09-14T20:45:00Z — token set, Button/Card, form/feedback/icon/logo primitives, auth screens (#41, #42, #43).
