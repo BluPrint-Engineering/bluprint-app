@@ -7,7 +7,9 @@ Recreation of the two screens specified in the repo's visual-foundation epic:
 | Entrar | [#42 — 1.7 Tela de login](https://github.com/BluPrint-Engineering/bluprint-app/issues/42) | `LoginScreen.jsx`, `login.html` |
 | Criar conta | [#43 — 1.8 Tela de cadastro](https://github.com/BluPrint-Engineering/bluprint-app/issues/43) | `SignupScreen.jsx`, `InviteDialog.jsx`, `signup.html` |
 
-`index.html` is the click-through: session check → Entrar → Criar conta → (invite dialog) → obra list.
+Nobody signs up alone: an account only exists after an invitation (RF-106, RF-130). Entrar has no signup link — its footer only says access is by invitation — and Criar conta is reachable **only from the invite link**, always with an invite.
+
+`index.html` is the click-through: session check → Entrar → obra list. The dashed **Demo · abrir link do convite** button (bottom-right, demo only, not product UI) stands in for the e-mailed link: → Criar conta → (invite dialog) → obra list.
 
 `mobile.html` shows the same two screens at 402 px inside phone frames — same files, no separate mobile build.
 
@@ -15,7 +17,7 @@ Recreation of the two screens specified in the repo's visual-foundation epic:
 
 ## What is real and what is stand-in
 
-- **Real** — every layout, token and component decision, the pt-BR copy, the acceptance criteria from #42 (client-side validation, translated API error, loading state without content flash, path to signup), the invite flow of RF-130, and the obra list of RF-134.
+- **Real** — every layout, token and component decision, the pt-BR copy, the acceptance criteria from #42 (client-side validation, translated API error, loading state without content flash), the invite flow of RF-130, and the obra list of RF-134.
 - **Stand-in** — the obra list (`ProjectsScreen.jsx`) is deliberately thin: it belongs to issues [#44](https://github.com/BluPrint-Engineering/bluprint-app/issues/44) and [#45](https://github.com/BluPrint-Engineering/bluprint-app/issues/45), which have no refined spec yet. Nothing here recreates the plan viewer, pins or dashboards — those screens do not exist in the repo.
 - `senha` **obra1234** logs in; any other password shows the translated credential error.
 

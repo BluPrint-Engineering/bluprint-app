@@ -2,7 +2,7 @@
 const { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Field, Checkbox, Alert, Spinner, Logo, Icon } = window.BluPrintDesignSystem_d4fa62;
 const ICONS = "../../assets/icons";
 
-function LoginScreen({ onSignup, onDone, forceLoading = false }) {
+function LoginScreen({ onDone, forceLoading = false }) {
   const [email, setEmail] = React.useState("");
   const [senha, setSenha] = React.useState("");
   const [show, setShow] = React.useState(false);
@@ -32,7 +32,7 @@ function LoginScreen({ onSignup, onDone, forceLoading = false }) {
     <Card>
       <CardHeader>
         <CardTitle style={{ fontSize: "var(--text-2xl)" }}>Entrar</CardTitle>
-        <CardDescription>Use o e-mail com que você foi convidado para a obra.</CardDescription>
+        <CardDescription>Entre com seu e-mail e senha.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} noValidate style={{ display: "grid", gap: "var(--form-gap)" }}>
@@ -55,9 +55,9 @@ function LoginScreen({ onSignup, onDone, forceLoading = false }) {
           <Button type="submit" size="lg" block loading={loading}>{loading ? "Entrando…" : "Entrar"}</Button>
         </form>
       </CardContent>
-      <CardFooter style={{ justifyContent: "center", gap: "var(--space-2)", fontSize: "var(--text-sm)" }}>
-        <span style={{ color: "var(--muted-foreground)" }}>Não tem conta?</span>
-        <Button variant="link" onClick={onSignup}>Criar conta</Button>
+      {/* RF-106/RF-130: accounts only exist through an invitation, so there is no signup link here. */}
+      <CardFooter style={{ justifyContent: "center", textAlign: "center", fontSize: "var(--text-sm)", color: "var(--muted-foreground)", textWrap: "pretty" }}>
+        Não tem conta? O acesso é por convite da sua construtora.
       </CardFooter>
     </Card>
   );

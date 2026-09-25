@@ -1,4 +1,4 @@
-/* @ds-bundle: {"format":4,"namespace":"BluPrintDesignSystem_d4fa62","components":[{"name":"Logo","sourcePath":"components/brand/Logo.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"CardHeader","sourcePath":"components/core/Card.jsx"},{"name":"CardTitle","sourcePath":"components/core/Card.jsx"},{"name":"CardDescription","sourcePath":"components/core/Card.jsx"},{"name":"CardContent","sourcePath":"components/core/Card.jsx"},{"name":"CardFooter","sourcePath":"components/core/Card.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"Alert","sourcePath":"components/feedback/Alert.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Field","sourcePath":"components/forms/Field.jsx"},{"name":"Input","sourcePath":"components/forms/Input.jsx"},{"name":"Label","sourcePath":"components/forms/Label.jsx"}],"sourceHashes":{"components/brand/Logo.jsx":"98ea617308bb","components/core/Button.jsx":"35515bb15167","components/core/Card.jsx":"77b0a85aa121","components/core/Icon.jsx":"48f28aeb87ff","components/feedback/Alert.jsx":"7b881d675d2e","components/feedback/Spinner.jsx":"f487984cabe4","components/forms/Checkbox.jsx":"772c9a861f74","components/forms/Field.jsx":"ce08676a3c7a","components/forms/Input.jsx":"09a4bcb10891","components/forms/Label.jsx":"887ef842b370","ui_kits/bluprint-web/AuthShell.jsx":"055db518a4a0","ui_kits/bluprint-web/InviteDialog.jsx":"3cf2efd9ce97","ui_kits/bluprint-web/LoginScreen.jsx":"0d3ddca48b7c","ui_kits/bluprint-web/ProjectsScreen.jsx":"d9675eac4d31","ui_kits/bluprint-web/SignupScreen.jsx":"9e6dd6ffba66","ui_kits/bluprint-web/app.jsx":"98c8cc8a8499","ui_kits/bluprint-web/ios-frame.jsx":"24642b887be3"},"inlinedExternals":[],"unexposedExports":[]} */
+/* @ds-bundle: {"format":4,"namespace":"BluPrintDesignSystem_d4fa62","components":[{"name":"Logo","sourcePath":"components/brand/Logo.jsx"},{"name":"Button","sourcePath":"components/core/Button.jsx"},{"name":"Card","sourcePath":"components/core/Card.jsx"},{"name":"CardHeader","sourcePath":"components/core/Card.jsx"},{"name":"CardTitle","sourcePath":"components/core/Card.jsx"},{"name":"CardDescription","sourcePath":"components/core/Card.jsx"},{"name":"CardContent","sourcePath":"components/core/Card.jsx"},{"name":"CardFooter","sourcePath":"components/core/Card.jsx"},{"name":"Icon","sourcePath":"components/core/Icon.jsx"},{"name":"Alert","sourcePath":"components/feedback/Alert.jsx"},{"name":"Spinner","sourcePath":"components/feedback/Spinner.jsx"},{"name":"Checkbox","sourcePath":"components/forms/Checkbox.jsx"},{"name":"Field","sourcePath":"components/forms/Field.jsx"},{"name":"Input","sourcePath":"components/forms/Input.jsx"},{"name":"Label","sourcePath":"components/forms/Label.jsx"}],"sourceHashes":{"components/brand/Logo.jsx":"98ea617308bb","components/core/Button.jsx":"35515bb15167","components/core/Card.jsx":"77b0a85aa121","components/core/Icon.jsx":"48f28aeb87ff","components/feedback/Alert.jsx":"7b881d675d2e","components/feedback/Spinner.jsx":"f487984cabe4","components/forms/Checkbox.jsx":"772c9a861f74","components/forms/Field.jsx":"ce08676a3c7a","components/forms/Input.jsx":"09a4bcb10891","components/forms/Label.jsx":"887ef842b370","ui_kits/bluprint-web/AuthShell.jsx":"055db518a4a0","ui_kits/bluprint-web/InviteDialog.jsx":"3cf2efd9ce97","ui_kits/bluprint-web/LoginScreen.jsx":"030737648769","ui_kits/bluprint-web/ProjectsScreen.jsx":"d9675eac4d31","ui_kits/bluprint-web/SignupScreen.jsx":"ef95d912c620","ui_kits/bluprint-web/app.jsx":"1859a325fea9","ui_kits/bluprint-web/ios-frame.jsx":"24642b887be3"},"inlinedExternals":[],"unexposedExports":[]} */
 
 (() => {
 
@@ -562,7 +562,6 @@ try { (() => {
   } = window.BluPrintDesignSystem_d4fa62;
   const ICONS = "../../assets/icons";
   function LoginScreen({
-    onSignup,
     onDone,
     forceLoading = false
   }) {
@@ -591,7 +590,7 @@ try { (() => {
       style: {
         fontSize: "var(--text-2xl)"
       }
-    }, "Entrar"), /*#__PURE__*/React.createElement(CardDescription, null, "Use o e-mail com que voc\xEA foi convidado para a obra.")), /*#__PURE__*/React.createElement(CardContent, null, /*#__PURE__*/React.createElement("form", {
+    }, "Entrar"), /*#__PURE__*/React.createElement(CardDescription, null, "Entre com seu e-mail e senha.")), /*#__PURE__*/React.createElement(CardContent, null, /*#__PURE__*/React.createElement("form", {
       onSubmit: submit,
       noValidate: true,
       style: {
@@ -650,17 +649,12 @@ try { (() => {
     }, loading ? "Entrando…" : "Entrar"))), /*#__PURE__*/React.createElement(CardFooter, {
       style: {
         justifyContent: "center",
-        gap: "var(--space-2)",
-        fontSize: "var(--text-sm)"
+        textAlign: "center",
+        fontSize: "var(--text-sm)",
+        color: "var(--muted-foreground)",
+        textWrap: "pretty"
       }
-    }, /*#__PURE__*/React.createElement("span", {
-      style: {
-        color: "var(--muted-foreground)"
-      }
-    }, "N\xE3o tem conta?"), /*#__PURE__*/React.createElement(Button, {
-      variant: "link",
-      onClick: onSignup
-    }, "Criar conta")));
+    }, "N\xE3o tem conta? O acesso \xE9 por convite da sua construtora."));
   }
   Object.assign(window, {
     LoginScreen
@@ -826,6 +820,8 @@ try { (() => {
     Icon
   } = window.BluPrintDesignSystem_d4fa62;
   const ICONS_S = "../../assets/icons";
+
+  /** #43 — reachable only from the invite link (RF-106, RF-130). `invite` is required. */
   function SignupScreen({
     invite,
     onLogin,
@@ -834,7 +830,7 @@ try { (() => {
   }) {
     const [form, setForm] = React.useState({
       nome: "",
-      email: invite ? invite.email : "",
+      email: invite.email,
       senha: ""
     });
     const [aceite, setAceite] = React.useState(false);
@@ -871,10 +867,10 @@ try { (() => {
         display: "grid",
         gap: "var(--form-gap)"
       }
-    }, invite ? /*#__PURE__*/React.createElement(Alert, {
+    }, /*#__PURE__*/React.createElement(Alert, {
       tone: "info",
       title: `Convite de ${invite.org}`
-    }, "Obra ", invite.project, " \xB7 ", invite.role, ". Ao concluir o cadastro voc\xEA confirma o convite.") : null, /*#__PURE__*/React.createElement(Field, {
+    }, "Obra ", invite.project, " \xB7 ", invite.role, ". Ao concluir o cadastro voc\xEA confirma o convite."), /*#__PURE__*/React.createElement(Field, {
       label: "Nome completo",
       htmlFor: "nome",
       error: errors.nome
@@ -890,7 +886,7 @@ try { (() => {
       label: "E-mail",
       htmlFor: "s-email",
       error: errors.email,
-      hint: invite ? "O convite foi enviado para este e-mail." : null
+      hint: "O convite foi enviado para este e-mail."
     }, /*#__PURE__*/React.createElement(Input, {
       id: "s-email",
       type: "email",
@@ -900,7 +896,7 @@ try { (() => {
       placeholder: "voce@construtora.com.br",
       value: form.email,
       invalid: !!errors.email,
-      disabled: !!invite,
+      disabled: true,
       onChange: set("email")
     })), /*#__PURE__*/React.createElement(Field, {
       label: "Senha",
@@ -1058,13 +1054,26 @@ try { (() => {
         }
       }) : null);
     }
-    return /*#__PURE__*/React.createElement(AuthShell, null, screen === "login" ? /*#__PURE__*/React.createElement(LoginScreen, {
-      onSignup: () => setScreen("signup"),
+    return /*#__PURE__*/React.createElement(AuthShell, null, screen === "login" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(LoginScreen, {
       onDone: e => {
         setEmail(e);
         setScreen("app");
       }
-    }) : /*#__PURE__*/React.createElement(SignupScreen, {
+    }), /*#__PURE__*/React.createElement("div", {
+      style: {
+        position: "fixed",
+        right: "var(--space-4)",
+        bottom: "var(--space-4)",
+        zIndex: 5
+      }
+    }, /*#__PURE__*/React.createElement(Button, {
+      variant: "outline",
+      size: "sm",
+      onClick: () => setScreen("signup"),
+      style: {
+        borderStyle: "dashed"
+      }
+    }, "Demo \xB7 abrir link do convite"))) : /*#__PURE__*/React.createElement(SignupScreen, {
       invite: INVITE,
       onLogin: () => setScreen("login"),
       onDone: form => {

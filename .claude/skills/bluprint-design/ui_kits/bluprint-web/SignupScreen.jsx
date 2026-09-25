@@ -2,8 +2,9 @@
 const { Button, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Input, Field, Checkbox, Alert, Spinner, Logo, Icon } = window.BluPrintDesignSystem_d4fa62;
 const ICONS_S = "../../assets/icons";
 
+/** #43 — reachable only from the invite link (RF-106, RF-130). `invite` is required. */
 function SignupScreen({ invite, onLogin, onDone, forceLoading = false }) {
-  const [form, setForm] = React.useState({ nome: "", email: invite ? invite.email : "", senha: "" });
+  const [form, setForm] = React.useState({ nome: "", email: invite.email, senha: "" });
   const [aceite, setAceite] = React.useState(false);
   const [show, setShow] = React.useState(false);
   const [errors, setErrors] = React.useState({});
@@ -31,20 +32,18 @@ function SignupScreen({ invite, onLogin, onDone, forceLoading = false }) {
       </CardHeader>
       <CardContent>
         <form onSubmit={submit} noValidate style={{ display: "grid", gap: "var(--form-gap)" }}>
-          {invite ? (
-            <Alert tone="info" title={`Convite de ${invite.org}`}>
-              Obra {invite.project} · {invite.role}. Ao concluir o cadastro você confirma o convite.
-            </Alert>
-          ) : null}
+          <Alert tone="info" title={`Convite de ${invite.org}`}>
+            Obra {invite.project} · {invite.role}. Ao concluir o cadastro você confirma o convite.
+          </Alert>
           <Field label="Nome completo" htmlFor="nome" error={errors.nome}>
             <Input id="nome" autoComplete="name" enterKeyHint="next" placeholder="Como aparece nos relatórios"
               value={form.nome} invalid={!!errors.nome} onChange={set("nome")} />
           </Field>
           <Field label="E-mail" htmlFor="s-email" error={errors.email}
-            hint={invite ? "O convite foi enviado para este e-mail." : null}>
+            hint="O convite foi enviado para este e-mail.">
             <Input id="s-email" type="email" inputMode="email" autoComplete="email" enterKeyHint="next"
               placeholder="voce@construtora.com.br" value={form.email} invalid={!!errors.email}
-              disabled={!!invite} onChange={set("email")} />
+              disabled onChange={set("email")} />
           </Field>
           <Field label="Senha" htmlFor="s-senha" hint="Mínimo de 8 caracteres" error={errors.senha}>
             <Input id="s-senha" type={show ? "text" : "password"} autoComplete="new-password" enterKeyHint="go"

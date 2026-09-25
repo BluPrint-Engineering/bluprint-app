@@ -58,8 +58,12 @@ tokens (ADR-0035): blue as *hidráulica* and blue as `--primary` are different b
 
 - **#42** — email + password, client-side validation with pt-BR messages, show/hide password as a 44px
   icon button, API errors translated from `error.problem.code` into a banner (never API text, ADR-0047),
-  loading state on the submit button that does not flash the form.
-- **#43** — invite-scoped signup: the invite states the construtora, the obra and the role before the form.
+  loading state on the submit button that does not flash the form. No link to signup: the footer is plain
+  muted text, "Não tem conta? O acesso é por convite da sua construtora."
+- **#43** — reachable **only from the invite link** (RF-106, RF-130); there is no route in from Entrar and
+  no signup without an invite. The invite states the construtora, the obra and the role before the form,
+  and the e-mail is fixed to the invited address. `cadastro.tsx` should reject a missing or invalid invite
+  token rather than render an empty form.
 - **Both** — mobile-first single column below 900px with the brand band on top; a 44%/56% split above it.
   44px minimum tap target, 52px for the primary action. Light and dark themes ship together.
 - The frozen states are in `ui_kits/bluprint-web/loading.html` and `state.html` — use them as the QA list.

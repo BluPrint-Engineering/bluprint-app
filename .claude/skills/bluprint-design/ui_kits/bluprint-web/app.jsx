@@ -44,7 +44,15 @@ function App({ start = "session" }) {
   return (
     <AuthShell>
       {screen === "login" ? (
-        <LoginScreen onSignup={() => setScreen("signup")} onDone={e => { setEmail(e); setScreen("app"); }} />
+        <>
+          <LoginScreen onDone={e => { setEmail(e); setScreen("app"); }} />
+          {/* Demo only — stands in for the e-mailed invite link. Not part of the product UI. */}
+          <div style={{ position: "fixed", right: "var(--space-4)", bottom: "var(--space-4)", zIndex: 5 }}>
+            <Button variant="outline" size="sm" onClick={() => setScreen("signup")} style={{ borderStyle: "dashed" }}>
+              Demo · abrir link do convite
+            </Button>
+          </div>
+        </>
       ) : (
         <SignupScreen invite={INVITE} onLogin={() => setScreen("login")}
           onDone={form => { setEmail(form.email); setInvite(INVITE); setScreen("app"); }} />
