@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div style="padding:64px; background:var(--secondary); color:var(--foreground); font-family:var(--font-sans); display:grid; gap:72px; width:max-content">
+  <header style="display:grid; gap:8px; max-width:760px">
+    <h1 style="margin:0; font-size:var(--text-3xl); font-weight:600; letter-spacing:var(--tracking-tight)">Obras (#45) · QA</h1>
+    <p style="margin:0; font-size:var(--text-base); color:var(--muted-foreground); text-wrap:pretty">Cada linha é um estado congelado da tela <a href="Obras.dc.html">Obras</a>, em mobile 390 × 844 e desktop 1280 × 800, claro e escuro. Estados que só existem em um formato aparecem só nele. Os ids (O1, O2…) servem de lista de QA. “Nova obra” no mobile fica numa barra fixa no rodapé; no desktop, ao lado do título.</p>
+  </header>
+
+  <section style="display:grid; gap:48px">
+    <h2 style="margin:0; font-size:var(--text-2xl); font-weight:600; letter-spacing:var(--tracking-tight)">Estados</h2>
+    <sc-for list="{{ rows }}" as="row" hint-placeholder-count="3">
+      <div data-qa-row="{{ row.id }}" style="display:grid; gap:12px">
+        <div style="display:flex; align-items:baseline; gap:12px">
+          <span style="font-family:var(--font-mono); font-size:var(--text-sm); color:var(--muted-foreground)">{{ row.id }}</span>
+          <span style="font-size:var(--text-lg); font-weight:600">{{ row.title }}</span>
+          <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ row.note }}</span>
+        </div>
+        <div style="display:flex; gap:32px; align-items:flex-start">
+          <sc-if value="{{ row.showMobile }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Mobile · claro</span>
+              <div style="width:390px; height:844px; border-radius:24px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#fff"><dc-import style="display:block; width:100%; height:100%" name="Obras" state="{{ row.state }}" overlay="{{ row.overlay }}" role="{{ row.role }}" theme="light" viewport="mobile" framed="{{ true }}" hint-size="390px,844px"></dc-import></div></div>
+            <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Mobile · escuro</span>
+              <div style="width:390px; height:844px; border-radius:24px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#081830"><dc-import style="display:block; width:100%; height:100%" name="Obras" state="{{ row.state }}" overlay="{{ row.overlay }}" role="{{ row.role }}" theme="dark" viewport="mobile" framed="{{ true }}" hint-size="390px,844px"></dc-import></div></div>
+          </sc-if>
+          <sc-if value="{{ row.placeholder }}" hint-placeholder-val="{{ true }}">
+            <div style="width:{{ row.phW }}; height:844px; border-radius:24px; background:var(--muted); display:grid; place-items:center; color:var(--muted-foreground); font-size:var(--text-sm)">Carregando {{ row.id }}…</div>
+          </sc-if>
+          <sc-if value="{{ row.showDesktop }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Desktop · claro</span>
+              <div style="width:1280px; height:800px; border-radius:12px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#fff"><dc-import style="display:block; width:100%; height:100%" name="Obras" state="{{ row.state }}" overlay="{{ row.overlay }}" role="{{ row.role }}" theme="light" viewport="desktop" framed="{{ true }}" hint-size="1280px,800px"></dc-import></div></div>
+            <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Desktop · escuro</span>
+              <div style="width:1280px; height:800px; border-radius:12px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#081830"><dc-import style="display:block; width:100%; height:100%" name="Obras" state="{{ row.state }}" overlay="{{ row.overlay }}" role="{{ row.role }}" theme="dark" viewport="desktop" framed="{{ true }}" hint-size="1280px,800px"></dc-import></div></div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-for>
+  </section>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { seen: {} };
+  componentDidMount() {
+    let n = 0;
+    this.scan = setInterval(() => {
+      n++;
+      if (n > 17) return clearInterval(this.scan);
+      this.setState(s => ({ seen: Object.assign({}, s.seen, { ["O" + n]: true }) }));
+    }, 350);
+  }
+  componentWillUnmount() { clearInterval(this.scan); }
+  renderVals() {
+    const seen = this.state.seen;
+    const r = (id, title, state, role, overlay, fmt, note) => ({ id, title, state, role, overlay: overlay || "none", note: note || "",
+      showMobile: fmt !== "desktop" && !!seen[id], showDesktop: fmt !== "mobile" && !!seen[id], placeholder: !seen[id],
+      phW: fmt === "mobile" ? "812px" : fmt === "desktop" ? "2592px" : "3436px" });
+    return {
+      rows: [
+        r("O1", "Carregando", "loading", "admin"),
+        r("O2", "Com obras · admin", "list", "admin", null, null, "Status “Todas” para mostrar os dois status"),
+        r("O3", "Com obras · gerente / assistente", "list", "manager", null, null, "Sem “Nova obra”, sem filtro de gerente"),
+        r("O4", "Com obras · admin sem licença", "list-no-license", "admin"),
+        r("O5", "Vazio · admin", "empty", "admin"),
+        r("O6", "Vazio · admin sem licença", "empty-no-license", "admin"),
+        r("O7", "Vazio · gerente / assistente", "empty", "manager"),
+        r("O8", "Sem resultados", "no-results", "admin", null, null, "Busca “brisa” em obras em andamento"),
+        r("O9", "Erro ao carregar", "error", "admin"),
+        r("O10", "Sem conexão", "offline", "admin", null, null, "Retoma sozinho quando a conexão volta"),
+        r("O11", "Carregando mais", "loading-more", "admin", null, "mobile"),
+        r("O12", "Erro ao carregar mais", "error-more", "admin", null, "mobile"),
+        r("O13", "Trocando de página", "changing-page", "admin", null, "desktop", "Página 2 carregando"),
+        r("O14", "Filtros abertos", "list", "admin", "filters", "mobile", "Dois filtros ativos"),
+        r("O15", "Menu do usuário aberto", "list", "admin", "user-menu"),
+        r("O16", "Saindo", "list", "admin", "signing-out", null, "Spinner em Sair, menu travado"),
+        r("O17", "Falha ao sair", "list", "admin", "signout-failed", null, "Usuário continua logado"),
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>

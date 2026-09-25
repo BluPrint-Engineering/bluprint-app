@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0;height:100%}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div ref="{{ rootRef }}" class="{{ themeClass }}" style="position:relative; display:flex; flex-direction:column; height:{{ rootH }}; overflow:hidden; background:var(--background); color:var(--foreground); font-family:var(--font-sans)">
+  <div ref="{{ scrollRef }}" onScroll="{{ onScroll }}" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:{{ scrollbarWidth }}">
+
+    <header style="position:{{ headerPos }}; top:0; z-index:30; background:var(--background); border-bottom:1px solid var(--border); padding-top:env(safe-area-inset-top)">
+      <div style="max-width:var(--content-max-wide); margin:0 auto; height:{{ headerH }}; padding:0 {{ pad }}; display:flex; align-items:center; justify-content:space-between; gap:var(--space-3)">
+        <a href="#" onClick="{{ noop }}" aria-label="BluPrint, obras" style="display:flex; align-items:center; min-height:var(--tap-min)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" wordmark="{{ true }}" tone="{{ logoTone }}" size="{{ logoSize }}" hint-size="102px,28px"></x-import>
+        </a>
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenu" trigger="{{ menuTrigger }}" open="{{ menuOpen }}" onOpenChange="{{ onMenuOpenChange }}" locked="{{ signingOut }}" align="end" width="{{ 312 }}" label="Conta" hint-size="44px,44px">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuLabel" hint-size="100%,64px">
+            <div style="display:flex; align-items:center; gap:var(--space-3); padding-block:var(--space-1)">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Avatar" name="{{ user.name }}" size="lg" hint-size="48px,48px"></x-import>
+              <div style="display:grid; gap:2px; min-width:0">
+                <span style="font-size:var(--text-base); font-weight:600; line-height:var(--leading-snug)">{{ user.name }}</span>
+                <span style="font-size:var(--text-sm); color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ user.email }}</span>
+                <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:var(--text-sm); color:var(--muted-foreground)">Admin da construtora</span>
+                </sc-if>
+              </div>
+            </div>
+          </x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuSeparator" hint-size="100%,9px"></x-import>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); min-height:var(--tap-min); padding-left:var(--space-3)">
+            <span>Tema</span>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.SegmentedControl" size="sm" label="Tema" options="{{ themeOptions }}" value="{{ themeValue }}" onChange="{{ onTheme }}" hint-size="90px,36px"></x-import>
+          </div>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuSeparator" hint-size="100%,9px"></x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuItem" icon="{{ logoutIcon }}" loading="{{ signingOut }}" keepOpen="{{ true }}" onSelect="{{ signOut }}" hint-size="100%,44px">Sair</x-import>
+        </x-import>
+      </div>
+    </header>
+
+    <main style="max-width:var(--content-max-wide); margin:0 auto; padding:{{ mainPad }}; display:grid; gap:{{ mainGap }}">
+      <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; min-height:44px">
+        <div style="display:flex; align-items:baseline; gap:var(--space-3); min-width:0">
+          <h1 style="margin:0; font-size:{{ titleSize }}; font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-tight)">Obras</h1>
+          <sc-if value="{{ showCount }}" hint-placeholder-val="{{ true }}">
+            <span style="font-size:var(--text-base); color:var(--muted-foreground); font-variant-numeric:tabular-nums">{{ countLabel }}</span>
+          </sc-if>
+          <sc-if value="{{ countLoading }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 64 }}" height="{{ 18 }}" radius="md" hint-size="64px,18px"></x-import>
+          </sc-if>
+        </div>
+        <sc-if value="{{ showDesktopCta }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex; align-items:center; gap:var(--space-4)">
+            <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ licenseText }}</span>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" disabled="{{ noLicense }}" onClick="{{ noop }}" hint-size="130px,44px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="plus" size="{{ 20 }}" hint-size="20px,20px"></x-import>Nova obra
+            </x-import>
+          </div>
+        </sc-if>
+        <sc-if value="{{ showMobileTitleCta }}" hint-placeholder-val="{{ false }}">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" disabled="{{ noLicense }}" onClick="{{ noop }}" hint-size="130px,44px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="plus" size="{{ 20 }}" hint-size="20px,20px"></x-import>Nova obra
+          </x-import>
+          <span style="flex-basis:100%; margin-top:calc(var(--space-2) * -1); font-size:var(--text-sm); color:var(--muted-foreground)">{{ licenseText }}</span>
+        </sc-if>
+      </div>
+
+      <sc-if value="{{ showDesktopToolbar }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap">
+          <div style="width:260px; max-width:100%">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.SearchInput" size="sm" placeholder="Buscar obra" aria-label="Buscar obra pelo nome" value="{{ q }}" onChange="{{ onSearch }}" onClear="{{ clearSearch }}" hint-size="100%,36px"></x-import>
+          </div>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.SegmentedControl" size="sm" label="Status" options="{{ statusOptions }}" value="{{ status }}" onChange="{{ onStatus }}" hint-size="290px,36px"></x-import>
+          <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenu" trigger="{{ managerTrigger }}" align="start" width="{{ 264 }}" label="Gerente responsável" hint-size="170px,36px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuLabel" hint-size="100%,32px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Gerente responsável</span></x-import>
+              <sc-for list="{{ managerItems }}" as="m" hint-placeholder-count="5">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuItem" checked="{{ m.checked }}" onSelect="{{ m.select }}" hint-size="100%,44px">{{ m.label }}</x-import>
+              </sc-for>
+            </x-import>
+          </sc-if>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenu" trigger="{{ sortTrigger }}" align="start" width="{{ 264 }}" label="Ordenar" hint-size="200px,36px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuLabel" hint-size="100%,32px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Ordenar</span></x-import>
+            <sc-for list="{{ sortItems }}" as="o" hint-placeholder-count="4">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuItem" checked="{{ o.checked }}" onSelect="{{ o.select }}" hint-size="100%,44px">{{ o.label }}</x-import>
+            </sc-for>
+          </x-import>
+          <sc-if value="{{ canClear }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="ghost" size="sm" onClick="{{ clearAll }}" hint-size="120px,36px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="x" size="{{ 16 }}" hint-size="16px,16px"></x-import>Limpar filtros
+            </x-import>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showMobileToolbar }}" hint-placeholder-val="{{ true }}">
+        <div style="position:sticky; top:0; z-index:20; margin:0 calc(var(--page-pad) * -1); padding:var(--space-2) var(--page-pad); background:var(--background); border-bottom:1px solid {{ stuckBorder }}; display:flex; gap:var(--space-2); transition:border-color var(--duration) var(--ease-standard)">
+          <div style="flex:1; min-width:0">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.SearchInput" placeholder="Buscar obra" aria-label="Buscar obra pelo nome" value="{{ q }}" onChange="{{ onSearch }}" onClear="{{ clearSearch }}" hint-size="100%,44px"></x-import>
+          </div>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ openSheet }}" aria-label="{{ filterAria }}" hint-size="112px,44px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="sliders-horizontal" size="{{ 20 }}" hint-size="20px,20px"></x-import>Filtros
+            <sc-if value="{{ hasActive }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Badge" count="{{ true }}" hint-size="20px,20px">{{ activeCount }}</x-import>
+            </sc-if>
+          </x-import>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isLoading }}" hint-placeholder-val="{{ false }}">
+        <div aria-busy="true" aria-label="Carregando obras" style="display:grid; grid-template-columns:{{ gridCols }}; gap:var(--space-3)">
+          <sc-for list="{{ skeletons }}" as="k" hint-placeholder-count="6">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" hint-size="100%,150px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" hint-size="100%,118px">
+                <div style="display:grid; gap:var(--space-3)">
+                  <div style="display:flex; justify-content:space-between; gap:var(--space-3); min-height:52px; align-items:flex-start">
+                    <div style="display:grid; gap:8px; flex:1; padding-top:2px">
+                      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ k.w }}" height="{{ 20 }}" radius="md" hint-size="60%,20px"></x-import>
+                      <sc-if value="{{ skRole }}" hint-placeholder-val="{{ false }}">
+                        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 110 }}" height="{{ 14 }}" radius="sm" hint-size="110px,14px"></x-import>
+                      </sc-if>
+                    </div>
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 112 }}" height="{{ 24 }}" radius="full" hint-size="112px,24px"></x-import>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; padding-top:var(--space-3); border-top:1px solid var(--border)">
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 150 }}" height="{{ 14 }}" radius="sm" hint-size="150px,14px"></x-import>
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 96 }}" height="{{ 14 }}" radius="sm" hint-size="96px,14px"></x-import>
+                  </div>
+                </div>
+              </x-import>
+            </x-import>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isList }}" hint-placeholder-val="{{ false }}">
+        <div role="list" aria-busy="{{ listBusy }}" style="display:grid; grid-template-columns:{{ gridCols }}; gap:var(--space-3); opacity:{{ listOpacity }}; transition:opacity var(--duration) var(--ease-standard)">
+          <sc-for list="{{ cards }}" as="c" hint-placeholder-count="6">
+            <a role="listitem" href="{{ c.href }}" onClick="{{ noop }}" style="display:block; min-width:0; color:inherit; text-decoration:none; border-radius:var(--radius-xl); outline:none; transition:box-shadow var(--duration-fast) var(--ease-standard)" style-hover="box-shadow:0 0 0 1px var(--input); color:inherit" style-focus="box-shadow:var(--shadow-focus)" style-active="transform:translateY(var(--press-translate))">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" dc-props="{{ c.cardProps }}" hint-size="100%,150px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" hint-size="100%,118px">
+                  <div style="display:grid; gap:var(--space-3)">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:var(--space-3); min-height:52px">
+                      <div style="display:grid; gap:2px; min-width:0">
+                        <span style="font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); text-wrap:pretty; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden">{{ c.name }}</span>
+                        <sc-if value="{{ c.showRole }}" hint-placeholder-val="{{ false }}">
+                          <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ c.role }}</span>
+                        </sc-if>
+                      </div>
+                      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Badge" tone="{{ c.tone }}" dot="{{ true }}" style="flex:none" hint-size="112px,24px">{{ c.statusLabel }}</x-import>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:var(--space-3); flex-wrap:wrap; padding-top:var(--space-3); border-top:1px solid var(--border); font-size:var(--text-sm)">
+                      <span style="font-weight:500; font-variant-numeric:tabular-nums; color:{{ c.pinsColor }}">{{ c.pins }}</span>
+                      <span style="color:var(--muted-foreground)">{{ c.activity }}</span>
+                    </div>
+                  </div>
+                </x-import>
+              </x-import>
+            </a>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showBlock }}" hint-placeholder-val="{{ false }}">
+        <div role="{{ blockRole }}" style="display:grid; justify-items:center; gap:var(--space-4); text-align:center; padding:{{ blockPad }}; max-width:26rem; width:100%; margin:0 auto; color:var(--muted-foreground)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ blockIcon }}" size="{{ 24 }}" hint-size="24px,24px"></x-import>
+          <div style="display:grid; gap:var(--space-1)">
+            <h2 style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); color:var(--foreground)">{{ blockTitle }}</h2>
+            <p style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); text-wrap:pretty">{{ blockDesc }}</p>
+          </div>
+          <sc-if value="{{ blockRetry }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" onClick="{{ retry }}" hint-size="160px,52px">Tentar de novo</x-import>
+          </sc-if>
+          <sc-if value="{{ blockClear }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ clearAll }}" hint-size="140px,44px">Limpar filtros</x-import>
+          </sc-if>
+          <sc-if value="{{ blockNovaObra }}" hint-placeholder-val="{{ false }}">
+            <div style="display:grid; justify-items:center; gap:var(--space-2); width:100%">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" block="{{ isMobile }}" disabled="{{ noLicense }}" onClick="{{ noop }}" hint-size="160px,52px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="plus" size="{{ 20 }}" hint-size="20px,20px"></x-import>Nova obra
+              </x-import>
+              <span style="font-size:var(--text-sm)">{{ licenseText }}</span>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showLoadMore }}" hint-placeholder-val="{{ false }}">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" block="{{ true }}" onClick="{{ loadMore }}" hint-size="100%,44px">Carregar mais</x-import>
+      </sc-if>
+      <sc-if value="{{ loadingMore }}" hint-placeholder-val="{{ false }}">
+        <div role="status" style="display:flex; align-items:center; justify-content:center; gap:var(--space-2); min-height:var(--tap-min); font-size:var(--text-sm); color:var(--muted-foreground)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Spinner" size="{{ 18 }}" hint-size="18px,18px"></x-import>Carregando mais obras…
+        </div>
+      </sc-if>
+      <sc-if value="{{ moreError }}" hint-placeholder-val="{{ false }}">
+        <div role="alert" style="display:grid; justify-items:center; gap:var(--space-3); padding-block:var(--space-2); text-align:center">
+          <span style="display:flex; align-items:center; gap:var(--space-2); font-size:var(--text-sm); color:var(--muted-foreground)">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="circle-alert" size="{{ 18 }}" hint-size="18px,18px"></x-import>Não foi possível carregar mais obras.
+          </span>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" block="{{ true }}" onClick="{{ loadMore }}" hint-size="100%,44px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="refresh-cw" size="{{ 18 }}" hint-size="18px,18px"></x-import>Tentar de novo
+          </x-import>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ showPagination }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap; padding-top:var(--space-2)">
+          <span style="font-size:var(--text-sm); color:var(--muted-foreground); font-variant-numeric:tabular-nums">{{ rangeLabel }}</span>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Pagination" page="{{ page }}" pageCount="{{ pageCount }}" loadingPage="{{ loadingPage }}" onPageChange="{{ onPage }}" label="Páginas de obras" hint-size="320px,36px"></x-import>
+        </div>
+      </sc-if>
+    </main>
+  </div>
+
+  <sc-if value="{{ showBottomBar }}" hint-placeholder-val="{{ false }}">
+    <div style="flex:none; display:grid; gap:var(--space-2); padding:var(--space-3) var(--page-pad) calc(var(--space-3) + env(safe-area-inset-bottom)); background:var(--background); border-top:1px solid var(--border)">
+      <span style="text-align:center; font-size:var(--text-sm); color:var(--muted-foreground)">{{ licenseText }}</span>
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" block="{{ true }}" disabled="{{ noLicense }}" onClick="{{ noop }}" hint-size="100%,52px">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="plus" size="{{ 20 }}" hint-size="20px,20px"></x-import>Nova obra
+      </x-import>
+    </div>
+  </sc-if>
+
+  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Sheet" open="{{ sheetOpen }}" onClose="{{ closeSheet }}" title="Filtros" description="{{ sheetDesc }}" footer="{{ sheetFooter }}" contained="{{ true }}" hint-size="0px,0px">
+    <div style="display:grid; gap:var(--space-2)">
+      <span style="font-size:var(--text-sm); font-weight:500">Status</span>
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.SegmentedControl" block="{{ true }}" label="Status" options="{{ statusOptions }}" value="{{ status }}" onChange="{{ onStatus }}" hint-size="100%,50px"></x-import>
+    </div>
+    <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ true }}">
+      <div role="radiogroup" aria-label="Gerente responsável" style="display:grid; gap:var(--space-1)">
+        <span style="font-size:var(--text-sm); font-weight:500">Gerente responsável</span>
+        <div style="display:grid; margin:0 calc(var(--space-3) * -1)">
+          <sc-for list="{{ managerItems }}" as="m" hint-placeholder-count="5">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuItem" role="radio" checked="{{ m.checked }}" keepOpen="{{ true }}" onSelect="{{ m.select }}" hint-size="100%,44px">{{ m.label }}</x-import>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+    <div role="radiogroup" aria-label="Ordenar" style="display:grid; gap:var(--space-1)">
+      <span style="font-size:var(--text-sm); font-weight:500">Ordenar</span>
+      <div style="display:grid; margin:0 calc(var(--space-3) * -1)">
+        <sc-for list="{{ sortItems }}" as="o" hint-placeholder-count="4">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuItem" role="radio" checked="{{ o.checked }}" keepOpen="{{ true }}" onSelect="{{ o.select }}" hint-size="100%,44px">{{ o.label }}</x-import>
+        </sc-for>
+      </div>
+    </div>
+  </x-import>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Toaster" contained="{{ true }}" position="{{ toastPos }}" offset="{{ toastOffset }}" hint-size="0px,0px">
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Toast" tone="danger" onDismiss="{{ dismissToast }}" hint-size="100%,64px">Não foi possível sair. Confira sua conexão e tente de novo.</x-import>
+    </x-import>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;manager&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'manager'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;loading&quot;,&quot;list&quot;,&quot;list-no-license&quot;,&quot;empty&quot;,&quot;empty-no-license&quot;,&quot;no-results&quot;,&quot;error&quot;,&quot;offline&quot;,&quot;loading-more&quot;,&quot;error-more&quot;,&quot;changing-page&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;overlay&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;filters&quot;,&quot;user-menu&quot;,&quot;signing-out&quot;,&quot;signout-failed&quot;],&quot;default&quot;:&quot;none&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;ctaPlacement&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;bottom-bar&quot;,&quot;title&quot;],&quot;default&quot;:&quot;bottom-bar&quot;,&quot;tsType&quot;:&quot;'bottom-bar'|'title'&quot;,&quot;section&quot;:&quot;Nova obra&quot;},&quot;licensesAvailable&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:5,&quot;default&quot;:2,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Nova obra&quot;},&quot;signOutResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;moreFails&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;framed&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const NAMES = ["Residencial Vista do Parque", "Edifício Aurora", "Jardim das Acácias · Torre B", "Condomínio Porto Belo", "Residencial Alto da Serra", "Edifício Maré Alta", "Villa Toscana", "Residencial Ipê Amarelo", "Edifício Horizonte", "Parque das Águas · Fase 2", "Residencial Bela Vista", "Edifício Solar do Campo", "Condomínio Recanto Verde", "Edifício Pátio Central", "Residencial Mirante Sul", "Torre Atlântica", "Residencial Jequitibá", "Edifício Monte Claro", "Condomínio Vale do Sol", "Residencial Primavera", "Edifício Castelo Branco", "Residencial Lagoa Azul", "Edifício Nova Aliança", "Condomínio Bosque Imperial", "Residencial Dom Pedro", "Edifício Brisa do Mar", "Residencial Santa Clara", "Edifício Jardim Europa", "Residencial Serra Verde", "Edifício Ponta Negra", "Condomínio Terra Nova", "Residencial Parque Imperial", "Edifício Cais do Porto", "Residencial Canto do Rio"];
+const MANAGERS = ["Rafael Souza", "Juliana Lima", "Marcos Pereira", "Beatriz Alves"];
+const DELIVERED = [3, 8, 13, 17, 21, 25, 29, 33];
+const rnd = i => { const x = Math.sin(i * 12.9898 + 78.233) * 43758.5453; return x - Math.floor(x); };
+const ADMIN_DATA = NAMES.map((name, i) => {
+  const delivered = DELIVERED.includes(i);
+  return {
+    id: "o" + (i + 1), name, order: i, delivered, manager: MANAGERS[i % 4], role: "Admin da construtora",
+    pins: delivered ? (i % 3 === 0 ? 0 : Math.round(rnd(i) * 4)) : Math.round(rnd(i + 7) * 80) + 1,
+    activityMin: delivered ? 1440 * (6 + (i % 20)) : Math.round(Math.pow(rnd(i + 3), 2) * 4000) + 3,
+  };
+});
+const MANAGER_DATA = [
+  { id: "o1", name: "Residencial Vista do Parque", order: 0, delivered: false, manager: "Rafael Souza", role: "Gerente de obra", pins: 42, activityMin: 120 },
+  { id: "o2", name: "Edifício Aurora", order: 1, delivered: false, manager: "Rafael Souza", role: "Gerente de obra", pins: 17, activityMin: 25 },
+  { id: "o3", name: "Jardim das Acácias · Torre B", order: 2, delivered: false, manager: "Juliana Lima", role: "Assistente de obra", pins: 8, activityMin: 1500 },
+  { id: "o26", name: "Edifício Brisa do Mar", order: 3, delivered: true, manager: "Rafael Souza", role: "Gerente de obra", pins: 0, activityMin: 1440 * 12 },
+];
+const USERS = {
+  admin: { name: "Carla Mendes", email: "carla@construtoraatlas.com.br" },
+  manager: { name: "Rafael Souza", email: "rafael.souza@construtoraatlas.com.br" },
+};
+const STATUS_LABEL = { andamento: "Em andamento", entregue: "Entregue", todas: "Todas" };
+const SORTS = [["recentes", "Mais recentes"], ["nome", "Nome A–Z"], ["pendencias", "Mais pendências abertas"], ["atividade", "Atividade recente"]];
+const PAGE = 12;
+const norm = s => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const plural = (n, one, many) => n === 1 ? one : many;
+function activityText(m) {
+  if (m < 60) return "Atividade há " + m + " min";
+  if (m < 1440) return "Atividade há " + Math.round(m / 60) + " h";
+  const d = Math.round(m / 1440);
+  return "Atividade há " + d + " " + plural(d, "dia", "dias");
+}
+function pinsText(n) {
+  if (n === 0) return "Nenhuma pendência aberta";
+  return n + " " + plural(n, "pendência aberta", "pendências abertas");
+}
+
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  scrollRef = React.createRef();
+  url = (() => { try { return new URLSearchParams(window.location.search); } catch (e) { return new URLSearchParams(); } })();
+  state = {
+    w: 1280, dark: null, phase: "ready",
+    q: this.url.get("q") || "", status: this.url.get("status") || "andamento", manager: this.url.get("manager") || "todos",
+    sort: this.url.get("sort") || "recentes", page: +(this.url.get("page") || 1), loadingPage: null,
+    visible: PAGE, loadingMore: false, moreError: false,
+    menuOpen: false, signingOut: false, toast: false, sheetOpen: false, stuck: false,
+  };
+
+  stateProp() { return this.props.state ?? this.url.get("state") ?? "live"; }
+  isFrozen() { return this.props.state != null && this.props.state !== "live"; }
+
+  componentDidMount() {
+    const el = this.rootRef.current;
+    if (el && window.ResizeObserver) {
+      this.ro = new ResizeObserver(([e]) => this.setState({ w: e.contentRect.width }));
+      this.ro.observe(el);
+    }
+    if (this.isFrozen()) this.applyFrozen();
+    else {
+      const s = this.stateProp();
+      if (s === "live") {
+        this.setState({ phase: "loading" });
+        this.t = setTimeout(() => this.setState({ phase: navigator.onLine === false ? "offline" : "ready" }), 800);
+      }
+      this.onOnline = () => { if (this.state.phase === "offline") { this.setState({ phase: "loading" }); this.t = setTimeout(() => this.setState({ phase: "ready" }), 700); } };
+      this.onOffline = () => { if (this.state.phase === "loading") this.setState({ phase: "offline" }); };
+      window.addEventListener("online", this.onOnline);
+      window.addEventListener("offline", this.onOffline);
+    }
+  }
+  componentWillUnmount() {
+    if (this.ro) this.ro.disconnect();
+    clearTimeout(this.t); clearTimeout(this.t2); clearTimeout(this.t3);
+    if (this.onOnline) { window.removeEventListener("online", this.onOnline); window.removeEventListener("offline", this.onOffline); }
+  }
+  componentDidUpdate(prev) {
+    const p = this.props || {};
+    prev = prev || {};
+    if (prev.state !== p.state || prev.overlay !== p.overlay || prev.role !== p.role) { if (this.isFrozen()) this.applyFrozen(); }
+    if (prev.theme !== p.theme) this.setState({ dark: null });
+    this.maybeSyncUrl();
+  }
+
+  maybeSyncUrl() {
+    if (this.props.framed || this.isFrozen()) return;
+    const s = this.state;
+    const key = JSON.stringify([s.q, s.status, s.manager, s.sort, s.page]);
+    if (key === this._urlKey) return;
+    const first = this._urlKey === undefined;
+    this._urlKey = key;
+    if (!first) this.syncUrl();
+  }
+
+  syncUrl() {
+    try {
+      const u = new URLSearchParams(window.location.search);
+      const s = this.state;
+      const set = (k, v, d) => { if (v && v !== d) u.set(k, v); else u.delete(k); };
+      set("q", s.q.trim(), ""); set("status", s.status, "andamento"); set("manager", s.manager, "todos"); set("sort", s.sort, "recentes"); set("page", String(s.page), "1");
+      const qs = u.toString();
+      window.history.replaceState(null, "", window.location.pathname + (qs ? "?" + qs : ""));
+    } catch (e) {}
+  }
+
+  applyFrozen() {
+    const s = this.stateProp();
+    const o = this.props.overlay ?? "none";
+    const admin = this.role() === "admin";
+    const patch = {
+      menuOpen: o === "user-menu" || o === "signing-out", signingOut: o === "signing-out", toast: o === "signout-failed", sheetOpen: o === "filters",
+      q: "", status: "andamento", manager: "todos", sort: "recentes", page: 1, loadingPage: null, visible: PAGE, loadingMore: false, moreError: false, stuck: false,
+      phase: s === "loading" ? "loading" : s === "error" ? "error" : s === "offline" ? "offline" : "ready",
+    };
+    if (["list", "list-no-license", "loading-more", "error-more", "changing-page"].includes(s)) patch.status = "todas";
+    if (s === "no-results") patch.q = "brisa";
+    if (s === "loading-more") patch.loadingMore = true;
+    if (s === "error-more") patch.moreError = true;
+    if (s === "changing-page") patch.loadingPage = 2;
+    if (o === "filters") { patch.status = "todas"; if (admin) patch.manager = "Juliana Lima"; }
+    this.setState(patch, () => {
+      const sc = this.scrollRef.current;
+      if (!sc) return;
+      if (["loading-more", "error-more", "changing-page"].includes(s)) [300, 900, 1800].forEach(ms => setTimeout(() => { sc.scrollTop = sc.scrollHeight; }, ms));
+      else sc.scrollTop = 0;
+    });
+  }
+
+  role() { return this.props.role ?? this.url.get("role") ?? "admin"; }
+  isDark() { return this.state.dark ?? ((this.props.theme ?? this.url.get("theme")) === "dark"); }
+
+  dataset() {
+    const s = this.stateProp();
+    if (s === "empty" || s === "empty-no-license") return [];
+    return this.role() === "admin" ? ADMIN_DATA : MANAGER_DATA;
+  }
+
+  filtered() {
+    const { q, status, manager, sort } = this.state;
+    const nq = norm(q.trim());
+    let list = this.dataset().filter(o =>
+      (!nq || norm(o.name).includes(nq)) &&
+      (status === "todas" || (status === "entregue") === o.delivered) &&
+      (this.role() !== "admin" || manager === "todos" || o.manager === manager));
+    const by = {
+      recentes: (a, b) => a.order - b.order,
+      nome: (a, b) => a.name.localeCompare(b.name, "pt-BR"),
+      pendencias: (a, b) => b.pins - a.pins,
+      atividade: (a, b) => a.activityMin - b.activityMin,
+    }[sort];
+    return list.slice().sort(by);
+  }
+
+  resetPaging(extra) { this.setState(Object.assign({ page: 1, visible: PAGE, loadingPage: null, moreError: false }, extra), () => this.maybeSyncUrl()); const sc = this.scrollRef.current; if (sc && sc.scrollTop > 0) sc.scrollTop = 0; }
+
+  loadMore = () => {
+    if (this.state.loadingMore) return;
+    this.setState({ loadingMore: true, moreError: false });
+    clearTimeout(this.t2);
+    this.t2 = setTimeout(() => {
+      if (this.props.moreFails) return this.setState({ loadingMore: false, moreError: true });
+      this.setState(s => ({ loadingMore: false, visible: s.visible + PAGE }));
+    }, 900);
+  };
+
+  onScroll = (e) => {
+    const el = e.currentTarget;
+    const stuck = el.scrollTop > 64;
+    if (stuck !== this.state.stuck) this.setState({ stuck });
+    if (this._mobile && this._hasMore && !this.state.loadingMore && !this.state.moreError && !this.isFrozen()
+      && el.scrollHeight - el.scrollTop - el.clientHeight < 160) this.loadMore();
+  };
+
+  signOut = () => {
+    if (this.state.signingOut) return;
+    this.setState({ signingOut: true });
+    clearTimeout(this.t3);
+    this.t3 = setTimeout(() => {
+      const fails = this.props.framed || this.isFrozen() || (this.props.signOutResult ?? "success") === "fail" || navigator.onLine === false;
+      if (fails) {
+        this.setState({ signingOut: false, menuOpen: false, toast: true });
+        clearTimeout(this.t4);
+        this.t4 = setTimeout(() => this.setState({ toast: false }), 6000);
+        return;
+      }
+      window.location.href = "../auth/Entrar.dc.html" + (this.isDark() ? "?theme=dark" : "");
+    }, 1200);
+  };
+
+  renderVals() {
+    const DS = window.BluPrintDesignSystem_d4fa62 || {};
+    const h = React.createElement;
+    const st = this.state;
+    const vp = this.props.viewport ?? "auto";
+    const desk = vp === "desktop" || (vp !== "mobile" && st.w >= 768);
+    const dark = this.isDark();
+    const role = this.role();
+    const admin = role === "admin";
+    const user = USERS[admin ? "admin" : "manager"];
+    const s = this.stateProp();
+    const phase = st.phase;
+    const data = this.dataset();
+    const empty = phase === "ready" && data.length === 0;
+    const list = this.filtered();
+    const count = list.length;
+    const noResults = phase === "ready" && !empty && count === 0;
+    const ready = phase === "ready" && !empty && count > 0;
+
+    const avail = (s === "empty-no-license" || s === "list-no-license") ? 0 : (this.props.licensesAvailable ?? 2);
+    const noLicense = avail <= 0;
+    const licenseText = noLicense ? "Sem licenças disponíveis. Fale com a BluPrint." : avail + " " + plural(avail, "licença disponível", "licenças disponíveis");
+
+    const activeCount = (st.status !== "andamento" ? 1 : 0) + (admin && st.manager !== "todos" ? 1 : 0);
+    const pageCount = Math.max(1, Math.ceil(count / PAGE));
+    const page = Math.min(st.page, pageCount);
+    const shown = desk ? list.slice((page - 1) * PAGE, page * PAGE) : list.slice(0, st.visible);
+    const hasMore = !desk && st.visible < count;
+    this._mobile = !desk; this._hasMore = hasMore;
+
+    const placement = this.props.ctaPlacement ?? "bottom-bar";
+    const ctaPhase = phase === "loading" || ready || noResults;
+    const toolbarPhase = phase === "loading" || ready || noResults;
+
+    let block = null;
+    if (phase === "error") block = { icon: "circle-alert", title: "Não foi possível carregar suas obras", desc: "Confira sua conexão e tente de novo.", retry: true, role: "alert" };
+    else if (phase === "offline") block = { icon: "wifi-off", title: "Sem conexão.", desc: "Continuamos assim que a internet voltar.", role: "status" };
+    else if (empty && admin) block = { icon: "building", title: "Nenhuma obra ainda", desc: "Crie a primeira obra da construtora para começar a mapear pendências.", nova: true, role: "status" };
+    else if (empty) block = { icon: "building", title: "Nenhuma obra por aqui", desc: "Você verá uma obra aqui quando o admin da construtora te vincular a ela.", role: "status" };
+    else if (noResults) {
+      const scope = { andamento: "em obras em andamento", entregue: "em obras entregues", todas: "em todas as obras" }[st.status];
+      const mgr = admin && st.manager !== "todos" ? ", gerente " + st.manager : "";
+      const qq = st.q.trim();
+      block = { icon: "search", title: "Nenhuma obra encontrada", desc: (qq ? "Nenhum resultado para \u201C" + qq + "\u201D " : "Nenhum resultado ") + scope + mgr + ".", clear: true, role: "status" };
+    }
+
+    const setF = patch => this.resetPaging(patch);
+    const managerItems = [{ v: "todos", label: "Todos os gerentes" }].concat(MANAGERS.map(m => ({ v: m, label: m }))).map(m => ({
+      label: m.label, checked: st.manager === m.v, select: () => setF({ manager: m.v }),
+    }));
+    const sortItems = SORTS.map(([v, label]) => ({ label, checked: st.sort === v, select: () => setF({ sort: v }) }));
+    const sortLabel = (SORTS.find(x => x[0] === st.sort) || SORTS[0])[1];
+    const mgrLabel = st.manager === "todos" ? "Todos" : st.manager;
+    const chev = DS.Icon ? h(DS.Icon, { name: "chevron-down", size: 16, style: { color: "var(--muted-foreground)" } }) : null;
+    const trig = (k, v) => DS.Button ? h(DS.Button, { variant: "outline", size: "sm", style: { gap: 6 } },
+      h("span", { style: { color: "var(--muted-foreground)" } }, k), h("span", null, v), chev) : h("span");
+
+    const menuTrigger = DS.Button ? h(DS.Button, {
+      variant: "ghost", size: desk ? "md" : "icon", "aria-label": "Conta de " + user.name,
+      style: desk ? { paddingInline: "var(--space-1) var(--space-2)", gap: "var(--space-2)", fontSize: "var(--text-sm)" } : null,
+    }, h(DS.Avatar, { name: user.name, size: "md" }), desk ? h("span", null, user.name) : null, desk ? chev : null) : h("span");
+
+    const cards = shown.map(o => ({
+      href: "#/projects/" + o.id,
+      name: o.name,
+      tone: o.delivered ? "neutral" : "primary",
+      statusLabel: o.delivered ? "Entregue" : "Em andamento",
+      role: o.role,
+      showRole: !admin,
+      pins: pinsText(o.pins),
+      pinsColor: o.delivered || o.pins === 0 ? "var(--muted-foreground)" : "var(--foreground)",
+      activity: activityText(o.activityMin),
+      cardProps: { style: o.delivered ? { background: "transparent" } : {} },
+    }));
+
+    const barH = 12 + 21 + 8 + 52 + 12;
+    const showBottomBar = !desk && admin && placement === "bottom-bar" && ctaPhase;
+
+    return {
+      rootRef: this.rootRef, scrollRef: this.scrollRef, onScroll: this.onScroll,
+      themeClass: dark ? "dark" : "",
+      rootH: this.props.framed ? "100%" : "100dvh",
+      scrollbarWidth: desk ? "auto" : "none",
+      headerPos: desk ? "sticky" : "relative",
+      headerH: desk ? "64px" : "56px",
+      pad: desk ? "var(--page-pad-desktop)" : "var(--page-pad)",
+      mainPad: desk ? "var(--space-8) var(--page-pad-desktop) var(--space-12)" : "var(--space-5) var(--page-pad) var(--space-8)",
+      mainGap: desk ? "var(--space-5)" : "var(--space-4)",
+      logoTone: dark ? "white" : "gradient",
+      logoSize: desk ? 32 : 28,
+      noop: e => { if (e && e.preventDefault) e.preventDefault(); },
+      user,
+      menuTrigger, menuOpen: st.menuOpen, signingOut: st.signingOut,
+      onMenuOpenChange: v => this.setState({ menuOpen: v }),
+      themeOptions: DS.Icon ? [
+        { value: "light", icon: h(DS.Icon, { name: "sun", size: 18 }), ariaLabel: "Tema claro" },
+        { value: "dark", icon: h(DS.Icon, { name: "moon", size: 18 }), ariaLabel: "Tema escuro" },
+      ] : [],
+      themeValue: dark ? "dark" : "light",
+      onTheme: v => this.setState({ dark: v === "dark" }),
+      logoutIcon: DS.Icon ? h(DS.Icon, { name: "log-out", size: 20 }) : null,
+      signOut: this.signOut,
+
+      titleSize: desk ? "var(--text-3xl)" : "var(--text-2xl)",
+      showCount: ready || noResults,
+      countLabel: count + " " + plural(count, "obra", "obras"),
+      countLoading: phase === "loading",
+      licenseText, noLicense,
+      showDesktopCta: desk && admin && ctaPhase,
+      showMobileTitleCta: !desk && admin && placement === "title" && ctaPhase,
+
+      showDesktopToolbar: desk && toolbarPhase,
+      showMobileToolbar: !desk && toolbarPhase,
+      stuckBorder: st.stuck ? "var(--border)" : "transparent",
+      q: st.q,
+      onSearch: e => setF({ q: e.target.value }),
+      clearSearch: () => setF({ q: "" }),
+      statusOptions: [{ value: "andamento", label: "Em andamento" }, { value: "entregue", label: "Entregue" }, { value: "todas", label: "Todas" }],
+      status: st.status,
+      onStatus: v => setF({ status: v }),
+      isAdmin: admin, isMobile: !desk,
+      managerTrigger: trig("Gerente:", mgrLabel),
+      sortTrigger: trig("Ordenar:", sortLabel),
+      managerItems, sortItems,
+      canClear: activeCount > 0 || !!st.q,
+      clearAll: () => setF({ q: "", status: "andamento", manager: "todos" }),
+      hasActive: activeCount > 0, activeCount,
+      filterAria: activeCount ? "Filtros, " + activeCount + " " + plural(activeCount, "ativo", "ativos") : "Filtros",
+      openSheet: () => this.setState({ sheetOpen: true }),
+      closeSheet: () => this.setState({ sheetOpen: false }),
+      sheetOpen: st.sheetOpen && !desk,
+      sheetDesc: activeCount ? activeCount + " " + plural(activeCount, "filtro ativo", "filtros ativos") : "Nenhum filtro ativo",
+      sheetFooter: DS.Button ? [
+        h(DS.Button, { key: "c", variant: "outline", disabled: activeCount === 0, onClick: () => setF({ status: "andamento", manager: "todos" }) }, "Limpar filtros"),
+        h(DS.Button, { key: "v", block: true, onClick: () => this.setState({ sheetOpen: false }) }, "Ver " + count + " " + plural(count, "obra", "obras")),
+      ] : null,
+
+      gridCols: desk ? "repeat(auto-fill, minmax(300px, 1fr))" : "minmax(0, 1fr)",
+      isLoading: phase === "loading",
+      skRole: !admin,
+      skeletons: Array.from({ length: desk ? PAGE : 6 }, (_, i) => ({ w: ["62%", "48%", "70%", "55%", "66%", "44%"][i % 6] })),
+      isList: ready,
+      cards,
+      listBusy: st.loadingPage != null,
+      listOpacity: st.loadingPage != null ? 0.55 : 1,
+
+      showBlock: !!block,
+      blockRole: block ? block.role : "status",
+      blockIcon: block ? block.icon : "building",
+      blockTitle: block ? block.title : "",
+      blockDesc: block ? block.desc : "",
+      blockRetry: !!(block && block.retry),
+      blockClear: !!(block && block.clear),
+      blockNovaObra: !!(block && block.nova),
+      blockPad: desk ? "var(--space-16) 0" : "var(--space-12) 0",
+      retry: () => {
+        this.setState({ phase: "loading" });
+        clearTimeout(this.t);
+        this.t = setTimeout(() => this.setState({ phase: this.isFrozen() ? "error" : "ready" }), 900);
+      },
+
+      showLoadMore: ready && hasMore && !st.loadingMore && !st.moreError,
+      loadMore: this.loadMore,
+      loadingMore: ready && !desk && st.loadingMore,
+      moreError: ready && !desk && st.moreError,
+
+      showPagination: ready && desk && pageCount > 1,
+      page, pageCount, loadingPage: st.loadingPage,
+      rangeLabel: "Mostrando " + ((page - 1) * PAGE + 1) + "–" + Math.min(page * PAGE, count) + " de " + count,
+      onPage: p => {
+        this.setState({ loadingPage: p });
+        clearTimeout(this.t2);
+        this.t2 = setTimeout(() => {
+          this.setState({ page: p, loadingPage: null }, () => this.maybeSyncUrl());
+          const sc = this.scrollRef.current; if (sc) sc.scrollTop = 0;
+        }, 700);
+      },
+
+      showBottomBar,
+      toast: st.toast,
+      toastPos: desk ? "bottom-right" : "bottom-center",
+      toastOffset: showBottomBar ? barH : 0,
+      dismissToast: () => this.setState({ toast: false }),
+    };
+  }
+}
+</script>
+</body>
+</html>
