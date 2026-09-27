@@ -1,10 +1,12 @@
-import { ProjectSummary } from "@bluprint/shared";
-import { Body, Controller, Get, Post } from "@nestjs/common";
+import { ProjectList, ProjectSummary } from "@bluprint/shared";
+import { Body, Controller, Get, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
 import { CreateProjectDto } from "./dto/create-project.dto";
+import { ProjectListQueryDto } from "./dto/project-list-query.dto";
+import { ProjectListDto } from "./dto/project-list.dto";
 import { ProjectSummaryDto } from "./dto/project-summary.dto";
 import { ProjectsService } from "./projects.service";
 
@@ -17,16 +19,19 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "My projects",
 		description:
-			"Lists the projects visible to the caller, with the caller's role in each. A caller with a project membership gets that membership's effective role (`manager` or `assistant`); a caller with no project membership who is the organization's `admin` still sees the project and gets `admin`. Without an organization membership the project does not appear at all — that is data isolation between organizations.",
+			"Lists one page of the projects visible to the caller, newest first, with the caller's role in each and the total across every page. A caller with a project membership gets that membership's effective role (`manager` or `assistant`); a caller with no project membership who is the organization's `admin` still sees the project and gets `admin`. Without an organization membership the project does not appear at all — that is data isolation between organizations.",
 	})
 	@ZodResponse({
 		status: 200,
-		description: "Visible projects, possibly empty.",
-		type: [ProjectSummaryDto],
+		description: "One page of visible projects, possibly empty.",
+		type: ProjectListDto,
 	})
-	@ApiErrorResponses(401)
-	list(@Session() session: UserSession): Promise<ProjectSummary[]> {
-		return this.projects.listVisible(session.user.id);
+	@ApiErrorResponses(400, 401)
+	list(
+		@Session() session: UserSession,
+		@Query() query: ProjectListQueryDto,
+	): Promise<ProjectList> {
+		return this.projects.listVisible(session.user.id, query);
 	}
 
 	@Post()

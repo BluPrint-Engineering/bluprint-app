@@ -50,7 +50,7 @@ describe("/signup route", () => {
 		});
 	});
 
-	test("redirects to / when a session already exists", async () => {
+	test("redirects to the project list when a session already exists", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
 		stubAuthApi(signedIn);
 
@@ -59,10 +59,10 @@ describe("/signup route", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();
 		});
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 	});
 
-	test("lands on / after signing up, not back on the signup", async () => {
+	test("lands on the project list after signing up, not back on the signup", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
 		stubAuthApi(null);
 
@@ -82,6 +82,6 @@ describe("/signup route", () => {
 		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();
 		});
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 	});
 });

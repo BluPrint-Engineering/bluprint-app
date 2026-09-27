@@ -16,7 +16,7 @@ export const Route = createFileRoute("/login")({
 	}),
 	beforeLoad: async ({ context, search }) => {
 		const session = await peekSession(context.queryClient);
-		if (session) throw redirect({ href: search.redirect ?? "/" });
+		if (session) throw redirect({ href: search.redirect ?? "/projects" });
 	},
 	pendingComponent: SessionSplash,
 	pendingMs: 0,
@@ -33,7 +33,7 @@ function RouteComponent() {
 				onSuccess={() => {
 					// the cached "no session" would send the guard straight back to the login
 					discardSession(queryClient);
-					router.history.push(redirect ?? "/");
+					router.history.push(redirect ?? "/projects");
 				}}
 			/>
 		</AuthShell>

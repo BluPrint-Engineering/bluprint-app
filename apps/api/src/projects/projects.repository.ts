@@ -1,6 +1,6 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { and, desc, eq, isNotNull, or } from "drizzle-orm";
+import { and, count, desc, eq, isNotNull, or } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
@@ -10,8 +10,12 @@ import { project } from "./project.entity";
 export class ProjectsRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
-	async listVisible(userId: string) {
-		return (
+	/** `offset` counts projects, not pages. */
+	async listVisible(
+		userId: string,
+		{ limit, offset }: { limit: number; offset: number },
+	) {
+		const visible = this.txHost.tx.$with("visible").as(
 			this.txHost.tx
 				.select({
 					id: project.id,
@@ -36,9 +40,22 @@ export class ProjectsRepository {
 					),
 				)
 				// an org admin sees every project; anyone else only those they're a member of (ADR 0022)
-				.where(or(isNotNull(projectMember.id), eq(member.role, "admin")))
-				.orderBy(desc(project.createdAt), desc(project.id))
+				.where(or(isNotNull(projectMember.id), eq(member.role, "admin"))),
 		);
+
+		const [items, [counted]] = await Promise.all([
+			this.txHost.tx
+				.with(visible)
+				.select()
+				.from(visible)
+				// the id tiebreak keeps pages stable: rows created in one transaction share created_at
+				.orderBy(desc(visible.createdAt), desc(visible.id))
+				.limit(limit)
+				.offset(offset),
+			this.txHost.tx.with(visible).select({ total: count() }).from(visible),
+		]);
+
+		return { items, total: counted!.total };
 	}
 
 	async insert(values: {

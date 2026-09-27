@@ -37,6 +37,7 @@ styles/          globals.css: Tailwind and theme tokens
 ```
 
 - **A route file is thin**: `validateSearch`, `loader`, `beforeLoad` (auth guard) and `errorComponent` live there; rendering is imported from `features/`. `routes/` includes `__root.tsx` and layout routes that render no UI of their own. A route with children keeps its `route.tsx` in the same folder as them; `index.tsx` is only ever an index route ([0053](adr/0053-folder-per-page-and-per-route.md)).
+- **No product route lives at `/`**: it only redirects to `/projects`, the home after login, and stays reserved for a future landing page. Every product screen sits under `/_authenticated`, so it is protected by default.
 - **A file climbs one level only when a second consumer needs it**: from `features/<x>/<Page>/` to `features/<x>/components/` when a second page does, and from there to `components/` when a second feature does, never before; that is what keeps everything in `components/` reusable by definition.
 - **API calls and TanStack Query hooks** live in `features/<x>/api.ts`, using `queryOptions` and `apiFetch` from `src/lib/api.ts`.
 - **A type or schema moves to `packages/shared` when the web app and the API must agree on it** (a request/response contract, a domain enum). A form's validation schema stays in its feature.

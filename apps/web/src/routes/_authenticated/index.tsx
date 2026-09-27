@@ -1,10 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-// TODO(#45): replace with the projects list
+// no product screen lives at "/": it stays free for the landing page
 export const Route = createFileRoute("/_authenticated/")({
-	component: () => (
-		<main className="grid min-h-dvh place-items-center">
-			<h1 className="text-xl font-semibold">Obras</h1>
-		</main>
-	),
+	beforeLoad: () => {
+		throw redirect({ to: "/projects", replace: true });
+	},
 });

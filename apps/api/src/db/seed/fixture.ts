@@ -61,7 +61,7 @@ export const people: SeedPerson[] = [
 export const organizations: SeedOrganization[] = [
 	{
 		name: "Construtora Horizonte",
-		licenses: 5,
+		licenses: 16,
 		members: [
 			{ email: "ana@horizonte.test", role: "admin" },
 			{ email: "bruno@horizonte.test", role: "admin" },
@@ -95,6 +95,21 @@ export const organizations: SeedOrganization[] = [
 			},
 			// No project_member at all: only the two admins can see it.
 			{ name: "Galpão Logístico Sul", members: [] },
+			// the rest takes the admins' list past one page of 12, accents included for search
+			{
+				name: "Condomínio Porto Belo",
+				members: [{ email: "diego@horizonte.test", role: "manager" }],
+			},
+			{ name: "Jardim das Acácias · Torre B", members: [] },
+			{ name: "Residencial Ipê Amarelo", members: [] },
+			{ name: "Edifício Maré Alta", members: [] },
+			{ name: "Parque das Águas · Fase 2", members: [] },
+			{ name: "Villa Toscana", members: [] },
+			{ name: "Edifício Solar do Campo", members: [] },
+			{ name: "Residencial Jequitibá", members: [] },
+			{ name: "Condomínio Recanto Verde", members: [] },
+			{ name: "Edifício Pátio Central", members: [] },
+			{ name: "Torre Atlântica", members: [] },
 		],
 	},
 	{

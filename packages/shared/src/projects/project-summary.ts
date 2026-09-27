@@ -17,8 +17,5 @@ export const projectSummarySchema = z.object({
 	role: projectAccessRoleSchema,
 });
 
-export const projectListSchema = z.array(projectSummarySchema);
-
 export type ProjectAccessRole = z.infer<typeof projectAccessRoleSchema>;
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;
-export type ProjectList = z.infer<typeof projectListSchema>;
