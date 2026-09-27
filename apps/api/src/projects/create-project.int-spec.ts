@@ -108,7 +108,7 @@ describe("POST /api/projects", () => {
 		expect(created).toMatchObject({ name: "Casa Moinhos", role: "admin" });
 
 		const listed = await creator.agent.get(PROJECTS);
-		expect(projectListSchema.parse(listed.body)).toEqual(
+		expect(projectListSchema.parse(listed.body).items).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ id: created.id, role: "admin" }),
 			]),
@@ -142,7 +142,10 @@ describe("POST /api/projects", () => {
 		expect(problemDetailsSchema.parse(res.body).code).toBe("NO_FREE_LICENSE");
 
 		const listed = await exhausted.agent.get(PROJECTS);
-		expect(projectListSchema.parse(listed.body)).toEqual([]);
+		expect(projectListSchema.parse(listed.body)).toEqual({
+			items: [],
+			total: 0,
+		});
 	});
 
 	test("simultaneous creations with one free license produce exactly one project", async () => {
@@ -162,7 +165,7 @@ describe("POST /api/projects", () => {
 		}
 
 		const listed = await contended.agent.get(PROJECTS);
-		expect(projectListSchema.parse(listed.body)).toHaveLength(1);
+		expect(projectListSchema.parse(listed.body).total).toBe(1);
 	});
 
 	test("refuses a caller who is not the organization's admin", async () => {

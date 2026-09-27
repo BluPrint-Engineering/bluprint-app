@@ -12,10 +12,11 @@ export function AppLayout({
 	children: React.ReactNode;
 }) {
 	return (
-		<>
+		// a screen fills the height under the header with flex-1, so a short one can pin content to the bottom
+		<div className="flex min-h-dvh flex-col">
 			<AppHeader user={user} />
 			{children}
 			<Toaster />
-		</>
+		</div>
 	);
 }

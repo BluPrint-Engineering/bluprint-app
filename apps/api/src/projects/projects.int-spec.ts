@@ -29,10 +29,13 @@ let admin: { userId: string; agent: ReturnType<typeof request.agent> };
 let linked: { userId: string; agent: ReturnType<typeof request.agent> };
 let unlinked: { userId: string; agent: ReturnType<typeof request.agent> };
 let outsider: { userId: string; agent: ReturnType<typeof request.agent> };
+let paginated: { userId: string; agent: ReturnType<typeof request.agent> };
 
 let projectOne: string;
 let projectTwo: string;
 let projectThree: string;
+// newest first, the order the list must answer in
+let paginatedIds: string[];
 
 async function signUp(name: string) {
 	const agent = request.agent(server);
@@ -66,6 +69,7 @@ beforeAll(async () => {
 	linked = await signUp("Gerente Vinculada");
 	unlinked = await signUp("Gerente Sem Vínculo");
 	outsider = await signUp("Pessoa de Outra Construtora");
+	paginated = await signUp("Admin com Muitas Obras");
 
 	const organizationId = await organizationOf(admin.userId);
 
@@ -111,10 +115,30 @@ beforeAll(async () => {
 		userId: admin.userId,
 		role: "manager",
 	});
+
+	// 26 projects over 13 creation instants, two per instant, so pages cross ties that only the id breaks
+	const paginatedOrganization = await organizationOf(paginated.userId);
+	const base = Date.UTC(2026, 0, 1);
+	const rows = await db
+		.insert(project)
+		.values(
+			Array.from({ length: 26 }, (_, i) => ({
+				organizationId: paginatedOrganization,
+				name: `Obra ${String(i + 1).padStart(2, "0")}`,
+				createdAt: new Date(base + Math.floor(i / 2) * 60_000),
+			})),
+		)
+		.returning({ id: project.id, createdAt: project.createdAt });
+	paginatedIds = rows
+		.sort(
+			(a, b) =>
+				b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1),
+		)
+		.map((row) => row.id);
 });
 
 afterAll(async () => {
-	for (const { userId } of [admin, linked, unlinked, outsider]) {
+	for (const { userId } of [admin, linked, unlinked, outsider, paginated]) {
 		await db.delete(user).where(eq(user.id, userId));
 	}
 	await app.close();
@@ -125,31 +149,33 @@ describe("GET /api/projects", () => {
 		const res = await linked.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
-		const projects = projectListSchema.parse(res.body);
-		expect(projects).toEqual(
+		const { items, total } = projectListSchema.parse(res.body);
+		expect(items).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ id: projectOne, role: "manager" }),
 				expect.objectContaining({ id: projectTwo, role: "assistant" }),
 			]),
 		);
-		expect(projects.map((p) => p.id)).not.toContain(projectThree);
-		expect(projects).toHaveLength(2);
+		expect(items.map((p) => p.id)).not.toContain(projectThree);
+		expect(items).toHaveLength(2);
+		expect(total).toBe(2);
 	});
 
 	test("an organization member with no project membership sees nothing", async () => {
 		const res = await unlinked.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
-		expect(projectListSchema.parse(res.body)).toEqual([]);
+		expect(projectListSchema.parse(res.body)).toEqual({ items: [], total: 0 });
 	});
 
 	test("the organization admin sees every project, reported as admin", async () => {
 		const res = await admin.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
-		const projects = projectListSchema.parse(res.body);
-		expect(projects).toHaveLength(3);
-		expect(projects).toEqual(
+		const { items, total } = projectListSchema.parse(res.body);
+		expect(items).toHaveLength(3);
+		expect(total).toBe(3);
+		expect(items).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ id: projectTwo, role: "admin" }),
 				expect.objectContaining({ id: projectThree, role: "admin" }),
@@ -160,8 +186,8 @@ describe("GET /api/projects", () => {
 	test("the effective role wins over admin when the admin is also a project_member", async () => {
 		const res = await admin.agent.get(PROJECTS);
 
-		const projects = projectListSchema.parse(res.body);
-		expect(projects).toEqual(
+		const { items } = projectListSchema.parse(res.body);
+		expect(items).toEqual(
 			expect.arrayContaining([
 				expect.objectContaining({ id: projectOne, role: "manager" }),
 			]),
@@ -172,7 +198,7 @@ describe("GET /api/projects", () => {
 		const res = await outsider.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
-		expect(projectListSchema.parse(res.body)).toEqual([]);
+		expect(projectListSchema.parse(res.body)).toEqual({ items: [], total: 0 });
 	});
 
 	test("refuses an anonymous caller", async () => {
@@ -185,10 +211,79 @@ describe("GET /api/projects", () => {
 	test("never leaks a field outside the shared response schema", async () => {
 		const res = await admin.agent.get(PROJECTS);
 
-		for (const row of res.body as Record<string, unknown>[]) {
+		const body = res.body as { items: Record<string, unknown>[] };
+		expect(Object.keys(body).sort()).toEqual(["items", "total"]);
+		for (const row of body.items) {
 			expect(Object.keys(row).sort()).toEqual(
 				["createdAt", "id", "name", "role"].sort(),
 			);
 		}
 	});
+});
+
+describe("GET /api/projects pagination", () => {
+	async function page(query: string) {
+		const res = await paginated.agent.get(`${PROJECTS}?${query}`);
+		expect(res.status).toBe(200);
+		return projectListSchema.parse(res.body);
+	}
+
+	test("answers 12 projects by default, with the total across every page", async () => {
+		const { items, total } = await page("");
+
+		expect(items.map((p) => p.id)).toEqual(paginatedIds.slice(0, 12));
+		expect(total).toBe(26);
+	});
+
+	test("walks every page newest first, ties broken by id, without repeating or skipping", async () => {
+		const walked = [
+			...(await page("page=1")).items,
+			...(await page("page=2")).items,
+			...(await page("page=3")).items,
+		].map((p) => p.id);
+
+		expect(walked).toEqual(paginatedIds);
+	});
+
+	test("the last page holds the remainder", async () => {
+		const { items, total } = await page("page=3");
+
+		expect(items).toHaveLength(2);
+		expect(total).toBe(26);
+	});
+
+	test("a page past the last answers no items and the real total", async () => {
+		expect(await page("page=9")).toEqual({ items: [], total: 26 });
+	});
+
+	test("honours a page size", async () => {
+		const { items } = await page("page=2&pageSize=5");
+
+		expect(items.map((p) => p.id)).toEqual(paginatedIds.slice(5, 10));
+	});
+
+	test("no page reaches another organization's project, nor counts it", async () => {
+		const { items, total } = await page("pageSize=100");
+
+		expect(total).toBe(26);
+		expect(items.map((p) => p.id)).toEqual(paginatedIds);
+
+		const other = projectListSchema.parse(
+			(await admin.agent.get(`${PROJECTS}?pageSize=100`)).body,
+		);
+		expect(other.total).toBe(3);
+		expect(other.items.filter((p) => paginatedIds.includes(p.id))).toEqual([]);
+	});
+
+	test.each(["page=0", "page=abc", "pageSize=0", "pageSize=101", "page=1.5"])(
+		"rejects %s",
+		async (query) => {
+			const res = await paginated.agent.get(`${PROJECTS}?${query}`);
+
+			expect(res.status).toBe(400);
+			expect(problemDetailsSchema.parse(res.body).code).toBe(
+				"VALIDATION_FAILED",
+			);
+		},
+	);
 });

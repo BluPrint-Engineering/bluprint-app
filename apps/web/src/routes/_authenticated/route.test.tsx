@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
-import { renderAt, signedIn, stubAuthApi } from "@/test/renderApp";
+import { renderAt, signedIn, stubApi } from "@/test/renderApp";
 
 describe("protected layout", () => {
 	afterEach(() => {
@@ -13,7 +13,7 @@ describe("protected layout", () => {
 	});
 
 	test("sends a signed-out visitor to the login, remembering where they were going", async () => {
-		stubAuthApi(null);
+		stubApi(null);
 
 		const { router } = renderAt("/projects");
 
@@ -25,7 +25,7 @@ describe("protected layout", () => {
 	});
 
 	test("sends the root to the projects list", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		const { router } = renderAt("/");
 
@@ -36,7 +36,7 @@ describe("protected layout", () => {
 	});
 
 	test("renders the requested screen when there is a session", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		const { router } = renderAt("/projects");
 
@@ -72,7 +72,7 @@ describe("protected layout", () => {
 		// the first try plus three automatic retries
 		expect(failing).toHaveBeenCalledTimes(4);
 
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 		await userEvent.click(
 			screen.getByRole("button", { name: "Tentar de novo" }),
 		);
@@ -114,7 +114,7 @@ describe("protected layout", () => {
 
 	test("waits for the connection when the device is offline, then continues on its own", async () => {
 		onlineManager.setOnline(false);
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		renderAt("/projects");
 
@@ -134,7 +134,7 @@ describe("protected layout", () => {
 	});
 
 	test("does not ask the server again when navigating with a fresh session", async () => {
-		const { fetchMock } = stubAuthApi(signedIn);
+		const { fetchMock } = stubApi(signedIn);
 
 		const { router } = renderAt("/projects");
 		await screen.findByText("Obras");
@@ -151,7 +151,7 @@ describe("protected layout", () => {
 	});
 
 	test("sends the visitor to the login, back to the current screen, when a request answers 401", async () => {
-		const api = stubAuthApi(signedIn);
+		const api = stubApi(signedIn);
 
 		const { router, queryClient } = renderAt("/projects");
 		await screen.findByText("Obras");
@@ -180,7 +180,7 @@ describe("protected layout", () => {
 	});
 
 	test("does not loop when a 401 arrives on a public screen", async () => {
-		stubAuthApi(null);
+		stubApi(null);
 		const { router, queryClient } = renderAt("/login");
 		await screen.findByLabelText("E-mail");
 		vi.stubGlobal(

@@ -1,4 +1,8 @@
-import { ProjectSummary } from "@bluprint/shared";
+import {
+	ProjectList,
+	ProjectListQuery,
+	ProjectSummary,
+} from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
@@ -14,16 +18,25 @@ export class ProjectsService {
 		private readonly licenses: LicensesRepository,
 	) {}
 
-	async listVisible(userId: string): Promise<ProjectSummary[]> {
-		const rows = await this.projects.listVisible(userId);
+	async listVisible(
+		userId: string,
+		{ page, pageSize }: ProjectListQuery,
+	): Promise<ProjectList> {
+		const { items, total } = await this.projects.listVisible(userId, {
+			limit: pageSize,
+			offset: (page - 1) * pageSize,
+		});
 
-		return rows.map((row) => ({
-			id: row.id,
-			name: row.name,
-			// z.iso.datetime() needs a string, not a Date, or the serializer 500s
-			createdAt: row.createdAt.toISOString(),
-			role: row.effectiveRole ?? "admin",
-		}));
+		return {
+			items: items.map((row) => ({
+				id: row.id,
+				name: row.name,
+				// z.iso.datetime() needs a string, not a Date, or the serializer 500s
+				createdAt: row.createdAt.toISOString(),
+				role: row.effectiveRole ?? "admin",
+			})),
+			total,
+		};
 	}
 
 	@Transactional()

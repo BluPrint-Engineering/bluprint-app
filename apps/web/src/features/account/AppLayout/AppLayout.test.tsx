@@ -2,12 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import {
-	organization,
-	renderAt,
-	signedIn,
-	stubAuthApi,
-} from "@/test/renderApp";
+import { organization, renderAt, signedIn, stubApi } from "@/test/renderApp";
 
 async function openMenu() {
 	await userEvent.click(
@@ -26,7 +21,7 @@ describe("app layout", () => {
 	});
 
 	test("links the logo to the projects list", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		renderAt("/projects");
 
@@ -36,7 +31,7 @@ describe("app layout", () => {
 	});
 
 	test("shows the person's initials when they have no photo", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		renderAt("/projects");
 
@@ -47,7 +42,7 @@ describe("app layout", () => {
 	});
 
 	test("opens the account menu with the person's name and e-mail", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 		renderAt("/projects");
 
 		const menu = await openMenu();
@@ -60,7 +55,7 @@ describe("app layout", () => {
 	});
 
 	test("tells an admin their role in the account menu", async () => {
-		stubAuthApi(signedIn, { organization: { ...organization, role: "admin" } });
+		stubApi(signedIn, { organization: { ...organization, role: "admin" } });
 		renderAt("/projects");
 
 		const menu = await openMenu();
@@ -71,7 +66,7 @@ describe("app layout", () => {
 	});
 
 	test("shows no organization role to a manager or an assistant", async () => {
-		const { fetchMock } = stubAuthApi(signedIn);
+		const { fetchMock } = stubApi(signedIn);
 		renderAt("/projects");
 
 		const menu = await openMenu();
@@ -89,7 +84,7 @@ describe("app layout", () => {
 	});
 
 	test("switches to the dark theme and remembers it on the device", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 		renderAt("/projects");
 
 		const menu = await openMenu();
@@ -105,7 +100,7 @@ describe("app layout", () => {
 	});
 
 	test("signs out without confirmation, back to the login with nothing of the account left", async () => {
-		stubAuthApi(signedIn, { organization: { ...organization, role: "admin" } });
+		stubApi(signedIn, { organization: { ...organization, role: "admin" } });
 		const { router, queryClient } = renderAt("/projects");
 
 		const menu = await openMenu();
@@ -119,7 +114,7 @@ describe("app layout", () => {
 	});
 
 	test("keeps the menu open and locked while signing out", async () => {
-		stubAuthApi(signedIn, { signOut: () => new Promise(() => {}) });
+		stubApi(signedIn, { signOut: () => new Promise(() => {}) });
 		renderAt("/projects");
 
 		const menu = await openMenu();
@@ -135,7 +130,7 @@ describe("app layout", () => {
 	});
 
 	test("keeps the person signed in and says so when signing out fails", async () => {
-		stubAuthApi(signedIn, {
+		stubApi(signedIn, {
 			signOut: () => Promise.reject(new TypeError("Failed to fetch")),
 		});
 		const { router } = renderAt("/projects");
@@ -156,7 +151,7 @@ describe("app layout", () => {
 	});
 
 	test("takes a server error on sign-out for a failure too", async () => {
-		stubAuthApi(signedIn, {
+		stubApi(signedIn, {
 			signOut: () => Promise.resolve(new Response("{}", { status: 500 })),
 		});
 		const { router } = renderAt("/projects");

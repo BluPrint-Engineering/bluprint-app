@@ -16,6 +16,9 @@ test.describe("signed out", () => {
 		await page.getByRole("button", { name: "Entrar" }).click();
 
 		await expect(page).toHaveURL("/projects");
+		await expect(
+			page.getByRole("list", { name: "Obras" }).getByRole("listitem"),
+		).toHaveCount(12);
 
 		const cookies = await page.context().cookies();
 		const sessionCookie = cookies.find(
