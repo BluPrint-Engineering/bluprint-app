@@ -7,6 +7,7 @@ import { AuthModule } from "./auth/auth.module";
 import { DATABASE, DatabaseModule } from "./db/database.module";
 import { HealthModule } from "./health/health.module";
 import { envSchema } from "./lib/env";
+import { OrganizationsModule } from "./organizations/organizations.module";
 import { ProjectsModule } from "./projects/projects.module";
 
 @Module({
@@ -32,6 +33,7 @@ import { ProjectsModule } from "./projects/projects.module";
 		}),
 		AuthModule,
 		HealthModule,
+		OrganizationsModule,
 		ProjectsModule,
 	],
 })

@@ -1,4 +1,5 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
+import { AppLayout } from "@/features/account";
 import {
 	SessionCheckFailed,
 	SessionSplash,
@@ -20,5 +21,14 @@ export const Route = createFileRoute("/_authenticated")({
 	pendingComponent: SessionSplash,
 	pendingMs: 0,
 	errorComponent: SessionCheckFailed,
-	component: Outlet,
+	component: AuthenticatedLayout,
 });
+
+function AuthenticatedLayout() {
+	const { session } = Route.useRouteContext();
+	return (
+		<AppLayout user={session.user}>
+			<Outlet />
+		</AppLayout>
+	);
+}

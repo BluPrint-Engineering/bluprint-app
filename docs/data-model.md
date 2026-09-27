@@ -32,7 +32,7 @@ Three principles the whole model serves:
 | --- | --- | --- |
 | `user` | `email`, `is_platform_admin` | One account, **no global role**. The platform admin is a flag, not a membership: they belong to no organization ([0013](adr/0013-better-auth-tables-are-generated.md)). |
 | `organization` | `name` | The construction company, registered by hand by the platform admin ([0020](adr/0020-organizations-are-registered-by-hand.md)). |
-| `member` | `organization_id`, `user_id`, `role` | Organization membership; holds the **default role**, which only suggests and never authorizes. |
+| `member` | `organization_id`, `user_id`, `role` | Organization membership; holds the **default role**, which only suggests and never authorizes. **One per person**: `user_id` is unique ([0054](adr/0054-one-organization-per-person.md)). |
 | `license` | `organization_id`, `project_id?` | Owned by the **organization** ([0019](adr/0019-license-belongs-to-the-organization.md)). `project_id` null = free; filled = consumed. Free licenses come from `WHERE project_id IS NULL`. |
 | `project` | `organization_id`, `name` | Created blank by the admin from a free license. |
 

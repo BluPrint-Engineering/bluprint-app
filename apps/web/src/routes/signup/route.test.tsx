@@ -50,7 +50,7 @@ describe("/signup route", () => {
 		});
 	});
 
-	test("redirects to the project list when a session already exists", async () => {
+	test("redirects to the projects list when a session already exists", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
 		stubApi(signedIn);
 
@@ -62,7 +62,7 @@ describe("/signup route", () => {
 		expect(router.state.location.pathname).toBe("/projects");
 	});
 
-	test("lands on the project list after signing up, not back on the signup", async () => {
+	test("lands on the projects list after signing up, not back on the signup", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
 		stubApi(null);
 

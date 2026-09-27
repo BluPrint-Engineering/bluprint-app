@@ -37,12 +37,6 @@ interface SeedOrganization {
 	projects: SeedProject[];
 }
 
-// Helena's roles differ by organization and by project (ADR 0022)
-const helena: SeedPerson = {
-	name: "Helena Martins",
-	email: "helena@consultoria.test",
-};
-
 export const people: SeedPerson[] = [
 	platformAdmin,
 	{ name: "Ana Ribeiro", email: "ana@horizonte.test" },
@@ -54,8 +48,10 @@ export const people: SeedPerson[] = [
 	{ name: "Gabriela Souza", email: "gabriela@horizonte.test" },
 	{ name: "Igor Pereira", email: "igor@vertice.test" },
 	{ name: "Júlia Nunes", email: "julia@vertice.test" },
+	{ name: "Lucas Ferraz", email: "lucas@vertice.test" },
 	{ name: "Karina Duarte", email: "karina@alfa.test" },
-	helena,
+	// an outside consultant: her email domain is not the organization's (ADR 0026)
+	{ name: "Helena Martins", email: "helena@consultoria.test" },
 ];
 
 export const organizations: SeedOrganization[] = [
@@ -71,7 +67,7 @@ export const organizations: SeedOrganization[] = [
 			{ email: "fabio@horizonte.test", role: "assistant" },
 			// invited before any project existed: default role only, no project_member row yet
 			{ email: "gabriela@horizonte.test", role: "assistant" },
-			{ email: helena.email, role: "assistant" },
+			{ email: "helena@consultoria.test", role: "assistant" },
 		],
 		projects: [
 			{
@@ -81,7 +77,7 @@ export const organizations: SeedOrganization[] = [
 					// A manager's default role does not carry over: assistant here.
 					{ email: "diego@horizonte.test", role: "assistant" },
 					{ email: "elisa@horizonte.test", role: "assistant" },
-					{ email: helena.email, role: "assistant" },
+					{ email: "helena@consultoria.test", role: "assistant" },
 				],
 			},
 			{
@@ -119,7 +115,7 @@ export const organizations: SeedOrganization[] = [
 		members: [
 			{ email: "igor@vertice.test", role: "admin" },
 			{ email: "julia@vertice.test", role: "manager" },
-			{ email: helena.email, role: "manager" },
+			{ email: "lucas@vertice.test", role: "manager" },
 		],
 		projects: [
 			{
@@ -127,12 +123,13 @@ export const organizations: SeedOrganization[] = [
 				name: "Residencial Jardins",
 				members: [
 					{ email: "julia@vertice.test", role: "manager" },
-					{ email: helena.email, role: "assistant" },
+					// Lucas's role differs by project (ADR 0022): assistant here, manager on Torre Ipê
+					{ email: "lucas@vertice.test", role: "assistant" },
 				],
 			},
 			{
 				name: "Torre Ipê",
-				members: [{ email: helena.email, role: "manager" }],
+				members: [{ email: "lucas@vertice.test", role: "manager" }],
 			},
 		],
 	},

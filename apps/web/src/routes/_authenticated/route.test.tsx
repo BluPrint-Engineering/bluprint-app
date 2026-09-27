@@ -24,6 +24,17 @@ describe("protected layout", () => {
 		expect(router.state.location.search).toEqual({ redirect: "/projects" });
 	});
 
+	test("sends the root to the projects list", async () => {
+		stubApi(signedIn);
+
+		const { router } = renderAt("/");
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/projects");
+		});
+		expect(await screen.findByText("Obras")).toBeInTheDocument();
+	});
+
 	test("renders the requested screen when there is a session", async () => {
 		stubApi(signedIn);
 

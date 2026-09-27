@@ -22,7 +22,7 @@ describe("/login route", () => {
 		await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
 	}
 
-	test("redirects to the project list when a session already exists", async () => {
+	test("redirects to the projects list when a session already exists", async () => {
 		stubApi(signedIn);
 
 		renderAt("/login");
@@ -74,7 +74,7 @@ describe("/login route", () => {
 		"/\\evil.test",
 		"evil.test",
 	])(
-		"ignores the external destination %s and lands on the project list",
+		"ignores the external destination %s and lands on the projects list",
 		async (destination) => {
 			stubApi(null);
 
