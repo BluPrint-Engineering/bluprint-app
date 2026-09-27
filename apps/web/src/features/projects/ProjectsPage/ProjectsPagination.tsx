@@ -34,7 +34,8 @@ export function ProjectsPagination({
 	const last = Math.min(page * PROJECT_PAGE_SIZE, total);
 
 	return (
-		<div className="hidden flex-wrap items-center justify-between gap-(--space-4) pt-(--space-2) md:flex">
+		// a short page pins the row to the bottom of the screen instead of right under the cards
+		<div className="mt-auto hidden flex-wrap items-center justify-between gap-(--space-4) pt-(--space-2) md:flex">
 			<span className="text-sm text-muted-foreground tabular-nums">
 				Mostrando {first}–{last} de {total}
 			</span>

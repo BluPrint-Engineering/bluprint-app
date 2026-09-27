@@ -53,5 +53,14 @@ test.describe("project list", () => {
 			page.getByRole("list", { name: "Obras" }).getByRole("listitem"),
 		).toHaveCount(2);
 		await expect(page.getByText("Residencial Jardins")).toBeVisible();
+
+		// a short page keeps the pages at the bottom of the screen, not right under the cards
+		const pages = await page
+			.getByRole("navigation", { name: "Páginas de obras" })
+			.boundingBox();
+		const viewport = page.viewportSize();
+		expect((pages?.y ?? 0) + (pages?.height ?? 0)).toBeGreaterThan(
+			(viewport?.height ?? 0) - 64,
+		);
 	});
 });

@@ -133,7 +133,7 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 	}
 
 	return (
-		<main className="mx-auto grid w-full max-w-(--content-max-wide) content-start gap-(--space-4) px-(--page-pad) pt-(--space-5) pb-(--space-8) md:gap-(--space-5) md:px-(--page-pad-desktop) md:pt-(--space-8) md:pb-(--space-12)">
+		<main className="mx-auto flex min-h-dvh w-full max-w-(--content-max-wide) flex-col gap-(--space-4) px-(--page-pad) pt-(--space-5) pb-(--space-8) md:gap-(--space-5) md:px-(--page-pad-desktop) md:pt-(--space-8) md:pb-(--space-12)">
 			<div className="flex min-h-(--tap-min) min-w-0 items-baseline gap-(--space-3)">
 				<h1 className="text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
 					Obras
