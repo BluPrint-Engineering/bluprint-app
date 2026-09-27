@@ -1,28 +1,56 @@
+import type { Organization } from "@bluprint/shared";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { render } from "@testing-library/react";
 import { vi } from "vitest";
 import { createApp } from "@/lib/app";
 
-const USER = { id: "u1", email: "ana@horizonte.test" };
+const USER = {
+	id: "u1",
+	name: "Ana Ribeiro",
+	email: "ana@horizonte.test",
+	image: null,
+};
 const SESSION = { session: { id: "s1" }, user: USER };
 
 type Session = typeof SESSION | null;
 
+export const organization: Organization = {
+	id: "0199a1f4-3c2e-7d5a-9b1e-2f4c6a8e0d13",
+	name: "Construtora Horizonte",
+	role: "manager",
+};
+
+const json = (body: unknown, status = 200) =>
+	Promise.resolve(new Response(JSON.stringify(body), { status }));
+
 /**
  * Stubs the API at the network boundary. `setSession` changes what the server would answer from
- * then on; a successful sign-in or sign-up flips it to a session, as a real one would.
+ * then on; a successful sign-in or sign-up flips it to a session and a sign-out back to none, as a
+ * real one would. `signOut` replaces the sign-out answer, to make it fail or hang.
  */
-export function stubAuthApi(initial: Session) {
+export function stubAuthApi(
+	initial: Session,
+	options: {
+		organization?: Organization;
+		signOut?: () => Promise<Response>;
+	} = {},
+) {
 	let session = initial;
-	const json = (body: unknown) =>
-		Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
 	const fetchMock = vi.fn((input: RequestInfo | URL) => {
 		const url = String(input);
 		if (url.includes("/get-session")) return json(session);
 		if (url.includes("/sign-in/email") || url.includes("/sign-up/email")) {
 			session = SESSION;
 			return json({ token: "t", user: USER });
+		}
+		if (url.includes("/sign-out")) {
+			if (options.signOut) return options.signOut();
+			session = null;
+			return json({ success: true });
+		}
+		if (url.endsWith("/api/organization")) {
+			return json(options.organization ?? organization);
 		}
 		return json({});
 	});

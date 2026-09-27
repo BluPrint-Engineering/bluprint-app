@@ -22,7 +22,7 @@ describe("/login route", () => {
 		await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
 	}
 
-	test("redirects to / when a session already exists", async () => {
+	test("redirects to the projects list when a session already exists", async () => {
 		stubAuthApi(signedIn);
 
 		renderAt("/login");
@@ -58,13 +58,13 @@ describe("/login route", () => {
 	test("goes back to the screen the visitor was heading to after signing in", async () => {
 		stubAuthApi(null);
 
-		const { router } = renderAt("/login?redirect=%2F%3Ffrom%3Demail");
+		const { router } = renderAt("/login?redirect=%2Fprojects%3Ffrom%3Demail");
 		await signIn();
 
 		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();
 		});
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 		expect(router.state.location.search).toEqual({ from: "email" });
 	});
 
@@ -74,7 +74,7 @@ describe("/login route", () => {
 		"/\\evil.test",
 		"evil.test",
 	])(
-		"ignores the external destination %s and lands on /",
+		"ignores the external destination %s and lands on the projects list",
 		async (destination) => {
 			stubAuthApi(null);
 
@@ -86,7 +86,7 @@ describe("/login route", () => {
 			await waitFor(() => {
 				expect(screen.getByText("Obras")).toBeInTheDocument();
 			});
-			expect(router.state.location.pathname).toBe("/");
+			expect(router.state.location.pathname).toBe("/projects");
 			expect(router.state.location.search).toEqual({});
 		},
 	);
@@ -94,7 +94,7 @@ describe("/login route", () => {
 	test("skips the form for a visitor who already has a session, to the requested screen", async () => {
 		stubAuthApi(signedIn);
 
-		const { router } = renderAt("/login?redirect=%2F%3Ffrom%3Demail");
+		const { router } = renderAt("/login?redirect=%2Fprojects%3Ffrom%3Demail");
 
 		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();
@@ -105,13 +105,13 @@ describe("/login route", () => {
 	test("lands on the protected screen after signing in from a redirect, not back on the login", async () => {
 		stubAuthApi(null);
 
-		const { router } = renderAt("/");
+		const { router } = renderAt("/projects");
 		await signIn();
 
 		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();
 		});
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 	});
 
 	test("shows the form at once when the API is down instead of retrying", async () => {

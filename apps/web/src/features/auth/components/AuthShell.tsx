@@ -1,6 +1,6 @@
 import type * as React from "react";
 import { Logo } from "@/components/brand/Logo";
-import { useTheme } from "../useTheme";
+import { useTheme } from "@/lib/useTheme";
 import { ThemeToggle } from "./ThemeToggle";
 
 /** Flat form on mobile, framed card from 900px — applied on the Card the caller renders inside AuthShell. */

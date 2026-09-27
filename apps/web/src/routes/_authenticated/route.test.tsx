@@ -15,30 +15,41 @@ describe("protected layout", () => {
 	test("sends a signed-out visitor to the login, remembering where they were going", async () => {
 		stubAuthApi(null);
 
-		const { router } = renderAt("/");
+		const { router } = renderAt("/projects");
 
 		await waitFor(() => {
 			expect(screen.getByLabelText("E-mail")).toBeInTheDocument();
 		});
 		expect(router.state.location.pathname).toBe("/login");
-		expect(router.state.location.search).toEqual({ redirect: "/" });
+		expect(router.state.location.search).toEqual({ redirect: "/projects" });
 	});
 
-	test("renders the requested screen when there is a session", async () => {
+	test("sends the root to the projects list", async () => {
 		stubAuthApi(signedIn);
 
 		const { router } = renderAt("/");
 
 		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/projects");
+		});
+		expect(await screen.findByText("Obras")).toBeInTheDocument();
+	});
+
+	test("renders the requested screen when there is a session", async () => {
+		stubAuthApi(signedIn);
+
+		const { router } = renderAt("/projects");
+
+		await waitFor(() => {
 			expect(screen.getByText("Obras")).toBeInTheDocument();
 		});
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 	});
 
 	test("shows the splash, not the login or the screen, while the session is checked", async () => {
 		vi.stubGlobal("fetch", () => new Promise(() => {}));
 
-		renderAt("/");
+		renderAt("/projects");
 
 		expect(await screen.findByText("Verificando sua sessão…")).toBeVisible();
 		expect(screen.queryByText("Obras")).not.toBeInTheDocument();
@@ -49,7 +60,7 @@ describe("protected layout", () => {
 		const failing = vi.fn(() => Promise.reject(new Error("network down")));
 		vi.stubGlobal("fetch", failing);
 
-		const { router } = renderAt("/");
+		const { router } = renderAt("/projects");
 
 		expect(
 			await screen.findByText("Não foi possível verificar sua sessão"),
@@ -57,7 +68,7 @@ describe("protected layout", () => {
 		expect(
 			screen.getByText("Confira sua conexão e tente de novo."),
 		).toBeInTheDocument();
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 		// the first try plus three automatic retries
 		expect(failing).toHaveBeenCalledTimes(4);
 
@@ -77,18 +88,18 @@ describe("protected layout", () => {
 			vi.fn(() => Promise.resolve(new Response("{}", { status: 500 }))),
 		);
 
-		const { router } = renderAt("/");
+		const { router } = renderAt("/projects");
 
 		expect(
 			await screen.findByText("Não foi possível verificar sua sessão"),
 		).toBeInTheDocument();
-		expect(router.state.location.pathname).toBe("/");
+		expect(router.state.location.pathname).toBe("/projects");
 	});
 
 	test("lets the visitor retry as many times as they need", async () => {
 		vi.stubGlobal("fetch", () => Promise.reject(new Error("network down")));
 
-		renderAt("/");
+		renderAt("/projects");
 
 		for (let attempt = 0; attempt < 3; attempt++) {
 			await userEvent.click(
@@ -105,7 +116,7 @@ describe("protected layout", () => {
 		onlineManager.setOnline(false);
 		stubAuthApi(signedIn);
 
-		renderAt("/");
+		renderAt("/projects");
 
 		expect(await screen.findByText("Sem conexão.")).toBeInTheDocument();
 		expect(
@@ -125,7 +136,7 @@ describe("protected layout", () => {
 	test("does not ask the server again when navigating with a fresh session", async () => {
 		const { fetchMock } = stubAuthApi(signedIn);
 
-		const { router } = renderAt("/");
+		const { router } = renderAt("/projects");
 		await screen.findByText("Obras");
 		const checks = () =>
 			fetchMock.mock.calls.filter(([url]) =>
@@ -133,7 +144,7 @@ describe("protected layout", () => {
 			).length;
 		expect(checks()).toBe(1);
 
-		await router.navigate({ to: "/" });
+		await router.navigate({ to: "/projects" });
 		await router.invalidate();
 
 		expect(checks()).toBe(1);
@@ -142,7 +153,7 @@ describe("protected layout", () => {
 	test("sends the visitor to the login, back to the current screen, when a request answers 401", async () => {
 		const api = stubAuthApi(signedIn);
 
-		const { router, queryClient } = renderAt("/");
+		const { router, queryClient } = renderAt("/projects");
 		await screen.findByText("Obras");
 
 		api.setSession(null);
@@ -164,7 +175,7 @@ describe("protected layout", () => {
 		await waitFor(() => {
 			expect(router.state.location.pathname).toBe("/login");
 		});
-		expect(router.state.location.search).toEqual({ redirect: "/" });
+		expect(router.state.location.search).toEqual({ redirect: "/projects" });
 		expect(await screen.findByLabelText("E-mail")).toBeInTheDocument();
 	});
 

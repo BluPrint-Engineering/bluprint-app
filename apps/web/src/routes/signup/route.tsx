@@ -13,7 +13,7 @@ export const Route = createFileRoute("/signup")({
 		// the login footer already explains that access comes by invitation
 		if (!selfSignupAllowed()) throw redirect({ to: "/login" });
 		const session = await peekSession(context.queryClient);
-		if (session) throw redirect({ to: "/" });
+		if (session) throw redirect({ to: "/projects" });
 	},
 	pendingComponent: SessionSplash,
 	pendingMs: 0,
@@ -29,7 +29,7 @@ function RouteComponent() {
 				onSuccess={() => {
 					// the cached "no session" would send the guard straight back to the login
 					discardSession(queryClient);
-					router.navigate({ to: "/" });
+					router.navigate({ to: "/projects" });
 				}}
 			/>
 		</AuthShell>
