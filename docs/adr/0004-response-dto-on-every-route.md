@@ -4,5 +4,5 @@ Every controller method declares what it returns with a DTO built by `createZodD
 
 ## Consequences
 
-- A route with no input (`GET /api/projects`) has no request DTO, but still has a response DTO.
+- A route with no input has no request DTO, but still has a response DTO.
 - A `z.iso.datetime()` field needs the service to return a string; a `Date` fails validation with a 500, because the interceptor runs before serialization.

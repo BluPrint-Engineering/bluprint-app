@@ -1,6 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { renderAt, signedIn, stubAuthApi } from "@/test/renderApp";
+import { renderAt, signedIn, stubApi } from "@/test/renderApp";
 
 describe("/ route", () => {
 	afterEach(() => {
@@ -8,7 +8,7 @@ describe("/ route", () => {
 	});
 
 	test("sends the visitor to the project list", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		const { router } = renderAt("/");
 

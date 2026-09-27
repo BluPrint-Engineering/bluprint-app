@@ -2,7 +2,7 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { renderAt, signedIn, stubAuthApi } from "@/test/renderApp";
+import { renderAt, signedIn, stubApi } from "@/test/renderApp";
 
 describe("/login route", () => {
 	afterEach(() => {
@@ -23,7 +23,7 @@ describe("/login route", () => {
 	}
 
 	test("redirects to the project list when a session already exists", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		renderAt("/login");
 
@@ -33,7 +33,7 @@ describe("/login route", () => {
 	});
 
 	test("renders the login form when there is no session", async () => {
-		stubAuthApi(null);
+		stubApi(null);
 
 		renderAt("/login");
 
@@ -56,7 +56,7 @@ describe("/login route", () => {
 	});
 
 	test("goes back to the screen the visitor was heading to after signing in", async () => {
-		stubAuthApi(null);
+		stubApi(null);
 
 		const { router } = renderAt("/login?redirect=%2Fprojects%3Fpage%3D2");
 		await signIn();
@@ -76,7 +76,7 @@ describe("/login route", () => {
 	])(
 		"ignores the external destination %s and lands on the project list",
 		async (destination) => {
-			stubAuthApi(null);
+			stubApi(null);
 
 			const { router } = renderAt(
 				`/login?redirect=${encodeURIComponent(destination)}`,
@@ -92,7 +92,7 @@ describe("/login route", () => {
 	);
 
 	test("skips the form for a visitor who already has a session, to the requested screen", async () => {
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		const { router } = renderAt("/login?redirect=%2Fprojects%3Fpage%3D2");
 
@@ -103,7 +103,7 @@ describe("/login route", () => {
 	});
 
 	test("lands on the protected screen after signing in from a redirect, not back on the login", async () => {
-		stubAuthApi(null);
+		stubApi(null);
 
 		const { router } = renderAt("/projects");
 		await signIn();
@@ -126,7 +126,7 @@ describe("/login route", () => {
 
 	test("says the device is offline instead of showing a form that cannot work", async () => {
 		onlineManager.setOnline(false);
-		stubAuthApi(null);
+		stubApi(null);
 
 		renderAt("/login");
 

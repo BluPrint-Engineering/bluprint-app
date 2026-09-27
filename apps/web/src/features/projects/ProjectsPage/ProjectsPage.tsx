@@ -52,7 +52,8 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 	}, [landedPage]);
 
 	let content: React.ReactNode;
-	if (query.isError && !query.isFetching) {
+	// a failed refresh of a list already on screen keeps the list
+	if (!data && query.isError && !query.isFetching) {
 		content = (
 			<StateBlock
 				role="alert"

@@ -1,6 +1,6 @@
 import type { ProjectAccessRole } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
-import { act, screen, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import {
@@ -8,8 +8,9 @@ import {
 	json,
 	renderAt,
 	signedIn,
-	stubAuthApi,
+	stubApi,
 } from "@/test/renderApp";
+import { projectsQueryOptions } from "../api";
 
 const PAGE_SIZE = 12;
 
@@ -38,9 +39,7 @@ function projectsApi(
 	};
 }
 
-function requestedPages(
-	fetchMock: ReturnType<typeof stubAuthApi>["fetchMock"],
-) {
+function requestedPages(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	return fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
 		.filter((url) => url.pathname === "/api/projects")
@@ -59,7 +58,7 @@ describe("projects page", () => {
 	});
 
 	test("shows card-shaped placeholders while the list loads (O1)", async () => {
-		stubAuthApi(signedIn, (url) =>
+		stubApi(signedIn, (url) =>
 			url.pathname === "/api/projects" ? new Promise(() => {}) : undefined,
 		);
 
@@ -72,7 +71,7 @@ describe("projects page", () => {
 	});
 
 	test("lists the first 12 projects with the total count", async () => {
-		stubAuthApi(signedIn, projectsApi(26));
+		stubApi(signedIn, projectsApi(26));
 
 		renderAt("/projects");
 
@@ -85,7 +84,7 @@ describe("projects page", () => {
 	});
 
 	test("counts a single project in the singular, without pages", async () => {
-		stubAuthApi(signedIn, projectsApi(1));
+		stubApi(signedIn, projectsApi(1));
 
 		renderAt("/projects");
 
@@ -97,7 +96,7 @@ describe("projects page", () => {
 
 	test("shows the caller's role on each card, except where it is admin", async () => {
 		const roles: ProjectAccessRole[] = ["manager", "assistant", "admin"];
-		stubAuthApi(
+		stubApi(
 			signedIn,
 			projectsApi(3, (n) => roles[n - 1] ?? "admin"),
 		);
@@ -113,7 +112,7 @@ describe("projects page", () => {
 	});
 
 	test("the card is not a link until the project screen exists", async () => {
-		stubAuthApi(signedIn, projectsApi(1));
+		stubApi(signedIn, projectsApi(1));
 
 		renderAt("/projects");
 
@@ -122,7 +121,7 @@ describe("projects page", () => {
 	});
 
 	test("explains an empty list to someone with no project (O7)", async () => {
-		stubAuthApi(signedIn, projectsApi(0));
+		stubApi(signedIn, projectsApi(0));
 
 		renderAt("/projects");
 
@@ -139,7 +138,7 @@ describe("projects page", () => {
 
 	test("explains a failed load and retries on demand (O9)", async () => {
 		let failing = true;
-		stubAuthApi(signedIn, (url) => {
+		stubApi(signedIn, (url) => {
 			if (url.pathname !== "/api/projects") return undefined;
 			return failing ? json({}, 500) : projectsApi(2)(url);
 		});
@@ -158,11 +157,34 @@ describe("projects page", () => {
 		expect(await screen.findByText("2 obras")).toBeInTheDocument();
 	});
 
+	test("keeps a loaded list when a later refresh fails", async () => {
+		let failing = false;
+		const serve = projectsApi(2);
+		stubApi(signedIn, (url) => {
+			if (url.pathname !== "/api/projects") return undefined;
+			return failing ? json({}, 500) : serve(url);
+		});
+
+		const { queryClient } = renderAt("/projects");
+		await screen.findByText("2 obras");
+
+		failing = true;
+		await act(() => queryClient.refetchQueries({ queryKey: ["projects"] }));
+		await waitFor(() => {
+			expect(
+				queryClient.getQueryState(projectsQueryOptions(1).queryKey)?.status,
+			).toBe("error");
+		});
+
+		expect(screen.getByText("Obra 1")).toBeInTheDocument();
+		expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+	});
+
 	test("waits for the connection when the signal drops, then loads on its own (O10)", async () => {
 		const serve = projectsApi(2);
 		let dropSignal: () => void = () => {};
 		let firstRequest = true;
-		stubAuthApi(signedIn, (url) => {
+		stubApi(signedIn, (url) => {
 			if (url.pathname !== "/api/projects") return undefined;
 			if (!firstRequest) return serve(url);
 			firstRequest = false;
@@ -195,7 +217,7 @@ describe("projects page", () => {
 	test("while another page loads, dims the list and locks the controls, then scrolls to the top (O13)", async () => {
 		let releaseSecondPage: () => void = () => {};
 		const serve = projectsApi(26);
-		stubAuthApi(signedIn, (url) => {
+		stubApi(signedIn, (url) => {
 			if (url.searchParams.get("page") !== "2") return serve(url);
 			return new Promise<Response>((resolve) => {
 				releaseSecondPage = () => resolve(serve(url) as Response);
@@ -232,7 +254,7 @@ describe("projects page", () => {
 	});
 
 	test("goes back to the first page, dropping it from the address", async () => {
-		const { fetchMock } = stubAuthApi(signedIn, projectsApi(26));
+		const { fetchMock } = stubApi(signedIn, projectsApi(26));
 
 		const { router } = renderAt("/projects?page=3");
 		await screen.findByText("Obra 25");
@@ -245,7 +267,7 @@ describe("projects page", () => {
 	});
 
 	test("never shows more than 7 page slots", async () => {
-		stubAuthApi(signedIn, projectsApi(12 * 20));
+		stubApi(signedIn, projectsApi(12 * 20));
 
 		renderAt("/projects?page=10");
 
@@ -261,7 +283,7 @@ describe("projects page", () => {
 	});
 
 	test("a page past the last lands on the last page", async () => {
-		stubAuthApi(signedIn, projectsApi(26));
+		stubApi(signedIn, projectsApi(26));
 
 		const { router } = renderAt("/projects?page=9");
 

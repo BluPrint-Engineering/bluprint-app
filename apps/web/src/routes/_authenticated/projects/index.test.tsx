@@ -1,8 +1,8 @@
 import { screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { renderAt, signedIn, stubAuthApi } from "@/test/renderApp";
+import { renderAt, signedIn, stubApi } from "@/test/renderApp";
 
-function requestedPage(fetchMock: ReturnType<typeof stubAuthApi>["fetchMock"]) {
+function requestedPage(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	const urls = fetchMock.mock.calls
 		.map(([input]) => new URL(String(input), "http://localhost"))
 		.filter((url) => url.pathname === "/api/projects");
@@ -15,7 +15,7 @@ describe("/projects route", () => {
 	});
 
 	test("asks for the page in the address", async () => {
-		const { fetchMock } = stubAuthApi(signedIn);
+		const { fetchMock } = stubApi(signedIn);
 
 		const { router } = renderAt("/projects?page=2");
 
@@ -28,7 +28,7 @@ describe("/projects route", () => {
 	test.each(["1", "0", "-1", "1.5", "abc", "%22%22"])(
 		"falls back to the first page, omitted from the address, for page=%s",
 		async (value) => {
-			const { fetchMock } = stubAuthApi(signedIn);
+			const { fetchMock } = stubApi(signedIn);
 
 			const { router } = renderAt(`/projects?page=${value}`);
 

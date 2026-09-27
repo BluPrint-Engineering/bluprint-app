@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { renderAt, signedIn, stubAuthApi } from "@/test/renderApp";
+import { renderAt, signedIn, stubApi } from "@/test/renderApp";
 
 describe("/signup route", () => {
 	afterEach(() => {
@@ -11,7 +11,7 @@ describe("/signup route", () => {
 
 	test("redirects to the login when self-signup is off", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", undefined);
-		stubAuthApi(null);
+		stubApi(null);
 
 		const { router } = renderAt("/signup");
 
@@ -27,7 +27,7 @@ describe("/signup route", () => {
 
 	test("renders the signup form when self-signup is on and there is no session", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
-		stubAuthApi(null);
+		stubApi(null);
 
 		renderAt("/signup");
 
@@ -52,7 +52,7 @@ describe("/signup route", () => {
 
 	test("redirects to the project list when a session already exists", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
-		stubAuthApi(signedIn);
+		stubApi(signedIn);
 
 		const { router } = renderAt("/signup");
 
@@ -64,7 +64,7 @@ describe("/signup route", () => {
 
 	test("lands on the project list after signing up, not back on the signup", async () => {
 		vi.stubEnv("VITE_ALLOW_SELF_SIGNUP", "true");
-		stubAuthApi(null);
+		stubApi(null);
 
 		const { router } = renderAt("/signup");
 		await userEvent.type(

@@ -21,7 +21,7 @@ export type ApiHandler = (url: URL) => Promise<Response> | Response | undefined;
  * then on; a successful sign-in or sign-up flips it to a session, as a real one would. The project
  * list answers empty unless `api` answers it.
  */
-export function stubAuthApi(initial: Session, api?: ApiHandler) {
+export function stubApi(initial: Session, api?: ApiHandler) {
 	let session = initial;
 	const fetchMock = vi.fn((input: RequestInfo | URL) => {
 		const url = new URL(String(input), "http://localhost");
