@@ -11,6 +11,6 @@ setup("authenticate as an org admin", async ({ page }) => {
 	await page.getByLabel("Senha", { exact: true }).fill(SEED_PASSWORD);
 	await page.getByRole("button", { name: "Entrar" }).click();
 
-	await expect(page).toHaveURL("/");
+	await expect(page).toHaveURL("/projects");
 	await page.context().storageState({ path: ADMIN_STORAGE_STATE });
 });

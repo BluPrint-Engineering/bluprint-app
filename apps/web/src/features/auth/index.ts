@@ -2,6 +2,7 @@ export {
 	discardSession,
 	peekSession,
 	sessionQueryOptions,
+	signOut,
 } from "./api";
 export { AuthShell } from "./components/AuthShell";
 export { SessionCheckFailed } from "./components/SessionCheckFailed";

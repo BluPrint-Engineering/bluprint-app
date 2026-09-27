@@ -25,7 +25,7 @@ test.describe("signed out", () => {
 			.click();
 		await page.getByRole("button", { name: "Criar conta" }).click();
 
-		await expect(page).toHaveURL("/");
+		await expect(page).toHaveURL("/projects");
 
 		const cookies = await page.context().cookies();
 		const sessionCookie = cookies.find(

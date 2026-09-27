@@ -34,3 +34,9 @@ export function peekSession(queryClient: QueryClient) {
 		.query({ ...sessionQueryOptions, retry: false })
 		.catch(() => null);
 }
+
+/** Ends the session on the server; throws when it could not, so the person is never told they left while still signed in. */
+export async function signOut() {
+	const { error } = await authClient.signOut();
+	if (error) throw new Error(error.message ?? "Sign-out failed");
+}

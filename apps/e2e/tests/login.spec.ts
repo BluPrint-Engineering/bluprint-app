@@ -15,7 +15,7 @@ test.describe("signed out", () => {
 		await page.getByLabel("Senha", { exact: true }).fill(SEED_PASSWORD);
 		await page.getByRole("button", { name: "Entrar" }).click();
 
-		await expect(page).toHaveURL("/");
+		await expect(page).toHaveURL("/projects");
 
 		const cookies = await page.context().cookies();
 		const sessionCookie = cookies.find(
@@ -34,9 +34,9 @@ test.describe("signed out, opening a protected screen", () => {
 	test("lands on the login, remembering where it was going", async ({
 		page,
 	}) => {
-		await page.goto("/");
+		await page.goto("/projects");
 
-		await expect(page).toHaveURL("/login?redirect=%2F");
+		await expect(page).toHaveURL("/login?redirect=%2Fprojects");
 		await expect(page.getByLabel("E-mail")).toBeVisible();
 	});
 });
@@ -47,7 +47,7 @@ test.describe("already signed in", () => {
 	}) => {
 		await page.goto("/login");
 
-		await expect(page).toHaveURL("/");
+		await expect(page).toHaveURL("/projects");
 
 		await page.reload();
 		const session = await page.request.get("/api/auth/get-session");

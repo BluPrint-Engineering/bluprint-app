@@ -23,5 +23,5 @@ export function useTheme() {
 		}
 	}, [dark]);
 
-	return { dark, toggle: () => setDark((shown) => !shown) };
+	return { dark, setDark, toggle: () => setDark((shown) => !shown) };
 }
