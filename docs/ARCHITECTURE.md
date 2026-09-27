@@ -26,8 +26,9 @@ A screen's handoff in `docs/design/screens/<screen>/` is a high-fidelity referen
 ### `apps/web/src`
 
 ```
-routes/          TanStack Router file-based route tree
-features/<x>/    everything that belongs to ONE screen: components, hooks, api.ts; barrel at the root
+routes/          TanStack Router file-based route tree, one folder per route: <segment>/route.tsx + route.test.tsx
+features/<x>/    everything that belongs to ONE feature: api.ts, what its pages share in components/; barrel at the root
+features/<x>/<Page>/  one page: <Page>.tsx, its test, and what only that page uses
 components/ui/   shadcn/ui, added by the CLI then adjusted to the design system's tokens
 components/      reusable components used by 2+ features
 lib/             stateful or talks to the world: HTTP client, the app factory (QueryClient + router), cn()
@@ -35,8 +36,8 @@ utils/           pure functions, no state or I/O
 styles/          globals.css: Tailwind and theme tokens
 ```
 
-- **A route file is thin**: `validateSearch`, `loader`, `beforeLoad` (auth guard) and `errorComponent` live there; rendering is imported from `features/`. `routes/` includes `__root.tsx` and layout routes that render no UI of their own.
-- **A component moves from `features/<x>/` to `components/` when a second feature needs it**, never before; that is what keeps everything in `components/` reusable by definition.
+- **A route file is thin**: `validateSearch`, `loader`, `beforeLoad` (auth guard) and `errorComponent` live there; rendering is imported from `features/`. `routes/` includes `__root.tsx` and layout routes that render no UI of their own. A route with children keeps its `route.tsx` in the same folder as them; `index.tsx` is only ever an index route ([0053](adr/0053-folder-per-page-and-per-route.md)).
+- **A file climbs one level only when a second consumer needs it**: from `features/<x>/<Page>/` to `features/<x>/components/` when a second page does, and from there to `components/` when a second feature does, never before; that is what keeps everything in `components/` reusable by definition.
 - **API calls and TanStack Query hooks** live in `features/<x>/api.ts`, using `queryOptions` and `apiFetch` from `src/lib/api.ts`.
 - **A type or schema moves to `packages/shared` when the web app and the API must agree on it** (a request/response contract, a domain enum). A form's validation schema stays in its feature.
 - `index.html` is the entry point Vite processes, not a static asset.
@@ -148,7 +149,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 - **End-to-end**: `apps/e2e`, Playwright against the built app on `iPhone 13` (WebKit) and `Desktop Chrome`, its own `bluprint_e2e` database and ports ([0050](adr/0050-playwright-for-end-to-end.md)). `bun run e2e` builds first, prepares the database (`prepare-database.ts`, since Playwright starts its servers before its own `globalSetup` would run), then runs Playwright; running `playwright test` directly skips that preparation. CI publishes the HTML report and screenshots as the `playwright-report` artifact.
 - **Migrations**: `drizzle-kit migrate` only reads `DATABASE_URL`. After pulling a new migration, run it against `DATABASE_URL_TEST` too, or `test:int` fails with `relation ... does not exist` while CI is green.
 - **Lint/format**: Biome in web and shared; ESLint + Prettier in the API ([0008](adr/0008-eslint-in-api-biome-elsewhere.md)).
-- **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Two tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), and `routes/` follows TanStack Router syntax (`admin.dashboard.tsx`, `$projectId.tsx`: a dot separates segments, `$` marks a parameter).
+- **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Two tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), and `routes/` follows TanStack Router syntax (a folder per segment, `$projectId/` for a parameter, `route.tsx` for the route itself and `index.tsx` for an index route).
 - **Commits**: Conventional Commits in the imperative, `type(scope): subject`. Scope is the workspace (`api`, `web`, `shared`), omitted for repo-wide changes. Types in use: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `ci`. The body explains why, not what. A `commit-msg` git hook enforces the type list ([0045](adr/0045-local-git-hooks-with-lefthook.md)); adding a type means updating both this line and `lefthook.yml`'s `COMMIT_TYPES`.
 - **Branches**: `type/[issue-]slug`, same types as commits (`feat/66-agent-guardrails`, `chore/worktree-cleanup`). `main` is exempt. A `pre-push` hook enforces the pattern ([0048](adr/0048-hooks-enforce-agent-guardrails.md)), sharing `lefthook.yml`'s `COMMIT_TYPES` with the commit-msg check above.
 - **Local git hooks**: Lefthook ([0045](adr/0045-local-git-hooks-with-lefthook.md)), installed by `bun install`. Lint on commit (staged files only), branch name + typecheck + unit tests on push. CI ([0018](adr/0018-ci-runs-root-scripts.md)) is still the real gate; a Claude Code hook blocks agents from `--no-verify`/`LEFTHOOK=0` ([0048](adr/0048-hooks-enforce-agent-guardrails.md)), a human still can.

@@ -15,8 +15,8 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth";
-import { authCardClassName } from "./components/AuthShell";
-import { PasswordInput } from "./components/PasswordInput";
+import { authCardClassName } from "../components/AuthShell";
+import { PasswordInput } from "../components/PasswordInput";
 import { signInErrorMessage } from "./signInErrorMessage";
 
 const loginFormSchema = z.object({
