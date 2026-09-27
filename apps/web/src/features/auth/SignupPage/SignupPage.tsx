@@ -27,8 +27,8 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { authClient } from "@/lib/auth";
-import { authCardClassName } from "./components/AuthShell";
-import { PasswordInput } from "./components/PasswordInput";
+import { authCardClassName } from "../components/AuthShell";
+import { PasswordInput } from "../components/PasswordInput";
 import {
 	EMAIL_TAKEN_CODE,
 	PASSWORD_TOO_GUESSABLE_MESSAGE,

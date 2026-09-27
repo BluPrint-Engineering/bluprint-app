@@ -20,7 +20,7 @@ export default defineConfig(({ mode }) => {
 
 	return {
 		plugins: [
-			// a route file's own test lives beside it, e.g. routes/login.test.tsx
+			// a route file's own test lives beside it, e.g. routes/login/route.test.tsx
 			tanstackRouter({ routeFileIgnorePattern: "\\.test\\.tsx$" }),
 			react(),
 			tailwindcss(),
