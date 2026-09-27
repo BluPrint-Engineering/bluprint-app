@@ -12,17 +12,12 @@ Skeleton, Spinner, Toast/Toaster. No primitive or icon was added.
 ## Where it lands in `apps/web`
 
 ```
-src/routes/_authenticated/index.tsx      ← "/" becomes a redirect to "/projects" (landing page later)
-src/routes/_authenticated/projects.tsx   ← new route; validateSearch for q, status, manager, sort, page
+src/routes/_authenticated/index.tsx         ← "/" becomes a redirect to "/projects"; no product route lives at "/"
+src/routes/_authenticated/projects/index.tsx ← new index route; validateSearch for q, status, manager, sort, page
 src/features/projects/
-  ProjectsPage.tsx                       ← this screen
-  components/AppHeader.tsx               ← logo + user menu (reused by every signed-in screen)
-  components/UserMenu.tsx                ← name, e-mail, Tema, Sair
-  components/ProjectCard.tsx
-  components/ProjectsToolbar.tsx         ← desktop inline toolbar
-  components/ProjectsFilterSheet.tsx     ← mobile bottom sheet (shadcn drawer)
-  components/NewProjectAction.tsx        ← button + license count; hidden for non-admins
-  api.ts                                 ← useProjectsQuery (TanStack Query, keyed by the search params)
+  api.ts                                    ← projects, organization and managers queries
+  ProjectsPage/                             ← this screen, with AppHeader, UserMenu, ProjectCard,
+                                              ProjectsToolbar and ProjectsFilterSheet (ADR 0053)
 src/components/ui/                       ← avatar, badge, skeleton, sonner, dropdown-menu, drawer,
                                            pagination, toggle-group (bunx shadcn add), per the DS HANDOFF
 ```
@@ -31,8 +26,8 @@ A card links to `/projects/$projectId` (not designed yet). "Nova obra" links to 
 
 ## URL
 
-`/projects?q=torre&status=entregue&manager=<userId>&sort=pendencias&page=2`. Defaults are omitted:
-`status=andamento`, `manager` = all, `sort=recentes`, `page=1`. Changing search, a filter or the sort resets
+`/projects?q=torre&status=delivered&manager=<userId>&sort=open-pins&page=2`, English values as in the API.
+Defaults are omitted: `status=active`, `manager` = all, `sort=recent`, `page=1`. Changing search, a filter or the sort resets
 `page`. Returning from a project restores the same page, filters and search. The prototype writes these
 params with `history.replaceState` when opened on its own.
 
@@ -48,8 +43,8 @@ params with `history.replaceState` when opened on its own.
   fixed bottom bar, always visible and in thumb reach; the toast is lifted above it. The `ctaPlacement="title"`
   prop is kept only as a record of the rejected option.
 - **Licenses show only what is free**: "2 licenças disponíveis" / "1 licença disponível". A license is consumed
-  when an obra is created and never returns, so the total bought is not shown. Zero reads "Sem licenças
-  disponíveis. Fale com a BluPrint." and disables the button.
+  when an obra is created and no obra is ever deleted, so the total bought is not shown. Zero reads "Sem licenças
+  disponíveis. Fale com a BluPrint." and disables the button. Button, count and no-license state ship with #46.
 - **Role on the card only when it varies.** An admin has the same role in every obra, so the card does not
   repeat it; "Admin da construtora" appears once, in the user menu under the e-mail. Managers and assistants
   see their role in that obra (Gerente de obra / Assistente de obra) as a muted line under the name.
@@ -62,7 +57,7 @@ params with `history.replaceState` when opened on its own.
 ## States (QA ids)
 
 O1 carregando · O2 com obras, admin · O3 com obras, gerente/assistente · O4 admin sem licença · O5 vazio,
-admin · O6 vazio, admin sem licença · O7 vazio, gerente/assistente · O8 sem resultados · O9 erro ao carregar ·
+admin · O6 vazio, admin sem licença · O7 vazio, gerente/assistente · O8a nenhuma em andamento ("Ver entregues") · O8 sem resultados · O9 erro ao carregar ·
 O10 sem conexão (resumes on the `online` event, no button) · O11 carregando mais (mobile) · O12 erro ao
 carregar mais (mobile) · O13 trocando de página (desktop) · O14 filtros abertos (mobile) · O15 menu do usuário ·
 O16 saindo (spinner on Sair, menu locked) · O17 falha ao sair (toast, user stays signed in).
@@ -71,39 +66,21 @@ Sign-out has no confirmation. On success it goes to `/login`.
 
 ## What the API serves today vs. what is future
 
-The API currently returns the member's projects (id, name, the user's role). Everything below needs a
-ticket before the screen can show it; until then the UI hides the element rather than faking it.
-
-| Element | Status |
-| --- | --- |
-| List of obras the user belongs to, name, the user's role | **Served** |
-| Admin sees every obra of the organization | Future |
-| Search by name (`q`) | Future — server-side, so it works across pages |
-| Status (Em andamento / Entregue) and its filter | Future — needs a project status field |
-| Gerente responsável filter (admin) | Future — needs the responsible manager on the project |
-| Sort: Nome A–Z | Future (trivial) · Mais pendências abertas, Atividade recente — Future |
-| Open pins count ("42 pendências abertas") | Future — aggregate on pins |
-| Last activity ("Atividade há 2 h") | Future — `lastActivityAt` on the project |
-| Pagination (`page`, `pageSize=12`, total count) | Future |
-| Available license count ("2 licenças disponíveis") and the no-license state | Future — organization licenses (only the available count is needed) |
-| "Nova obra" entry point | Future — the form is #46 |
-| Profile photo in the Avatar | Future — initials until upload exists |
+The full table, with what the list spec (#94) adds and what waits for #7 and #46, is in `README.md`.
 
 ## Copy (pt-BR, verbatim)
 
 Obras · "N obras" / "1 obra" · Nova obra · "N licenças disponíveis" / "1 licença disponível" · "Sem licenças disponíveis. Fale com
-a BluPrint." · Buscar obra · Filtros · Status: Em andamento, Entregue, Todas · Gerente responsável ·
+a BluPrint." · Buscar obra · Filtros · Status: Em andamento, Entregue, Todas · Gerente ·
 Ordenar: Mais recentes, Nome A–Z, Mais pendências abertas, Atividade recente · Limpar filtros ·
 "Ver N obras" · "N pendências abertas" / "1 pendência aberta" / "Nenhuma pendência aberta" ·
 "Atividade há 25 min / 2 h / 3 dias" · Nenhuma obra ainda · "Crie a primeira obra da construtora para
 começar a mapear pendências." · Nenhuma obra por aqui · "Você verá uma obra aqui quando o admin da
 construtora te vincular a ela." · Nenhuma obra encontrada · "Nenhum resultado para “brisa” em obras em
-andamento." · Não foi possível carregar suas obras · Confira sua conexão e tente de novo. · Tentar de novo ·
+andamento." · Nenhuma obra em andamento · Ver entregues · Não foi possível carregar suas obras · Confira sua conexão e tente de novo. · Tentar de novo ·
 Sem conexão. · Continuamos assim que a internet voltar. · Carregar mais · Carregando mais obras… ·
 Não foi possível carregar mais obras. · Mostrando 1–12 de 26 · Tema · Sair · "Não foi possível sair.
 Confira sua conexão e tente de novo."
-
-The admin empty-state sentence ("Crie a primeira obra…") was not in the brief; review it.
 
 ## Notes for the build
 

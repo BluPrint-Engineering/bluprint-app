@@ -33,27 +33,33 @@ pixel, using the design tokens by name (they already exist in, or go into, `apps
 ## Route and files in `apps/web`
 
 ```
-src/routes/_authenticated/index.tsx      ← "/" becomes redirect({ to: "/projects" }) (landing page later)
-src/routes/_authenticated/projects.tsx   ← new route, validateSearch for q, status, manager, sort, page
+src/routes/_authenticated/index.tsx         ← "/" becomes redirect({ to: "/projects" }); no product route lives at "/"
+src/routes/_authenticated/projects/index.tsx ← new index route, validateSearch for q, status, manager, sort, page
 src/features/projects/
-  ProjectsPage.tsx
-  components/AppHeader.tsx               ← logo + user menu, reused by every signed-in screen
-  components/UserMenu.tsx
-  components/ProjectCard.tsx
-  components/ProjectsToolbar.tsx         ← desktop inline toolbar
-  components/ProjectsFilterSheet.tsx     ← mobile bottom sheet (shadcn drawer)
-  components/NewProjectAction.tsx        ← button + available licenses; rendered only for admins
-  api.ts                                 ← useProjectsQuery, keyed by the search params
+  api.ts                                    ← projects, organization and managers queries, keyed by the search params
+  ProjectsPage/
+    ProjectsPage.tsx
+    AppHeader.tsx                           ← logo + user menu; climbs when the project screen needs it
+    UserMenu.tsx
+    ProjectCard.tsx
+    ProjectsToolbar.tsx                     ← desktop inline toolbar
+    ProjectsFilterSheet.tsx                 ← mobile bottom sheet (shadcn drawer)
 ```
 
-The login already pushes `redirect ?? "/"` on success (`src/routes/login.tsx`), so the redirect in
+Files follow ADR 0053: everything starts in the page folder and climbs only when a second page or feature
+needs it. `useTheme` climbs out of `features/auth/` now, since the user menu is its second consumer.
+`NewProjectAction` (button + available licenses) ships with #46, not with the list.
+
+The login already pushes `redirect ?? "/"` on success (`src/routes/login/route.tsx`), so the redirect in
 `_authenticated/index.tsx` is the only change on the auth side.
 
 ### URL
 
-`/projects?q=torre&status=entregue&manager=<userId>&sort=pendencias&page=2`
+`/projects?q=torre&status=delivered&manager=<userId>&sort=open-pins&page=2`
 
-- Defaults are omitted: `status=andamento`, `manager` = all, `sort=recentes`, `page=1`.
+- Values are English, the same enums as the API: `status` = `active | delivered | all`, `sort` =
+  `recent | name | activity | open-pins`.
+- Defaults are omitted: `status=active`, `manager` = all, `sort=recent`, `page=1`.
 - Changing the search, a filter or the sort resets `page` to 1.
 - Returning from a project restores the same page, filters and search (they live in the URL).
 - `manager` is ignored for non-admins.
@@ -112,9 +118,11 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
    clear (X) button when there is text.
 2. SegmentedControl `sm` (30px segments): **Em andamento** (default) · **Entregue** · **Todas**.
 3. Admin only: outline `sm` button "Gerente: Todos ▾" → DropdownMenu (align start, 264px) with label
-   "Gerente responsável" and radio items "Todos os gerentes", then each manager.
+   "Gerente" and radio items "Todos os gerentes", then each manager. A manager is anyone who is gerente de
+   obra in at least one obra of the organization; the filter keeps the obras where that person is gerente.
 4. Outline `sm` button "Ordenar: Mais recentes ▾" → DropdownMenu with label "Ordenar" and radio items
    **Mais recentes** (default) · **Nome A–Z** · **Mais pendências abertas** · **Atividade recente**.
+   "Mais pendências abertas" is hidden until pins exist (#7).
    In the trigger the key ("Gerente:", "Ordenar:") is `--muted-foreground`, the value `--foreground`, gap 6px.
 5. When anything is active (search, status ≠ Em andamento, gerente ≠ todos): ghost `sm` "Limpar filtros"
    with `x` icon 16px.
@@ -134,7 +142,7 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
 - Title "Filtros", description "2 filtros ativos" / "1 filtro ativo" / "Nenhum filtro ativo", close X (44px).
 - Body, gap 24px:
   - "Status" (14px/500) + SegmentedControl `md` full width (44px segments).
-  - Admin: "Gerente responsável" + radio list (44px rows, trailing `check` 18px in `--primary`).
+  - Admin: "Gerente" + radio list (44px rows, trailing `check` 18px in `--primary`).
   - "Ordenar" + radio list with the four options.
 - Sticky footer, `border-top`: outline "Limpar filtros" (disabled at 0 active) + primary full-width
   "Ver N obras".
@@ -154,9 +162,13 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
   2. Footer row: `border-top: 1px solid --border`, padding-top 12px, `space-between`, baseline, 14px:
      - Left: open pins, 500 weight, tabular numbers: "42 pendências abertas" / "1 pendência aberta" /
        "Nenhuma pendência aberta". Color `--foreground`, or `--muted-foreground` when 0 or the obra is delivered.
-     - Right: "Atividade há 25 min" / "há 2 h" / "há 3 dias", `--muted-foreground`.
+     - Right: "Atividade há 25 min" / "há 2 h" / "há 3 dias", `--muted-foreground`. Last activity is the
+       latest change to the obra's content (pins, photos, plans, structure); creating the obra counts, so a
+       new obra reads its creation time.
+     - The open-pin count is hidden until pins exist (#7).
 - **Delivered obra**: quieter, not disabled. Card background transparent (hairline ring only), neutral
-  badge, muted pin count. Still opens the obra and can still be exported, but takes no new pins.
+  badge, muted pin count. Still opens the obra and exports reports; its content is frozen until a gerente
+  or admin reopens it (RF-216).
 - Not on the card: organization name, cover photo, chevron.
 - States: hover adds `box-shadow: 0 0 0 1px --input` on the link (radius 14px); focus-visible
   `--shadow-focus`; active `translateY(1px)`. Transition 120ms.
@@ -192,8 +204,8 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
   background `--background`, padding `12px 16px calc(12px + env(safe-area-inset-bottom))`, gap 8px:
   centered "N licenças disponíveis" (14px muted) above a full-width `lg` (52px) primary "Nova obra" with `plus`.
 - **Licenses**: only the available count is shown: "2 licenças disponíveis" / "1 licença disponível". A
-  license is consumed when an obra is created and does not come back, so the total bought is irrelevant and
-  is not shown.
+  license is consumed when an obra is created and no obra is ever deleted, so the total bought is not shown.
+- The button, the license count and the no-license state ship with #46, together with the form.
 - **No license**: button disabled (50% opacity) and the text becomes "Sem licenças disponíveis. Fale com a
   BluPrint."
 - The bar shows while loading, with results, and in no-results. In the admin empty state the action moves
@@ -224,6 +236,7 @@ centered, gap 16px, padding-block 48px mobile / 64px desktop, icon 24px `--muted
 | O5 | Vazio, admin | `building` · "Nenhuma obra ainda" · "Crie a primeira obra da construtora para começar a mapear pendências." · `lg` "Nova obra" (full width on mobile) + licenses under it. No toolbar. |
 | O6 | Vazio, admin sem licença | Same, button disabled, no-license text. |
 | O7 | Vazio, gerente / assistente | `building` · "Nenhuma obra por aqui" · "Você verá uma obra aqui quando o admin da construtora te vincular a ela." No action. |
+| O8a | Nenhuma em andamento | With the default filters and no search, the person has obras but none em andamento: `building` · "Nenhuma obra em andamento" · outline "Ver entregues" (sets `status=delivered`). Needs `counts` from the API. |
 | O8 | Sem resultados | `search` · "Nenhuma obra encontrada" · "Nenhum resultado para “brisa” em obras em andamento." (the scope follows status and gerente) · outline "Limpar filtros" (clears search, status, gerente). |
 | O9 | Erro ao carregar | `circle-alert` · "Não foi possível carregar suas obras" · "Confira sua conexão e tente de novo." · `lg` "Tentar de novo". `role="alert"`. |
 | O10 | Sem conexão | `wifi-off` · "Sem conexão." · "Continuamos assim que a internet voltar." No button; resumes on the browser `online` event (TanStack Query `onlineManager`, as in `SessionSplash`). |
@@ -239,30 +252,33 @@ centered, gap 16px, padding-block 48px mobile / 64px desktop, icon 24px `--muted
 
 - **URL search params** (source of truth): `q`, `status`, `manager`, `sort`, `page`.
 - **Server state** (TanStack Query): `useProjectsQuery({ q, status, manager, sort, page, pageSize: 12 })`
-  → `{ items, total, availableLicenses }`. Mobile uses `useInfiniteQuery` with the same key minus `page`.
+  → `{ items, total, counts: { active, delivered } }`. Desktop shows page N; mobile uses `useInfiniteQuery`
+  with the same key minus `page` and appends pages as the list scrolls.
   Search is debounced (~250ms) before it hits the URL and the query.
 - **Local UI state**: filter sheet open, user menu open, signing out, toast.
-- Role comes from the session: `admin` sees all obras, the gerente filter and Nova obra; others don't.
+- The organization role comes from `GET /api/organization` → `{ id, name, role }`: `admin` sees the gerente
+  filter, Nova obra, the admin empty state and "Admin da construtora" in the user menu; others don't. It
+  only switches UI, the API still authorizes. Available licenses come from `GET /api/organization/licenses`.
+- Theme reuses `useTheme` (localStorage `bp-theme`, applied before first paint by `index.html`).
+- Avatar shows `user.image` when set, otherwise the initials of the first and last name.
 
 ## What the API serves today vs. what is future
 
-The API returns today the member's projects with id, name and the user's role. Everything else needs a
-ticket; until it lands the UI **hides the element** instead of faking it.
+`GET /api/projects` returns today every obra the person can see (an admin sees the whole organization),
+with id, name, createdAt and the person's role, as a bare array. The rest is sliced under the list spec
+issue (#94); until an element lands the UI **hides it** instead of faking it.
 
 | Element | Status |
 | --- | --- |
-| Obras the user belongs to, name, the user's role | Served |
-| Admin sees every obra of the organization | Future |
-| Search by name (`q`), server-side | Future |
-| Status (Em andamento / Entregue) and its filter | Future — project status field |
-| Gerente responsável filter (admin) | Future — responsible manager on the project |
-| Sort: Nome A–Z (trivial), Mais pendências abertas, Atividade recente | Future |
-| Open pin count | Future — aggregate on pins |
-| Last activity | Future — `lastActivityAt` on the project |
-| Pagination (`page`, `pageSize`, `total`) | Future |
-| Available license count and no-license state | Future — organization licenses (only the available count) |
-| Nova obra entry point | Future — form is #46 |
-| Profile photo in the Avatar | Future — initials until upload exists |
+| Obras the person can see (admin: the whole organization), name, role | Served |
+| Organization role (`GET /api/organization`) | #94 |
+| Pagination (`page`, `pageSize`, `total`), search (`q`, accent- and case-insensitive) | #94 |
+| Status (`active` / `delivered`), its badge and filter, `counts` | #94 — marking an obra delivered lives on the obra screen |
+| Gerente filter (admin), `GET /api/projects/managers` | #94 — derived from project membership |
+| Sort `recent`, `name`, `activity`; last activity on the card | #94 — `lastActivityAt`, set at creation |
+| Open pin count, sort `open-pins` | #7 — needs pins |
+| Available license count, no-license state, Nova obra | #46 — `GET /api/organization/licenses` |
+| Profile photo in the Avatar | Shown when `user.image` is set; upload is out of scope |
 
 ## Interactions and motion
 
@@ -346,5 +362,3 @@ No images. Icons are lucide, from `lucide-react`: `search`, `sliders-horizontal`
    the prototype. The app already uses `wordmark-white.svg` directly, so nothing to do in `apps/web`, but the
    design system should gain the variant.
 2. The Card title sizes differ between Entrar (16px/500) and Criar conta (28px/500) in the current code.
-3. The admin empty-state sentence ("Crie a primeira obra da construtora para começar a mapear pendências.")
-   was written in this session, not in the brief.

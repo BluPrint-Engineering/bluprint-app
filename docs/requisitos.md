@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 01/09/2026 — revisão de RF-405, RF-412, RF-414, RF-508, RF-702, RF-704, RF-706 e RF-707, mais o novo RF-808.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 27/09/2026 — novos RF-139 a RF-142, RF-215 e RF-216, da spec da lista de obras.
 
 ---
 
@@ -102,6 +102,10 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-136 | Gestão de pessoas: reenviar ou cancelar convite pendente, remover alguém de uma obra ou da organização, alterar papel padrão e alterar o papel numa obra específica | S |
 | RF-137 | Usuário sai de uma obra por conta própria | S |
 | RF-138 | Aviso ao vincular alguém a uma obra com papel diferente do padrão ("o Gui está cadastrado como assistente — confirmar como gerente nesta obra?") | S |
+| RF-139 | A pessoa pertence a **uma única organização** e só é vinculada a obras dela. Convite de outra organização para quem já tem vínculo é recusado; para mudar de construtora, a atual remove a pessoa (RF-136) e a nova a convida, com a mesma conta | M |
+| RF-140 | Cada obra da lista mostra nome, status, pendências abertas e última atividade, mais o papel da pessoa quando ele varia entre as obras (gerente e assistente; o admin tem o mesmo papel em todas) | M |
+| RF-141 | A lista de obras tem busca pelo nome (sem diferenciar acento nem maiúscula), filtro de status (padrão: em andamento) e paginação; busca, filtros, ordenação e página ficam no endereço, e um link compartilhado reabre a mesma visão | M |
+| RF-142 | Na lista de obras, o admin filtra por gerente (quem é gerente de obra em pelo menos uma obra), e todos ordenam por mais recentes, nome, atividade recente ou mais pendências abertas | S |
 
 ## 2. Configuração da obra
 
@@ -121,6 +125,8 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-212 | O item arquivado registra quem arquivou e quando; a restauração é feita por gerente de obra ou admin | M |
 | RF-213 | Cômodo em uso por algum pin não pode ser excluído. Pode ser **renomeado**, e o novo nome se propaga aos pins e aos relatórios | M |
 | RF-214 | Exclusão definitiva de um item arquivado, restrita a gerente de obra e admin, com confirmação que informa exatamente o que será perdido ("12 pins, 8 fotos, 2 plantas") | S |
+| RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin marca a obra como entregue e pode reabri-la | M |
+| RF-216 | Obra **entregue** fica congelada: ninguém cria, edita, conclui ou exclui pin, foto, planta ou estrutura até ela ser reaberta. Relatórios são exportados em qualquer status | M |
 
 ## 3. Empresas executoras
 

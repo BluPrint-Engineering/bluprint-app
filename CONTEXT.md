@@ -17,8 +17,15 @@ The right to create one project, owned by the organization and never by a person
 One construction development, enabled by one license. Ex.: Casa Moinhos.
 _Avoid_: site, work, construction
 
+**Project status** (pt-BR: *status da obra*):
+Either *active* (*em andamento*) or *delivered* (*entregue*), set and reverted by an admin or a manager. A delivered project's content is frozen until it is reopened; reports export in either status.
+_Avoid_: archived, finished, closed
+
+**Last activity** (pt-BR: *última atividade*):
+When anyone last changed a project's operational content: pins, photos, plans or structure. Reading and exporting are not activity.
+
 **Organization membership** (pt-BR: *vínculo com a organização*; table `member`):
-A person's link to an organization; holds their default role.
+A person's link to an organization; holds their default role. A person has at most one, and joins only projects of that organization.
 _Avoid_: vínculo
 
 **Project membership** (pt-BR: *vínculo com a obra*; table `project_member`):
