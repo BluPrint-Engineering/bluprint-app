@@ -8,7 +8,13 @@ import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 import { DATABASE, Database } from "../db/database.module";
-import { member, project, projectMember, user } from "../db/schema";
+import {
+	member,
+	organization,
+	project,
+	projectMember,
+	user,
+} from "../db/schema";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const PASSWORD = "senha-de-obra-123";
@@ -74,6 +80,13 @@ beforeAll(async () => {
 	projectOne = created[0]!.id;
 	projectTwo = created[1]!.id;
 	projectThree = created[2]!.id;
+
+	// sign-up gave each its own organization; one per person (RF-139), so it goes before they join this one
+	for (const { userId } of [linked, unlinked]) {
+		await db
+			.delete(organization)
+			.where(eq(organization.id, await organizationOf(userId)));
+	}
 
 	// linked's access and roles come from project_member below, never this organization membership
 	await db.insert(member).values({

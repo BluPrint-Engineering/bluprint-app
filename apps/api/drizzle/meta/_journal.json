@@ -29,6 +29,13 @@
       "when": 1789274662984,
       "tag": "0003_project_project_member",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1790525915766,
+      "tag": "0004_one_organization_per_person",
+      "breakpoints": true
     }
   ]
 }
