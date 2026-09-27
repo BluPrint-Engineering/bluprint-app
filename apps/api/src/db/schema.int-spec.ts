@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 import { DATABASE, Database } from "./database.module";
@@ -93,6 +93,40 @@ describe("member", () => {
 		expect(found?.role).toBe("admin");
 		expect(found?.userId).toBe(userId);
 		expect(found?.organizationId).toBe(organizationId);
+	});
+
+	test("rejects a second organization membership for the same person (RF-139)", async () => {
+		const personId = `test-user-${randomUUID()}`;
+		await db.insert(user).values({
+			id: personId,
+			name: "Engenheira Disputada",
+			email: `${randomUUID()}@example.com`,
+		});
+		const [first, second] = await db
+			.insert(organization)
+			.values([{ name: "Primeira Construtora" }, { name: "Outra Construtora" }])
+			.returning({ id: organization.id });
+
+		try {
+			await db
+				.insert(member)
+				.values({ organizationId: first!.id, userId: personId, role: "admin" });
+
+			await expect(
+				db.insert(member).values({
+					organizationId: second!.id,
+					userId: personId,
+					role: "manager",
+				}),
+			).rejects.toMatchObject({
+				cause: { code: "23505", constraint: "member_user_id_uidx" },
+			});
+		} finally {
+			await db.delete(user).where(eq(user.id, personId));
+			await db
+				.delete(organization)
+				.where(inArray(organization.id, [first!.id, second!.id]));
+		}
 	});
 });
 

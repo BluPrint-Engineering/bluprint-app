@@ -28,10 +28,11 @@ export class ProjectsService {
 
 	@Transactional()
 	async create(userId: string, name: string): Promise<ProjectSummary> {
-		const organizationId = await this.members.findAdminOrganizationId(userId);
-		if (!organizationId) {
+		const membership = await this.members.findByUser(userId);
+		if (membership?.role !== "admin") {
 			throw new ForbiddenException();
 		}
+		const { organizationId } = membership;
 
 		const project = await this.projects.insert({ organizationId, name });
 
