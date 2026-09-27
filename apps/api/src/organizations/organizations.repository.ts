@@ -1,6 +1,6 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { asc, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { member } from "../members/member.entity";
 import { organization } from "./organization.entity";
@@ -27,10 +27,7 @@ export class OrganizationsRepository {
 			})
 			.from(member)
 			.innerJoin(organization, eq(organization.id, member.organizationId))
-			.where(eq(member.userId, userId))
-			// TODO(#96): a person can still hold two memberships; until then the oldest one answers
-			.orderBy(asc(member.createdAt), asc(member.id))
-			.limit(1);
+			.where(eq(member.userId, userId));
 
 		return found;
 	}
