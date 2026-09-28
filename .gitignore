@@ -17,6 +17,8 @@ playwright-report/
 test-results/
 blob-report/
 **/playwright/.auth/
+# a flow recorded only for a PR video, deleted after the PR opens
+apps/e2e/tests/*.local.spec.ts
 
 # Ambiente
 .env
