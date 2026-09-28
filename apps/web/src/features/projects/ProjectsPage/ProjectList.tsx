@@ -17,11 +17,18 @@ interface ProjectsMainProps {
 	/** Of the whole list, not of what is on screen; `undefined` until it lands. */
 	total: number | undefined;
 	counting: boolean;
+	/** Between the title and the list; left out where there is nothing to sort or filter. */
+	toolbar?: React.ReactNode;
 	children: React.ReactNode;
 }
 
-/** The page around the list: the title with the count, then the list or what stands in for it. */
-export function ProjectsMain({ total, counting, children }: ProjectsMainProps) {
+/** The page around the list: the title with the count, the toolbar, then the list or what stands in for it. */
+export function ProjectsMain({
+	total,
+	counting,
+	toolbar,
+	children,
+}: ProjectsMainProps) {
 	return (
 		<main className="mx-auto flex w-full flex-1 max-w-(--content-max-wide) flex-col gap-(--space-4) px-(--page-pad) pt-(--space-5) pb-(--space-8) md:gap-(--space-5) md:px-(--page-pad-desktop) md:pt-(--space-8) md:pb-(--space-12)">
 			<div className="flex min-h-(--tap-min) min-w-0 items-baseline gap-(--space-3)">
@@ -37,6 +44,7 @@ export function ProjectsMain({ total, counting, children }: ProjectsMainProps) {
 					counting && <Skeleton className="h-4.5 w-16 self-center" />
 				)}
 			</div>
+			{toolbar}
 			{children}
 		</main>
 	);
@@ -49,9 +57,19 @@ interface FirstLoad {
 	refetch: () => unknown;
 }
 
+export function firstLoadState(
+	query: FirstLoad,
+): "loading" | "failed" | "offline" {
+	if (query.isError && !query.isFetching) return "failed";
+	// paused, not failed: TanStack Query resumes the request when the connection returns
+	if (query.fetchStatus === "paused") return "offline";
+	return "loading";
+}
+
 /** Stands in for the list until its first page lands: loading, failed or waiting for the connection. */
 export function ListPlaceholder({ query }: { query: FirstLoad }) {
-	if (query.isError && !query.isFetching) {
+	const state = firstLoadState(query);
+	if (state === "failed") {
 		return (
 			<StateBlock
 				role="alert"
@@ -65,8 +83,7 @@ export function ListPlaceholder({ query }: { query: FirstLoad }) {
 			</StateBlock>
 		);
 	}
-	if (query.fetchStatus === "paused") {
-		// paused, not failed: TanStack Query resumes the request when the connection returns
+	if (state === "offline") {
 		return (
 			<StateBlock
 				icon={WifiOff}

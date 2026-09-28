@@ -1,25 +1,38 @@
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { CircleAlert, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { projectsInfiniteQueryOptions } from "../api";
+import type { ProjectsFilters } from "./filters";
 import {
+	firstLoadState,
 	ListPlaceholder,
 	NoProjects,
 	ProjectList,
 	ProjectsMain,
 } from "./ProjectList";
+import { ProjectsMobileToolbar } from "./ProjectsToolbar";
+
+interface ContinuousProjectListProps {
+	filters: ProjectsFilters;
+	onFiltersChange: (filters: ProjectsFilters) => void;
+}
 
 /** How far below the screen the end of the list starts loading the next page. */
 const LOAD_AHEAD_PX = 160;
 
 /** The phone's list: the next page loads on its own as the end of the list nears the screen. */
-export function ContinuousProjectList() {
+export function ContinuousProjectList({
+	filters,
+	onFiltersChange,
+}: ContinuousProjectListProps) {
 	const query = useInfiniteQuery({
-		...projectsInfiniteQueryOptions(),
+		...projectsInfiniteQueryOptions(filters),
 		// three retries hold the spinner ~7 s on a weak signal before the retry button shows
 		retry: 1,
+		// a new sort keeps the list on screen, dimmed, until it lands
+		placeholderData: keepPreviousData,
 	});
 	const { data, hasNextPage, fetchNextPage } = query;
 
@@ -69,22 +82,39 @@ export function ContinuousProjectList() {
 			<>
 				{/* wrapped so the sentinel adds no gap of its own under the list */}
 				<div>
-					<ProjectList projects={projects} />
+					<ProjectList projects={projects} busy={query.isPlaceholderData} />
 					<div ref={watchEnd} />
 				</div>
 				<NextPage
 					// paused while offline: the page loads on its own when the connection returns
 					loading={query.isFetchingNextPage || query.fetchStatus === "paused"}
 					failed={query.isFetchNextPageError}
-					hasMore={hasNextPage}
+					// the list on screen is the previous sort's; its next page is not the new one's
+					hasMore={hasNextPage && !query.isPlaceholderData}
 					onLoad={() => void loadNext()}
 				/>
 			</>
 		);
 	}
 
+	const showToolbar = data
+		? total !== undefined && total > 0
+		: firstLoadState(query) === "loading";
+
 	return (
-		<ProjectsMain total={total} counting={query.isFetching}>
+		<ProjectsMain
+			total={total}
+			counting={query.isFetching}
+			toolbar={
+				showToolbar && (
+					<ProjectsMobileToolbar
+						filters={filters}
+						onFiltersChange={onFiltersChange}
+						total={total}
+					/>
+				)
+			}
+		>
 			{content}
 		</ProjectsMain>
 	);

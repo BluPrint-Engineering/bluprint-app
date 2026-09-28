@@ -2,26 +2,33 @@ import { PROJECT_PAGE_SIZE } from "@bluprint/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { projectsQueryOptions } from "../api";
+import type { ProjectsFilters } from "./filters";
 import {
+	firstLoadState,
 	ListPlaceholder,
 	NoProjects,
 	ProjectList,
 	ProjectsMain,
 } from "./ProjectList";
 import { ProjectsPagination } from "./ProjectsPagination";
+import { ProjectsToolbar } from "./ProjectsToolbar";
 
 interface PagedProjectListProps {
 	page: number;
+	filters: ProjectsFilters;
+	onFiltersChange: (filters: ProjectsFilters) => void;
 	onPageChange: (page: number, options?: { replace?: boolean }) => void;
 }
 
 /** The desktop's list: one numbered page at a time, the page kept in the address. */
 export function PagedProjectList({
 	page,
+	filters,
+	onFiltersChange,
 	onPageChange,
 }: PagedProjectListProps) {
 	const query = useQuery({
-		...projectsQueryOptions(page),
+		...projectsQueryOptions({ page, ...filters }),
 		// the page on screen stays, dimmed, until the next one lands
 		placeholderData: keepPreviousData,
 	});
@@ -70,8 +77,24 @@ export function PagedProjectList({
 		);
 	}
 
+	const showToolbar = data
+		? data.total > 0
+		: firstLoadState(query) === "loading";
+
 	return (
-		<ProjectsMain total={data?.total} counting={query.isFetching}>
+		<ProjectsMain
+			total={data?.total}
+			counting={query.isFetching}
+			toolbar={
+				showToolbar && (
+					<ProjectsToolbar
+						filters={filters}
+						onFiltersChange={onFiltersChange}
+						total={data?.total}
+					/>
+				)
+			}
+		>
 			{content}
 		</ProjectsMain>
 	);

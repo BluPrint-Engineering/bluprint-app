@@ -95,7 +95,7 @@ The interface for engineers in the field (phone) and in the office (desktop), mo
 | Framework | React + Vite + Tailwind v4 (`@tailwindcss/vite`) |
 | Routing / data | TanStack Router · TanStack Query v5 |
 | Forms | React Hook Form + Zod v4 |
-| UI | shadcn/ui over Radix · lucide-react |
+| UI | shadcn/ui over Radix (vaul for the drawer) · lucide-react |
 
 ### 3.2 API (`apps/api`)
 
