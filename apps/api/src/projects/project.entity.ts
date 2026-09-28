@@ -23,7 +23,7 @@ export const project = pgTable(
 		// a delivered project is frozen until reopened (ADR 0056)
 		status: projectStatus().notNull().default("active"),
 		createdAt: createdAt(),
-		// every write route on operational content sets it; renaming or changing status does not
+		// starts at creation; a write to operational content must bump it, a rename or status change must not
 		lastActivityAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [index("project_organization_id_idx").on(table.organizationId)],

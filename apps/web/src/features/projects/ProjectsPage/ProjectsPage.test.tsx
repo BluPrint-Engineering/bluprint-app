@@ -403,8 +403,7 @@ describe("projects page", () => {
 	});
 
 	test("sorts by recent activity from the toolbar", async () => {
-		stubProjects(projectsApi(26));
-
+		const { fetchMock } = stubProjects(projectsApi(26));
 		renderAt("/projects");
 		await screen.findByText("Obra 1");
 		await userEvent.click(
@@ -415,6 +414,13 @@ describe("projects page", () => {
 			within(menu).getByRole("menuitemradio", { name: "Atividade recente" }),
 		);
 
+		await waitFor(() => {
+			expect(
+				fetchMock.mock.calls.some(([input]) =>
+					String(input).includes("sort=activity"),
+				),
+			).toBe(true);
+		});
 		await waitFor(() => {
 			expect(
 				screen.getByRole("button", { name: "Ordenar: Atividade recente" }),
