@@ -20,7 +20,6 @@ interface ProjectsPaginationProps {
 	onPageChange: (page: number) => void;
 }
 
-/** Desktop only: on the phone the list shows its first page. */
 export function ProjectsPagination({
 	page,
 	loadingPage,
@@ -35,7 +34,7 @@ export function ProjectsPagination({
 
 	return (
 		// a short page pins the row to the bottom of the screen instead of right under the cards
-		<div className="mt-auto hidden flex-wrap items-center justify-between gap-(--space-4) pt-(--space-2) md:flex">
+		<div className="mt-auto flex flex-wrap items-center justify-between gap-(--space-4) pt-(--space-2)">
 			<span className="text-sm text-muted-foreground tabular-nums">
 				Mostrando {first}–{last} de {total}
 			</span>

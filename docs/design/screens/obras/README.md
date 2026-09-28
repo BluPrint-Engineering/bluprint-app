@@ -139,14 +139,20 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
 ### Filter sheet — mobile (Sheet = shadcn `drawer`)
 
 - Bottom sheet over the `--overlay` scrim, radius 14px on top, `--shadow-lg`, 36 × 4 handle, enter 280ms slide.
-- Title "Filtros", description "2 filtros ativos" / "1 filtro ativo" / "Nenhum filtro ativo", close X (44px).
+- Title "Filtros", description "2 filtros ativos" / "1 filtro ativo" / "Nenhum filtro ativo" (of the choices in
+  the sheet), close X (44px).
 - Body, gap 24px:
   - "Status" (14px/500) + SegmentedControl `md` full width (44px segments).
   - Admin: "Gerente" + radio list (44px rows, trailing `check` 18px in `--primary`).
   - "Ordenar" + radio list with the four options.
-- Sticky footer, `border-top`: outline "Limpar filtros" (disabled at 0 active) + primary full-width
-  "Ver N obras".
-- Filters apply immediately (the list behind updates); "Ver N obras" only closes.
+- Sticky footer, `border-top`: outline "Limpar filtros" (disabled at 0 active; clears the choices in the
+  sheet, applies nothing) + primary full-width "Ver N obras".
+- Choices in the sheet are a draft: the list behind keeps the applied filters until **"Ver N obras"** applies
+  the draft and closes. Closing any other way (X, drag down, scrim) discards the draft; reopening starts from
+  the applied filters. N previews the draft: while it differs from what is applied, the count comes from
+  `GET /api/projects` with the draft and `pageSize=1`, and the button reads "Ver obras" until it lands.
+  (Changed from "filters apply immediately" in #100: a tap on a sort or filter must not reshuffle the list
+  before the person confirms.)
 
 ### Project card (whole card = one link)
 
@@ -255,7 +261,7 @@ centered, gap 16px, padding-block 48px mobile / 64px desktop, icon 24px `--muted
   → `{ items, total, counts: { active, delivered } }`. Desktop shows page N; mobile uses `useInfiniteQuery`
   with the same key minus `page` and appends pages as the list scrolls.
   Search is debounced (~250ms) before it hits the URL and the query.
-- **Local UI state**: filter sheet open, user menu open, signing out, toast.
+- **Local UI state**: filter sheet open and its draft filters, user menu open, signing out, toast.
 - The organization role comes from `GET /api/organization` → `{ id, name, role }`: `admin` sees the gerente
   filter, Nova obra, the admin empty state and "Admin da construtora" in the user menu; others don't. It
   only switches UI, the API still authorizes. Available licenses come from `GET /api/organization/licenses`.

@@ -36,6 +36,29 @@ let projectTwo: string;
 let projectThree: string;
 // newest first, the order the list must answer in
 let paginatedIds: string[];
+// alphabetical, the order `sort=name` must answer in
+let paginatedIdsByName: string[];
+
+// pt-BR alphabetical order: an accent or a lowercase initial keeps a name among its letter
+const NAMES_ALPHABETICAL = [
+	"Ágata Residencial",
+	"Alameda Santos",
+	"Bloco C",
+	"Casa Moinhos",
+	"casa Verde",
+	"Edifício Aurora",
+	"Edificio Brisa",
+	"Élan Office",
+	"Estação Norte",
+	"Galpão Sul",
+	// straddles the first page break, which only the id orders
+	"Obra Duplicada",
+	"Obra Duplicada",
+	"Obra Duplicada",
+	...Array.from({ length: 11 }, (_, i) => `Residencial ${i + 14}`),
+	"Torre Ipê",
+	"Última Etapa",
+];
 
 async function signUp(name: string) {
 	const agent = request.agent(server);
@@ -116,7 +139,8 @@ beforeAll(async () => {
 		role: "manager",
 	});
 
-	// 26 projects over 13 creation instants, two per instant, so pages cross ties that only the id breaks
+	// 26 projects over 13 creation instants, two per instant, so pages cross ties that only the id breaks;
+	// names are shuffled against creation, so the two sorts disagree
 	const paginatedOrganization = await organizationOf(paginated.userId);
 	const base = Date.UTC(2026, 0, 1);
 	const rows = await db
@@ -124,15 +148,26 @@ beforeAll(async () => {
 		.values(
 			Array.from({ length: 26 }, (_, i) => ({
 				organizationId: paginatedOrganization,
-				name: `Obra ${String(i + 1).padStart(2, "0")}`,
+				name: NAMES_ALPHABETICAL[(i * 7) % 26]!,
 				createdAt: new Date(base + Math.floor(i / 2) * 60_000),
 			})),
 		)
-		.returning({ id: project.id, createdAt: project.createdAt });
+		.returning({
+			id: project.id,
+			name: project.name,
+			createdAt: project.createdAt,
+		});
 	paginatedIds = rows
-		.sort(
+		.toSorted(
 			(a, b) =>
 				b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1),
+		)
+		.map((row) => row.id);
+	paginatedIdsByName = rows
+		.toSorted(
+			(a, b) =>
+				NAMES_ALPHABETICAL.indexOf(a.name) -
+					NAMES_ALPHABETICAL.indexOf(b.name) || (a.id < b.id ? -1 : 1),
 		)
 		.map((row) => row.id);
 });
@@ -221,13 +256,13 @@ describe("GET /api/projects", () => {
 	});
 });
 
-describe("GET /api/projects pagination", () => {
-	async function page(query: string) {
-		const res = await paginated.agent.get(`${PROJECTS}?${query}`);
-		expect(res.status).toBe(200);
-		return projectListSchema.parse(res.body);
-	}
+async function page(query: string) {
+	const res = await paginated.agent.get(`${PROJECTS}?${query}`);
+	expect(res.status).toBe(200);
+	return projectListSchema.parse(res.body);
+}
 
+describe("GET /api/projects pagination", () => {
 	test("answers 12 projects by default, with the total across every page", async () => {
 		const { items, total } = await page("");
 
@@ -275,15 +310,48 @@ describe("GET /api/projects pagination", () => {
 		expect(other.items.filter((p) => paginatedIds.includes(p.id))).toEqual([]);
 	});
 
-	test.each(["page=0", "page=abc", "pageSize=0", "pageSize=101", "page=1.5"])(
-		"rejects %s",
-		async (query) => {
-			const res = await paginated.agent.get(`${PROJECTS}?${query}`);
+	test.each([
+		"page=0",
+		"page=abc",
+		"pageSize=0",
+		"pageSize=101",
+		"page=1.5",
+		"sort=bogus",
+		"sort=Name",
+	])("rejects %s", async (query) => {
+		const res = await paginated.agent.get(`${PROJECTS}?${query}`);
 
-			expect(res.status).toBe(400);
-			expect(problemDetailsSchema.parse(res.body).code).toBe(
-				"VALIDATION_FAILED",
-			);
-		},
-	);
+		expect(res.status).toBe(400);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("VALIDATION_FAILED");
+	});
+});
+
+describe("GET /api/projects sort", () => {
+	async function walk(sort: string) {
+		return [
+			...(await page(`sort=${sort}&page=1`)).items,
+			...(await page(`sort=${sort}&page=2`)).items,
+			...(await page(`sort=${sort}&page=3`)).items,
+		];
+	}
+
+	test("recent is the default: newest first", async () => {
+		expect((await walk("recent")).map((p) => p.id)).toEqual(paginatedIds);
+	});
+
+	test("name walks every page in pt-BR alphabetical order, ignoring accents and case", async () => {
+		const walked = await walk("name");
+
+		expect(walked.map((p) => p.name)).toEqual(NAMES_ALPHABETICAL);
+	});
+
+	test("name breaks a tie by id, so pages never repeat or skip a project", async () => {
+		const walked = await walk("name");
+
+		expect(walked.map((p) => p.id)).toEqual(paginatedIdsByName);
+	});
+
+	test("name keeps the total", async () => {
+		expect((await page("sort=name")).total).toBe(26);
+	});
 });

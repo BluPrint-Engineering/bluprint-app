@@ -4,7 +4,7 @@ import { projectSummarySchema } from "./project-summary.js";
 export const projectListSchema = z.object({
 	items: z.array(projectSummarySchema).meta({
 		description:
-			"One page of visible projects, newest first, ties broken by id so pages never overlap.",
+			"One page of visible projects, in the requested order, ties broken by id so pages never overlap.",
 	}),
 	total: z.number().int().nonnegative().meta({
 		description: "Visible projects across every page.",
