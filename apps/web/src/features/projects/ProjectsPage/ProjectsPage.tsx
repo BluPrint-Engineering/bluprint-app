@@ -1,4 +1,4 @@
-import { PROJECT_PAGE_SIZE } from "@bluprint/shared";
+import { PROJECT_PAGE_SIZE, type ProjectSort } from "@bluprint/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { Building, CircleAlert, WifiOff } from "lucide-react";
 import { useEffect, useRef } from "react";
@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { projectsQueryOptions } from "../api";
 import { ProjectCard, ProjectCardSkeleton } from "./ProjectCard";
 import { ProjectsPagination } from "./ProjectsPagination";
+import { ProjectsToolbar } from "./ProjectsToolbar";
 import { StateBlock } from "./StateBlock";
 
 const GRID =
@@ -15,14 +16,26 @@ const GRID =
 
 const SKELETON_WIDTHS = ["62%", "48%", "70%", "55%", "66%", "44%"];
 
-interface ProjectsPageProps {
-	page: number;
-	onPageChange: (page: number, options?: { replace?: boolean }) => void;
+/** What narrows or reorders the list; changing any of it goes back to the first page. */
+export interface ProjectsFilters {
+	sort: ProjectSort;
 }
 
-export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
+interface ProjectsPageProps {
+	page: number;
+	filters: ProjectsFilters;
+	onPageChange: (page: number, options?: { replace?: boolean }) => void;
+	onFiltersChange: (filters: Partial<ProjectsFilters>) => void;
+}
+
+export function ProjectsPage({
+	page,
+	filters,
+	onPageChange,
+	onFiltersChange,
+}: ProjectsPageProps) {
 	const query = useQuery({
-		...projectsQueryOptions(page),
+		...projectsQueryOptions({ page, ...filters }),
 		// the page on screen stays, dimmed, until the next one lands
 		placeholderData: keepPreviousData,
 	});
@@ -52,6 +65,7 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 	}, [landedPage]);
 
 	let content: React.ReactNode;
+	let showToolbar = false;
 	// a failed refresh of a list already on screen keeps the list
 	if (!data && query.isError && !query.isFetching) {
 		content = (
@@ -76,6 +90,7 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 			/>
 		);
 	} else if (!data || overshotTo) {
+		showToolbar = true;
 		content = (
 			<div
 				role="status"
@@ -105,6 +120,7 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 			/>
 		);
 	} else {
+		showToolbar = true;
 		content = (
 			<>
 				<ul
@@ -147,6 +163,16 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 					query.isFetching && <Skeleton className="h-4.5 w-16 self-center" />
 				)}
 			</div>
+			{showToolbar && (
+				<ProjectsToolbar
+					sort={filters.sort}
+					onSortChange={(sort) => onFiltersChange({ sort })}
+					// the sort is the only control so far, and it hides no project
+					activeFilterCount={0}
+					onClearFilters={() => onFiltersChange({})}
+					total={data?.total}
+				/>
+			)}
 			{content}
 		</main>
 	);

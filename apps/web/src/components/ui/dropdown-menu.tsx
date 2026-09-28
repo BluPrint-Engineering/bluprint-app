@@ -137,20 +137,20 @@ function DropdownMenuRadioItem({
 			data-slot="dropdown-menu-radio-item"
 			data-inset={inset}
 			className={cn(
-				"relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-sm outline-hidden select-none focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground data-inset:pl-7 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+				"relative flex min-h-(--tap-min) cursor-default items-center gap-3 rounded-md px-3 outline-hidden select-none transition-colors duration-(--duration-fast) ease-(--ease-standard) focus:bg-muted data-inset:pl-10 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
 				className,
 			)}
 			{...props}
 		>
+			<span className="min-w-0 flex-1">{children}</span>
 			<span
-				className="pointer-events-none absolute right-2 flex items-center justify-center"
+				className="pointer-events-none flex items-center justify-center"
 				data-slot="dropdown-menu-radio-item-indicator"
 			>
 				<DropdownMenuPrimitive.ItemIndicator>
-					<CheckIcon />
+					<CheckIcon aria-hidden="true" className="size-4.5 text-primary" />
 				</DropdownMenuPrimitive.ItemIndicator>
 			</span>
-			{children}
 		</DropdownMenuPrimitive.RadioItem>
 	);
 }

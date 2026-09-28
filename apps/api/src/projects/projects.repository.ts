@@ -1,6 +1,7 @@
+import { ProjectSort } from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { and, count, desc, eq, isNotNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, or, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
@@ -13,7 +14,11 @@ export class ProjectsRepository {
 	/** `offset` counts projects, not pages. */
 	async listVisible(
 		userId: string,
-		{ limit, offset }: { limit: number; offset: number },
+		{
+			sort,
+			limit,
+			offset,
+		}: { sort: ProjectSort; limit: number; offset: number },
 	) {
 		const visible = this.txHost.tx.$with("visible").as(
 			this.txHost.tx
@@ -43,13 +48,19 @@ export class ProjectsRepository {
 				.where(or(isNotNull(projectMember.id), eq(member.role, "admin"))),
 		);
 
+		// the id tiebreak keeps pages stable: rows created in one transaction share created_at, and names repeat
+		const order = {
+			recent: [desc(visible.createdAt), desc(visible.id)],
+			// ICU compares letters before accents and case, so "Árvore" and "árvore" sort among the A's
+			name: [asc(sql`${visible.name} collate "pt-BR-x-icu"`), asc(visible.id)],
+		}[sort];
+
 		const [items, [counted]] = await Promise.all([
 			this.txHost.tx
 				.with(visible)
 				.select()
 				.from(visible)
-				// the id tiebreak keeps pages stable: rows created in one transaction share created_at
-				.orderBy(desc(visible.createdAt), desc(visible.id))
+				.orderBy(...order)
 				.limit(limit)
 				.offset(offset),
 			this.txHost.tx.with(visible).select({ total: count() }).from(visible),

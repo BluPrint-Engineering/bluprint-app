@@ -11,5 +11,22 @@ globalThis.ResizeObserver ??= class {
 	disconnect() {}
 };
 
+// jsdom has no matchMedia, and vaul's Drawer queries one on open; no media query ever matches here
+window.matchMedia ??= (query: string) => ({
+	matches: false,
+	media: query,
+	onchange: null,
+	addListener() {},
+	removeListener() {},
+	addEventListener() {},
+	removeEventListener() {},
+	dispatchEvent: () => false,
+});
+
+// jsdom has no pointer capture, and vaul's Drawer takes it on every press inside the sheet
+Element.prototype.setPointerCapture ??= () => {};
+Element.prototype.releasePointerCapture ??= () => {};
+Element.prototype.hasPointerCapture ??= () => false;
+
 // jsdom does not scroll, and the router scrolls to the top on every navigation
 window.scrollTo = () => {};

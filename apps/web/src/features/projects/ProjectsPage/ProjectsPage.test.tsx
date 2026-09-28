@@ -23,7 +23,10 @@ function project(n: number, role: ProjectAccessRole = "admin") {
 	};
 }
 
-/** Serves `total` projects the way the API pages them; `role` picks each one's role. */
+/**
+ * Serves `total` projects the way the API pages them; `role` picks each one's role. `sort=name`
+ * answers them in reverse, so the two orders tell apart.
+ */
 function projectsApi(
 	total: number,
 	role: (n: number) => ProjectAccessRole = () => "admin",
@@ -31,12 +34,23 @@ function projectsApi(
 	return (url) => {
 		if (url.pathname !== "/api/projects") return undefined;
 		const page = Number(url.searchParams.get("page") ?? 1);
+		const byName = url.searchParams.get("sort") === "name";
 		const first = (page - 1) * PAGE_SIZE + 1;
 		const last = Math.min(page * PAGE_SIZE, total);
 		const items = [];
-		for (let n = first; n <= last; n++) items.push(project(n, role(n)));
+		for (let i = first; i <= last; i++) {
+			const n = byName ? total + 1 - i : i;
+			items.push(project(n, role(n)));
+		}
 		return json({ items, total });
 	};
+}
+
+/** `hidden` reaches the list behind an open sheet, which hides the rest of the page from assistive tech. */
+function firstCard({ hidden = false } = {}) {
+	return within(
+		screen.getByRole("list", { name: "Obras", hidden }),
+	).getAllByRole("listitem", { hidden })[0];
 }
 
 function stubProjects(api: ApiHandler) {
@@ -175,7 +189,9 @@ describe("projects page", () => {
 		await act(() => queryClient.refetchQueries({ queryKey: ["projects"] }));
 		await waitFor(() => {
 			expect(
-				queryClient.getQueryState(projectsQueryOptions(1).queryKey)?.status,
+				queryClient.getQueryState(
+					projectsQueryOptions({ page: 1, sort: "recent" }).queryKey,
+				)?.status,
 			).toBe("error");
 		});
 
@@ -292,5 +308,93 @@ describe("projects page", () => {
 
 		expect(await screen.findByText("Obra 25")).toBeInTheDocument();
 		expect(router.state.location.search).toEqual({ page: 3 });
+	});
+
+	test("sorts by name from the toolbar, showing the sort on its trigger", async () => {
+		stubProjects(projectsApi(26));
+
+		renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ordenar: Mais recentes" }),
+		);
+
+		const menu = await screen.findByRole("menu");
+		expect(within(menu).getByText("Ordenar")).toBeInTheDocument();
+		expect(
+			within(menu).getByRole("menuitemradio", { name: "Mais recentes" }),
+		).toBeChecked();
+		await userEvent.click(
+			within(menu).getByRole("menuitemradio", { name: "Nome A–Z" }),
+		);
+
+		await waitFor(() => {
+			expect(firstCard()).toHaveTextContent("Obra 26");
+		});
+		expect(
+			screen.getByRole("button", { name: "Ordenar: Nome A–Z" }),
+		).toBeInTheDocument();
+	});
+
+	test("the filter sheet sorts the list behind it and only closes on “Ver N obras” (O14)", async () => {
+		stubProjects(projectsApi(26));
+
+		renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+
+		const sheet = await screen.findByRole("dialog", { name: "Filtros" });
+		expect(sheet).toHaveAccessibleDescription("Nenhum filtro ativo");
+		const sort = within(sheet).getByRole("radiogroup", { name: "Ordenar" });
+		expect(
+			within(sort).getByRole("radio", { name: "Mais recentes" }),
+		).toBeChecked();
+		expect(
+			within(sheet).getByRole("button", { name: "Limpar filtros" }),
+		).toBeDisabled();
+
+		await userEvent.click(
+			within(sort).getByRole("radio", { name: "Nome A–Z" }),
+		);
+
+		await waitFor(() => {
+			expect(firstCard({ hidden: true })).toHaveTextContent("Obra 26");
+		});
+		expect(within(sort).getByRole("radio", { name: "Nome A–Z" })).toBeChecked();
+		expect(sheet).toBeInTheDocument();
+
+		await userEvent.click(
+			within(sheet).getByRole("button", { name: "Ver 26 obras" }),
+		);
+
+		await waitFor(() => {
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+		expect(firstCard()).toHaveTextContent("Obra 26");
+	});
+
+	test("the sort is not an active filter", async () => {
+		stubProjects(projectsApi(26));
+
+		renderAt("/projects?sort=name");
+		await screen.findByText("Obra 26");
+
+		expect(screen.getByRole("button", { name: "Filtros" })).toHaveTextContent(
+			/^Filtros$/,
+		);
+	});
+
+	test("an empty list has no toolbar (O7)", async () => {
+		stubProjects(projectsApi(0));
+
+		renderAt("/projects");
+		await screen.findByRole("heading", { name: "Nenhuma obra por aqui" });
+
+		expect(
+			screen.queryByRole("button", { name: "Filtros" }),
+		).not.toBeInTheDocument();
+		expect(
+			screen.queryByRole("button", { name: /^Ordenar:/ }),
+		).not.toBeInTheDocument();
 	});
 });
