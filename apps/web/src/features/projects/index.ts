@@ -1,4 +1,2 @@
-export {
-	type ProjectsFilters,
-	ProjectsPage,
-} from "./ProjectsPage/ProjectsPage";
+export type { ProjectsFilters } from "./ProjectsPage/filters";
+export { ProjectsPage } from "./ProjectsPage/ProjectsPage";

@@ -6,10 +6,14 @@ import {
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
-function fetchProjectsPage(page: number, sort: ProjectSort) {
+function fetchProjectsPage(
+	page: number,
+	sort: ProjectSort,
+	pageSize = PROJECT_PAGE_SIZE,
+) {
 	const params = new URLSearchParams({
 		page: String(page),
-		pageSize: String(PROJECT_PAGE_SIZE),
+		pageSize: String(pageSize),
 		sort,
 	});
 	return apiFetch(`/projects?${params}`, projectListSchema);
@@ -45,5 +49,13 @@ export function projectsInfiniteQueryOptions({ sort }: { sort: ProjectSort }) {
 				? lastPageParam + 1
 				: undefined;
 		},
+	});
+}
+
+/** How many projects the filters leave, without loading them: one project is the smallest page. */
+export function projectsTotalQueryOptions({ sort }: { sort: ProjectSort }) {
+	return queryOptions({
+		queryKey: ["projects", "total", { sort }],
+		queryFn: async () => (await fetchProjectsPage(1, sort, 1)).total,
 	});
 }

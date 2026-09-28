@@ -42,11 +42,11 @@ function RouteComponent() {
 		[navigate],
 	);
 	const onFiltersChange = useCallback(
-		(next: Partial<ProjectsFilters>) =>
+		(next: ProjectsFilters) =>
 			navigate({
 				search: (prev) => ({
 					...prev,
-					...(next.sort && { sort: sortParam(next.sort) }),
+					sort: sortParam(next.sort),
 					// the page the caller was on may not exist in the new result
 					page: undefined,
 				}),

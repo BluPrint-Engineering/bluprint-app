@@ -11,10 +11,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import {
-	ProjectsFilterSheet,
-	type ProjectsFilterSheetProps,
-} from "./ProjectsFilterSheet";
+import type { ProjectsFilters } from "./filters";
+import { ProjectsFilterSheet } from "./ProjectsFilterSheet";
 import { SORT_LABELS } from "./sortLabels";
 
 /** Past this, the phone's sticky row draws its bottom border so the cards don't run into it. */
@@ -31,11 +29,19 @@ function useScrolledPast(offset: number) {
 	return past;
 }
 
-/** The desktop's controls, inline above the grid. */
+export interface ProjectsToolbarProps {
+	filters: ProjectsFilters;
+	onFiltersChange: (filters: ProjectsFilters) => void;
+	/** Projects `filters` leave, `undefined` while the list loads. */
+	total: number | undefined;
+}
+
+/** The desktop's controls, inline above the grid; each applies as soon as it changes. */
 export function ProjectsToolbar({
-	sort,
-	onSortChange,
-}: ProjectsFilterSheetProps) {
+	filters,
+	onFiltersChange,
+}: ProjectsToolbarProps) {
+	const { sort } = filters;
 	return (
 		<div className="flex flex-wrap items-center gap-(--space-3)">
 			<DropdownMenu>
@@ -53,7 +59,10 @@ export function ProjectsToolbar({
 					<DropdownMenuRadioGroup
 						value={sort}
 						onValueChange={(value) =>
-							onSortChange(projectSortSchema.parse(value))
+							onFiltersChange({
+								...filters,
+								sort: projectSortSchema.parse(value),
+							})
 						}
 					>
 						{projectSorts.map((option) => (
@@ -69,7 +78,11 @@ export function ProjectsToolbar({
 }
 
 /** The phone's controls: a row that sticks to the top as the list scrolls, its "Filtros" opening a sheet. */
-export function ProjectsMobileToolbar(props: ProjectsFilterSheetProps) {
+export function ProjectsMobileToolbar({
+	filters,
+	onFiltersChange,
+	total,
+}: ProjectsToolbarProps) {
 	const stuck = useScrolledPast(STUCK_AFTER_PX);
 
 	return (
@@ -80,7 +93,11 @@ export function ProjectsMobileToolbar(props: ProjectsFilterSheetProps) {
 				stuck ? "border-border" : "border-transparent",
 			)}
 		>
-			<ProjectsFilterSheet {...props} />
+			<ProjectsFilterSheet
+				filters={filters}
+				onApply={onFiltersChange}
+				total={total}
+			/>
 		</div>
 	);
 }

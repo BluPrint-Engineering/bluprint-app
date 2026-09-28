@@ -2,6 +2,7 @@ import { PROJECT_PAGE_SIZE } from "@bluprint/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { projectsQueryOptions } from "../api";
+import type { ProjectsFilters } from "./filters";
 import {
 	firstLoadState,
 	ListPlaceholder,
@@ -9,14 +10,13 @@ import {
 	ProjectList,
 	ProjectsMain,
 } from "./ProjectList";
-import type { ProjectsControls, ProjectsFilters } from "./ProjectsPage";
 import { ProjectsPagination } from "./ProjectsPagination";
 import { ProjectsToolbar } from "./ProjectsToolbar";
 
 interface PagedProjectListProps {
 	page: number;
 	filters: ProjectsFilters;
-	controls: ProjectsControls;
+	onFiltersChange: (filters: ProjectsFilters) => void;
 	onPageChange: (page: number, options?: { replace?: boolean }) => void;
 }
 
@@ -24,7 +24,7 @@ interface PagedProjectListProps {
 export function PagedProjectList({
 	page,
 	filters,
-	controls,
+	onFiltersChange,
 	onPageChange,
 }: PagedProjectListProps) {
 	const query = useQuery({
@@ -86,7 +86,13 @@ export function PagedProjectList({
 			total={data?.total}
 			counting={query.isFetching}
 			toolbar={
-				showToolbar && <ProjectsToolbar {...controls} total={data?.total} />
+				showToolbar && (
+					<ProjectsToolbar
+						filters={filters}
+						onFiltersChange={onFiltersChange}
+						total={data?.total}
+					/>
+				)
 			}
 		>
 			{content}

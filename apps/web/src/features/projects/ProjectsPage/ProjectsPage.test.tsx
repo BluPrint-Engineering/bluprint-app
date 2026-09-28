@@ -337,11 +337,11 @@ describe("projects page", () => {
 		).toBeInTheDocument();
 	});
 
-	test("the filter sheet sorts the list behind it and only closes on “Ver N obras” (O14)", async () => {
+	test("the filter sheet applies a choice only on “Ver N obras” (O14)", async () => {
 		setViewport("phone");
 		stubProjects(projectsApi(26));
 
-		renderAt("/projects");
+		const { router } = renderAt("/projects");
 		await screen.findByText("Obra 1");
 		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
 
@@ -359,20 +359,80 @@ describe("projects page", () => {
 			within(sort).getByRole("radio", { name: "Nome A–Z" }),
 		);
 
-		await waitFor(() => {
-			expect(firstCard({ hidden: true })).toHaveTextContent("Obra 26");
-		});
 		expect(within(sort).getByRole("radio", { name: "Nome A–Z" })).toBeChecked();
-		expect(sheet).toBeInTheDocument();
+		expect(firstCard({ hidden: true })).toHaveTextContent("Obra 1");
+		expect(router.state.location.search).toEqual({});
 
 		await userEvent.click(
-			within(sheet).getByRole("button", { name: "Ver 26 obras" }),
+			await within(sheet).findByRole("button", { name: "Ver 26 obras" }),
 		);
 
 		await waitFor(() => {
 			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 		});
-		expect(firstCard()).toHaveTextContent("Obra 26");
+		await waitFor(() => {
+			expect(firstCard()).toHaveTextContent("Obra 26");
+		});
+		expect(router.state.location.search).toEqual({ sort: "name" });
+	});
+
+	test("closing the filter sheet any other way discards the choice", async () => {
+		setViewport("phone");
+		stubProjects(projectsApi(26));
+
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+		const sheet = await screen.findByRole("dialog", { name: "Filtros" });
+		await userEvent.click(
+			within(sheet).getByRole("radio", { name: "Nome A–Z" }),
+		);
+
+		await userEvent.click(
+			within(sheet).getByRole("button", { name: "Fechar" }),
+		);
+
+		await waitFor(() => {
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+		expect(firstCard()).toHaveTextContent("Obra 1");
+		expect(router.state.location.search).toEqual({});
+
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+		expect(
+			within(await screen.findByRole("dialog")).getByRole("radio", {
+				name: "Mais recentes",
+			}),
+		).toBeChecked();
+	});
+
+	test("“Ver N obras” counts what the pending choice would show", async () => {
+		setViewport("phone");
+		const byDate = projectsApi(26);
+		// one fewer by name stands in for a filter that hides a project
+		const byName = projectsApi(25);
+		stubProjects((url) =>
+			url.searchParams.get("sort") === "name" ? byName(url) : byDate(url),
+		);
+
+		renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+		const sheet = await screen.findByRole("dialog", { name: "Filtros" });
+		expect(
+			within(sheet).getByRole("button", { name: "Ver 26 obras" }),
+		).toBeInTheDocument();
+
+		await userEvent.click(
+			within(sheet).getByRole("radio", { name: "Nome A–Z" }),
+		);
+
+		expect(
+			await within(sheet).findByRole("button", { name: "Ver 25 obras" }),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText("26 obras", { ignore: "button" }),
+		).toBeInTheDocument();
 	});
 
 	test("the sort is not an active filter", async () => {

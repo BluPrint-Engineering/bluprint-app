@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { projectsInfiniteQueryOptions } from "../api";
+import type { ProjectsFilters } from "./filters";
 import {
 	firstLoadState,
 	ListPlaceholder,
@@ -11,12 +12,11 @@ import {
 	ProjectList,
 	ProjectsMain,
 } from "./ProjectList";
-import type { ProjectsControls, ProjectsFilters } from "./ProjectsPage";
 import { ProjectsMobileToolbar } from "./ProjectsToolbar";
 
 interface ContinuousProjectListProps {
 	filters: ProjectsFilters;
-	controls: ProjectsControls;
+	onFiltersChange: (filters: ProjectsFilters) => void;
 }
 
 /** How far below the screen the end of the list starts loading the next page. */
@@ -25,13 +25,13 @@ const LOAD_AHEAD_PX = 160;
 /** The phone's list: the next page loads on its own as the end of the list nears the screen. */
 export function ContinuousProjectList({
 	filters,
-	controls,
+	onFiltersChange,
 }: ContinuousProjectListProps) {
 	const query = useInfiniteQuery({
 		...projectsInfiniteQueryOptions(filters),
 		// three retries hold the spinner ~7 s on a weak signal before the retry button shows
 		retry: 1,
-		// a new sort keeps the list on screen, dimmed, behind the filter sheet until it lands
+		// a new sort keeps the list on screen, dimmed, until it lands
 		placeholderData: keepPreviousData,
 	});
 	const { data, hasNextPage, fetchNextPage } = query;
@@ -106,7 +106,13 @@ export function ContinuousProjectList({
 			total={total}
 			counting={query.isFetching}
 			toolbar={
-				showToolbar && <ProjectsMobileToolbar {...controls} total={total} />
+				showToolbar && (
+					<ProjectsMobileToolbar
+						filters={filters}
+						onFiltersChange={onFiltersChange}
+						total={total}
+					/>
+				)
 			}
 		>
 			{content}

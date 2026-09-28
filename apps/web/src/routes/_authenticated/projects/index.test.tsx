@@ -124,10 +124,12 @@ describe("/projects route", () => {
 		await userEvent.click(
 			await screen.findByRole("button", { name: "Filtros" }),
 		);
+		const sheet = await screen.findByRole("dialog");
 		await userEvent.click(
-			within(await screen.findByRole("dialog")).getByRole("radio", {
-				name: "Nome A–Z",
-			}),
+			within(sheet).getByRole("radio", { name: "Nome A–Z" }),
+		);
+		await userEvent.click(
+			await within(sheet).findByRole("button", { name: "Ver 26 obras" }),
 		);
 
 		await waitFor(() => {
