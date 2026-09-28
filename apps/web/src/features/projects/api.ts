@@ -8,7 +8,7 @@ import { apiFetch } from "@/lib/api";
 
 function fetchProjectsPage(
 	page: number,
-	sort: ProjectSort,
+	{ q, sort }: { q: string; sort: ProjectSort },
 	pageSize = PROJECT_PAGE_SIZE,
 ) {
 	const params = new URLSearchParams({
@@ -16,20 +16,23 @@ function fetchProjectsPage(
 		pageSize: String(pageSize),
 		sort,
 	});
+	if (q) params.set("q", q);
 	return apiFetch(`/projects?${params}`, projectListSchema);
 }
 
 export function projectsQueryOptions({
 	page,
+	q,
 	sort,
 }: {
 	page: number;
+	q: string;
 	sort: ProjectSort;
 }) {
 	return queryOptions({
-		queryKey: ["projects", { page, pageSize: PROJECT_PAGE_SIZE, sort }],
+		queryKey: ["projects", { page, pageSize: PROJECT_PAGE_SIZE, q, sort }],
 		queryFn: async () => {
-			const list = await fetchProjectsPage(page, sort);
+			const list = await fetchProjectsPage(page, { q, sort });
 			// tagged with its page: while the next page loads, the data on screen is still the previous one's
 			return { ...list, page };
 		},
@@ -37,10 +40,20 @@ export function projectsQueryOptions({
 }
 
 /** The phone's list: the same pages as the desktop's, appended one after another. */
-export function projectsInfiniteQueryOptions({ sort }: { sort: ProjectSort }) {
+export function projectsInfiniteQueryOptions({
+	q,
+	sort,
+}: {
+	q: string;
+	sort: ProjectSort;
+}) {
 	return infiniteQueryOptions({
-		queryKey: ["projects", "infinite", { pageSize: PROJECT_PAGE_SIZE, sort }],
-		queryFn: ({ pageParam }) => fetchProjectsPage(pageParam, sort),
+		queryKey: [
+			"projects",
+			"infinite",
+			{ pageSize: PROJECT_PAGE_SIZE, q, sort },
+		],
+		queryFn: ({ pageParam }) => fetchProjectsPage(pageParam, { q, sort }),
 		initialPageParam: 1,
 		getNextPageParam: (lastPage, pages, lastPageParam) => {
 			const loaded = pages.reduce((sum, page) => sum + page.items.length, 0);
@@ -53,9 +66,15 @@ export function projectsInfiniteQueryOptions({ sort }: { sort: ProjectSort }) {
 }
 
 /** How many projects the filters leave, without loading them: one project is the smallest page. */
-export function projectsTotalQueryOptions({ sort }: { sort: ProjectSort }) {
+export function projectsTotalQueryOptions({
+	q,
+	sort,
+}: {
+	q: string;
+	sort: ProjectSort;
+}) {
 	return queryOptions({
-		queryKey: ["projects", "total", { sort }],
-		queryFn: async () => (await fetchProjectsPage(1, sort, 1)).total,
+		queryKey: ["projects", "total", { q, sort }],
+		queryFn: async () => (await fetchProjectsPage(1, { q, sort }, 1)).total,
 	});
 }

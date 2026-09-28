@@ -355,3 +355,100 @@ describe("GET /api/projects sort", () => {
 		expect((await page("sort=name")).total).toBe(26);
 	});
 });
+
+describe("GET /api/projects search", () => {
+	async function namesFor(q: string, extra = "") {
+		const params = new URLSearchParams({ q, sort: "name" });
+		return page(`${params.toString()}${extra}`);
+	}
+
+	test("finds a name by a substring, ignoring accents", async () => {
+		const { items, total } = await namesFor("edificio");
+
+		expect(items.map((p) => p.name)).toEqual([
+			"Edifício Aurora",
+			"Edificio Brisa",
+		]);
+		expect(total).toBe(2);
+	});
+
+	test("finds a name by an accented query, ignoring what the name spells plain", async () => {
+		const { items } = await namesFor("edifício");
+
+		expect(items.map((p) => p.name)).toEqual([
+			"Edifício Aurora",
+			"Edificio Brisa",
+		]);
+	});
+
+	test("finds a name by any word of it, ignoring case", async () => {
+		expect((await namesFor("MOINHOS")).items.map((p) => p.name)).toEqual([
+			"Casa Moinhos",
+		]);
+		expect((await namesFor("agata")).items.map((p) => p.name)).toEqual([
+			"Ágata Residencial",
+		]);
+	});
+
+	test("finds a substring in the middle of a word", async () => {
+		expect((await namesFor("plica")).items.map((p) => p.name)).toEqual([
+			"Obra Duplicada",
+			"Obra Duplicada",
+			"Obra Duplicada",
+		]);
+	});
+
+	test("takes a blank query as no search", async () => {
+		expect((await namesFor("   ")).total).toBe(26);
+	});
+
+	test("takes % and _ as themselves, not as wildcards", async () => {
+		expect((await namesFor("%")).total).toBe(0);
+		expect((await namesFor("_")).total).toBe(0);
+		expect((await namesFor("Bloco_C")).total).toBe(0);
+	});
+
+	test("answers the total of the search across every page", async () => {
+		const first = await page("q=residencial&pageSize=5");
+
+		// "Residencial 14" to "Residencial 24" and "Ágata Residencial"
+		expect(first.total).toBe(12);
+		expect(first.items).toHaveLength(5);
+		expect((await page("q=residencial&pageSize=5&page=3")).items).toHaveLength(
+			2,
+		);
+	});
+
+	test("answers no items and total 0 when nothing matches", async () => {
+		expect(await page("q=brisa-inexistente")).toEqual({ items: [], total: 0 });
+	});
+
+	test("never reaches another organization's project", async () => {
+		expect((await namesFor("moinhos")).items.map((p) => p.name)).toEqual([
+			"Casa Moinhos",
+		]);
+
+		const other = projectListSchema.parse(
+			(await admin.agent.get(`${PROJECTS}?q=residencial`)).body,
+		);
+		expect(other).toEqual({ items: [], total: 0 });
+
+		const own = projectListSchema.parse(
+			(await admin.agent.get(`${PROJECTS}?q=casa`)).body,
+		);
+		expect(own.items.map((p) => p.id)).toEqual([projectOne]);
+	});
+
+	test("narrows a member to their own projects, not the organization's", async () => {
+		const res = await linked.agent.get(`${PROJECTS}?q=galpao`);
+
+		expect(projectListSchema.parse(res.body)).toEqual({ items: [], total: 0 });
+	});
+
+	test("rejects a query over 100 characters", async () => {
+		const res = await paginated.agent.get(`${PROJECTS}?q=${"a".repeat(101)}`);
+
+		expect(res.status).toBe(400);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("VALIDATION_FAILED");
+	});
+});

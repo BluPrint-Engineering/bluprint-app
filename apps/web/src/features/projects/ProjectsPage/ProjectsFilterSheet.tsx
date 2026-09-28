@@ -47,8 +47,12 @@ export function ProjectsFilterSheet({
 	total,
 }: ProjectsFilterSheetProps) {
 	const [open, setOpen] = useState(false);
-	const [draft, setDraft] = useState(filters);
+	const [chosen, setChosen] = useState(filters);
 	const sortLabelId = useId();
+
+	// the search is not the sheet's: it follows the address, so a search that lands while the sheet is open is neither reverted nor left out of the count
+	const draft = { ...chosen, q: filters.q };
+	const setDraft = setChosen;
 
 	const pending = !sameFilters(draft, filters);
 	const preview = useQuery({

@@ -20,9 +20,10 @@ export class ProjectsService {
 
 	async listVisible(
 		userId: string,
-		{ page, pageSize, sort }: ProjectListQuery,
+		{ page, pageSize, q, sort }: ProjectListQuery,
 	): Promise<ProjectList> {
 		const { items, total } = await this.projects.listVisible(userId, {
+			q,
 			sort,
 			limit: pageSize,
 			offset: (page - 1) * pageSize,

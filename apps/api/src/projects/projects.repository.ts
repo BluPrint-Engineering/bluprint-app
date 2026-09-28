@@ -7,6 +7,13 @@ import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
 import { project } from "./project.entity";
 
+/** Substring match that ignores accents and case; ilike reads `%`, `_` and `\` as wildcards or escapes, so `q` is escaped to match itself. */
+function nameContains(q: string) {
+	if (q === "") return undefined;
+	const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+	return sql`unaccent(${project.name}) ilike unaccent(${pattern})`;
+}
+
 @Injectable()
 export class ProjectsRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
@@ -15,10 +22,11 @@ export class ProjectsRepository {
 	async listVisible(
 		userId: string,
 		{
+			q,
 			sort,
 			limit,
 			offset,
-		}: { sort: ProjectSort; limit: number; offset: number },
+		}: { q: string; sort: ProjectSort; limit: number; offset: number },
 	) {
 		const visible = this.txHost.tx.$with("visible").as(
 			this.txHost.tx
@@ -45,7 +53,12 @@ export class ProjectsRepository {
 					),
 				)
 				// an org admin sees every project; anyone else only those they're a member of (ADR 0022)
-				.where(or(isNotNull(projectMember.id), eq(member.role, "admin"))),
+				.where(
+					and(
+						or(isNotNull(projectMember.id), eq(member.role, "admin")),
+						nameContains(q),
+					),
+				),
 		);
 
 		// the id tiebreak keeps pages stable: rows created in one transaction share created_at, and names repeat

@@ -2,11 +2,12 @@ import { PROJECT_PAGE_SIZE } from "@bluprint/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { projectsQueryOptions } from "../api";
-import type { ProjectsFilters } from "./filters";
+import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
 import {
 	firstLoadState,
 	ListPlaceholder,
 	NoProjects,
+	NoResults,
 	ProjectList,
 	ProjectsMain,
 } from "./ProjectList";
@@ -62,7 +63,14 @@ export function PagedProjectList({
 	if (!data || overshotTo) {
 		content = <ListPlaceholder query={query} />;
 	} else if (data.total === 0) {
-		content = <NoProjects />;
+		content = isNarrowed(filters) ? (
+			<NoResults
+				q={filters.q}
+				onClear={() => onFiltersChange(clearAllFilters(filters))}
+			/>
+		) : (
+			<NoProjects />
+		);
 	} else {
 		content = (
 			<>
@@ -77,8 +85,9 @@ export function PagedProjectList({
 		);
 	}
 
+	// a search that finds nothing keeps its field, or the person could not edit it
 	const showToolbar = data
-		? data.total > 0
+		? data.total > 0 || isNarrowed(filters)
 		: firstLoadState(query) === "loading";
 
 	return (
