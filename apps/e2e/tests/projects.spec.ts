@@ -14,7 +14,7 @@ test.describe("project list", () => {
 		await expect(page.getByText("Torre Atlântica")).toBeVisible();
 	});
 
-	test("on the phone, shows the first 12 in one column with no pages", async ({
+	test("on the phone, shows the first 12 in one column, then the rest as the list scrolls", async ({
 		page,
 		isMobile,
 	}) => {
@@ -33,6 +33,14 @@ test.describe("project list", () => {
 		expect(second?.x).toBe(first?.x);
 		await expect(
 			page.getByRole("navigation", { name: "Páginas de obras" }),
+		).toBeHidden();
+
+		await cards.last().scrollIntoViewIfNeeded();
+
+		await expect(cards).toHaveCount(14);
+		await expect(page.getByText("Residencial Jardins")).toBeVisible();
+		await expect(
+			page.getByRole("button", { name: "Carregar mais" }),
 		).toBeHidden();
 	});
 
