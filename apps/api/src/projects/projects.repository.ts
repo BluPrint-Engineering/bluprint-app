@@ -7,7 +7,7 @@ import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
 import { project } from "./project.entity";
 
-/** Substring match that ignores accents and case; `q` is text, so `%`, `_` and `\\` match themselves. */
+/** Substring match that ignores accents and case; ilike reads `%`, `_` and `\` as wildcards or escapes, so `q` is escaped to match itself. */
 function nameContains(q: string) {
 	if (q === "") return undefined;
 	const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;

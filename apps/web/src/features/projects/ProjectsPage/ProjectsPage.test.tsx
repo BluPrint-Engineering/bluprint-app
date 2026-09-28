@@ -833,4 +833,53 @@ describe("projects page search", () => {
 			});
 		});
 	});
+
+	test("takes no more than the API accepts, instead of emptying itself on a longer paste", async () => {
+		stubProjects(searchApi(NAMES));
+
+		renderAt("/projects");
+
+		expect(await searchField()).toHaveAttribute("maxlength", "100");
+	});
+
+	test("on the phone, a search that lands while the sheet is open is kept when the sheet applies", async () => {
+		setViewport("phone");
+		stubProjects(searchApi(NAMES));
+
+		const { router } = renderAt("/projects?q=edificio");
+		await screen.findByText("2 obras");
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+		const sheet = await screen.findByRole("dialog", { name: "Filtros" });
+
+		await act(() =>
+			router.navigate({ to: "/projects", search: { q: "moinhos" } }),
+		);
+		await userEvent.click(
+			within(sheet).getByRole("radio", { name: "Nome A–Z" }),
+		);
+		await userEvent.click(
+			await within(sheet).findByRole("button", { name: "Ver 1 obra" }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({
+				q: "moinhos",
+				sort: "name",
+			});
+		});
+	});
+
+	test("typing a search adds no history entry of its own", async () => {
+		stubProjects(searchApi(NAMES));
+
+		const { router } = renderAt("/projects");
+		await screen.findByText("3 obras");
+		const before = router.history.length;
+		await userEvent.type(await searchField(), "edif");
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({ q: "edif" });
+		});
+
+		expect(router.history.length).toBe(before);
+	});
 });

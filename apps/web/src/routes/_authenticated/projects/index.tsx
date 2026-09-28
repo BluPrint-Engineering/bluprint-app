@@ -67,8 +67,10 @@ function RouteComponent() {
 					// the page the caller was on may not exist in the new result
 					page: undefined,
 				}),
+				// each pause in typing would otherwise add a history entry for Back to step through
+				replace: qParam(next.q) !== (q || undefined),
 			}),
-		[navigate],
+		[navigate, q],
 	);
 
 	return (

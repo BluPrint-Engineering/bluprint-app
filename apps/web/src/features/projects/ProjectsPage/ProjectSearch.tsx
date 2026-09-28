@@ -1,3 +1,4 @@
+import { MAX_PROJECT_SEARCH_LENGTH } from "@bluprint/shared";
 import { Search, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,8 @@ export function ProjectSearch({
 				autoComplete="off"
 				placeholder="Buscar obra"
 				aria-label="Buscar obra pelo nome"
+				// a longer paste would be dropped from the address, and the field would empty itself to match
+				maxLength={MAX_PROJECT_SEARCH_LENGTH}
 				value={text}
 				onChange={(event) => setText(event.target.value)}
 				className={cn(
