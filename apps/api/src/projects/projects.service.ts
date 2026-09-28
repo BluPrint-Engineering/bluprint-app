@@ -36,6 +36,7 @@ export class ProjectsService {
 				name: row.name,
 				// z.iso.datetime() needs a string, not a Date, or the serializer 500s
 				createdAt: row.createdAt.toISOString(),
+				lastActivityAt: row.lastActivityAt.toISOString(),
 				role: row.effectiveRole ?? "admin",
 				status: row.status,
 			})),
@@ -67,6 +68,7 @@ export class ProjectsService {
 			id: project.id,
 			name: project.name,
 			createdAt: project.createdAt.toISOString(),
+			lastActivityAt: project.lastActivityAt.toISOString(),
 			role: "admin",
 			status: project.status,
 		};

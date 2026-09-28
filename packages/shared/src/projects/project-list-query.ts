@@ -4,7 +4,7 @@ import { projectStatusFilterSchema } from "./project-status.js";
 export const PROJECT_PAGE_SIZE = 12;
 export const MAX_PROJECT_PAGE_SIZE = 100;
 
-export const projectSorts = ["recent", "name"] as const;
+export const projectSorts = ["recent", "name", "activity"] as const;
 
 export const projectSortSchema = z.enum(projectSorts);
 
@@ -35,7 +35,7 @@ export const projectListQuerySchema = z.object({
 	}),
 	sort: projectSortSchema.default("recent").meta({
 		description:
-			"`recent`: newest first. `name`: alphabetical in pt-BR, where accents and case never move a name out of its letter. Ties break by id, so pages never overlap.",
+			"`recent`: newest first. `name`: alphabetical in pt-BR, where accents and case never move a name out of its letter. `activity`: most recent last activity first. Ties break by id, so pages never overlap.",
 		example: "name",
 	}),
 });

@@ -46,6 +46,7 @@ export class ProjectsRepository {
 					name: project.name,
 					createdAt: project.createdAt,
 					status: project.status,
+					lastActivityAt: project.lastActivityAt,
 					effectiveRole: projectMember.role,
 				})
 				.from(project)
@@ -78,6 +79,7 @@ export class ProjectsRepository {
 			recent: [desc(visible.createdAt), desc(visible.id)],
 			// ICU compares letters before accents and case, so "Árvore" and "árvore" sort among the A's
 			name: [asc(sql`${visible.name} collate "pt-BR-x-icu"`), asc(visible.id)],
+			activity: [desc(visible.lastActivityAt), desc(visible.id)],
 		}[sort];
 
 		const inStatus = status === "all" ? undefined : eq(visible.status, status);
@@ -110,8 +112,8 @@ export class ProjectsRepository {
 		return { items, total: counted!.total, counts };
 	}
 
-	async insert(values: {
-		organizationId: string;
+	async insert(values: { organizationId: string; name: string }): Promise<{
+		id: string;
 		name: string;
 		/** Left out, the project is born `active`. */
 		status?: ProjectStatus | undefined;
@@ -119,6 +121,7 @@ export class ProjectsRepository {
 		id: string;
 		name: string;
 		createdAt: Date;
+		lastActivityAt: Date;
 		status: ProjectStatus;
 	}> {
 		const [created] = await this.txHost.tx
@@ -129,6 +132,7 @@ export class ProjectsRepository {
 				name: project.name,
 				createdAt: project.createdAt,
 				status: project.status,
+				lastActivityAt: project.lastActivityAt,
 			});
 
 		return created!;
