@@ -1,7 +1,9 @@
 import {
 	MAX_PROJECT_SEARCH_LENGTH,
 	type ProjectSort,
+	type ProjectStatusFilter,
 	projectSortSchema,
+	projectStatusFilterSchema,
 } from "@bluprint/shared";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
@@ -29,23 +31,36 @@ function sortParam(value: unknown): ProjectSort | undefined {
 	return sort === "recent" ? undefined : sort;
 }
 
+/** Projects in progress are the default, so they never show in the address; anything invalid falls back to them. */
+function statusParam(value: unknown): ProjectStatusFilter | undefined {
+	const status = projectStatusFilterSchema.safeParse(value).data;
+	return status === "active" ? undefined : status;
+}
+
 export const Route = createFileRoute("/_authenticated/projects/")({
 	validateSearch: (
 		search,
 	): {
 		page?: number | undefined;
 		q?: string | undefined;
+		status?: ProjectStatusFilter | undefined;
 		sort?: ProjectSort | undefined;
 	} => ({
 		page: pageParam(search.page),
 		q: qParam(search.q),
+		status: statusParam(search.status),
 		sort: sortParam(search.sort),
 	}),
 	component: RouteComponent,
 });
 
 function RouteComponent() {
-	const { page = 1, q = "", sort = "recent" } = Route.useSearch();
+	const {
+		page = 1,
+		q = "",
+		status = "active",
+		sort = "recent",
+	} = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const onPageChange = useCallback(
 		(next: number, { replace = false }: { replace?: boolean } = {}) =>
@@ -63,6 +78,7 @@ function RouteComponent() {
 				search: (prev) => ({
 					...prev,
 					q: qParam(next.q),
+					status: statusParam(next.status),
 					sort: sortParam(next.sort),
 					// the page the caller was on may not exist in the new result
 					page: undefined,
@@ -76,7 +92,7 @@ function RouteComponent() {
 	return (
 		<ProjectsPage
 			page={page}
-			filters={{ q, sort }}
+			filters={{ q, status, sort }}
 			onPageChange={onPageChange}
 			onFiltersChange={onFiltersChange}
 		/>

@@ -1,10 +1,15 @@
-import type { ProjectSummary } from "@bluprint/shared";
+import type {
+	ProjectList as ProjectListData,
+	ProjectStatusFilter,
+	ProjectSummary,
+} from "@bluprint/shared";
 import type { FetchStatus } from "@tanstack/react-query";
 import { Building, CircleAlert, Search, WifiOff } from "lucide-react";
 import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { clearFilters, type ProjectsFilters } from "./filters";
 import { ProjectCard, ProjectCardSkeleton } from "./ProjectCard";
 import { StateBlock } from "./StateBlock";
 
@@ -114,7 +119,12 @@ export function ListPlaceholder({ query }: { query: FirstLoad }) {
 	);
 }
 
-export function NoProjects() {
+/** Whether the person can see any project at all, whatever the status filter leaves on screen. */
+export function hasProjects(counts: ProjectListData["counts"]) {
+	return counts.active + counts.delivered > 0;
+}
+
+function NoProjects() {
 	return (
 		<StateBlock
 			icon={Building}
@@ -124,16 +134,80 @@ export function NoProjects() {
 	);
 }
 
+/** The clause a search-empty message appends, so its scope reads with the status it ran against. */
+function searchScopeText(status: ProjectStatusFilter): string {
+	if (status === "active") return " em obras em andamento";
+	if (status === "delivered") return " em obras entregues";
+	return "";
+}
+
 /** What a search that matches no project shows; "Limpar filtros" is the way back to the list. */
-export function NoResults({ q, onClear }: { q: string; onClear: () => void }) {
+export function NoResults({
+	q,
+	status,
+	onClear,
+}: {
+	q: string;
+	status: ProjectStatusFilter;
+	onClear: () => void;
+}) {
 	return (
 		<StateBlock
 			icon={Search}
 			title="Nenhuma obra encontrada"
-			description={`Nenhum resultado para “${q}”.`}
+			description={`Nenhum resultado para “${q}”${searchScopeText(status)}.`}
 		>
 			<Button variant="outline" onClick={onClear}>
 				Limpar filtros
+			</Button>
+		</StateBlock>
+	);
+}
+
+interface EmptyListProps {
+	counts: ProjectListData["counts"];
+	filters: ProjectsFilters;
+	onFiltersChange: (filters: ProjectsFilters) => void;
+}
+
+/** What stands in for a list with nothing on it: no project at all, or none in the status on screen. */
+export function EmptyList({
+	counts,
+	filters,
+	onFiltersChange,
+}: EmptyListProps) {
+	if (!hasProjects(counts)) return <NoProjects />;
+
+	// "all" cannot come up empty while any project exists, so what is left is a single status
+	if (filters.status === "delivered") {
+		return (
+			<StateBlock
+				icon={Building}
+				title="Nenhuma obra entregue"
+				description="As obras aparecem aqui depois de marcadas como entregues."
+			>
+				<Button
+					variant="outline"
+					size="lg"
+					onClick={() => onFiltersChange(clearFilters(filters))}
+				>
+					Ver em andamento
+				</Button>
+			</StateBlock>
+		);
+	}
+	return (
+		<StateBlock
+			icon={Building}
+			title="Nenhuma obra em andamento"
+			description="As obras entregues continuam disponíveis."
+		>
+			<Button
+				variant="outline"
+				size="lg"
+				onClick={() => onFiltersChange({ ...filters, status: "delivered" })}
+			>
+				Ver entregues
 			</Button>
 		</StateBlock>
 	);

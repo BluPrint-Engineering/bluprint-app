@@ -200,7 +200,11 @@ describe("GET /api/projects", () => {
 		const res = await unlinked.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
-		expect(projectListSchema.parse(res.body)).toEqual({ items: [], total: 0 });
+		expect(projectListSchema.parse(res.body)).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
 	});
 
 	test("the organization admin sees every project, reported as admin", async () => {
@@ -233,7 +237,11 @@ describe("GET /api/projects", () => {
 		const res = await outsider.agent.get(PROJECTS);
 
 		expect(res.status).toBe(200);
-		expect(projectListSchema.parse(res.body)).toEqual({ items: [], total: 0 });
+		expect(projectListSchema.parse(res.body)).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
 	});
 
 	test("refuses an anonymous caller", async () => {
@@ -247,10 +255,10 @@ describe("GET /api/projects", () => {
 		const res = await admin.agent.get(PROJECTS);
 
 		const body = res.body as { items: Record<string, unknown>[] };
-		expect(Object.keys(body).sort()).toEqual(["items", "total"]);
+		expect(Object.keys(body).sort()).toEqual(["counts", "items", "total"]);
 		for (const row of body.items) {
 			expect(Object.keys(row).sort()).toEqual(
-				["createdAt", "id", "name", "role"].sort(),
+				["createdAt", "id", "name", "role", "status"].sort(),
 			);
 		}
 	});
@@ -288,7 +296,11 @@ describe("GET /api/projects pagination", () => {
 	});
 
 	test("a page past the last answers no items and the real total", async () => {
-		expect(await page("page=9")).toEqual({ items: [], total: 26 });
+		expect(await page("page=9")).toEqual({
+			items: [],
+			total: 26,
+			counts: { active: 26, delivered: 0 },
+		});
 	});
 
 	test("honours a page size", async () => {
@@ -420,7 +432,11 @@ describe("GET /api/projects search", () => {
 	});
 
 	test("answers no items and total 0 when nothing matches", async () => {
-		expect(await page("q=brisa-inexistente")).toEqual({ items: [], total: 0 });
+		expect(await page("q=brisa-inexistente")).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
 	});
 
 	test("never reaches another organization's project", async () => {
@@ -431,7 +447,11 @@ describe("GET /api/projects search", () => {
 		const other = projectListSchema.parse(
 			(await admin.agent.get(`${PROJECTS}?q=residencial`)).body,
 		);
-		expect(other).toEqual({ items: [], total: 0 });
+		expect(other).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
 
 		const own = projectListSchema.parse(
 			(await admin.agent.get(`${PROJECTS}?q=casa`)).body,
@@ -442,7 +462,11 @@ describe("GET /api/projects search", () => {
 	test("narrows a member to their own projects, not the organization's", async () => {
 		const res = await linked.agent.get(`${PROJECTS}?q=galpao`);
 
-		expect(projectListSchema.parse(res.body)).toEqual({ items: [], total: 0 });
+		expect(projectListSchema.parse(res.body)).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
 	});
 
 	test("rejects a query over 100 characters", async () => {

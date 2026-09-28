@@ -10,6 +10,16 @@ export const projectListSchema = z.object({
 		description: "Visible projects across every page.",
 		example: 26,
 	}),
+	counts: z
+		.object({
+			active: z.number().int().nonnegative(),
+			delivered: z.number().int().nonnegative(),
+		})
+		.meta({
+			description:
+				"Visible projects in each status, whatever `status` the request filtered by. Tells a client that an empty `active` list still has delivered projects behind it.",
+			example: { active: 0, delivered: 3 },
+		}),
 });
 
 export type ProjectList = z.infer<typeof projectListSchema>;

@@ -4,9 +4,10 @@ import { useEffect, useRef } from "react";
 import { projectsQueryOptions } from "../api";
 import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
 import {
+	EmptyList,
 	firstLoadState,
+	hasProjects,
 	ListPlaceholder,
-	NoProjects,
 	NoResults,
 	ProjectList,
 	ProjectsMain,
@@ -63,13 +64,18 @@ export function PagedProjectList({
 	if (!data || overshotTo) {
 		content = <ListPlaceholder query={query} />;
 	} else if (data.total === 0) {
-		content = isNarrowed(filters) ? (
+		content = filters.q ? (
 			<NoResults
 				q={filters.q}
+				status={filters.status}
 				onClear={() => onFiltersChange(clearAllFilters(filters))}
 			/>
 		) : (
-			<NoProjects />
+			<EmptyList
+				counts={data.counts}
+				filters={filters}
+				onFiltersChange={onFiltersChange}
+			/>
 		);
 	} else {
 		content = (
@@ -85,9 +91,9 @@ export function PagedProjectList({
 		);
 	}
 
-	// a search that finds nothing keeps its field, or the person could not edit it
+	// it stays over a search or status that finds nothing, or the person could not undo the filter
 	const showToolbar = data
-		? data.total > 0 || isNarrowed(filters)
+		? data.total > 0 || isNarrowed(filters) || hasProjects(data.counts)
 		: firstLoadState(query) === "loading";
 
 	return (

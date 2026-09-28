@@ -23,6 +23,10 @@ function requestedSort(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	return lastRequest(fetchMock)?.get("sort");
 }
 
+function requestedStatus(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
+	return lastRequest(fetchMock)?.get("status");
+}
+
 /** 26 projects, whatever the page; enough for the list and its toolbar to show. */
 function stubProjects() {
 	return stubApi(signedIn, {
@@ -35,9 +39,11 @@ function stubProjects() {
 								name: "Obra 1",
 								createdAt: "2026-01-01T00:00:00.000Z",
 								role: "admin",
+								status: "active",
 							},
 						],
 						total: 26,
+						counts: { active: 26, delivered: 0 },
 					})
 				: undefined,
 	});
@@ -184,6 +190,71 @@ describe("/projects route", () => {
 				q: "aurora",
 				sort: "name",
 			});
+		});
+	});
+
+	test("asks for the status in the address", async () => {
+		const { fetchMock } = stubApi(signedIn);
+
+		const { router } = renderAt("/projects?status=delivered");
+
+		await waitFor(() => {
+			expect(requestedStatus(fetchMock)).toBe("delivered");
+		});
+		expect(router.state.location.search).toEqual({ status: "delivered" });
+	});
+
+	test("keeps “Todas” in the address", async () => {
+		const { fetchMock } = stubApi(signedIn);
+
+		const { router } = renderAt("/projects?status=all");
+
+		await waitFor(() => {
+			expect(requestedStatus(fetchMock)).toBe("all");
+		});
+		expect(router.state.location.search).toEqual({ status: "all" });
+	});
+
+	test.each(["active", "Delivered", "done", "%22%22"])(
+		"falls back to the projects in progress, omitted from the address, for status=%s",
+		async (value) => {
+			const { fetchMock } = stubApi(signedIn);
+
+			const { router } = renderAt(`/projects?status=${value}`);
+
+			await screen.findByRole("heading", { name: "Obras" });
+			await waitFor(() => {
+				expect(requestedStatus(fetchMock)).toBe("active");
+			});
+			expect(router.state.location.search).toEqual({});
+		},
+	);
+
+	test("changing the status goes back to the first page", async () => {
+		const { fetchMock } = stubProjects();
+
+		const { router } = renderAt("/projects?page=3");
+		await userEvent.click(
+			await screen.findByRole("radio", { name: "Entregue" }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({ status: "delivered" });
+		});
+		expect(requestedPage(fetchMock)).toBe("1");
+		expect(requestedStatus(fetchMock)).toBe("delivered");
+	});
+
+	test("going back to “Em andamento” drops the status from the address", async () => {
+		stubProjects();
+
+		const { router } = renderAt("/projects?status=all&sort=name");
+		await userEvent.click(
+			await screen.findByRole("radio", { name: "Em andamento" }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({ sort: "name" });
 		});
 	});
 });

@@ -6,9 +6,10 @@ import { Spinner } from "@/components/ui/spinner";
 import { projectsInfiniteQueryOptions } from "../api";
 import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
 import {
+	EmptyList,
 	firstLoadState,
+	hasProjects,
 	ListPlaceholder,
-	NoProjects,
 	NoResults,
 	ProjectList,
 	ProjectsMain,
@@ -72,18 +73,24 @@ export function ContinuousProjectList({
 		[data],
 	);
 
-	const total = data?.pages.at(-1)?.total;
+	const latest = data?.pages.at(-1);
+	const total = latest?.total;
 	let content: React.ReactNode;
 	if (!data) {
 		content = <ListPlaceholder query={query} />;
-	} else if (total === 0) {
-		content = isNarrowed(filters) ? (
+	} else if (total === 0 && latest) {
+		content = filters.q ? (
 			<NoResults
 				q={filters.q}
+				status={filters.status}
 				onClear={() => onFiltersChange(clearAllFilters(filters))}
 			/>
 		) : (
-			<NoProjects />
+			<EmptyList
+				counts={latest.counts}
+				filters={filters}
+				onFiltersChange={onFiltersChange}
+			/>
 		);
 	} else {
 		content = (
@@ -105,9 +112,11 @@ export function ContinuousProjectList({
 		);
 	}
 
-	// a search that finds nothing keeps its field, or the person could not edit it
-	const showToolbar = data
-		? (total !== undefined && total > 0) || isNarrowed(filters)
+	// it stays over a search or status that finds nothing, or the person could not undo the filter
+	const showToolbar = latest
+		? (total !== undefined && total > 0) ||
+			isNarrowed(filters) ||
+			hasProjects(latest.counts)
 		: firstLoadState(query) === "loading";
 
 	return (

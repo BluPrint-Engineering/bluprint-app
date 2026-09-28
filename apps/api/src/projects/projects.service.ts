@@ -20,10 +20,11 @@ export class ProjectsService {
 
 	async listVisible(
 		userId: string,
-		{ page, pageSize, q, sort }: ProjectListQuery,
+		{ page, pageSize, q, status, sort }: ProjectListQuery,
 	): Promise<ProjectList> {
-		const { items, total } = await this.projects.listVisible(userId, {
+		const { items, total, counts } = await this.projects.listVisible(userId, {
 			q,
+			status,
 			sort,
 			limit: pageSize,
 			offset: (page - 1) * pageSize,
@@ -36,8 +37,10 @@ export class ProjectsService {
 				// z.iso.datetime() needs a string, not a Date, or the serializer 500s
 				createdAt: row.createdAt.toISOString(),
 				role: row.effectiveRole ?? "admin",
+				status: row.status,
 			})),
 			total,
+			counts,
 		};
 	}
 
@@ -65,6 +68,7 @@ export class ProjectsService {
 			name: project.name,
 			createdAt: project.createdAt.toISOString(),
 			role: "admin",
+			status: project.status,
 		};
 	}
 }

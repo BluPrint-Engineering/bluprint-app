@@ -117,6 +117,7 @@ async function main(): Promise<void> {
 						const createdProject = await projectsRepository.insert({
 							organizationId: createdOrganization.id,
 							name: seedProject.name,
+							status: seedProject.status,
 						});
 
 						const license = await licensesRepository.consumeFree(
