@@ -2,16 +2,20 @@ import {
 	PROJECT_PAGE_SIZE,
 	type ProjectListQuery,
 	projectListSchema,
+	projectManagersSchema,
 } from "@bluprint/shared";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
 /** What the list is narrowed and ordered by: the query parameters that are not the page. */
-type ProjectsFilters = Pick<ProjectListQuery, "q" | "status" | "sort">;
+type ProjectsFilters = Pick<
+	ProjectListQuery,
+	"q" | "status" | "sort" | "manager"
+>;
 
 function fetchProjectsPage(
 	page: number,
-	{ q, status, sort }: ProjectsFilters,
+	{ q, status, sort, manager }: ProjectsFilters,
 	pageSize = PROJECT_PAGE_SIZE,
 ) {
 	const params = new URLSearchParams({
@@ -21,6 +25,7 @@ function fetchProjectsPage(
 		sort,
 	});
 	if (q) params.set("q", q);
+	if (manager) params.set("manager", manager);
 	return apiFetch(`/projects?${params}`, projectListSchema);
 }
 
@@ -28,11 +33,11 @@ export function projectsQueryOptions({
 	page,
 	...filters
 }: { page: number } & ProjectsFilters) {
-	const { q, status, sort } = filters;
+	const { q, status, sort, manager } = filters;
 	return queryOptions({
 		queryKey: [
 			"projects",
-			{ page, pageSize: PROJECT_PAGE_SIZE, q, status, sort },
+			{ page, pageSize: PROJECT_PAGE_SIZE, q, status, sort, manager },
 		],
 		queryFn: async () => {
 			const list = await fetchProjectsPage(page, filters);
@@ -44,12 +49,12 @@ export function projectsQueryOptions({
 
 /** The phone's list: the same pages as the desktop's, appended one after another. */
 export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
-	const { q, status, sort } = filters;
+	const { q, status, sort, manager } = filters;
 	return infiniteQueryOptions({
 		queryKey: [
 			"projects",
 			"infinite",
-			{ pageSize: PROJECT_PAGE_SIZE, q, status, sort },
+			{ pageSize: PROJECT_PAGE_SIZE, q, status, sort, manager },
 		],
 		queryFn: ({ pageParam }) => fetchProjectsPage(pageParam, filters),
 		initialPageParam: 1,
@@ -65,9 +70,19 @@ export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
 
 /** How many projects the filters leave, without loading them: one project is the smallest page. */
 export function projectsTotalQueryOptions(filters: ProjectsFilters) {
-	const { q, status, sort } = filters;
+	const { q, status, sort, manager } = filters;
 	return queryOptions({
-		queryKey: ["projects", "total", { q, status, sort }],
+		queryKey: ["projects", "total", { q, status, sort, manager }],
 		queryFn: async () => (await fetchProjectsPage(1, filters, 1)).total,
+	});
+}
+
+/** Who the admin can filter by; only the admin may ask. */
+export function projectManagersQueryOptions(enabled: boolean) {
+	return queryOptions({
+		queryKey: ["projects", "managers"],
+		queryFn: () => apiFetch("/projects/managers", projectManagersSchema),
+		enabled,
+		staleTime: 60 * 1000,
 	});
 }

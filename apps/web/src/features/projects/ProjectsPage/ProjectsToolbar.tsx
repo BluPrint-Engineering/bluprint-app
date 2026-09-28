@@ -1,4 +1,5 @@
 import { projectSortSchema, projectSorts } from "@bluprint/shared";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronDown, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,15 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
+import { projectManagersQueryOptions } from "../api";
+import {
+	ALL_MANAGERS,
+	clearAllFilters,
+	isNarrowed,
+	managerChoice,
+	type ProjectsFilters,
+	withManager,
+} from "./filters";
 import { ProjectSearch } from "./ProjectSearch";
 import { ProjectsFilterSheet } from "./ProjectsFilterSheet";
 import { StatusFilter } from "./StatusFilter";
@@ -33,6 +42,8 @@ function useScrolledPast(offset: number) {
 
 export interface ProjectsToolbarProps {
 	filters: ProjectsFilters;
+	/** The caller is the organization's admin, the only one who filters by manager. */
+	admin: boolean;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 	/** Projects `filters` leave, `undefined` while the list loads. */
 	total: number | undefined;
@@ -41,9 +52,12 @@ export interface ProjectsToolbarProps {
 /** The desktop's controls, inline above the grid; each applies as soon as it changes, the search once typing pauses. */
 export function ProjectsToolbar({
 	filters,
+	admin,
 	onFiltersChange,
 }: ProjectsToolbarProps) {
 	const { sort, status } = filters;
+	const { data: managers } = useQuery(projectManagersQueryOptions(admin));
+	const manager = managers?.find(({ id }) => id === filters.manager);
 	return (
 		<div className="flex flex-wrap items-center gap-(--space-3)">
 			<ProjectSearch
@@ -58,6 +72,42 @@ export function ProjectsToolbar({
 				value={status}
 				onChange={(next) => onFiltersChange({ ...filters, status: next })}
 			/>
+			{admin && (
+				<DropdownMenu>
+					<DropdownMenuTrigger asChild>
+						<Button variant="outline" size="sm" className="gap-1.5">
+							<span className="text-muted-foreground">Gerente:</span>{" "}
+							{filters.manager
+								? (manager?.name ?? (managers ? "Desconhecido" : "…"))
+								: "Todos"}
+							<ChevronDown
+								aria-hidden="true"
+								className="text-muted-foreground"
+							/>
+						</Button>
+					</DropdownMenuTrigger>
+					<DropdownMenuContent align="start" className="w-66">
+						<DropdownMenuLabel className="text-sm text-muted-foreground">
+							Gerente
+						</DropdownMenuLabel>
+						<DropdownMenuRadioGroup
+							value={managerChoice(filters)}
+							onValueChange={(choice) =>
+								onFiltersChange(withManager(filters, choice))
+							}
+						>
+							<DropdownMenuRadioItem value={ALL_MANAGERS}>
+								Todos os gerentes
+							</DropdownMenuRadioItem>
+							{managers?.map(({ id, name }) => (
+								<DropdownMenuRadioItem key={id} value={id}>
+									{name}
+								</DropdownMenuRadioItem>
+							))}
+						</DropdownMenuRadioGroup>
+					</DropdownMenuContent>
+				</DropdownMenu>
+			)}
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button variant="outline" size="sm" className="gap-1.5">
@@ -104,6 +154,7 @@ export function ProjectsToolbar({
 /** The phone's controls: a row that sticks to the top as the list scrolls, with the search and a "Filtros" that opens a sheet. */
 export function ProjectsMobileToolbar({
 	filters,
+	admin,
 	onFiltersChange,
 	total,
 }: ProjectsToolbarProps) {
@@ -125,6 +176,7 @@ export function ProjectsMobileToolbar({
 			/>
 			<ProjectsFilterSheet
 				filters={filters}
+				admin={admin}
 				onApply={onFiltersChange}
 				total={total}
 			/>

@@ -37,6 +37,11 @@ function statusParam(value: unknown): ProjectStatusFilter | undefined {
 	return status === "active" ? undefined : status;
 }
 
+/** Every manager is the default, so it never shows in the address; an empty value falls back to it. */
+function managerParam(value: unknown): string | undefined {
+	return typeof value === "string" && value !== "" ? value : undefined;
+}
+
 export const Route = createFileRoute("/_authenticated/projects/")({
 	validateSearch: (
 		search,
@@ -45,11 +50,13 @@ export const Route = createFileRoute("/_authenticated/projects/")({
 		q?: string | undefined;
 		status?: ProjectStatusFilter | undefined;
 		sort?: ProjectSort | undefined;
+		manager?: string | undefined;
 	} => ({
 		page: pageParam(search.page),
 		q: qParam(search.q),
 		status: statusParam(search.status),
 		sort: sortParam(search.sort),
+		manager: managerParam(search.manager),
 	}),
 	component: RouteComponent,
 });
@@ -60,6 +67,7 @@ function RouteComponent() {
 		q = "",
 		status = "active",
 		sort = "recent",
+		manager,
 	} = Route.useSearch();
 	const navigate = Route.useNavigate();
 	const onPageChange = useCallback(
@@ -80,6 +88,7 @@ function RouteComponent() {
 					q: qParam(next.q),
 					status: statusParam(next.status),
 					sort: sortParam(next.sort),
+					manager: managerParam(next.manager),
 					// the page the caller was on may not exist in the new result
 					page: undefined,
 				}),
@@ -92,7 +101,7 @@ function RouteComponent() {
 	return (
 		<ProjectsPage
 			page={page}
-			filters={{ q, status, sort }}
+			filters={{ q, status, sort, manager }}
 			onPageChange={onPageChange}
 			onFiltersChange={onFiltersChange}
 		/>

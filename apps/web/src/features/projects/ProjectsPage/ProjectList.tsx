@@ -9,7 +9,7 @@ import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { clearFilters, type ProjectsFilters } from "./filters";
+import { clearAllFilters, type ProjectsFilters } from "./filters";
 import { ProjectCard, ProjectCardSkeleton } from "./ProjectCard";
 import { StateBlock } from "./StateBlock";
 
@@ -97,6 +97,10 @@ export function ListPlaceholder({ query }: { query: FirstLoad }) {
 			/>
 		);
 	}
+	return <ListSkeleton />;
+}
+
+function ListSkeleton() {
 	return (
 		<div
 			role="status"
@@ -124,7 +128,19 @@ export function hasProjects(counts: ProjectListData["counts"]) {
 	return counts.active + counts.delivered > 0;
 }
 
-function NoProjects() {
+/** What stands in for a list with no projects at all: for the admin an invitation, for anyone else an explanation. */
+function NoProjects({ admin }: { admin: boolean | undefined }) {
+	// the wrong block, even for a moment, would tell an admin to wait for someone else
+	if (admin === undefined) return <ListSkeleton />;
+	if (admin) {
+		return (
+			<StateBlock
+				icon={Building}
+				title="Nenhuma obra ainda"
+				description="Crie a primeira obra da construtora para começar a mapear pendências."
+			/>
+		);
+	}
 	return (
 		<StateBlock
 			icon={Building}
@@ -155,7 +171,11 @@ export function NoResults({
 		<StateBlock
 			icon={Search}
 			title="Nenhuma obra encontrada"
-			description={`Nenhum resultado para “${q}”${searchScopeText(status)}.`}
+			description={
+				q
+					? `Nenhum resultado para “${q}”${searchScopeText(status)}.`
+					: "Nenhuma obra combina com os filtros escolhidos."
+			}
 		>
 			<Button variant="outline" onClick={onClear}>
 				Limpar filtros
@@ -165,6 +185,8 @@ export function NoResults({
 }
 
 interface EmptyListProps {
+	/** The caller is the organization's admin; `undefined` while their role loads. */
+	admin: boolean | undefined;
 	counts: ProjectListData["counts"];
 	filters: ProjectsFilters;
 	onFiltersChange: (filters: ProjectsFilters) => void;
@@ -172,11 +194,23 @@ interface EmptyListProps {
 
 /** What stands in for a list with nothing on it: no project at all, or none in the status on screen. */
 export function EmptyList({
+	admin,
 	counts,
 	filters,
 	onFiltersChange,
 }: EmptyListProps) {
-	if (!hasProjects(counts)) return <NoProjects />;
+	if (!hasProjects(counts)) {
+		// the counts follow the manager filter, so a manager with no project is no "empty organization"
+		return filters.manager ? (
+			<NoResults
+				q=""
+				status={filters.status}
+				onClear={() => onFiltersChange(clearAllFilters(filters))}
+			/>
+		) : (
+			<NoProjects admin={admin} />
+		);
+	}
 
 	// "all" cannot come up empty while any project exists, so what is left is a single status
 	if (filters.status === "delivered") {
@@ -189,7 +223,7 @@ export function EmptyList({
 				<Button
 					variant="outline"
 					size="lg"
-					onClick={() => onFiltersChange(clearFilters(filters))}
+					onClick={() => onFiltersChange({ ...filters, status: "active" })}
 				>
 					Ver em andamento
 				</Button>

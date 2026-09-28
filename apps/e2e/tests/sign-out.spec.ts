@@ -11,6 +11,11 @@ test("signs out from the account menu, back to the login", async ({ page }) => {
 	await page.getByLabel("Senha", { exact: true }).fill(SEED_PASSWORD);
 	await page.getByRole("button", { name: "Entrar" }).click();
 	await expect(page).toHaveURL("/projects");
+	// asserted here, not in a test of its own: another sign-in would spend the 5/min budget
+	await expect(
+		page.getByRole("list", { name: "Obras" }).getByRole("listitem").first(),
+	).toBeVisible();
+	await expect(page.getByRole("button", { name: /^Gerente:/ })).toBeHidden();
 
 	await page.getByRole("button", { name: `Conta de ${MANAGER_NAME}` }).click();
 	await expect(page.getByRole("menu")).toContainText(MANAGER_EMAIL);

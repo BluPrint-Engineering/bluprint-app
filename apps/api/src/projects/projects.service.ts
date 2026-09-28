@@ -1,6 +1,7 @@
 import {
 	ProjectList,
 	ProjectListQuery,
+	ProjectManager,
 	ProjectSummary,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
@@ -20,12 +21,14 @@ export class ProjectsService {
 
 	async listVisible(
 		userId: string,
-		{ page, pageSize, q, status, sort }: ProjectListQuery,
+		{ page, pageSize, q, status, sort, manager }: ProjectListQuery,
 	): Promise<ProjectList> {
+		const membership = await this.members.findByUser(userId);
 		const { items, total, counts } = await this.projects.listVisible(userId, {
 			q,
 			status,
 			sort,
+			managerId: membership?.role === "admin" ? manager : undefined,
 			limit: pageSize,
 			offset: (page - 1) * pageSize,
 		});
@@ -43,6 +46,15 @@ export class ProjectsService {
 			total,
 			counts,
 		};
+	}
+
+	async listManagers(userId: string): Promise<ProjectManager[]> {
+		const membership = await this.members.findByUser(userId);
+		if (membership?.role !== "admin") {
+			throw new ForbiddenException();
+		}
+
+		return this.projects.listManagers(membership.organizationId);
 	}
 
 	@Transactional()

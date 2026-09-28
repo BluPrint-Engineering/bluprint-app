@@ -1,9 +1,13 @@
 import { randomUUID } from "node:crypto";
 import { Server } from "node:http";
-import { problemDetailsSchema, projectListSchema } from "@bluprint/shared";
+import {
+	problemDetailsSchema,
+	projectListSchema,
+	projectManagersSchema,
+} from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
@@ -501,5 +505,127 @@ describe("GET /api/projects search", () => {
 
 		expect(res.status).toBe(400);
 		expect(problemDetailsSchema.parse(res.body).code).toBe("VALIDATION_FAILED");
+	});
+});
+
+describe("GET /api/projects manager filter", () => {
+	async function listAs(
+		caller: { agent: ReturnType<typeof request.agent> },
+		query: string,
+	) {
+		const res = await caller.agent.get(`${PROJECTS}?${query}`);
+		expect(res.status).toBe(200);
+		return projectListSchema.parse(res.body);
+	}
+
+	test("the admin sees only the projects where that person is manager, with the matching total", async () => {
+		const { items, total } = await listAs(admin, `manager=${linked.userId}`);
+
+		expect(items.map((p) => p.id)).toEqual([projectOne]);
+		expect(total).toBe(1);
+	});
+
+	test("a project where the person is only assistant does not count", async () => {
+		// linked is assistant on projectTwo and manager on projectOne
+		const { items } = await listAs(admin, `manager=${linked.userId}`);
+
+		expect(items.map((p) => p.id)).not.toContain(projectTwo);
+	});
+
+	test("a person whose only manager role is the default one matches no project", async () => {
+		expect(await listAs(admin, `manager=${unlinked.userId}`)).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
+	});
+
+	test("the admin cannot reach another organization's project through its manager", async () => {
+		expect(await listAs(admin, `manager=${outsider.userId}`)).toEqual({
+			items: [],
+			total: 0,
+			counts: { active: 0, delivered: 0 },
+		});
+	});
+
+	test("is ignored for someone who is not the admin", async () => {
+		const { items, total } = await listAs(linked, `manager=${admin.userId}`);
+
+		expect(items.map((p) => p.id).sort()).toEqual(
+			[projectOne, projectTwo].sort(),
+		);
+		expect(total).toBe(2);
+	});
+
+	test("rejects an empty manager", async () => {
+		const res = await admin.agent.get(`${PROJECTS}?manager=`);
+
+		expect(res.status).toBe(400);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("VALIDATION_FAILED");
+	});
+});
+
+describe("GET /api/projects/managers", () => {
+	const MANAGERS = `${PROJECTS}/managers`;
+
+	test("lists whoever is manager on at least one project of the organization, by name", async () => {
+		const res = await admin.agent.get(MANAGERS);
+
+		expect(res.status).toBe(200);
+		expect(projectManagersSchema.parse(res.body)).toEqual([
+			{ id: admin.userId, name: "Admin da Construtora" },
+			{ id: linked.userId, name: "Gerente Vinculada" },
+		]);
+	});
+
+	test("leaves out someone who is only manager by default role", async () => {
+		const res = await admin.agent.get(MANAGERS);
+
+		const ids = projectManagersSchema.parse(res.body).map((m) => m.id);
+		expect(ids).not.toContain(unlinked.userId);
+	});
+
+	test("lists a person once, however many projects they manage", async () => {
+		await db.insert(projectMember).values({
+			projectId: projectThree,
+			userId: linked.userId,
+			role: "manager",
+		});
+
+		const res = await admin.agent.get(MANAGERS);
+
+		const ids = projectManagersSchema.parse(res.body).map((m) => m.id);
+		expect(ids.filter((id) => id === linked.userId)).toHaveLength(1);
+
+		await db
+			.delete(projectMember)
+			.where(
+				and(
+					eq(projectMember.projectId, projectThree),
+					eq(projectMember.userId, linked.userId),
+				),
+			);
+	});
+
+	test("never lists someone from another organization", async () => {
+		const res = await paginated.agent.get(MANAGERS);
+
+		expect(res.status).toBe(200);
+		expect(projectManagersSchema.parse(res.body)).toEqual([]);
+	});
+
+	test.each([
+		["a manager", () => linked],
+		["a member with no project", () => unlinked],
+	])("refuses %s", async (_, caller) => {
+		const res = await caller().agent.get(MANAGERS);
+
+		expect(res.status).toBe(403);
+	});
+
+	test("refuses an anonymous caller", async () => {
+		const res = await request(server).get(MANAGERS);
+
+		expect(res.status).toBe(401);
 	});
 });

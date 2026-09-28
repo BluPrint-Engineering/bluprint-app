@@ -18,6 +18,8 @@ import { ProjectsMobileToolbar } from "./ProjectsToolbar";
 
 interface ContinuousProjectListProps {
 	filters: ProjectsFilters;
+	/** `undefined` while the caller's role loads. */
+	admin: boolean | undefined;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 }
 
@@ -27,6 +29,7 @@ const LOAD_AHEAD_PX = 160;
 /** The phone's list: the next page loads on its own as the end of the list nears the screen. */
 export function ContinuousProjectList({
 	filters,
+	admin,
 	onFiltersChange,
 }: ContinuousProjectListProps) {
 	const query = useInfiniteQuery({
@@ -87,6 +90,7 @@ export function ContinuousProjectList({
 			/>
 		) : (
 			<EmptyList
+				admin={admin}
 				counts={latest.counts}
 				filters={filters}
 				onFiltersChange={onFiltersChange}
@@ -127,6 +131,7 @@ export function ContinuousProjectList({
 				showToolbar && (
 					<ProjectsMobileToolbar
 						filters={filters}
+						admin={admin === true}
 						onFiltersChange={onFiltersChange}
 						total={total}
 					/>
