@@ -112,8 +112,8 @@ export class ProjectsRepository {
 		return { items, total: counted!.total, counts };
 	}
 
-	async insert(values: { organizationId: string; name: string }): Promise<{
-		id: string;
+	async insert(values: {
+		organizationId: string;
 		name: string;
 		/** Left out, the project is born `active`. */
 		status?: ProjectStatus | undefined;

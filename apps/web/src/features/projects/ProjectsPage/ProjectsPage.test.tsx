@@ -594,10 +594,9 @@ describe("projects page status", () => {
 		renderAt("/projects?status=all");
 
 		const cards = await screen.findAllByRole("listitem");
-		expect(cards.map((card) => card.textContent)).toEqual([
-			"Obra 1Em andamento",
-			"Obra 2Entregue",
-		]);
+		expect(
+			cards.map((card) => card.textContent?.replace(/Atividade.*$/, "")),
+		).toEqual(["Obra 1Em andamento", "Obra 2Entregue"]);
 	});
 
 	test("opens on the projects in progress", async () => {
