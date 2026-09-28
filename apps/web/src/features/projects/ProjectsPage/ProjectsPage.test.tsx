@@ -94,7 +94,7 @@ describe("projects page", () => {
 
 		renderAt("/projects");
 
-		expect(await screen.findByText("1 obra")).toBeInTheDocument();
+		expect(await screen.findByText("1 obra cadastrada")).toBeInTheDocument();
 		expect(
 			screen.queryByRole("navigation", { name: "Páginas de obras" }),
 		).not.toBeInTheDocument();
