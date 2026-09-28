@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectStatusFilterSchema } from "./project-status.js";
 
 export const PROJECT_PAGE_SIZE = 12;
 export const MAX_PROJECT_PAGE_SIZE = 100;
@@ -26,6 +27,11 @@ export const projectListQuerySchema = z.object({
 		description:
 			"Keeps the projects whose name contains this text, wherever in the name it falls. Accents and case never matter: `edificio` finds `Edifício Aurora`. Blank means no search.",
 		example: "edificio",
+	}),
+	status: projectStatusFilterSchema.default("active").meta({
+		description:
+			"`active`: projects in progress. `delivered`: handed over. `all`: both. `total` and `items` follow it; `counts` does not.",
+		example: "delivered",
 	}),
 	sort: projectSortSchema.default("recent").meta({
 		description:

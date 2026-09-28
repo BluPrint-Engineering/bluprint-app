@@ -1,4 +1,8 @@
-import type { DefaultRole, EffectiveRole } from "@bluprint/shared";
+import type {
+	DefaultRole,
+	EffectiveRole,
+	ProjectStatus,
+} from "@bluprint/shared";
 
 // fine as a fixed value: never used outside a local/dev database
 export const SEED_PASSWORD = "canteiro-de-obras-azul";
@@ -26,6 +30,8 @@ interface SeedProjectMember {
 
 interface SeedProject {
 	name: string;
+	// omitted: active
+	status?: ProjectStatus | undefined;
 	members: SeedProjectMember[];
 }
 
@@ -46,6 +52,7 @@ export const people: SeedPerson[] = [
 	{ name: "Elisa Rocha", email: "elisa@horizonte.test" },
 	{ name: "Fábio Lima", email: "fabio@horizonte.test" },
 	{ name: "Gabriela Souza", email: "gabriela@horizonte.test" },
+	{ name: "Heitor Barros", email: "heitor@horizonte.test" },
 	{ name: "Igor Pereira", email: "igor@vertice.test" },
 	{ name: "Júlia Nunes", email: "julia@vertice.test" },
 	{ name: "Lucas Ferraz", email: "lucas@vertice.test" },
@@ -57,7 +64,7 @@ export const people: SeedPerson[] = [
 export const organizations: SeedOrganization[] = [
 	{
 		name: "Construtora Horizonte",
-		licenses: 16,
+		licenses: 19,
 		members: [
 			{ email: "ana@horizonte.test", role: "admin" },
 			{ email: "bruno@horizonte.test", role: "admin" },
@@ -67,6 +74,8 @@ export const organizations: SeedOrganization[] = [
 			{ email: "fabio@horizonte.test", role: "assistant" },
 			// invited before any project existed: default role only, no project_member row yet
 			{ email: "gabriela@horizonte.test", role: "assistant" },
+			// every project of his is delivered: the list opens on "Nenhuma obra em andamento"
+			{ email: "heitor@horizonte.test", role: "assistant" },
 			{ email: "helena@consultoria.test", role: "assistant" },
 		],
 		projects: [
@@ -106,6 +115,21 @@ export const organizations: SeedOrganization[] = [
 			{ name: "Condomínio Recanto Verde", members: [] },
 			{ name: "Edifício Pátio Central", members: [] },
 			{ name: "Torre Atlântica", members: [] },
+			// delivered ones: out of the default list, so the admins' in-progress projects still page past one page
+			{
+				name: "Residencial Vila Nova",
+				status: "delivered",
+				members: [
+					{ email: "carla@horizonte.test", role: "manager" },
+					{ email: "heitor@horizonte.test", role: "assistant" },
+				],
+			},
+			{
+				name: "Edifício Lagoa Azul",
+				status: "delivered",
+				members: [{ email: "heitor@horizonte.test", role: "assistant" }],
+			},
+			{ name: "Condomínio Bela Vista", status: "delivered", members: [] },
 		],
 	},
 	{

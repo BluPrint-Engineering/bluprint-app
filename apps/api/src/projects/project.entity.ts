@@ -1,6 +1,9 @@
-import { index, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { projectStatuses } from "@bluprint/shared";
+import { index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { organization } from "../organizations/organization.entity";
+
+export const projectStatus = pgEnum("project_status", projectStatuses);
 
 export const project = pgTable(
 	"project",
@@ -10,6 +13,8 @@ export const project = pgTable(
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
 		name: text().notNull(),
+		// a delivered project is frozen until reopened (ADR 0056)
+		status: projectStatus().notNull().default("active"),
 		createdAt: createdAt(),
 	},
 	(table) => [index("project_organization_id_idx").on(table.organizationId)],

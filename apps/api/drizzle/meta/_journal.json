@@ -43,6 +43,13 @@
       "when": 1790616775857,
       "tag": "0005_unaccent_extension",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1790630122300,
+      "tag": "0006_project_status",
+      "breakpoints": true
     }
   ]
 }

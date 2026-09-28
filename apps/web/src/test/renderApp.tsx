@@ -63,7 +63,12 @@ export function stubApi(
 		if (url.pathname === "/api/organization") {
 			return json(options.organization ?? organization);
 		}
-		if (url.pathname === "/api/projects") return json({ items: [], total: 0 });
+		if (url.pathname === "/api/projects")
+			return json({
+				items: [],
+				total: 0,
+				counts: { active: 0, delivered: 0 },
+			});
 		return json({});
 	});
 	vi.stubGlobal("fetch", fetchMock);

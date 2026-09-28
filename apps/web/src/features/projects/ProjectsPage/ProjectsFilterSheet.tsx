@@ -22,6 +22,7 @@ import {
 	type ProjectsFilters,
 	sameFilters,
 } from "./filters";
+import { StatusFilter } from "./StatusFilter";
 import { SORT_LABELS } from "./sortLabels";
 
 export interface ProjectsFilterSheetProps {
@@ -48,6 +49,7 @@ export function ProjectsFilterSheet({
 }: ProjectsFilterSheetProps) {
 	const [open, setOpen] = useState(false);
 	const [chosen, setChosen] = useState(filters);
+	const statusLabelId = useId();
 	const sortLabelId = useId();
 
 	// the search is not the sheet's: it follows the address, so a search that lands while the sheet is open is neither reverted nor left out of the count
@@ -101,6 +103,16 @@ export function ProjectsFilterSheet({
 					</DrawerDescription>
 				</DrawerHeader>
 				<DrawerBody>
+					<div className="grid gap-(--space-1)">
+						<span id={statusLabelId} className="text-sm font-medium">
+							Status
+						</span>
+						<StatusFilter
+							aria-labelledby={statusLabelId}
+							value={draft.status}
+							onChange={(status) => setDraft({ ...draft, status })}
+						/>
+					</div>
 					<div className="grid gap-(--space-1)">
 						<span id={sortLabelId} className="text-sm font-medium">
 							Ordenar

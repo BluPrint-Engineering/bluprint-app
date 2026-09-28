@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { effectiveRoles } from "../roles.js";
+import { projectStatusSchema } from "./project-status.js";
 
 /** Kept apart from defaultRoleSchema: the default role never authorizes anything, this schema is what a client sees. */
 export const projectAccessRoleSchema = z
@@ -15,6 +16,10 @@ export const projectSummarySchema = z.object({
 	name: z.string(),
 	createdAt: z.iso.datetime(),
 	role: projectAccessRoleSchema,
+	status: projectStatusSchema.meta({
+		description:
+			"`active`: in progress. `delivered`: handed over to the client; its content is frozen until it is reopened.",
+	}),
 });
 
 export type ProjectAccessRole = z.infer<typeof projectAccessRoleSchema>;

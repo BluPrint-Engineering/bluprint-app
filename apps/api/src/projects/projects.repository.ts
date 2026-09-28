@@ -1,4 +1,8 @@
-import { ProjectSort } from "@bluprint/shared";
+import {
+	ProjectSort,
+	ProjectStatus,
+	ProjectStatusFilter,
+} from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, asc, count, desc, eq, isNotNull, or, sql } from "drizzle-orm";
@@ -23,10 +27,17 @@ export class ProjectsRepository {
 		userId: string,
 		{
 			q,
+			status,
 			sort,
 			limit,
 			offset,
-		}: { q: string; sort: ProjectSort; limit: number; offset: number },
+		}: {
+			q: string;
+			status: ProjectStatusFilter;
+			sort: ProjectSort;
+			limit: number;
+			offset: number;
+		},
 	) {
 		const visible = this.txHost.tx.$with("visible").as(
 			this.txHost.tx
@@ -34,6 +45,7 @@ export class ProjectsRepository {
 					id: project.id,
 					name: project.name,
 					createdAt: project.createdAt,
+					status: project.status,
 					effectiveRole: projectMember.role,
 				})
 				.from(project)
@@ -68,24 +80,47 @@ export class ProjectsRepository {
 			name: [asc(sql`${visible.name} collate "pt-BR-x-icu"`), asc(visible.id)],
 		}[sort];
 
-		const [items, [counted]] = await Promise.all([
+		const inStatus = status === "all" ? undefined : eq(visible.status, status);
+
+		const [items, [counted], perStatus] = await Promise.all([
 			this.txHost.tx
 				.with(visible)
 				.select()
 				.from(visible)
+				.where(inStatus)
 				.orderBy(...order)
 				.limit(limit)
 				.offset(offset),
-			this.txHost.tx.with(visible).select({ total: count() }).from(visible),
+			this.txHost.tx
+				.with(visible)
+				.select({ total: count() })
+				.from(visible)
+				.where(inStatus),
+			// the status filter stays out: these counts say what the other statuses hold
+			this.txHost.tx
+				.with(visible)
+				.select({ status: visible.status, total: count() })
+				.from(visible)
+				.groupBy(visible.status),
 		]);
 
-		return { items, total: counted!.total };
+		const counts: Record<ProjectStatus, number> = { active: 0, delivered: 0 };
+		for (const row of perStatus) counts[row.status] = row.total;
+
+		return { items, total: counted!.total, counts };
 	}
 
 	async insert(values: {
 		organizationId: string;
 		name: string;
-	}): Promise<{ id: string; name: string; createdAt: Date }> {
+		/** Left out, the project is born `active`. */
+		status?: ProjectStatus | undefined;
+	}): Promise<{
+		id: string;
+		name: string;
+		createdAt: Date;
+		status: ProjectStatus;
+	}> {
 		const [created] = await this.txHost.tx
 			.insert(project)
 			.values(values)
@@ -93,6 +128,7 @@ export class ProjectsRepository {
 				id: project.id,
 				name: project.name,
 				createdAt: project.createdAt,
+				status: project.status,
 			});
 
 		return created!;

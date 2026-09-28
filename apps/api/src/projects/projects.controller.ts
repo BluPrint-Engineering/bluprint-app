@@ -19,7 +19,7 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "My projects",
 		description:
-			"Lists one page of the projects visible to the caller, optionally only those whose name contains `q`, newest first or by name, with the caller's role in each and the total across every page. A caller with a project membership gets that membership's effective role (`manager` or `assistant`); a caller with no project membership who is the organization's `admin` still sees the project and gets `admin`. Without an organization membership the project does not appear at all — that is data isolation between organizations.",
+			"Lists one page of the projects visible to the caller, optionally only those whose name contains `q`, newest first or by name, with the caller's role and status in each and the total across every page. Only projects in progress by default; `status` picks `delivered` or `all`. `counts` gives the visible projects per status whatever `status` asked for, so a client can offer the delivered ones when none is in progress. A caller with a project membership gets that membership's effective role (`manager` or `assistant`); a caller with no project membership who is the organization's `admin` still sees the project and gets `admin`. Without an organization membership the project does not appear at all — that is data isolation between organizations.",
 	})
 	@ZodResponse({
 		status: 200,

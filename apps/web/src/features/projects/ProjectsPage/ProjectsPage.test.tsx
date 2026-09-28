@@ -1,4 +1,4 @@
-import type { ProjectAccessRole } from "@bluprint/shared";
+import type { ProjectAccessRole, ProjectStatus } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -15,12 +15,17 @@ import { projectsQueryOptions } from "../api";
 
 const PAGE_SIZE = 12;
 
-function project(n: number, role: ProjectAccessRole = "admin") {
+function project(
+	n: number,
+	role: ProjectAccessRole = "admin",
+	status: ProjectStatus = "active",
+) {
 	return {
 		id: `0190a000-0000-7000-8000-${String(n).padStart(12, "0")}`,
 		name: `Obra ${n}`,
 		createdAt: "2026-01-01T00:00:00.000Z",
 		role,
+		status,
 	};
 }
 
@@ -43,7 +48,34 @@ function projectsApi(
 			const n = byName ? total + 1 - i : i;
 			items.push(project(n, role(n)));
 		}
-		return json({ items, total });
+		return json({ items, total, counts: { active: total, delivered: 0 } });
+	};
+}
+
+/**
+ * Serves the projects in progress, numbered first, and the delivered ones, filtered by `status` the
+ * way the API does; `counts` ignores the filter.
+ */
+function statusApi(active: number, delivered: number): ApiHandler {
+	return (url) => {
+		if (url.pathname !== "/api/projects") return undefined;
+		const status = url.searchParams.get("status") ?? "active";
+		const page = Number(url.searchParams.get("page") ?? 1);
+		const shown = [
+			...(status === "delivered"
+				? []
+				: Array.from({ length: active }, (_, i) => project(i + 1))),
+			...(status === "active"
+				? []
+				: Array.from({ length: delivered }, (_, i) =>
+						project(active + i + 1, "admin", "delivered"),
+					)),
+		];
+		return json({
+			items: shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+			total: shown.length,
+			counts: { active, delivered },
+		});
 	};
 }
 
@@ -65,6 +97,19 @@ function requestedPages(
 		.map(([input]) => new URL(String(input), "http://localhost"))
 		.filter((url) => url.pathname === "/api/projects")
 		.map((url) => url.searchParams.get("page"));
+}
+
+function requestedStatuses(
+	fetchMock: ReturnType<typeof stubProjects>["fetchMock"],
+) {
+	return [
+		...new Set(
+			fetchMock.mock.calls
+				.map(([input]) => new URL(String(input), "http://localhost"))
+				.filter((url) => url.pathname === "/api/projects")
+				.map((url) => url.searchParams.get("status")),
+		),
+	];
 }
 
 describe("projects page", () => {
@@ -123,9 +168,9 @@ describe("projects page", () => {
 
 		const cards = await screen.findAllByRole("listitem");
 		expect(cards.map((card) => card.textContent)).toEqual([
-			"Obra 1Gerente de obra",
-			"Obra 2Assistente de obra",
-			"Obra 3",
+			"Obra 1Gerente de obraEm andamento",
+			"Obra 2Assistente de obraEm andamento",
+			"Obra 3Em andamento",
 		]);
 	});
 
@@ -191,7 +236,12 @@ describe("projects page", () => {
 		await waitFor(() => {
 			expect(
 				queryClient.getQueryState(
-					projectsQueryOptions({ page: 1, q: "", sort: "recent" }).queryKey,
+					projectsQueryOptions({
+						page: 1,
+						q: "",
+						status: "active",
+						sort: "recent",
+					}).queryKey,
 				)?.status,
 			).toBe("error");
 		});
@@ -462,6 +512,210 @@ describe("projects page", () => {
 	});
 });
 
+describe("projects page status", () => {
+	beforeEach(() => {
+		vi.spyOn(window, "scrollTo");
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
+	});
+
+	test("badges each card with its status in words", async () => {
+		stubProjects(statusApi(1, 1));
+
+		renderAt("/projects?status=all");
+
+		const cards = await screen.findAllByRole("listitem");
+		expect(cards.map((card) => card.textContent)).toEqual([
+			"Obra 1Em andamento",
+			"Obra 2Entregue",
+		]);
+	});
+
+	test("opens on the projects in progress", async () => {
+		const { fetchMock } = stubProjects(statusApi(2, 3));
+
+		renderAt("/projects");
+
+		const list = await screen.findByRole("list", { name: "Obras" });
+		expect(within(list).getAllByRole("listitem")).toHaveLength(2);
+		expect(screen.getByText("2 obras")).toBeInTheDocument();
+		expect(screen.getByRole("radio", { name: "Em andamento" })).toBeChecked();
+		expect(
+			screen.queryByRole("button", { name: "Limpar filtros" }),
+		).not.toBeInTheDocument();
+		expect(requestedStatuses(fetchMock)).toEqual(["active"]);
+	});
+
+	test("switches to the delivered ones from the toolbar, which counts as a filter", async () => {
+		stubProjects(statusApi(2, 3));
+
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("radio", { name: "Entregue" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("3 obras")).toBeInTheDocument();
+		});
+		expect(screen.getByRole("radio", { name: "Entregue" })).toBeChecked();
+		expect(router.state.location.search).toEqual({ status: "delivered" });
+		const list = screen.getByRole("list", { name: "Obras" });
+		expect(within(list).getAllByText("Entregue")).toHaveLength(3);
+	});
+
+	test("shows both statuses under “Todas”", async () => {
+		stubProjects(statusApi(2, 3));
+
+		renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("radio", { name: "Todas" }));
+
+		await waitFor(() => {
+			expect(screen.getByText("5 obras")).toBeInTheDocument();
+		});
+	});
+
+	test("“Limpar filtros” goes back to the projects in progress and keeps the sort", async () => {
+		stubProjects(statusApi(2, 3));
+
+		const { router } = renderAt("/projects?status=delivered&sort=name");
+		await screen.findByText("3 obras");
+		await userEvent.click(
+			screen.getByRole("button", { name: "Limpar filtros" }),
+		);
+
+		await waitFor(() => {
+			expect(screen.getByText("2 obras")).toBeInTheDocument();
+		});
+		expect(router.state.location.search).toEqual({ sort: "name" });
+		expect(
+			screen.queryByRole("button", { name: "Limpar filtros" }),
+		).not.toBeInTheDocument();
+	});
+
+	test("points to the delivered ones when none is in progress (O8a)", async () => {
+		stubProjects(statusApi(0, 3));
+
+		const { router } = renderAt("/projects");
+
+		expect(
+			await screen.findByRole("heading", { name: "Nenhuma obra em andamento" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("heading", { name: "Nenhuma obra por aqui" }),
+		).not.toBeInTheDocument();
+		// the toolbar stays, or a person with only delivered projects would have no way to change the status
+		expect(screen.getByRole("radio", { name: "Todas" })).toBeInTheDocument();
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ver entregues" }),
+		);
+
+		expect(await screen.findByText("Obra 1")).toBeInTheDocument();
+		expect(router.state.location.search).toEqual({ status: "delivered" });
+		expect(screen.getByText("3 obras")).toBeInTheDocument();
+	});
+
+	test("says there are no delivered ones when only those in progress exist", async () => {
+		stubProjects(statusApi(2, 0));
+
+		const { router } = renderAt("/projects?status=delivered");
+
+		expect(
+			await screen.findByRole("heading", { name: "Nenhuma obra entregue" }),
+		).toBeInTheDocument();
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ver em andamento" }),
+		);
+
+		expect(await screen.findByText("Obra 1")).toBeInTheDocument();
+		expect(router.state.location.search).toEqual({});
+	});
+
+	test("a person with no project at all still gets the empty state, whatever the status (O7)", async () => {
+		stubProjects(statusApi(0, 0));
+
+		renderAt("/projects?status=all");
+
+		expect(
+			await screen.findByRole("heading", { name: "Nenhuma obra por aqui" }),
+		).toBeInTheDocument();
+	});
+
+	test("the filter sheet chooses the status as a draft, counts it, and applies it on “Ver N obras”", async () => {
+		setViewport("phone");
+		stubProjects(statusApi(2, 3));
+
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+		const sheet = await screen.findByRole("dialog", { name: "Filtros" });
+		expect(sheet).toHaveAccessibleDescription("Nenhum filtro ativo");
+
+		await userEvent.click(
+			within(sheet).getByRole("radio", { name: "Entregue" }),
+		);
+
+		expect(sheet).toHaveAccessibleDescription("1 filtro ativo");
+		expect(
+			within(sheet).getByRole("button", { name: "Limpar filtros" }),
+		).toBeEnabled();
+		expect(router.state.location.search).toEqual({});
+		await userEvent.click(
+			await within(sheet).findByRole("button", { name: "Ver 3 obras" }),
+		);
+
+		await waitFor(() => {
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		});
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({ status: "delivered" });
+		});
+		expect(
+			screen.getByRole("button", { name: "Filtros, 1 ativo" }),
+		).toBeInTheDocument();
+	});
+
+	test("“Limpar filtros” in the sheet resets the draft to the projects in progress", async () => {
+		setViewport("phone");
+		stubProjects(statusApi(2, 3));
+
+		renderAt("/projects?status=all");
+		await screen.findByText("5 obras");
+		await userEvent.click(
+			screen.getByRole("button", { name: "Filtros, 1 ativo" }),
+		);
+		const sheet = await screen.findByRole("dialog", { name: "Filtros" });
+
+		await userEvent.click(
+			within(sheet).getByRole("button", { name: "Limpar filtros" }),
+		);
+
+		expect(
+			within(sheet).getByRole("radio", { name: "Em andamento" }),
+		).toBeChecked();
+		expect(sheet).toHaveAccessibleDescription("Nenhum filtro ativo");
+	});
+
+	test("O8a on the phone offers the delivered ones too", async () => {
+		setViewport("phone");
+		stubProjects(statusApi(0, 3));
+
+		renderAt("/projects");
+
+		expect(
+			await screen.findByRole("heading", { name: "Nenhuma obra em andamento" }),
+		).toBeInTheDocument();
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ver entregues" }),
+		);
+		expect(await screen.findByText("Obra 1")).toBeInTheDocument();
+	});
+});
+
 describe("projects page on the phone", () => {
 	beforeEach(() => {
 		setViewport("phone");
@@ -644,7 +898,11 @@ describe("projects page search", () => {
 			const items = names
 				.map((name, i) => ({ ...project(i + 1), name }))
 				.filter((p) => plain(p.name).includes(q));
-			return json({ items, total: items.length });
+			return json({
+				items,
+				total: items.length,
+				counts: { active: items.length, delivered: 0 },
+			});
 		};
 	}
 

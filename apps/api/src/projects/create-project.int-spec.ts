@@ -105,7 +105,11 @@ describe("POST /api/projects", () => {
 
 		expect(res.status).toBe(201);
 		const created = projectSummarySchema.parse(res.body);
-		expect(created).toMatchObject({ name: "Casa Moinhos", role: "admin" });
+		expect(created).toMatchObject({
+			name: "Casa Moinhos",
+			role: "admin",
+			status: "active",
+		});
 
 		const listed = await creator.agent.get(PROJECTS);
 		expect(projectListSchema.parse(listed.body).items).toEqual(
@@ -145,6 +149,7 @@ describe("POST /api/projects", () => {
 		expect(projectListSchema.parse(listed.body)).toEqual({
 			items: [],
 			total: 0,
+			counts: { active: 0, delivered: 0 },
 		});
 	});
 

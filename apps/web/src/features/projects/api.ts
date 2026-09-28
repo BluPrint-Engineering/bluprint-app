@@ -1,19 +1,23 @@
 import {
 	PROJECT_PAGE_SIZE,
-	type ProjectSort,
+	type ProjectListQuery,
 	projectListSchema,
 } from "@bluprint/shared";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
+/** What the list is narrowed and ordered by: the query parameters that are not the page. */
+type ProjectsFilters = Pick<ProjectListQuery, "q" | "status" | "sort">;
+
 function fetchProjectsPage(
 	page: number,
-	{ q, sort }: { q: string; sort: ProjectSort },
+	{ q, status, sort }: ProjectsFilters,
 	pageSize = PROJECT_PAGE_SIZE,
 ) {
 	const params = new URLSearchParams({
 		page: String(page),
 		pageSize: String(pageSize),
+		status,
 		sort,
 	});
 	if (q) params.set("q", q);
@@ -22,17 +26,16 @@ function fetchProjectsPage(
 
 export function projectsQueryOptions({
 	page,
-	q,
-	sort,
-}: {
-	page: number;
-	q: string;
-	sort: ProjectSort;
-}) {
+	...filters
+}: { page: number } & ProjectsFilters) {
+	const { q, status, sort } = filters;
 	return queryOptions({
-		queryKey: ["projects", { page, pageSize: PROJECT_PAGE_SIZE, q, sort }],
+		queryKey: [
+			"projects",
+			{ page, pageSize: PROJECT_PAGE_SIZE, q, status, sort },
+		],
 		queryFn: async () => {
-			const list = await fetchProjectsPage(page, { q, sort });
+			const list = await fetchProjectsPage(page, filters);
 			// tagged with its page: while the next page loads, the data on screen is still the previous one's
 			return { ...list, page };
 		},
@@ -40,20 +43,15 @@ export function projectsQueryOptions({
 }
 
 /** The phone's list: the same pages as the desktop's, appended one after another. */
-export function projectsInfiniteQueryOptions({
-	q,
-	sort,
-}: {
-	q: string;
-	sort: ProjectSort;
-}) {
+export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
+	const { q, status, sort } = filters;
 	return infiniteQueryOptions({
 		queryKey: [
 			"projects",
 			"infinite",
-			{ pageSize: PROJECT_PAGE_SIZE, q, sort },
+			{ pageSize: PROJECT_PAGE_SIZE, q, status, sort },
 		],
-		queryFn: ({ pageParam }) => fetchProjectsPage(pageParam, { q, sort }),
+		queryFn: ({ pageParam }) => fetchProjectsPage(pageParam, filters),
 		initialPageParam: 1,
 		getNextPageParam: (lastPage, pages, lastPageParam) => {
 			const loaded = pages.reduce((sum, page) => sum + page.items.length, 0);
@@ -66,15 +64,10 @@ export function projectsInfiniteQueryOptions({
 }
 
 /** How many projects the filters leave, without loading them: one project is the smallest page. */
-export function projectsTotalQueryOptions({
-	q,
-	sort,
-}: {
-	q: string;
-	sort: ProjectSort;
-}) {
+export function projectsTotalQueryOptions(filters: ProjectsFilters) {
+	const { q, status, sort } = filters;
 	return queryOptions({
-		queryKey: ["projects", "total", { q, sort }],
-		queryFn: async () => (await fetchProjectsPage(1, { q, sort }, 1)).total,
+		queryKey: ["projects", "total", { q, status, sort }],
+		queryFn: async () => (await fetchProjectsPage(1, filters, 1)).total,
 	});
 }

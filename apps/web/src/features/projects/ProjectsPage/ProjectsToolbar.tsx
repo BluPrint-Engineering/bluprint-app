@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
 import { ProjectSearch } from "./ProjectSearch";
 import { ProjectsFilterSheet } from "./ProjectsFilterSheet";
+import { StatusFilter } from "./StatusFilter";
 import { SORT_LABELS } from "./sortLabels";
 
 /** Past this, the phone's sticky row draws its bottom border so the cards don't run into it. */
@@ -42,7 +43,7 @@ export function ProjectsToolbar({
 	filters,
 	onFiltersChange,
 }: ProjectsToolbarProps) {
-	const { sort } = filters;
+	const { sort, status } = filters;
 	return (
 		<div className="flex flex-wrap items-center gap-(--space-3)">
 			<ProjectSearch
@@ -50,6 +51,12 @@ export function ProjectsToolbar({
 				value={filters.q}
 				onChange={(q) => onFiltersChange({ ...filters, q })}
 				className="w-65"
+			/>
+			<StatusFilter
+				size="sm"
+				aria-label="Status"
+				value={status}
+				onChange={(next) => onFiltersChange({ ...filters, status: next })}
 			/>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
