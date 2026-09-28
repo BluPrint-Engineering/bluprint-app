@@ -50,7 +50,6 @@ function RouteComponent() {
 					// the page the caller was on may not exist in the new result
 					page: undefined,
 				}),
-				resetScroll: false,
 			}),
 		[navigate],
 	);

@@ -1,20 +1,9 @@
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
-import { useSyncExternalStore } from "react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
-
-const DESKTOP = "(min-width: 768px)";
-
-function subscribeToDesktop(onChange: () => void) {
-	const query = window.matchMedia?.(DESKTOP);
-	query?.addEventListener("change", onChange);
-	return () => query?.removeEventListener("change", onChange);
-}
-
-// jsdom has no matchMedia; it renders as a phone
-const isDesktop = () => window.matchMedia?.(DESKTOP).matches ?? false;
+import { useIsDesktop } from "@/lib/useIsDesktop";
 
 const Toaster = (props: ToasterProps) => {
-	const desktop = useSyncExternalStore(subscribeToDesktop, isDesktop);
+	const desktop = useIsDesktop();
 	return (
 		<Sonner
 			// colours come from the tokens, which follow .dark; "system" would read the OS instead of the app's theme

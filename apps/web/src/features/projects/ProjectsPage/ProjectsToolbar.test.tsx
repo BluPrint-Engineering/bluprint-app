@@ -1,12 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
-import { ProjectsToolbar } from "./ProjectsToolbar";
+import { ProjectsMobileToolbar } from "./ProjectsToolbar";
 
 function renderToolbar(activeFilterCount: number) {
 	const onClearFilters = vi.fn();
 	render(
-		<ProjectsToolbar
+		<ProjectsMobileToolbar
 			sort="recent"
 			onSortChange={() => {}}
 			activeFilterCount={activeFilterCount}
@@ -17,7 +17,7 @@ function renderToolbar(activeFilterCount: number) {
 	return { onClearFilters };
 }
 
-describe("projects toolbar", () => {
+describe("projects toolbar on the phone", () => {
 	test.each([
 		[1, "Filtros, 1 ativo", "1 filtro ativo"],
 		[2, "Filtros, 2 ativos", "2 filtros ativos"],

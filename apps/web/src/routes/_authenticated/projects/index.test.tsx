@@ -2,6 +2,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
+import { setViewport } from "@/test/viewport";
 
 function lastRequest(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	return fetchMock.mock.calls
@@ -116,6 +117,7 @@ describe("/projects route", () => {
 	});
 
 	test("changing the sort from the filter sheet goes back to the first page", async () => {
+		setViewport("phone");
 		stubProjects();
 
 		const { router } = renderAt("/projects?page=2");
