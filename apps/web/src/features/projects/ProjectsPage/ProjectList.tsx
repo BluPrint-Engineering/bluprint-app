@@ -1,6 +1,6 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import type { FetchStatus } from "@tanstack/react-query";
-import { Building, CircleAlert, WifiOff } from "lucide-react";
+import { Building, CircleAlert, Search, WifiOff } from "lucide-react";
 import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -121,6 +121,21 @@ export function NoProjects() {
 			title="Nenhuma obra por aqui"
 			description="Você verá uma obra aqui quando o admin da construtora te vincular a ela."
 		/>
+	);
+}
+
+/** What a search that matches no project shows; "Limpar filtros" is the way back to the list. */
+export function NoResults({ q, onClear }: { q: string; onClear: () => void }) {
+	return (
+		<StateBlock
+			icon={Search}
+			title="Nenhuma obra encontrada"
+			description={`Nenhum resultado para “${q}”.`}
+		>
+			<Button variant="outline" onClick={onClear}>
+				Limpar filtros
+			</Button>
+		</StateBlock>
 	);
 }
 

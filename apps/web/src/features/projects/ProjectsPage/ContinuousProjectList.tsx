@@ -4,11 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { projectsInfiniteQueryOptions } from "../api";
-import type { ProjectsFilters } from "./filters";
+import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
 import {
 	firstLoadState,
 	ListPlaceholder,
 	NoProjects,
+	NoResults,
 	ProjectList,
 	ProjectsMain,
 } from "./ProjectList";
@@ -76,7 +77,14 @@ export function ContinuousProjectList({
 	if (!data) {
 		content = <ListPlaceholder query={query} />;
 	} else if (total === 0) {
-		content = <NoProjects />;
+		content = isNarrowed(filters) ? (
+			<NoResults
+				q={filters.q}
+				onClear={() => onFiltersChange(clearAllFilters(filters))}
+			/>
+		) : (
+			<NoProjects />
+		);
 	} else {
 		content = (
 			<>
@@ -97,8 +105,9 @@ export function ContinuousProjectList({
 		);
 	}
 
+	// a search that finds nothing keeps its field, or the person could not edit it
 	const showToolbar = data
-		? total !== undefined && total > 0
+		? (total !== undefined && total > 0) || isNarrowed(filters)
 		: firstLoadState(query) === "loading";
 
 	return (

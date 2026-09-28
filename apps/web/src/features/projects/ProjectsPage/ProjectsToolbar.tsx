@@ -1,5 +1,5 @@
 import { projectSortSchema, projectSorts } from "@bluprint/shared";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,7 +11,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { ProjectsFilters } from "./filters";
+import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
+import { ProjectSearch } from "./ProjectSearch";
 import { ProjectsFilterSheet } from "./ProjectsFilterSheet";
 import { SORT_LABELS } from "./sortLabels";
 
@@ -36,7 +37,7 @@ export interface ProjectsToolbarProps {
 	total: number | undefined;
 }
 
-/** The desktop's controls, inline above the grid; each applies as soon as it changes. */
+/** The desktop's controls, inline above the grid; each applies as soon as it changes, the search once typing pauses. */
 export function ProjectsToolbar({
 	filters,
 	onFiltersChange,
@@ -44,6 +45,12 @@ export function ProjectsToolbar({
 	const { sort } = filters;
 	return (
 		<div className="flex flex-wrap items-center gap-(--space-3)">
+			<ProjectSearch
+				size="sm"
+				value={filters.q}
+				onChange={(q) => onFiltersChange({ ...filters, q })}
+				className="w-65"
+			/>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button variant="outline" size="sm" className="gap-1.5">
@@ -73,11 +80,21 @@ export function ProjectsToolbar({
 					</DropdownMenuRadioGroup>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			{isNarrowed(filters) && (
+				<Button
+					variant="ghost"
+					size="sm"
+					onClick={() => onFiltersChange(clearAllFilters(filters))}
+				>
+					<X aria-hidden="true" className="size-4" />
+					Limpar filtros
+				</Button>
+			)}
 		</div>
 	);
 }
 
-/** The phone's controls: a row that sticks to the top as the list scrolls, its "Filtros" opening a sheet. */
+/** The phone's controls: a row that sticks to the top as the list scrolls, with the search and a "Filtros" that opens a sheet. */
 export function ProjectsMobileToolbar({
 	filters,
 	onFiltersChange,
@@ -93,6 +110,12 @@ export function ProjectsMobileToolbar({
 				stuck ? "border-border" : "border-transparent",
 			)}
 		>
+			<ProjectSearch
+				size="md"
+				value={filters.q}
+				onChange={(q) => onFiltersChange({ ...filters, q })}
+				className="flex-1"
+			/>
 			<ProjectsFilterSheet
 				filters={filters}
 				onApply={onFiltersChange}

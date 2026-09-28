@@ -36,6 +36,13 @@
       "when": 1790525915766,
       "tag": "0004_one_organization_per_person",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1790616775857,
+      "tag": "0005_unaccent_extension",
+      "breakpoints": true
     }
   ]
 }

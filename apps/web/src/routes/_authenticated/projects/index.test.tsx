@@ -15,6 +15,10 @@ function requestedPage(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	return lastRequest(fetchMock)?.get("page");
 }
 
+function requestedQuery(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
+	return lastRequest(fetchMock)?.get("q");
+}
+
 function requestedSort(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	return lastRequest(fetchMock)?.get("sort");
 }
@@ -134,6 +138,52 @@ describe("/projects route", () => {
 
 		await waitFor(() => {
 			expect(router.state.location.search).toEqual({ sort: "name" });
+		});
+	});
+
+	test("asks for the search in the address, and shows it in the field", async () => {
+		const { fetchMock } = stubApi(signedIn);
+
+		const { router } = renderAt("/projects?q=edificio%20aurora");
+
+		await waitFor(() => {
+			expect(requestedQuery(fetchMock)).toBe("edificio aurora");
+		});
+		expect(router.state.location.search).toEqual({ q: "edificio aurora" });
+		expect(
+			await screen.findByRole("textbox", { name: "Buscar obra pelo nome" }),
+		).toHaveValue("edificio aurora");
+	});
+
+	test.each([["%22%22"], ["%20%20"], ["a".repeat(101)]])(
+		"falls back to no search, omitted from the address, for q=%s",
+		async (value) => {
+			const { fetchMock } = stubApi(signedIn);
+
+			const { router } = renderAt(`/projects?q=${value}`);
+
+			await screen.findByRole("heading", { name: "Obras" });
+			await waitFor(() => {
+				expect(requestedQuery(fetchMock)).toBe(null);
+			});
+			expect(router.state.location.search).toEqual({});
+		},
+	);
+
+	test("changing the search goes back to the first page, keeping the sort", async () => {
+		stubProjects();
+
+		const { router } = renderAt("/projects?page=3&sort=name");
+		await userEvent.type(
+			await screen.findByRole("textbox", { name: "Buscar obra pelo nome" }),
+			"aurora",
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({
+				q: "aurora",
+				sort: "name",
+			});
 		});
 	});
 });
