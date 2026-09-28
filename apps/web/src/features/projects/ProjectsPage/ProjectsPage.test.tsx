@@ -85,7 +85,7 @@ describe("projects page", () => {
 		expect(within(list).getAllByRole("listitem")).toHaveLength(12);
 		expect(within(list).getByText("Obra 1")).toBeInTheDocument();
 		expect(within(list).queryByText("Obra 13")).not.toBeInTheDocument();
-		expect(screen.getByText("26 obras")).toBeInTheDocument();
+		expect(screen.getByText("26 obras cadastradas")).toBeInTheDocument();
 		expect(screen.getByText("Mostrando 1–12 de 26")).toBeInTheDocument();
 	});
 
@@ -157,7 +157,7 @@ describe("projects page", () => {
 			within(alert).getByRole("button", { name: "Tentar de novo" }),
 		);
 
-		expect(await screen.findByText("2 obras")).toBeInTheDocument();
+		expect(await screen.findByText("2 obras cadastradas")).toBeInTheDocument();
 	});
 
 	test("keeps a loaded list when a later refresh fails", async () => {
@@ -169,7 +169,7 @@ describe("projects page", () => {
 		});
 
 		const { queryClient } = renderAt("/projects");
-		await screen.findByText("2 obras");
+		await screen.findByText("2 obras cadastradas");
 
 		failing = true;
 		await act(() => queryClient.refetchQueries({ queryKey: ["projects"] }));
@@ -214,7 +214,7 @@ describe("projects page", () => {
 
 		act(() => onlineManager.setOnline(true));
 
-		expect(await screen.findByText("2 obras")).toBeInTheDocument();
+		expect(await screen.findByText("2 obras cadastradas")).toBeInTheDocument();
 	});
 
 	test("while another page loads, dims the list and locks the controls, then scrolls to the top (O13)", async () => {

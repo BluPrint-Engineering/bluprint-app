@@ -140,7 +140,9 @@ export function ProjectsPage({ page, onPageChange }: ProjectsPageProps) {
 				</h1>
 				{data && data.total > 0 ? (
 					<span className="text-base text-muted-foreground tabular-nums">
-						{data.total === 1 ? "1 obra" : `${data.total} obras`}
+						{data.total === 1
+							? "1 obra cadastrada"
+							: `${data.total} obras cadastradas`}
 					</span>
 				) : (
 					!data &&
