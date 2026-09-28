@@ -17,7 +17,8 @@ export default defineConfig({
 	use: {
 		baseURL: WEB_BASE_URL,
 		screenshot: { mode: "on", fullPage: true },
-		video: "retain-on-failure",
+		// E2E_VIDEO=1 records every test, for the PR video of a changed flow
+		video: process.env.E2E_VIDEO ? "on" : "retain-on-failure",
 		trace: "on-first-retry",
 	},
 	projects: [
