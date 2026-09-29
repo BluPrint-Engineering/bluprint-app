@@ -22,8 +22,7 @@ const buttonVariants = cva(
 				link: "text-primary underline-offset-4 hover:underline",
 			},
 			size: {
-				// 44px floor everywhere a gloved hand may tap (RNF-06); `sm` is the one
-				// exception, reserved for desktop toolbars and never used in the field.
+				// 44px tap floor (RNF-06); `sm` falls below it, so it is for desktop toolbars only, never in the field
 				default:
 					"h-(--control-h) gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
 				sm: "h-(--control-h-sm) gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",

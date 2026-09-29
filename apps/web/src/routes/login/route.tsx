@@ -9,7 +9,6 @@ import {
 import { internalPath } from "@/utils/internalPath";
 
 export const Route = createFileRoute("/login")({
-	// anything but an internal path is dropped, so the login can't send someone to another site
 	// the key stays present (as undefined), or the router's parent search merge lets the raw value through
 	validateSearch: (search): { redirect?: string | undefined } => ({
 		redirect: internalPath(search.redirect),

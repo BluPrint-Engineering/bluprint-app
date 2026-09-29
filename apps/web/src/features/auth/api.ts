@@ -1,11 +1,7 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth";
 
-/**
- * The only way to read the session, in the guard and on the public screens alike.
- * Resolves to `null` for a definite "no session" and throws for anything else, so a 500 or a dropped
- * connection never reads as signed out (ADR 0038).
- */
+/** `null` only for a definite "no session"; anything else throws, so a 500 or a dropped connection never reads as signed out (ADR 0038). */
 export const sessionQueryOptions = queryOptions({
 	queryKey: ["session"],
 	queryFn: async () => {
@@ -20,22 +16,18 @@ export const sessionQueryOptions = queryOptions({
 	retry: 3,
 });
 
-/** Drops the cached session, so a sign-in, sign-up or 401 is never followed by a stale answer. */
 export function discardSession(queryClient: QueryClient) {
 	queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey });
 }
 
-/**
- * Reads the session for a public screen, where it is only a shortcut past the form: no retries, and
- * an unverifiable session counts as none, so the form shows at once.
- */
+/** Unlike the guard's read, an unverifiable session counts as none, so the form shows at once. */
 export function peekSession(queryClient: QueryClient) {
 	return queryClient
 		.query({ ...sessionQueryOptions, retry: false })
 		.catch(() => null);
 }
 
-/** Ends the session on the server; throws when it could not, so the person is never told they left while still signed in. */
+/** Throws when the server could not end the session, so no one is told they left while still signed in. */
 export async function signOut() {
 	const { error } = await authClient.signOut();
 	if (error) throw new Error(error.message ?? "Sign-out failed");

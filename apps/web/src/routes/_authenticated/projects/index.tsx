@@ -9,7 +9,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useCallback } from "react";
 import { type ProjectsFilters, ProjectsPage } from "@/features/projects";
 
-/** The first page is the default, so it never shows in the address; anything invalid falls back to it. */
 function pageParam(value: unknown): number | undefined {
 	const page =
 		typeof value === "number" || typeof value === "string"
@@ -18,26 +17,22 @@ function pageParam(value: unknown): number | undefined {
 	return Number.isInteger(page) && page > 1 ? page : undefined;
 }
 
-/** No search is the default, so it never shows in the address; blank or too long falls back to it. */
 function qParam(value: unknown): string | undefined {
 	if (typeof value !== "string") return undefined;
 	const q = value.trim();
 	return q !== "" && q.length <= MAX_PROJECT_SEARCH_LENGTH ? q : undefined;
 }
 
-/** Newest first is the default, so it never shows in the address; anything invalid falls back to it. */
 function sortParam(value: unknown): ProjectSort | undefined {
 	const sort = projectSortSchema.safeParse(value).data;
 	return sort === "recent" ? undefined : sort;
 }
 
-/** Projects in progress are the default, so they never show in the address; anything invalid falls back to them. */
 function statusParam(value: unknown): ProjectStatusFilter | undefined {
 	const status = projectStatusFilterSchema.safeParse(value).data;
 	return status === "active" ? undefined : status;
 }
 
-/** Every manager is the default, so it never shows in the address; an empty value falls back to it. */
 function managerParam(value: unknown): string | undefined {
 	return typeof value === "string" && value !== "" ? value : undefined;
 }
@@ -75,7 +70,6 @@ function RouteComponent() {
 			navigate({
 				search: (prev) => ({ ...prev, page: pageParam(next) }),
 				replace,
-				// the list scrolls up when the next page lands, not while it loads
 				resetScroll: false,
 			}),
 		[navigate],
@@ -89,7 +83,6 @@ function RouteComponent() {
 					status: statusParam(next.status),
 					sort: sortParam(next.sort),
 					manager: managerParam(next.manager),
-					// the page the caller was on may not exist in the new result
 					page: undefined,
 				}),
 				// each pause in typing would otherwise add a history entry for Back to step through

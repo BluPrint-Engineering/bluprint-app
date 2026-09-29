@@ -1,4 +1,4 @@
-/** Translates authClient's flat `error.code` (not `ApiError.problem?.code`, see .claude/rules/web.md) into the pt-BR sentence the screen shows (ADR 0047). */
+/** Reads authClient's flat `error.code`, not `ApiError.problem?.code` (ADR 0047). */
 export function signInErrorMessage(code: string | undefined): string {
 	switch (code) {
 		case "INVALID_EMAIL_OR_PASSWORD":

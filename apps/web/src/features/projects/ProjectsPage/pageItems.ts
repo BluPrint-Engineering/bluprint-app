@@ -1,6 +1,5 @@
 export type PageItem = number | "gap-start" | "gap-end";
 
-/** `1 … 4 5 6 … 12`: at most 7 slots, the first and last page always among them. */
 export function pageItems(page: number, pageCount: number): PageItem[] {
 	if (pageCount <= 7) {
 		return Array.from({ length: pageCount }, (_, i) => i + 1);

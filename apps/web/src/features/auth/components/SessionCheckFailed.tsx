@@ -2,7 +2,6 @@ import { useRouter } from "@tanstack/react-router";
 import { CircleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/** The session could not be verified, so the visitor is neither let in nor sent to the login. */
 export function SessionCheckFailed() {
 	const router = useRouter();
 

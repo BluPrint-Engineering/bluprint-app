@@ -18,15 +18,12 @@ import { ProjectsMobileToolbar } from "./ProjectsToolbar";
 
 interface ContinuousProjectListProps {
 	filters: ProjectsFilters;
-	/** `undefined` while the caller's role loads. */
 	admin: boolean | undefined;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 }
 
-/** How far below the screen the end of the list starts loading the next page. */
 const LOAD_AHEAD_PX = 160;
 
-/** The phone's list: the next page loads on its own as the end of the list nears the screen. */
 export function ContinuousProjectList({
 	filters,
 	admin,
@@ -34,9 +31,7 @@ export function ContinuousProjectList({
 }: ContinuousProjectListProps) {
 	const query = useInfiniteQuery({
 		...projectsInfiniteQueryOptions(filters),
-		// three retries hold the spinner ~7 s on a weak signal before the retry button shows
 		retry: 1,
-		// a new sort keeps the list on screen, dimmed, until it lands
 		placeholderData: keepPreviousData,
 	});
 	const { data, hasNextPage, fetchNextPage } = query;
@@ -99,7 +94,6 @@ export function ContinuousProjectList({
 	} else {
 		content = (
 			<>
-				{/* wrapped so the sentinel adds no gap of its own under the list */}
 				<div>
 					<ProjectList projects={projects} busy={query.isPlaceholderData} />
 					<div ref={watchEnd} />
@@ -116,7 +110,6 @@ export function ContinuousProjectList({
 		);
 	}
 
-	// it stays over a search or status that finds nothing, or the person could not undo the filter
 	const showToolbar = latest
 		? (total !== undefined && total > 0) ||
 			isNarrowed(filters) ||
@@ -150,7 +143,6 @@ interface NextPageProps {
 	onLoad: () => void;
 }
 
-/** What sits under the list while there is more of it: loading, failed, or a button to load it. */
 function NextPage({ loading, failed, hasMore, onLoad }: NextPageProps) {
 	if (loading) {
 		return (

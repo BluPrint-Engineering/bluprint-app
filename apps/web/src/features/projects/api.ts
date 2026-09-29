@@ -7,7 +7,6 @@ import {
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
 
-/** What the list is narrowed and ordered by: the query parameters that are not the page. */
 type ProjectsFilters = Pick<
 	ProjectListQuery,
 	"q" | "status" | "sort" | "manager"
@@ -47,7 +46,6 @@ export function projectsQueryOptions({
 	});
 }
 
-/** The phone's list: the same pages as the desktop's, appended one after another. */
 export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
 	const { q, status, sort, manager } = filters;
 	return infiniteQueryOptions({
@@ -68,7 +66,6 @@ export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
 	});
 }
 
-/** How many projects the filters leave, without loading them: one project is the smallest page. */
 export function projectsTotalQueryOptions(filters: ProjectsFilters) {
 	const { q, status, sort, manager } = filters;
 	return queryOptions({
@@ -77,7 +74,7 @@ export function projectsTotalQueryOptions(filters: ProjectsFilters) {
 	});
 }
 
-/** Who the admin can filter by; only the admin may ask. */
+/** Only the admin may ask. */
 export function projectManagersQueryOptions(enabled: boolean) {
 	return queryOptions({
 		queryKey: ["projects", "managers"],

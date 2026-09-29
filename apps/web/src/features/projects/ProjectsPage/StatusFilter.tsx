@@ -10,14 +10,11 @@ import { STATUS_FILTER_LABELS } from "./statusLabels";
 interface StatusFilterProps {
 	value: ProjectStatusFilter;
 	onChange: (status: ProjectStatusFilter) => void;
-	/** `sm` inline on the desktop toolbar; the default fills the width of the phone's sheet. */
 	size?: "default" | "sm";
-	/** Names the control for assistive tech where no visible label sits beside it. */
 	"aria-label"?: string;
 	"aria-labelledby"?: string;
 }
 
-/** Em andamento · Entregue · Todas: one is always chosen, so pressing the chosen one again does nothing. */
 export function StatusFilter({
 	value,
 	onChange,

@@ -12,9 +12,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { pageItems } from "./pageItems";
 
 interface ProjectsPaginationProps {
-	/** The page on screen. */
 	page: number;
-	/** The page being fetched; every control locks until it lands. */
 	loadingPage: number | undefined;
 	total: number;
 	onPageChange: (page: number) => void;
@@ -33,7 +31,6 @@ export function ProjectsPagination({
 	const last = Math.min(page * PROJECT_PAGE_SIZE, total);
 
 	return (
-		// a short page pins the row to the bottom of the screen instead of right under the cards
 		<div className="mt-auto flex flex-wrap items-center justify-between gap-(--space-4) pt-(--space-2)">
 			<span className="text-sm text-muted-foreground tabular-nums">
 				Mostrando {first}–{last} de {total}

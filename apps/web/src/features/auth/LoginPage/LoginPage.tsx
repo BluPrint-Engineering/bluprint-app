@@ -106,7 +106,6 @@ export function LoginPage({ onSuccess }: { onSuccess: () => void }) {
 					</Button>
 				</form>
 			</CardContent>
-			{/* accounts only exist through an invitation, so there is no signup link here (RF-106, RF-130) */}
 			<CardFooter className="justify-center text-center text-sm text-pretty text-muted-foreground">
 				Não tem conta? O acesso é por convite da sua construtora.
 			</CardFooter>

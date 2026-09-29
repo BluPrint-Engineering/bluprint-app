@@ -16,7 +16,6 @@ describe("app layout", () => {
 		vi.unstubAllGlobals();
 		document.documentElement.classList.remove("dark");
 		localStorage.clear();
-		// sonner keeps active toasts module-wide and replays them to the next test's Toaster
 		toast.dismiss();
 	});
 

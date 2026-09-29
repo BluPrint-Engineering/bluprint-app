@@ -74,9 +74,7 @@ function Field({
 	...props
 }: React.ComponentProps<"div"> & VariantProps<typeof fieldVariants>) {
 	return (
-		// A layout row (label + control + error), not a form fieldset — <fieldset> would pull in
-		// UA border/padding this component resets in CSS anyway.
-		// biome-ignore lint/a11y/useSemanticElements: role="group" on a div is intentional here
+		// biome-ignore lint/a11y/useSemanticElements: a layout row, not a form fieldset; <fieldset> would bring UA border and padding
 		<div
 			role="group"
 			data-slot="field"

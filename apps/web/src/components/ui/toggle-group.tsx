@@ -3,7 +3,6 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-/** The design system's SegmentedControl: a sunken track whose selected item is raised. */
 function ToggleGroup({
 	className,
 	size = "default",

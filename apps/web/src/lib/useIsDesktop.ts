@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** Tailwind's `md`, where the layout turns desktop. */
+/** Must match Tailwind's `md` breakpoint. */
 const DESKTOP = "(min-width: 48rem)";
 
 function subscribe(onChange: () => void) {

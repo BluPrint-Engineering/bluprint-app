@@ -3,7 +3,6 @@ import { Logo } from "@/components/brand/Logo";
 import { useTheme } from "@/lib/useTheme";
 import { ThemeToggle } from "./ThemeToggle";
 
-/** Flat form on mobile, framed card from 900px — applied on the Card the caller renders inside AuthShell. */
 export const authCardClassName =
 	"gap-(--space-5) rounded-none bg-transparent py-0 ring-0 " +
 	"[&_[data-slot=card-header]]:px-0 [&_[data-slot=card-content]]:px-0 " +

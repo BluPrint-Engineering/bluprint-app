@@ -18,13 +18,11 @@ import { ProjectsToolbar } from "./ProjectsToolbar";
 interface PagedProjectListProps {
 	page: number;
 	filters: ProjectsFilters;
-	/** `undefined` while the caller's role loads. */
 	admin: boolean | undefined;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 	onPageChange: (page: number, options?: { replace?: boolean }) => void;
 }
 
-/** The desktop's list: one numbered page at a time, the page kept in the address. */
 export function PagedProjectList({
 	page,
 	filters,
@@ -34,7 +32,6 @@ export function PagedProjectList({
 }: PagedProjectListProps) {
 	const query = useQuery({
 		...projectsQueryOptions({ page, ...filters }),
-		// the page on screen stays, dimmed, until the next one lands
 		placeholderData: keepPreviousData,
 	});
 	const { data, isPlaceholderData } = query;
@@ -63,7 +60,6 @@ export function PagedProjectList({
 	}, [landedPage]);
 
 	let content: React.ReactNode;
-	// only a first load can fail into the error block; a failed refresh keeps the list on screen
 	if (!data || overshotTo) {
 		content = <ListPlaceholder query={query} />;
 	} else if (data.total === 0) {
@@ -95,7 +91,6 @@ export function PagedProjectList({
 		);
 	}
 
-	// it stays over a search or status that finds nothing, or the person could not undo the filter
 	const showToolbar = data
 		? data.total > 0 || isNarrowed(filters) || hasProjects(data.counts)
 		: firstLoadState(query) === "loading";

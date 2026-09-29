@@ -69,7 +69,6 @@ describe("protected layout", () => {
 			screen.getByText("Confira sua conexão e tente de novo."),
 		).toBeInTheDocument();
 		expect(router.state.location.pathname).toBe("/projects");
-		// the first try plus three automatic retries
 		expect(failing).toHaveBeenCalledTimes(4);
 
 		stubApi(signedIn);

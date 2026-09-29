@@ -5,19 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
-/** Typing pauses this long before the address and the API hear of the search. */
 const DEBOUNCE_MS = 250;
 
 interface ProjectSearchProps {
-	/** The search the address holds. */
 	value: string;
 	onChange: (q: string) => void;
-	/** `sm` is the desktop toolbar's 36px field; `md` is the phone's 44px one. */
 	size: "sm" | "md";
 	className?: string;
 }
 
-/** The "Buscar obra" field: keeps what is typed itself and tells `onChange` once typing pauses, or at once on clear. */
 export function ProjectSearch({
 	value,
 	onChange,

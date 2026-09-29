@@ -35,7 +35,6 @@ type PaginationLinkProps = {
 	isActive?: boolean;
 } & React.ComponentProps<"button">;
 
-// a button, not an anchor: the page changes through the router, and every control locks while it loads
 function PaginationLink({
 	className,
 	isActive,
