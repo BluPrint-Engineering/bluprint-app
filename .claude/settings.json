@@ -40,13 +40,13 @@
         ]
       }
     ],
-    "PostToolUse": [
+    "Stop": [
       {
-        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/comment-guard.ts"
+            "command": "bun \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/comment-review.ts",
+            "timeout": 180
           }
         ]
       }

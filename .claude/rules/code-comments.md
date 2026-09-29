@@ -13,7 +13,7 @@
 
 Removed code is deleted, not commented out. Comments are in English. Lint and TypeScript directives (`biome-ignore`, `eslint-disable`, `@ts-expect-error`) aren't comments in this sense.
 
-A `PreToolUse` hook denies an agent's edit that adds a comment to a test file, or JSDoc to a component or a prop in a `.tsx` file; everything else is judged against this file (ADR 0057).
+A `PreToolUse` hook denies an agent's edit that adds a comment to a test file, or JSDoc to a component or a prop in a `.tsx` file. At the end of every turn, a `Stop` hook has an independent reviewer judge every other comment the branch adds against this file, and its verdict stands (ADR 0057).
 
 ## Cut
 

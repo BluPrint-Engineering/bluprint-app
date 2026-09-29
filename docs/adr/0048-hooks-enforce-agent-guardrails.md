@@ -6,7 +6,7 @@ Three Bun TypeScript hooks in `.claude/hooks/`, registered in a committed `.clau
 
 - `guard-bash.ts` (`PreToolUse`, `Bash`): blocks `gh pr merge`, `git push` to `main`, `--force`/`-f` (`--force-with-lease` stays allowed off `main`), `--no-verify`, `LEFTHOOK=0`, `drizzle-kit push`/`drop`, and shell reads or writes of `.env`.
 - `guard-env.ts` (`PreToolUse`, `Read|Edit|Write|Grep|Glob`): blocks any path whose basename is `.env`.
-- `comment-nudge.ts` (`PostToolUse`, `Edit|Write` on `.ts`/`.tsx`): never blocks; hands back the comments an edit just added, and tells a bare ADR pointer (a comment that only references an ADR) apart from other comments, against `.claude/rules/code-comments.md`. Replaced by `comment-guard.ts`, which also denies comments in tests and JSDoc on components and props ([0057](0057-comments-default-to-none.md)).
+- `comment-nudge.ts` (`PostToolUse`, `Edit|Write` on `.ts`/`.tsx`): never blocks; hands back the comments an edit just added, and tells a bare ADR pointer (a comment that only references an ADR) apart from other comments, against `.claude/rules/code-comments.md`. Replaced by `comment-guard.ts` (`PreToolUse`), which denies comments in tests and JSDoc on components and props, and `comment-review.ts` (`Stop`), an independent reviewer for every other comment ([0057](0057-comments-default-to-none.md)).
 
 `.claude/settings.json` is committed, not personal: every agent gets it regardless of `settings.local.json`. `jsdoc/informative-docs` (`eslint-plugin-jsdoc`) backs the same comment rule for the API with a real lint failure, since Biome has no JSDoc-content rule for the web app.
 
