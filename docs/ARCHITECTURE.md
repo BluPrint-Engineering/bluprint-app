@@ -23,6 +23,10 @@ A Bun workspaces monorepo; Bun runs scripts, the API runs on Node ([0001](adr/00
 
 A screen's handoff in `docs/design/screens/<screen>/` is a high-fidelity reference to rebuild in `apps/web` with its own stack, never code to import; its `README.md` is the spec. The prototypes load the design system from `.claude/skills/bluprint-design/`, so serve the repo root to open them. A Claude Design export adds or replaces one screen folder and the `_ds/` copy it ships is dropped; `/import-design` does both kinds of export, screens and the design system.
 
+### `apps/web/functions`
+
+The Cloudflare Pages Function that answers `/api/*` in production: `api/[[path]].ts` is the Pages entry, `proxyToApi.ts` the handler beside its test, with a `tsconfig.json` of its own for the Workers types ([0058](adr/0058-api-only-answers-the-pages-proxy.md)).
+
 ### `apps/web/src`
 
 ```
@@ -55,6 +59,7 @@ auth/            Better Auth instance, the module that mounts it, its hand-writt
                  password-policy/ and signup/ (the self-signup scaffolding) beside them
 <domain>/        one module per domain: controller, service, repository, module, entity, dto/
 common/          cross-cutting filters, pipes, guards, interceptors; problems/ holds the error contract
+proxy-gate/      the Express middleware that refuses anything not sent by the Pages proxy ([0058](adr/0058-api-only-answers-the-pages-proxy.md))
 db/              DatabaseModule: pool, Drizzle instance, the entity barrel, shared columns, boot connection check
 lib/             stateful or talks to the world: env schema, clients
 utils/           pure functions, no state or I/O
@@ -138,7 +143,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 
 - **Authentication**: email and password through Better Auth; `httpOnly`, `SameSite=Lax` session cookie valid 90 days, renewed per day of use ([0010](adr/0010-self-hosted-better-auth.md)). Self-signup is scaffolding, off by default ([0011](adr/0011-self-signup-is-scaffolding.md)).
 - **Authorization**: a global `AuthGuard` protects every route; `@AllowAnonymous()` opts one out, and only `health` does. Roles are read from the project membership ([0022](adr/0022-roles-live-on-project-membership.md)); response DTOs strip fields outside the contract ([0004](adr/0004-response-dto-on-every-route.md)).
-- **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, keyed on the `X-Client-IP` the Pages proxy sets, behind the `PROXY_SECRET` gate that only lets that proxy through (0058); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it, and `PROXY_SECRET` too when `NODE_ENV=production`.
+- **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, keyed on the `X-Client-IP` the Pages proxy sets, behind the `PROXY_SECRET` gate that only lets that proxy through ([0058](adr/0058-api-only-answers-the-pages-proxy.md)); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it, and `PROXY_SECRET` too when `NODE_ENV=production`.
 - **Platform admin** never sees project content ([0021](adr/0021-platform-admin-sees-only-metadata.md)).
 - **API docs** (`/api/docs`) are on by default in development and off in production, via `API_DOCS_ENABLED` ([0046](adr/0046-openapi-via-nestjs-swagger.md)).
 
@@ -150,7 +155,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 - **End-to-end**: `apps/e2e`, Playwright against the built app on `iPhone 13` (WebKit) and `Desktop Chrome`, its own `bluprint_e2e` database and ports ([0050](adr/0050-playwright-for-end-to-end.md)). `bun run e2e` builds first, prepares the database (`prepare-database.ts`, since Playwright starts its servers before its own `globalSetup` would run), then runs Playwright; running `playwright test` directly skips that preparation. CI publishes the HTML report and screenshots as the `playwright-report` artifact; `E2E_VIDEO=1` also records every test, and `/open-frontend-pr` uploads the screenshots and videos of a change into its PR body ([0055](adr/0055-pr-screenshots-in-the-body.md)).
 - **Migrations**: `drizzle-kit migrate` only reads `DATABASE_URL`. After pulling a new migration, run it against `DATABASE_URL_TEST` too, or `test:int` fails with `relation ... does not exist` while CI is green.
 - **Lint/format**: Biome in web and shared; ESLint + Prettier in the API ([0008](adr/0008-eslint-in-api-biome-elsewhere.md)).
-- **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Two tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), and `routes/` follows TanStack Router syntax (a folder per segment, `$projectId/` for a parameter, `route.tsx` for the route itself and `index.tsx` for an index route).
+- **Naming**: PascalCase for React component files, named after their export (`StatCard.tsx`); camelCase for everything else, feature folders included (`features/adminDashboard/`). Three tool-imposed exceptions: `components/ui/` is kebab-case (shadcn CLI), `functions/api/[[path]].ts` follows Cloudflare Pages routing syntax, and `routes/` follows TanStack Router syntax (a folder per segment, `$projectId/` for a parameter, `route.tsx` for the route itself and `index.tsx` for an index route).
 - **Commits**: Conventional Commits in the imperative, `type(scope): subject`. Scope is the workspace (`api`, `web`, `shared`), omitted for repo-wide changes. Types in use: `feat`, `fix`, `docs`, `refactor`, `chore`, `test`, `ci`. The body explains why, not what. A `commit-msg` git hook enforces the type list ([0045](adr/0045-local-git-hooks-with-lefthook.md)); adding a type means updating both this line and `lefthook.yml`'s `COMMIT_TYPES`.
 - **Branches**: `type/[issue-]slug`, same types as commits (`feat/66-agent-guardrails`, `chore/worktree-cleanup`). `main` is exempt. A `pre-push` hook enforces the pattern ([0048](adr/0048-hooks-enforce-agent-guardrails.md)), sharing `lefthook.yml`'s `COMMIT_TYPES` with the commit-msg check above.
 - **Local git hooks**: Lefthook ([0045](adr/0045-local-git-hooks-with-lefthook.md)), installed by `bun install`. Lint on commit (staged files only), branch name + typecheck + unit tests on push. CI ([0018](adr/0018-ci-runs-root-scripts.md)) is still the real gate; a Claude Code hook blocks agents from `--no-verify`/`LEFTHOOK=0` ([0048](adr/0048-hooks-enforce-agent-guardrails.md)), a human still can.

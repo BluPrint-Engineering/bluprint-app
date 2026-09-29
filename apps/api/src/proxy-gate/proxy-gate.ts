@@ -6,7 +6,7 @@ import {
 	problemDetails,
 } from "../common/problems/problem-details";
 
-export const PROXY_SECRET_HEADER = "x-proxy-secret";
+const PROXY_SECRET_HEADER = "x-proxy-secret";
 export const CLIENT_IP_HEADER = "x-client-ip";
 
 const HEALTH_PATH = "/api/health";

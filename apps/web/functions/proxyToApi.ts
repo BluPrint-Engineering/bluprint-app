@@ -30,5 +30,6 @@ export async function proxyToApi(
 		// the browser follows redirects itself, against its own origin
 		redirect: "manual",
 		duplex: "half",
+		// workers-types' RequestInit lacks duplex, which fetch requires to stream a request body
 	} as RequestInit);
 }
