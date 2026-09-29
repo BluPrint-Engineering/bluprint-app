@@ -1,16 +1,11 @@
 import {
 	PROJECT_PAGE_SIZE,
-	type ProjectListQuery,
 	projectListSchema,
 	projectManagersSchema,
 } from "@bluprint/shared";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
 import { apiFetch } from "@/lib/api";
-
-type ProjectsFilters = Pick<
-	ProjectListQuery,
-	"q" | "status" | "sort" | "manager"
->;
+import type { ProjectsFilters } from "./filters";
 
 function fetchProjectsPage(
 	page: number,
@@ -28,16 +23,9 @@ function fetchProjectsPage(
 	return apiFetch(`/projects?${params}`, projectListSchema);
 }
 
-export function projectsQueryOptions({
-	page,
-	...filters
-}: { page: number } & ProjectsFilters) {
-	const { q, status, sort, manager } = filters;
+export function projectsQueryOptions(page: number, filters: ProjectsFilters) {
 	return queryOptions({
-		queryKey: [
-			"projects",
-			{ page, pageSize: PROJECT_PAGE_SIZE, q, status, sort, manager },
-		],
+		queryKey: ["projects", { page, pageSize: PROJECT_PAGE_SIZE, ...filters }],
 		queryFn: async () => {
 			const list = await fetchProjectsPage(page, filters);
 			// tagged with its page: while the next page loads, the data on screen is still the previous one's
@@ -47,12 +35,11 @@ export function projectsQueryOptions({
 }
 
 export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
-	const { q, status, sort, manager } = filters;
 	return infiniteQueryOptions({
 		queryKey: [
 			"projects",
 			"infinite",
-			{ pageSize: PROJECT_PAGE_SIZE, q, status, sort, manager },
+			{ pageSize: PROJECT_PAGE_SIZE, ...filters },
 		],
 		queryFn: ({ pageParam }) => fetchProjectsPage(pageParam, filters),
 		initialPageParam: 1,
@@ -67,9 +54,8 @@ export function projectsInfiniteQueryOptions(filters: ProjectsFilters) {
 }
 
 export function projectsTotalQueryOptions(filters: ProjectsFilters) {
-	const { q, status, sort, manager } = filters;
 	return queryOptions({
-		queryKey: ["projects", "total", { q, status, sort, manager }],
+		queryKey: ["projects", "total", filters],
 		queryFn: async () => (await fetchProjectsPage(1, filters, 1)).total,
 	});
 }

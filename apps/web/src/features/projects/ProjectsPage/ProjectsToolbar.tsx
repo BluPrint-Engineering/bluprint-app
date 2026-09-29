@@ -20,7 +20,7 @@ import {
 	managerChoice,
 	type ProjectsFilters,
 	withManager,
-} from "./filters";
+} from "../filters";
 import { ProjectSearch } from "./ProjectSearch";
 import { ProjectsFilterSheet } from "./ProjectsFilterSheet";
 import { StatusFilter } from "./StatusFilter";

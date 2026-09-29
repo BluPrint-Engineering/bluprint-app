@@ -2,16 +2,9 @@ import { PROJECT_PAGE_SIZE } from "@bluprint/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { projectsQueryOptions } from "../api";
-import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
-import {
-	EmptyList,
-	firstLoadState,
-	hasProjects,
-	ListPlaceholder,
-	NoResults,
-	ProjectList,
-	ProjectsMain,
-} from "./ProjectList";
+import type { ProjectsFilters } from "../filters";
+import { ProjectList } from "./ProjectList";
+import { ProjectsListShell } from "./ProjectsListShell";
 import { ProjectsPagination } from "./ProjectsPagination";
 import { ProjectsToolbar } from "./ProjectsToolbar";
 
@@ -31,7 +24,7 @@ export function PagedProjectList({
 	onPageChange,
 }: PagedProjectListProps) {
 	const query = useQuery({
-		...projectsQueryOptions({ page, ...filters }),
+		...projectsQueryOptions(page, filters),
 		placeholderData: keepPreviousData,
 	});
 	const { data, isPlaceholderData } = query;
@@ -59,58 +52,26 @@ export function PagedProjectList({
 		previousLandedPage.current = landedPage;
 	}, [landedPage]);
 
-	let content: React.ReactNode;
-	if (!data || overshotTo) {
-		content = <ListPlaceholder query={query} />;
-	} else if (data.total === 0) {
-		content = filters.q ? (
-			<NoResults
-				q={filters.q}
-				status={filters.status}
-				onClear={() => onFiltersChange(clearAllFilters(filters))}
-			/>
-		) : (
-			<EmptyList
-				admin={admin}
-				counts={data.counts}
-				filters={filters}
-				onFiltersChange={onFiltersChange}
-			/>
-		);
-	} else {
-		content = (
-			<>
-				<ProjectList projects={data.items} busy={isPlaceholderData} />
-				<ProjectsPagination
-					page={data.page}
-					loadingPage={isPlaceholderData ? page : undefined}
-					total={data.total}
-					onPageChange={onPageChange}
-				/>
-			</>
-		);
-	}
-
-	const showToolbar = data
-		? data.total > 0 || isNarrowed(filters) || hasProjects(data.counts)
-		: firstLoadState(query) === "loading";
-
 	return (
-		<ProjectsMain
-			total={data?.total}
-			counting={query.isFetching}
-			toolbar={
-				showToolbar && (
-					<ProjectsToolbar
-						filters={filters}
-						admin={admin === true}
-						onFiltersChange={onFiltersChange}
-						total={data?.total}
-					/>
-				)
-			}
+		<ProjectsListShell
+			query={query}
+			loaded={overshotTo ? undefined : data}
+			filters={filters}
+			admin={admin}
+			onFiltersChange={onFiltersChange}
+			Toolbar={ProjectsToolbar}
 		>
-			{content}
-		</ProjectsMain>
+			{data && (
+				<>
+					<ProjectList projects={data.items} busy={isPlaceholderData} />
+					<ProjectsPagination
+						page={data.page}
+						loadingPage={isPlaceholderData ? page : undefined}
+						total={data.total}
+						onPageChange={onPageChange}
+					/>
+				</>
+			)}
+		</ProjectsListShell>
 	);
 }

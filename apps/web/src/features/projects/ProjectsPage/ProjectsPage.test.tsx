@@ -13,6 +13,7 @@ import {
 } from "@/test/renderApp";
 import { observedMargins, setInView, setViewport } from "@/test/viewport";
 import { projectsQueryOptions } from "../api";
+import { DEFAULT_FILTERS } from "../filters";
 
 const PAGE_SIZE = 12;
 
@@ -232,12 +233,7 @@ describe("projects page", () => {
 		await waitFor(() => {
 			expect(
 				queryClient.getQueryState(
-					projectsQueryOptions({
-						page: 1,
-						q: "",
-						status: "active",
-						sort: "recent",
-					}).queryKey,
+					projectsQueryOptions(1, DEFAULT_FILTERS).queryKey,
 				)?.status,
 			).toBe("error");
 		});

@@ -4,16 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { projectsInfiniteQueryOptions } from "../api";
-import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
-import {
-	EmptyList,
-	firstLoadState,
-	hasProjects,
-	ListPlaceholder,
-	NoResults,
-	ProjectList,
-	ProjectsMain,
-} from "./ProjectList";
+import type { ProjectsFilters } from "../filters";
+import { ProjectList } from "./ProjectList";
+import { ProjectsListShell } from "./ProjectsListShell";
 import { ProjectsMobileToolbar } from "./ProjectsToolbar";
 
 interface ContinuousProjectListProps {
@@ -71,68 +64,28 @@ export function ContinuousProjectList({
 		[data],
 	);
 
-	const latest = data?.pages.at(-1);
-	const total = latest?.total;
-	let content: React.ReactNode;
-	if (!data) {
-		content = <ListPlaceholder query={query} />;
-	} else if (total === 0 && latest) {
-		content = filters.q ? (
-			<NoResults
-				q={filters.q}
-				status={filters.status}
-				onClear={() => onFiltersChange(clearAllFilters(filters))}
-			/>
-		) : (
-			<EmptyList
-				admin={admin}
-				counts={latest.counts}
-				filters={filters}
-				onFiltersChange={onFiltersChange}
-			/>
-		);
-	} else {
-		content = (
-			<>
-				<div>
-					<ProjectList projects={projects} busy={query.isPlaceholderData} />
-					<div ref={watchEnd} />
-				</div>
-				<NextPage
-					// paused while offline: the page loads on its own when the connection returns
-					loading={query.isFetchingNextPage || query.fetchStatus === "paused"}
-					failed={query.isFetchNextPageError}
-					// the list on screen is the previous sort's; its next page is not the new one's
-					hasMore={hasNextPage && !query.isPlaceholderData}
-					onLoad={() => void loadNext()}
-				/>
-			</>
-		);
-	}
-
-	const showToolbar = latest
-		? (total !== undefined && total > 0) ||
-			isNarrowed(filters) ||
-			hasProjects(latest.counts)
-		: firstLoadState(query) === "loading";
-
 	return (
-		<ProjectsMain
-			total={total}
-			counting={query.isFetching}
-			toolbar={
-				showToolbar && (
-					<ProjectsMobileToolbar
-						filters={filters}
-						admin={admin === true}
-						onFiltersChange={onFiltersChange}
-						total={total}
-					/>
-				)
-			}
+		<ProjectsListShell
+			query={query}
+			loaded={data?.pages.at(-1)}
+			filters={filters}
+			admin={admin}
+			onFiltersChange={onFiltersChange}
+			Toolbar={ProjectsMobileToolbar}
 		>
-			{content}
-		</ProjectsMain>
+			<div>
+				<ProjectList projects={projects} busy={query.isPlaceholderData} />
+				<div ref={watchEnd} />
+			</div>
+			<NextPage
+				// paused while offline: the page loads on its own when the connection returns
+				loading={query.isFetchingNextPage || query.fetchStatus === "paused"}
+				failed={query.isFetchNextPageError}
+				// the list on screen is the previous sort's; its next page is not the new one's
+				hasMore={hasNextPage && !query.isPlaceholderData}
+				onLoad={() => void loadNext()}
+			/>
+		</ProjectsListShell>
 	);
 }
 

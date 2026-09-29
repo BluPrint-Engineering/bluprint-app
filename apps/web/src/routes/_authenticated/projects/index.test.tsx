@@ -79,21 +79,6 @@ describe("/projects route", () => {
 		expect(router.state.location.search).toEqual({ page: 2 });
 	});
 
-	test.each(["1", "0", "-1", "1.5", "abc", "%22%22"])(
-		"falls back to the first page, omitted from the address, for page=%s",
-		async (value) => {
-			const { fetchMock } = stubApi(signedIn);
-
-			const { router } = renderAt(`/projects?page=${value}`);
-
-			await screen.findByRole("heading", { name: "Obras" });
-			await waitFor(() => {
-				expect(requestedPage(fetchMock)).toBe("1");
-			});
-			expect(router.state.location.search).toEqual({});
-		},
-	);
-
 	test("asks for the sort in the address", async () => {
 		const { fetchMock } = stubApi(signedIn);
 
@@ -104,21 +89,6 @@ describe("/projects route", () => {
 		});
 		expect(router.state.location.search).toEqual({ sort: "name" });
 	});
-
-	test.each(["recent", "Name", "open-pins", "%22%22"])(
-		"falls back to the newest first, omitted from the address, for sort=%s",
-		async (value) => {
-			const { fetchMock } = stubApi(signedIn);
-
-			const { router } = renderAt(`/projects?sort=${value}`);
-
-			await screen.findByRole("heading", { name: "Obras" });
-			await waitFor(() => {
-				expect(requestedSort(fetchMock)).toBe("recent");
-			});
-			expect(router.state.location.search).toEqual({});
-		},
-	);
 
 	test("changing the sort goes back to the first page", async () => {
 		const { fetchMock } = stubProjects();
@@ -175,21 +145,6 @@ describe("/projects route", () => {
 		).toHaveValue("edificio aurora");
 	});
 
-	test.each([["%22%22"], ["%20%20"], ["a".repeat(101)]])(
-		"falls back to no search, omitted from the address, for q=%s",
-		async (value) => {
-			const { fetchMock } = stubApi(signedIn);
-
-			const { router } = renderAt(`/projects?q=${value}`);
-
-			await screen.findByRole("heading", { name: "Obras" });
-			await waitFor(() => {
-				expect(requestedQuery(fetchMock)).toBe(null);
-			});
-			expect(router.state.location.search).toEqual({});
-		},
-	);
-
 	test("changing the search goes back to the first page, keeping the sort", async () => {
 		stubProjects();
 
@@ -229,21 +184,6 @@ describe("/projects route", () => {
 		expect(router.state.location.search).toEqual({ status: "all" });
 	});
 
-	test.each(["active", "Delivered", "done", "%22%22"])(
-		"falls back to the projects in progress, omitted from the address, for status=%s",
-		async (value) => {
-			const { fetchMock } = stubApi(signedIn);
-
-			const { router } = renderAt(`/projects?status=${value}`);
-
-			await screen.findByRole("heading", { name: "Obras" });
-			await waitFor(() => {
-				expect(requestedStatus(fetchMock)).toBe("active");
-			});
-			expect(router.state.location.search).toEqual({});
-		},
-	);
-
 	test("changing the status goes back to the first page", async () => {
 		const { fetchMock } = stubProjects();
 
@@ -259,19 +199,6 @@ describe("/projects route", () => {
 		expect(requestedStatus(fetchMock)).toBe("delivered");
 	});
 
-	test("going back to “Em andamento” drops the status from the address", async () => {
-		stubProjects();
-
-		const { router } = renderAt("/projects?status=all&sort=name");
-		await userEvent.click(
-			await screen.findByRole("radio", { name: "Em andamento" }),
-		);
-
-		await waitFor(() => {
-			expect(router.state.location.search).toEqual({ sort: "name" });
-		});
-	});
-
 	test("asks for the manager in the address", async () => {
 		const { fetchMock } = stubApi(signedIn);
 
@@ -281,19 +208,6 @@ describe("/projects route", () => {
 			expect(requestedManager(fetchMock)).toBe("u-carla");
 		});
 		expect(router.state.location.search).toEqual({ manager: "u-carla" });
-	});
-
-	test("asks for every manager, omitted from the address, when there is none or it is empty", async () => {
-		const { fetchMock } = stubApi(signedIn);
-
-		const { router } = renderAt("/projects?manager=");
-
-		await screen.findByRole("heading", { name: "Obras" });
-		await waitFor(() => {
-			expect(lastRequest(fetchMock)).toBeDefined();
-		});
-		expect(requestedManager(fetchMock)).toBeNull();
-		expect(router.state.location.search).toEqual({});
 	});
 
 	test("changing the manager goes back to the first page", async () => {

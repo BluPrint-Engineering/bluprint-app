@@ -24,7 +24,7 @@ import {
 	type ProjectsFilters,
 	sameFilters,
 	withManager,
-} from "./filters";
+} from "../filters";
 import { StatusFilter } from "./StatusFilter";
 import { SORT_LABELS } from "./sortLabels";
 
