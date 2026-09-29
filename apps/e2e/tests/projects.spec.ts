@@ -71,4 +71,45 @@ test.describe("project list", () => {
 			(viewport?.height ?? 0) - 64,
 		);
 	});
+
+	// Diego manages Edifício Aurora and Condomínio Porto Belo, and is only assistant on Residencial Jardins
+	test("on the desktop, the admin filters by manager from the toolbar", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "the desktop layout");
+
+		await page.goto("/projects");
+		await page.getByRole("button", { name: "Gerente: Todos" }).click();
+		await page.getByRole("menuitemradio", { name: "Diego Almeida" }).click();
+
+		await expect(page).toHaveURL(/\/projects\?manager=/);
+		await expect(page.getByText("2 obras")).toBeVisible();
+		await expect(page.getByText("Edifício Aurora")).toBeVisible();
+		await expect(page.getByText("Condomínio Porto Belo")).toBeVisible();
+		await expect(page.getByText("Residencial Jardins")).toBeHidden();
+
+		await page.getByRole("button", { name: "Limpar filtros" }).click();
+
+		await expect(page).toHaveURL("/projects");
+		await expect(page.getByText("14 obras")).toBeVisible();
+	});
+
+	test("on the phone, the admin filters by manager from the sheet", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(!isMobile, "the phone layout");
+
+		await page.goto("/projects");
+		await page.getByRole("button", { name: "Filtros" }).click();
+		const sheet = page.getByRole("dialog", { name: "Filtros" });
+		await sheet.getByRole("radio", { name: "Diego Almeida" }).click();
+		await sheet.getByRole("button", { name: "Ver 2 obras" }).click();
+
+		await expect(page).toHaveURL(/\/projects\?manager=/);
+		// exact: the closing sheet's "Ver 2 obras" is still in the page for a moment
+		await expect(page.getByText("2 obras", { exact: true })).toBeVisible();
+		await expect(page.getByText("Condomínio Porto Belo")).toBeVisible();
+	});
 });

@@ -5,7 +5,19 @@ import {
 } from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { and, asc, count, desc, eq, isNotNull, or, sql } from "drizzle-orm";
+import {
+	and,
+	asc,
+	count,
+	desc,
+	exists,
+	eq,
+	isNotNull,
+	or,
+	sql,
+} from "drizzle-orm";
+import { user } from "../auth/auth.entity";
+import { alias } from "drizzle-orm/pg-core";
 import { DatabaseAdapter } from "../db/database.module";
 import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
@@ -31,14 +43,18 @@ export class ProjectsRepository {
 			sort,
 			limit,
 			offset,
+			managerId,
 		}: {
 			q: string;
 			status: ProjectStatusFilter;
 			sort: ProjectSort;
 			limit: number;
 			offset: number;
+			/** Keeps the projects where this user is `manager`. */
+			managerId?: string | undefined;
 		},
 	) {
+		const managerOf = alias(projectMember, "manager_of");
 		const visible = this.txHost.tx.$with("visible").as(
 			this.txHost.tx
 				.select({
@@ -70,6 +86,20 @@ export class ProjectsRepository {
 					and(
 						or(isNotNull(projectMember.id), eq(member.role, "admin")),
 						nameContains(q),
+						managerId
+							? exists(
+									this.txHost.tx
+										.select({ one: sql`1` })
+										.from(managerOf)
+										.where(
+											and(
+												eq(managerOf.projectId, project.id),
+												eq(managerOf.userId, managerId),
+												eq(managerOf.role, "manager"),
+											),
+										),
+								)
+							: undefined,
 					),
 				),
 		);
@@ -110,6 +140,34 @@ export class ProjectsRepository {
 		for (const row of perStatus) counts[row.status] = row.total;
 
 		return { items, total: counted!.total, counts };
+	}
+
+	/** Everyone who is `manager` on at least one project of the organization, by name. */
+	async listManagers(organizationId: string) {
+		return (
+			this.txHost.tx
+				.select({ id: user.id, name: user.name })
+				.from(projectMember)
+				.innerJoin(project, eq(project.id, projectMember.projectId))
+				// a project_member row alone can name someone from another organization
+				.innerJoin(
+					member,
+					and(
+						eq(member.userId, projectMember.userId),
+						eq(member.organizationId, project.organizationId),
+					),
+				)
+				.innerJoin(user, eq(user.id, projectMember.userId))
+				.where(
+					and(
+						eq(project.organizationId, organizationId),
+						eq(projectMember.role, "manager"),
+					),
+				)
+				// grouped rather than DISTINCT: Postgres wants an ORDER BY expression in the DISTINCT list
+				.groupBy(user.id, user.name)
+				.orderBy(asc(sql`${user.name} collate "pt-BR-x-icu"`), asc(user.id))
+		);
 	}
 
 	async insert(values: {

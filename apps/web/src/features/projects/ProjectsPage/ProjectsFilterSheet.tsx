@@ -15,12 +15,15 @@ import {
 	DrawerTrigger,
 } from "@/components/ui/drawer";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { projectsTotalQueryOptions } from "../api";
+import { projectManagersQueryOptions, projectsTotalQueryOptions } from "../api";
 import {
+	ALL_MANAGERS,
 	clearFilters,
 	countActiveFilters,
+	managerChoice,
 	type ProjectsFilters,
 	sameFilters,
+	withManager,
 } from "./filters";
 import { StatusFilter } from "./StatusFilter";
 import { SORT_LABELS } from "./sortLabels";
@@ -28,6 +31,8 @@ import { SORT_LABELS } from "./sortLabels";
 export interface ProjectsFilterSheetProps {
 	/** The filters the list behind shows. */
 	filters: ProjectsFilters;
+	/** The caller is the organization's admin, the only one who filters by manager. */
+	admin: boolean;
 	onApply: (filters: ProjectsFilters) => void;
 	/** Projects `filters` leave, `undefined` while the list loads. */
 	total: number | undefined;
@@ -44,6 +49,7 @@ function filterCountText(count: number) {
  */
 export function ProjectsFilterSheet({
 	filters,
+	admin,
 	onApply,
 	total,
 }: ProjectsFilterSheetProps) {
@@ -51,6 +57,8 @@ export function ProjectsFilterSheet({
 	const [chosen, setChosen] = useState(filters);
 	const statusLabelId = useId();
 	const sortLabelId = useId();
+	const managerLabelId = useId();
+	const { data: managers } = useQuery(projectManagersQueryOptions(admin));
 
 	// the search is not the sheet's: it follows the address, so a search that lands while the sheet is open is neither reverted nor left out of the count
 	const draft = { ...chosen, q: filters.q };
@@ -103,6 +111,29 @@ export function ProjectsFilterSheet({
 					</DrawerDescription>
 				</DrawerHeader>
 				<DrawerBody>
+					{admin && (
+						<div className="grid gap-(--space-1)">
+							<span id={managerLabelId} className="text-sm font-medium">
+								Gerente
+							</span>
+							<RadioGroup
+								aria-labelledby={managerLabelId}
+								value={managerChoice(draft)}
+								onValueChange={(choice) => setDraft(withManager(draft, choice))}
+								// rows bleed into the padding so their labels line up with the section title
+								className="-mx-(--space-3) w-auto"
+							>
+								<RadioGroupItem value={ALL_MANAGERS}>
+									Todos os gerentes
+								</RadioGroupItem>
+								{managers?.map(({ id, name }) => (
+									<RadioGroupItem key={id} value={id}>
+										{name}
+									</RadioGroupItem>
+								))}
+							</RadioGroup>
+						</div>
+					)}
 					<div className="grid gap-(--space-1)">
 						<span id={statusLabelId} className="text-sm font-medium">
 							Status

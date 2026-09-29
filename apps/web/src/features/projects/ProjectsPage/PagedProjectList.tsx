@@ -18,6 +18,8 @@ import { ProjectsToolbar } from "./ProjectsToolbar";
 interface PagedProjectListProps {
 	page: number;
 	filters: ProjectsFilters;
+	/** `undefined` while the caller's role loads. */
+	admin: boolean | undefined;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 	onPageChange: (page: number, options?: { replace?: boolean }) => void;
 }
@@ -26,6 +28,7 @@ interface PagedProjectListProps {
 export function PagedProjectList({
 	page,
 	filters,
+	admin,
 	onFiltersChange,
 	onPageChange,
 }: PagedProjectListProps) {
@@ -72,6 +75,7 @@ export function PagedProjectList({
 			/>
 		) : (
 			<EmptyList
+				admin={admin}
 				counts={data.counts}
 				filters={filters}
 				onFiltersChange={onFiltersChange}
@@ -104,6 +108,7 @@ export function PagedProjectList({
 				showToolbar && (
 					<ProjectsToolbar
 						filters={filters}
+						admin={admin === true}
 						onFiltersChange={onFiltersChange}
 						total={data?.total}
 					/>

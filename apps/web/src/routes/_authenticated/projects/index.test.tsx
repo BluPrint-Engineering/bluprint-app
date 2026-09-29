@@ -1,7 +1,13 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
+import {
+	json,
+	organization,
+	renderAt,
+	signedIn,
+	stubApi,
+} from "@/test/renderApp";
 import { setViewport } from "@/test/viewport";
 
 function lastRequest(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
@@ -28,26 +34,34 @@ function requestedStatus(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 }
 
 /** 26 projects, whatever the page; enough for the list and its toolbar to show. */
-function stubProjects() {
+function stubProjects({ admin = false } = {}) {
 	return stubApi(signedIn, {
-		api: (url) =>
-			url.pathname === "/api/projects"
-				? json({
-						items: [
-							{
-								id: "0190a000-0000-7000-8000-000000000001",
-								name: "Obra 1",
-								createdAt: "2026-01-01T00:00:00.000Z",
-								lastActivityAt: "2026-01-01T00:00:00.000Z",
-								role: "admin",
-								status: "active",
-							},
-						],
-						total: 26,
-						counts: { active: 26, delivered: 0 },
-					})
-				: undefined,
+		organization: { ...organization, role: admin ? "admin" : "manager" },
+		api: (url) => {
+			if (url.pathname === "/api/projects/managers") {
+				return json([{ id: "u-carla", name: "Carla Mendes" }]);
+			}
+			if (url.pathname !== "/api/projects") return undefined;
+			return json({
+				items: [
+					{
+						id: "0190a000-0000-7000-8000-000000000001",
+						name: "Obra 1",
+						createdAt: "2026-01-01T00:00:00.000Z",
+						lastActivityAt: "2026-01-01T00:00:00.000Z",
+						role: "admin",
+						status: "active",
+					},
+				],
+				total: 26,
+				counts: { active: 26, delivered: 0 },
+			});
+		},
 	});
+}
+
+function requestedManager(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
+	return lastRequest(fetchMock)?.get("manager");
 }
 
 describe("/projects route", () => {
@@ -256,6 +270,46 @@ describe("/projects route", () => {
 
 		await waitFor(() => {
 			expect(router.state.location.search).toEqual({ sort: "name" });
+		});
+	});
+
+	test("asks for the manager in the address", async () => {
+		const { fetchMock } = stubApi(signedIn);
+
+		const { router } = renderAt("/projects?manager=u-carla");
+
+		await waitFor(() => {
+			expect(requestedManager(fetchMock)).toBe("u-carla");
+		});
+		expect(router.state.location.search).toEqual({ manager: "u-carla" });
+	});
+
+	test("asks for every manager, omitted from the address, when there is none or it is empty", async () => {
+		const { fetchMock } = stubApi(signedIn);
+
+		const { router } = renderAt("/projects?manager=");
+
+		await screen.findByRole("heading", { name: "Obras" });
+		await waitFor(() => {
+			expect(lastRequest(fetchMock)).toBeDefined();
+		});
+		expect(requestedManager(fetchMock)).toBeNull();
+		expect(router.state.location.search).toEqual({});
+	});
+
+	test("changing the manager goes back to the first page", async () => {
+		stubProjects({ admin: true });
+
+		const { router } = renderAt("/projects?page=3");
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Gerente: Todos" }),
+		);
+		await userEvent.click(
+			await screen.findByRole("menuitemradio", { name: "Carla Mendes" }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({ manager: "u-carla" });
 		});
 	});
 });

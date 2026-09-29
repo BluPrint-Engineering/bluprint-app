@@ -38,6 +38,10 @@ export const projectListQuerySchema = z.object({
 			"`recent`: newest first. `name`: alphabetical in pt-BR, where accents and case never move a name out of its letter. `activity`: most recent last activity first. Ties break by id, so pages never overlap.",
 		example: "name",
 	}),
+	manager: z.string().min(1).optional().meta({
+		description:
+			"A user id: keeps the projects where that user is `manager`. Applied for the organization's `admin`, ignored for everyone else.",
+	}),
 });
 
 export type ProjectSort = z.infer<typeof projectSortSchema>;
