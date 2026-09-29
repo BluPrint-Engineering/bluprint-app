@@ -12,7 +12,7 @@ Closes #
 
 <!-- No interface change? Write n/a on this line and leave the boxes as they are. -->
 
-- [ ] **Mobile** screenshot of every changed state (390×664), in the body — how: `.claude/rules/web.md`
+- [ ] **Mobile** screenshot of every changed state (390×664), in the body
 - [ ] **Desktop** screenshot of every changed state (1280×720), in the body
 - [ ] A changed interaction shown step by step, one state per step, in order
 - [ ] Interface text in pt-BR
