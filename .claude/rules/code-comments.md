@@ -1,13 +1,17 @@
 # Code comments
 
-A comment earns its place by telling the reader what the code, its names and its tests can't: why it's this way, a hidden hazard, a unit or precondition, a workaround and where it came from. A comment that restates the code or only points elsewhere costs reading time and goes stale.
+The default is no comment. Code that needs one usually needs a better name, a type or a test instead, and a comment that restates the code costs every later reader and goes stale. Agents copy the comment density of the code around them, so each comment kept here invites more.
 
-- **State the fact itself.** A line comment is one line.
-- **Cite ADRs, don't point to them.** Append `(ADR 0013)` to a comment that already stands on its own; a comment that is only a reference to an ADR says nothing, so state the hazard or delete it. The ADR names the modules it governs, so the link runs from the decision to the code.
-- **Prefer code over comment**: a clearer name, an explaining variable, an assertion for an invariant.
-- **JSDoc** when it adds what the signature can't: a unit, nullability, a precondition, a hazard. It may span several lines when the contract needs them. JSDoc that restates parameter names or the return type stays out.
-- **`TODO(#n)`** always carries its issue.
-- **Comment only code you're writing or changing**, and when you change code, update or delete the comments that describe it.
-- **What changed goes in the commit**, not the comment ("added", "now uses", "fixed").
+In source, a comment is kept only when it states one of these, in one line:
 
-Removed code is deleted, not commented out. Comments are in English. A test's name is its comment.
+- **A hidden hazard**: behaviour a reader would get wrong from the code alone.
+- **A unit or precondition** that no name, type or assertion can carry.
+- **A workaround and its source**: the bug, version or upstream issue that forced it.
+- **A tool directive**: `biome-ignore`, `eslint-disable`, `@ts-expect-error`, `prettier-ignore`, coverage ignores, `/// <reference>`, with its reason where the tool expects it.
+- **`TODO(#n)`**, carrying its issue.
+
+Everything else goes where it lasts: a name (`timeoutMs`), an explaining variable, a type, an assertion, a test named after the case, the commit body, or an ADR. JSDoc follows the same list.
+
+**Test files carry no comments** beyond tool directives and `TODO(#n)`: the test's name, its `describe` and named helpers say what it does. `.claude/hooks/comment-guard-tests.ts` refuses an Edit or Write that adds one (ADR 0057).
+
+A comment citing a decision states the fact and appends `(ADR 0013)`; the ADR names the modules it governs, so a bare pointer to it says nothing. What changed goes in the commit, not the comment. When code changes, delete or fix the comments that describe it. Removed code is deleted, not commented out. Comments are in English.
