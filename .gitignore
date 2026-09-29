@@ -33,3 +33,7 @@ apps/e2e/tests/*.local.spec.ts
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Cloudflare Pages local dev
+.wrangler/
+.dev.vars

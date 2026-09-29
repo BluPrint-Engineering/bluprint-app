@@ -75,7 +75,7 @@ One folder per domain with its `index.ts` (`health/`, `projects/`) and one file 
 ```mermaid
 flowchart LR
   user[Phone or desktop browser] -->|":5173, one origin"| web[Web app]
-  web -->|"relative /api/*, Vite proxy in dev"| api[NestJS API]
+  web -->|"relative /api/*, Vite proxy in dev, Pages Function in production"| api[NestJS API]
   api --> auth[Better Auth module]
   api --> pg[(PostgreSQL)]
   auth --> pg
@@ -138,7 +138,7 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 
 - **Authentication**: email and password through Better Auth; `httpOnly`, `SameSite=Lax` session cookie valid 90 days, renewed per day of use ([0010](adr/0010-self-hosted-better-auth.md)). Self-signup is scaffolding, off by default ([0011](adr/0011-self-signup-is-scaffolding.md)).
 - **Authorization**: a global `AuthGuard` protects every route; `@AllowAnonymous()` opts one out, and only `health` does. Roles are read from the project membership ([0022](adr/0022-roles-live-on-project-membership.md)); response DTOs strip fields outside the contract ([0004](adr/0004-response-dto-on-every-route.md)).
-- **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, with a known gap until a proxy is chosen (#21); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it.
+- **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, keyed on the `X-Client-IP` the Pages proxy sets, behind the `PROXY_SECRET` gate that only lets that proxy through (0058); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it, and `PROXY_SECRET` too when `NODE_ENV=production`.
 - **Platform admin** never sees project content ([0021](adr/0021-platform-admin-sees-only-metadata.md)).
 - **API docs** (`/api/docs`) are on by default in development and off in production, via `API_DOCS_ENABLED` ([0046](adr/0046-openapi-via-nestjs-swagger.md)).
 
