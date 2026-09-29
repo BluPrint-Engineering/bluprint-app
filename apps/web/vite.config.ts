@@ -37,9 +37,27 @@ export default defineConfig(({ mode }) => {
 			},
 		},
 		test: {
-			environment: "jsdom",
 			globals: true,
-			setupFiles: "./src/test/setup.ts",
+			projects: [
+				{
+					extends: true,
+					test: {
+						name: "app",
+						include: ["src/**/*.test.{ts,tsx}"],
+						environment: "jsdom",
+						setupFiles: "./src/test/setup.ts",
+					},
+				},
+				{
+					extends: true,
+					// jsdom's Request wrapper drops a Request passed as another's init
+					test: {
+						name: "functions",
+						include: ["functions/**/*.test.ts"],
+						environment: "node",
+					},
+				},
+			],
 		},
 	};
 });

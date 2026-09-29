@@ -18,6 +18,8 @@ export interface AuthOptions {
 	trustedOrigins: string[];
 	allowSelfSignup: boolean;
 	checkBreachedPasswords: boolean;
+	/** Keys the rate limit; pass one only when the proxy gate guarantees every request set it. */
+	clientIpHeader?: string | undefined;
 	onUserCreated: (user: { id: string; name: string }) => Promise<void>;
 }
 
@@ -31,6 +33,9 @@ export function createAuth(db: Database, options: AuthOptions) {
 		advanced: {
 			// pinned: Better Auth disables this itself when NODE_ENV is "test"
 			disableOriginCheck: false,
+			...(options.clientIpHeader !== undefined && {
+				ipAddress: { ipAddressHeaders: [options.clientIpHeader] },
+			}),
 		},
 		emailAndPassword: {
 			enabled: true,

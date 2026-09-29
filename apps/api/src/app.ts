@@ -4,6 +4,7 @@ import { Reflector } from "@nestjs/core";
 import helmet from "helmet";
 import { ZodSerializerInterceptor } from "nestjs-zod";
 import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
+import { proxyGate } from "./common/middleware/proxy-gate.middleware";
 import { RequestValidationPipe } from "./common/pipes/request-validation.pipe";
 import { Env } from "./lib/env";
 import { apiDocsEnabled, setupApiDocs } from "./openapi";
@@ -19,6 +20,10 @@ export function configureApp(app: INestApplication): void {
 
 	app.setGlobalPrefix("api");
 	app.use(helmet());
+	const proxySecret = config.get("PROXY_SECRET", { infer: true });
+	if (proxySecret !== undefined) {
+		app.use(proxyGate(proxySecret));
+	}
 	app.enableCors({ origin: config.get("CORS_ORIGIN", { infer: true }) });
 	app.useGlobalPipes(new RequestValidationPipe());
 	app.useGlobalFilters(new AllExceptionsFilter());

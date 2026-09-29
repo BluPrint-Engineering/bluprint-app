@@ -9,6 +9,7 @@ dist/
 build/
 .next/
 .vite/
+.wrangler/
 *.tsbuildinfo
 
 # Testes
@@ -24,6 +25,7 @@ apps/e2e/tests/*.local.spec.ts
 .env
 .env.*
 !.env.example
+.dev.vars
 
 # Worktrees do Claude Code
 .claude/worktrees/

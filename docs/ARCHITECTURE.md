@@ -7,7 +7,7 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 ```
 /
 ├── apps/
-│   ├── web/              React SPA (Vite)
+│   ├── web/              React SPA (Vite); functions/ is the Pages Function that proxies /api in production
 │   ├── api/              NestJS API on Node; openapi.ts + auth/auth.openapi.ts serve /api/docs, drizzle/ the migrations
 │   └── e2e/              Playwright, run through the root `e2e` script
 ├── packages/shared/      Zod schemas and types both apps agree on; built to dist/ before anything else
