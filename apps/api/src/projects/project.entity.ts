@@ -1,5 +1,12 @@
 import { projectStatuses } from "@bluprint/shared";
-import { index, pgEnum, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import {
+	index,
+	pgEnum,
+	pgTable,
+	text,
+	timestamp,
+	uuid,
+} from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { organization } from "../organizations/organization.entity";
 
@@ -16,6 +23,8 @@ export const project = pgTable(
 		// a delivered project is frozen until reopened (ADR 0056)
 		status: projectStatus().notNull().default("active"),
 		createdAt: createdAt(),
+		// starts at creation; a write to operational content must bump it, a rename or status change must not
+		lastActivityAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 	},
 	(table) => [index("project_organization_id_idx").on(table.organizationId)],
 );

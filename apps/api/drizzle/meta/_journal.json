@@ -50,6 +50,13 @@
       "when": 1790630122300,
       "tag": "0006_project_status",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1790632274046,
+      "tag": "0007_project_last_activity",
+      "breakpoints": true
     }
   ]
 }

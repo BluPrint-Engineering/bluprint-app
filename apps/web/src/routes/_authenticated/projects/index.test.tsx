@@ -38,6 +38,7 @@ function stubProjects() {
 								id: "0190a000-0000-7000-8000-000000000001",
 								name: "Obra 1",
 								createdAt: "2026-01-01T00:00:00.000Z",
+								lastActivityAt: "2026-01-01T00:00:00.000Z",
 								role: "admin",
 								status: "active",
 							},

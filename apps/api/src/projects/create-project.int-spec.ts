@@ -137,6 +137,21 @@ describe("POST /api/projects", () => {
 		expect(membership).toBeUndefined();
 	});
 
+	test("counts the creation as the first activity", async () => {
+		const res = await creator.agent.post(PROJECTS).send({ name: "Bloco C" });
+
+		expect(res.status).toBe(201);
+		const created = projectSummarySchema.parse(res.body);
+		expect(created.lastActivityAt).toBe(created.createdAt);
+
+		const listed = projectListSchema.parse(
+			(await creator.agent.get(PROJECTS)).body,
+		);
+		expect(listed.items.find((p) => p.id === created.id)?.lastActivityAt).toBe(
+			created.createdAt,
+		);
+	});
+
 	test("without a free license, answers 409 and creates nothing", async () => {
 		const res = await exhausted.agent
 			.post(PROJECTS)

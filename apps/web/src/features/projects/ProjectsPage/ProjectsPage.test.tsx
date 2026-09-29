@@ -24,6 +24,7 @@ function project(
 		id: `0190a000-0000-7000-8000-${String(n).padStart(12, "0")}`,
 		name: `Obra ${n}`,
 		createdAt: "2026-01-01T00:00:00.000Z",
+		lastActivityAt: "2026-01-01T00:00:00.000Z",
 		role,
 		status,
 	};
@@ -120,6 +121,7 @@ describe("projects page", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		vi.restoreAllMocks();
+		vi.useRealTimers();
 		onlineManager.setOnline(true);
 	});
 
@@ -167,7 +169,9 @@ describe("projects page", () => {
 		renderAt("/projects");
 
 		const cards = await screen.findAllByRole("listitem");
-		expect(cards.map((card) => card.textContent)).toEqual([
+		expect(
+			cards.map((card) => card.textContent?.replace(/Atividade.*$/, "")),
+		).toEqual([
 			"Obra 1Gerente de obraEm andamento",
 			"Obra 2Assistente de obraEm andamento",
 			"Obra 3Em andamento",
@@ -387,6 +391,68 @@ describe("projects page", () => {
 		).toBeInTheDocument();
 	});
 
+	test("shows each project's last activity at the foot of its card", async () => {
+		vi.useFakeTimers({ toFake: ["Date"] });
+		vi.setSystemTime(new Date("2026-01-01T02:00:00.000Z"));
+		stubProjects(projectsApi(3));
+
+		renderAt("/projects");
+
+		expect(await screen.findAllByText("Atividade há 2 h")).toHaveLength(3);
+		vi.useRealTimers();
+	});
+
+	test("sorts by recent activity from the toolbar", async () => {
+		const { fetchMock } = stubProjects(projectsApi(26));
+		renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ordenar: Mais recentes" }),
+		);
+		const menu = await screen.findByRole("menu");
+		await userEvent.click(
+			within(menu).getByRole("menuitemradio", { name: "Atividade recente" }),
+		);
+
+		await waitFor(() => {
+			expect(
+				fetchMock.mock.calls.some(([input]) =>
+					String(input).includes("sort=activity"),
+				),
+			).toBe(true);
+		});
+		await waitFor(() => {
+			expect(
+				screen.getByRole("button", { name: "Ordenar: Atividade recente" }),
+			).toBeInTheDocument();
+		});
+	});
+
+	test("sorts by recent activity from the filter sheet", async () => {
+		setViewport("phone");
+		const { fetchMock } = stubProjects(projectsApi(26));
+
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obra 1");
+		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
+		const sheet = await screen.findByRole("dialog");
+		await userEvent.click(
+			within(sheet).getByRole("radio", { name: "Atividade recente" }),
+		);
+		await userEvent.click(
+			within(sheet).getByRole("button", { name: /^Ver \d+ obras$/ }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({ sort: "activity" });
+		});
+		expect(
+			fetchMock.mock.calls.some(([input]) =>
+				String(input).includes("sort=activity"),
+			),
+		).toBe(true);
+	});
+
 	test("the filter sheet applies a choice only on “Ver N obras” (O14)", async () => {
 		setViewport("phone");
 		stubProjects(projectsApi(26));
@@ -528,10 +594,9 @@ describe("projects page status", () => {
 		renderAt("/projects?status=all");
 
 		const cards = await screen.findAllByRole("listitem");
-		expect(cards.map((card) => card.textContent)).toEqual([
-			"Obra 1Em andamento",
-			"Obra 2Entregue",
-		]);
+		expect(
+			cards.map((card) => card.textContent?.replace(/Atividade.*$/, "")),
+		).toEqual(["Obra 1Em andamento", "Obra 2Entregue"]);
 	});
 
 	test("opens on the projects in progress", async () => {

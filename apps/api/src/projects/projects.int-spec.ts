@@ -38,6 +38,8 @@ let projectThree: string;
 let paginatedIds: string[];
 // alphabetical, the order `sort=name` must answer in
 let paginatedIdsByName: string[];
+// most recent activity first, the order `sort=activity` must answer in
+let paginatedIdsByActivity: string[];
 
 // pt-BR alphabetical order: an accent or a lowercase initial keeps a name among its letter
 const NAMES_ALPHABETICAL = [
@@ -150,17 +152,27 @@ beforeAll(async () => {
 				organizationId: paginatedOrganization,
 				name: NAMES_ALPHABETICAL[(i * 7) % 26]!,
 				createdAt: new Date(base + Math.floor(i / 2) * 60_000),
+				// reversed against creation, in pairs sharing an instant, so activity disagrees with the other sorts
+				lastActivityAt: new Date(base + Math.floor((25 - i) / 2) * 60_000),
 			})),
 		)
 		.returning({
 			id: project.id,
 			name: project.name,
 			createdAt: project.createdAt,
+			lastActivityAt: project.lastActivityAt,
 		});
 	paginatedIds = rows
 		.toSorted(
 			(a, b) =>
 				b.createdAt.getTime() - a.createdAt.getTime() || (a.id < b.id ? 1 : -1),
+		)
+		.map((row) => row.id);
+	paginatedIdsByActivity = rows
+		.toSorted(
+			(a, b) =>
+				b.lastActivityAt.getTime() - a.lastActivityAt.getTime() ||
+				(a.id < b.id ? 1 : -1),
 		)
 		.map((row) => row.id);
 	paginatedIdsByName = rows
@@ -258,7 +270,7 @@ describe("GET /api/projects", () => {
 		expect(Object.keys(body).sort()).toEqual(["counts", "items", "total"]);
 		for (const row of body.items) {
 			expect(Object.keys(row).sort()).toEqual(
-				["createdAt", "id", "name", "role", "status"].sort(),
+				["createdAt", "id", "lastActivityAt", "name", "role", "status"].sort(),
 			);
 		}
 	});
@@ -365,6 +377,21 @@ describe("GET /api/projects sort", () => {
 
 	test("name keeps the total", async () => {
 		expect((await page("sort=name")).total).toBe(26);
+	});
+
+	test("activity walks every page by last activity, most recent first, ties broken by id", async () => {
+		const walked = await walk("activity");
+
+		expect(walked.map((p) => p.id)).toEqual(paginatedIdsByActivity);
+		expect(walked.map((p) => p.id)).not.toEqual(paginatedIds);
+	});
+
+	test("activity reports each project's last activity", async () => {
+		const { items } = await page("sort=activity&pageSize=100");
+
+		const times = items.map((p) => Date.parse(p.lastActivityAt));
+		expect(times).toEqual(times.toSorted((a, b) => b - a));
+		expect(times[0]).toBe(Date.UTC(2026, 0, 1) + 12 * 60_000);
 	});
 });
 

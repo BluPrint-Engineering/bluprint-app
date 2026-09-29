@@ -15,6 +15,10 @@ export const projectSummarySchema = z.object({
 	id: z.uuid(),
 	name: z.string(),
 	createdAt: z.iso.datetime(),
+	lastActivityAt: z.iso.datetime().meta({
+		description:
+			"When anyone last changed the project's operational content. Creation counts as the first activity; renaming does not.",
+	}),
 	role: projectAccessRoleSchema,
 	status: projectStatusSchema.meta({
 		description:
