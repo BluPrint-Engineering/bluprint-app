@@ -26,7 +26,7 @@ export function isRelevantFile(filePath: string): boolean {
 	return true;
 }
 
-const TEST_FILE = /\.(?:spec|test|e2e-spec)\.tsx?$/;
+const TEST_FILE = /\.(?:spec|test|e2e-spec|int-spec)\.tsx?$/;
 const TEST_DIRS = ["/apps/e2e/", "/apps/web/src/test/", "/apps/api/test/"];
 
 export function isTestFile(filePath: string): boolean {
