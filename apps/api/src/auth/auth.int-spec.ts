@@ -9,7 +9,6 @@ import { z } from "zod";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 
-// deliberately undecorated: a route written without a thought about auth must still refuse anonymous
 @Controller("probe")
 class ProbeController {
 	@Get()
@@ -41,7 +40,6 @@ const PASSWORD = "senha-de-obra-123";
 let app: INestApplication;
 let server: Server;
 
-// shared: an account per test would spend the rate-limit budget the brute-force test needs
 let account: { email: string; userId: string };
 let signUpResponse: request.Response;
 let signedIn: ReturnType<typeof request.agent>;
@@ -63,7 +61,6 @@ beforeAll(async () => {
 	signUpResponse = await signedIn
 		.post(SIGN_UP)
 		.send({ email, password: PASSWORD, name: "Engenheira de Obra" });
-	// asserted before the parse: ALLOW_SELF_SIGNUP off answers 403, and the Zod issue on a missing `user` won't say why
 	expect(signUpResponse.status).toBe(200);
 	account = {
 		email,
@@ -158,7 +155,6 @@ describe("body parsing on our own routes", () => {
 	});
 });
 
-// last, in one block: the limiter counts every attempt in this process, so anything after inherits a spent budget
 describe("signing in", () => {
 	test("rejects the wrong password, with Better Auth's code as problem details", async () => {
 		const res = await request(server)
@@ -186,7 +182,6 @@ describe("signing in", () => {
 		expect(authUserSchema.parse(session.body).user.email).toBe(account.email);
 	});
 
-	// a fresh client's first call has no cookie yet, so it looks like it passes
 	test("refuses a cookie-bearing request from an untrusted origin", async () => {
 		const res = await signedIn
 			.post(SIGN_IN)
@@ -208,7 +203,6 @@ describe("signing in", () => {
 		}
 
 		expect(limited).toBeDefined();
-		// Not redundant with the 401 above: see auth-problem-details.ts.
 		expect(problemDetailsSchema.parse(limited?.body).code).toBe(
 			"TOO_MANY_REQUESTS",
 		);

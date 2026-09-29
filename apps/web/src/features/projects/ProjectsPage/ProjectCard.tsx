@@ -22,10 +22,8 @@ const STATUS_BADGE_VARIANT = {
 
 const CARD = "rounded-xl shadow-(--ring-hairline) ring-0";
 
-// not a link, nor styled as one: the project screen it would open does not exist yet
 export function ProjectCard({ project }: { project: ProjectSummary }) {
 	return (
-		// a delivered project is quieter, not disabled: no fill, the same card otherwise
 		<Card
 			className={cn(CARD, project.status === "delivered" && "bg-transparent")}
 		>
@@ -35,7 +33,6 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
 						<h2 className="line-clamp-2 text-lg leading-snug font-semibold tracking-tight text-pretty">
 							{project.name}
 						</h2>
-						{/* an admin's role would repeat on every card; it belongs in the account menu */}
 						{project.role !== "admin" && (
 							<p className="text-sm text-muted-foreground">
 								{ROLE_LABELS[project.role]}
@@ -65,7 +62,6 @@ export function ProjectCardSkeleton({
 	width,
 	className,
 }: {
-	/** Of the name line, varied so the placeholders don't read as one block. */
 	width: string;
 	className?: string;
 }) {

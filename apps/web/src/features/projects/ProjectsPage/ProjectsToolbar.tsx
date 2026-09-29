@@ -26,7 +26,6 @@ import { ProjectsFilterSheet } from "./ProjectsFilterSheet";
 import { StatusFilter } from "./StatusFilter";
 import { SORT_LABELS } from "./sortLabels";
 
-/** Past this, the phone's sticky row draws its bottom border so the cards don't run into it. */
 const STUCK_AFTER_PX = 64;
 
 function useScrolledPast(offset: number) {
@@ -42,14 +41,11 @@ function useScrolledPast(offset: number) {
 
 export interface ProjectsToolbarProps {
 	filters: ProjectsFilters;
-	/** The caller is the organization's admin, the only one who filters by manager. */
 	admin: boolean;
 	onFiltersChange: (filters: ProjectsFilters) => void;
-	/** Projects `filters` leave, `undefined` while the list loads. */
 	total: number | undefined;
 }
 
-/** The desktop's controls, inline above the grid; each applies as soon as it changes, the search once typing pauses. */
 export function ProjectsToolbar({
 	filters,
 	admin,
@@ -151,7 +147,6 @@ export function ProjectsToolbar({
 	);
 }
 
-/** The phone's controls: a row that sticks to the top as the list scrolls, with the search and a "Filtros" that opens a sheet. */
 export function ProjectsMobileToolbar({
 	filters,
 	admin,
@@ -163,7 +158,6 @@ export function ProjectsMobileToolbar({
 	return (
 		<div
 			className={cn(
-				// bleeds over the page padding so the border spans the screen
 				"sticky top-0 z-20 -mx-(--page-pad) flex gap-(--space-2) border-b bg-background px-(--page-pad) py-(--space-2) transition-colors duration-(--duration) ease-standard",
 				stuck ? "border-border" : "border-transparent",
 			)}

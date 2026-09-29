@@ -31,10 +31,6 @@ function project(
 	};
 }
 
-/**
- * Serves `total` projects the way the API pages them; `role` picks each one's role. `sort=name`
- * answers them in reverse, so the two orders tell apart.
- */
 function projectsApi(
 	total: number,
 	role: (n: number) => ProjectAccessRole = () => "admin",
@@ -54,10 +50,6 @@ function projectsApi(
 	};
 }
 
-/**
- * Serves the projects in progress, numbered first, and the delivered ones, filtered by `status` the
- * way the API does; `counts` ignores the filter.
- */
 function statusApi(active: number, delivered: number): ApiHandler {
 	return (url) => {
 		if (url.pathname !== "/api/projects") return undefined;
@@ -81,7 +73,6 @@ function statusApi(active: number, delivered: number): ApiHandler {
 	};
 }
 
-/** `hidden` reaches the list behind an open sheet, which hides the rest of the page from assistive tech. */
 function firstCard({ hidden = false } = {}) {
 	return within(
 		screen.getByRole("list", { name: "Obras", hidden }),
@@ -526,7 +517,6 @@ describe("projects page", () => {
 	test("“Ver N obras” counts what the pending choice would show", async () => {
 		setViewport("phone");
 		const byDate = projectsApi(26);
-		// one fewer by name stands in for a filter that hides a project
 		const byName = projectsApi(25);
 		stubProjects((url) =>
 			url.searchParams.get("sort") === "name" ? byName(url) : byDate(url),
@@ -672,7 +662,6 @@ describe("projects page status", () => {
 		expect(
 			screen.queryByRole("heading", { name: "Nenhuma obra por aqui" }),
 		).not.toBeInTheDocument();
-		// the toolbar stays, or a person with only delivered projects would have no way to change the status
 		expect(screen.getByRole("radio", { name: "Todas" })).toBeInTheDocument();
 
 		await userEvent.click(
@@ -956,7 +945,6 @@ describe("projects page search", () => {
 			.replace(/\p{Diacritic}/gu, "")
 			.toLowerCase();
 
-	/** Serves the projects whose name holds `q`, ignoring accents and case, as the API would. */
 	function searchApi(names: string[]): ApiHandler {
 		return (url) => {
 			if (url.pathname !== "/api/projects") return undefined;
@@ -1213,7 +1201,6 @@ const MANAGERS = [
 	{ id: "u-diego", name: "Diego Almeida" },
 ];
 
-/** The admin's API: `total` projects, or `filtered` once a manager is asked for, plus the manager list. */
 function adminApi(total: number, filtered = total): ApiHandler {
 	const all = projectsApi(total);
 	const some = projectsApi(filtered);

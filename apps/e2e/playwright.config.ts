@@ -17,7 +17,6 @@ export default defineConfig({
 	use: {
 		baseURL: WEB_BASE_URL,
 		screenshot: { mode: "on", fullPage: true },
-		// E2E_VIDEO=1 records every test, for the PR video of a changed flow
 		video: process.env.E2E_VIDEO ? "on" : "retain-on-failure",
 		trace: "on-first-retry",
 	},
@@ -45,16 +44,13 @@ export default defineConfig({
 			command: "bun run start",
 			cwd: "../api",
 			url: `${API_BASE_URL}/api/health`,
-			// A stale process on the E2E ports should fail loudly, not be reused.
 			reuseExistingServer: false,
 			env: {
 				PORT: String(E2E_API_PORT),
 				DATABASE_URL: DATABASE_URL_E2E,
 				CORS_ORIGIN: WEB_BASE_URL,
 				BETTER_AUTH_URL: API_BASE_URL,
-				// signup.spec.ts creates an account; paired with VITE_ALLOW_SELF_SIGNUP in the root e2e script
 				ALLOW_SELF_SIGNUP: "true",
-				// the suite must not depend on the real HIBP API being up; its wiring is covered by password-policy.int-spec.ts
 				PASSWORD_BREACH_CHECK: "false",
 			},
 		},
@@ -63,7 +59,6 @@ export default defineConfig({
 			cwd: "../web",
 			url: WEB_BASE_URL,
 			reuseExistingServer: false,
-			// vite preview's proxy defaults to server.proxy, which targets PORT.
 			env: {
 				PORT: String(E2E_API_PORT),
 			},

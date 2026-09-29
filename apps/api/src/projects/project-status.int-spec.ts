@@ -81,7 +81,6 @@ beforeAll(async () => {
 
 	const organizationId = await organizationOf(admin.userId);
 
-	// created a minute apart, so `recent` orders them and the walk over pages is checkable
 	const base = Date.UTC(2026, 0, 1);
 	const projects: { name: string; status: ProjectStatus }[] = [
 		{ name: "Em andamento 1", status: "active" },
@@ -103,7 +102,6 @@ beforeAll(async () => {
 	[activeOne, activeTwo, deliveredOne, deliveredTwo, deliveredThree] =
 		created.map((row) => row.id) as [string, string, string, string, string];
 
-	// sign-up gave each its own organization; one per person (RF-139), so it goes before they join this one
 	for (const { userId } of [manager, onlyDelivered]) {
 		await db
 			.delete(organization)
@@ -122,7 +120,6 @@ beforeAll(async () => {
 		},
 	]);
 
-	// another organization's delivered project: no filter of the others may reach it
 	await db.insert(project).values({
 		organizationId: await organizationOf(outsider.userId),
 		name: "Entregue de outra construtora",

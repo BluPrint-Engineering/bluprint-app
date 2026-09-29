@@ -25,15 +25,8 @@ export function json(body: unknown, status = 200): Promise<Response> {
 	return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
 
-/** Answers any request the stub doesn't; `undefined` falls through to the defaults. */
 export type ApiHandler = (url: URL) => Promise<Response> | Response | undefined;
 
-/**
- * Stubs the API at the network boundary. `setSession` changes what the server would answer from
- * then on; a successful sign-in or sign-up flips it to a session and a sign-out back to none, as a
- * real one would. `signOut` replaces the sign-out answer, to make it fail or hang. The project list
- * answers empty unless `api` answers it.
- */
 export function stubApi(
 	initial: Session,
 	options: {
@@ -82,12 +75,10 @@ export function stubApi(
 
 export const signedIn = SESSION;
 
-/** Renders the real route tree, built by the same factory as the app, on an in-memory history. */
 export function renderAt(path: string) {
 	const { router, queryClient } = createApp({
 		history: createMemoryHistory({ initialEntries: [path] }),
 	});
-	// three automatic attempts would otherwise cost ~7 s per failing test
 	queryClient.setDefaultOptions({ queries: { retryDelay: 0 } });
 	render(
 		<QueryClientProvider client={queryClient}>

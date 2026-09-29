@@ -45,7 +45,6 @@ function problem(overrides: { status: number; code: string }) {
 	};
 }
 
-// the page links to /login, and a router Link needs a router around it
 async function renderSignupPage(onSuccess = vi.fn()) {
 	const rootRoute = createRootRoute({
 		component: () => <SignupPage onSuccess={onSuccess} />,

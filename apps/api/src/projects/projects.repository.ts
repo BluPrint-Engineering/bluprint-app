@@ -23,7 +23,7 @@ import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
 import { project } from "./project.entity";
 
-/** Substring match that ignores accents and case; ilike reads `%`, `_` and `\` as wildcards or escapes, so `q` is escaped to match itself. */
+/** ilike reads `%`, `_` and `\` as wildcards or escapes, so `q` is escaped to match itself. */
 function nameContains(q: string) {
 	if (q === "") return undefined;
 	const pattern = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
@@ -50,7 +50,6 @@ export class ProjectsRepository {
 			sort: ProjectSort;
 			limit: number;
 			offset: number;
-			/** Keeps the projects where this user is `manager`. */
 			managerId?: string | undefined;
 		},
 	) {
@@ -81,7 +80,6 @@ export class ProjectsRepository {
 						eq(projectMember.userId, userId),
 					),
 				)
-				// an org admin sees every project; anyone else only those they're a member of (ADR 0022)
 				.where(
 					and(
 						or(isNotNull(projectMember.id), eq(member.role, "admin")),
@@ -142,7 +140,6 @@ export class ProjectsRepository {
 		return { items, total: counted!.total, counts };
 	}
 
-	/** Everyone who is `manager` on at least one project of the organization, by name. */
 	async listManagers(organizationId: string) {
 		return (
 			this.txHost.tx
@@ -173,7 +170,6 @@ export class ProjectsRepository {
 	async insert(values: {
 		organizationId: string;
 		name: string;
-		/** Left out, the project is born `active`. */
 		status?: ProjectStatus | undefined;
 	}): Promise<{
 		id: string;

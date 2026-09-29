@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// PreToolUse guard for Bash (ADR 0048).
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { block, isEnvFile, readStdinJson, runHook } from "./lib";
@@ -10,7 +9,6 @@ interface PreToolUseInput {
 	tool_input?: { command?: string };
 }
 
-// Removes heredoc bodies (`<<EOF`, `<<-'EOF'`, ...) so payload text (e.g. a commit message) isn't parsed as commands.
 function stripHeredocs(input: string): string {
 	const marker = /<<(-?)\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\2/g;
 	let result = "";
@@ -42,7 +40,6 @@ function stripHeredocs(input: string): string {
 
 const OPERATORS = ["&&", "||", ">>", "&", ";", "|", ">", "<"] as const;
 
-// Splits into words; operators are their own token even glued to text (`>.env`).
 function tokenize(input: string): string[] {
 	const tokens: string[] = [];
 	let current = "";
@@ -90,7 +87,7 @@ function tokenize(input: string): string[] {
 
 		if (char === "\n") {
 			flush();
-			tokens.push(";"); // a newline separates commands, same as `;`
+			tokens.push(";");
 			i++;
 			continue;
 		}
@@ -177,7 +174,6 @@ const PUSH_VALUE_FLAGS = new Set(["-o", "--push-option", "--repo"]);
 const COMMIT_VALUE_SHORT = new Set(["m", "c", "C", "F", "S"]);
 const COMMIT_VALUE_LONG = new Set(["--message", "--file"]);
 
-// Walks git commit's args for a triggering `-n`, skipping -m/-F/--message/... values so a flag's own value is never read as a flag.
 function commitShortNoVerify(args: string[]): boolean {
 	for (let i = 0; i < args.length; i++) {
 		const token = args[i] as string;
@@ -215,7 +211,7 @@ function checkGitPush(pushArgs: string[], gitDir: string): string | null {
 		if (token.startsWith("-")) {
 			flags.push(token);
 			if (PUSH_VALUE_FLAGS.has(token) && !token.includes("=")) {
-				i++; // this flag's value is the next token, not a positional
+				i++;
 			}
 			continue;
 		}
@@ -225,7 +221,7 @@ function checkGitPush(pushArgs: string[], gitDir: string): string | null {
 	const hasForce = flags.some((f) => f === "--force" || shortFlagTriggers(f, "f", PUSH_VALUE_SHORT));
 	const hasForceRefspec = pushArgs.some((t) => t.startsWith("+") && t.length > 1);
 
-	const refspecs = positionals.slice(1); // positionals[0] is the remote, if given
+	const refspecs = positionals.slice(1);
 	const targetsMain =
 		refspecs.length > 0
 			? refspecs.some((r) => refspecDestination(r, gitDir) === "main")

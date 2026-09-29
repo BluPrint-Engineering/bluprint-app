@@ -4,10 +4,6 @@ import { discardSession } from "@/features/auth";
 import { routeTree } from "@/routeTree.gen";
 import { ApiError } from "./api";
 
-/**
- * Builds the QueryClient and the router together, because the 401 handler needs both. The app and
- * the tests go through here, so no rule holds only in production.
- */
 export function createApp({ history }: { history?: RouterHistory } = {}) {
 	// runs after both consts below exist: it fires from a request, never during construction
 	function onUnauthorized(error: Error) {

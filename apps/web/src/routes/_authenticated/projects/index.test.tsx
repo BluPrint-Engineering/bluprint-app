@@ -33,7 +33,6 @@ function requestedStatus(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
 	return lastRequest(fetchMock)?.get("status");
 }
 
-/** 26 projects, whatever the page; enough for the list and its toolbar to show. */
 function stubProjects({ admin = false } = {}) {
 	return stubApi(signedIn, {
 		organization: { ...organization, role: admin ? "admin" : "manager" },

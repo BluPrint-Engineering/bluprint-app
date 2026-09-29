@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// PreToolUse guard for Edit/Write on test files (ADR 0057).
 import { bullets, commentsAddedBy, type EditOrWriteInput, isRelevantFile, isTestFile } from "./comments";
 import { block, readStdinJson, runHook } from "./lib";
 

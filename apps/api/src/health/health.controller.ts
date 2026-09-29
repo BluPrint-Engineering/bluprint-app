@@ -8,7 +8,6 @@ import { HealthQueryDto } from "./dto/health-query.dto";
 import { HealthResponseDto } from "./dto/health-response.dto";
 import { HealthService } from "./health.service";
 
-/** Health is the one deliberate exception to the global AuthGuard; app.int-spec.ts keeps it that way. */
 @AllowAnonymous()
 @ApiTags("Health")
 @Controller("health")

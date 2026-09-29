@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { type AccountUser, UserMenu } from "./UserMenu";
 
-// scrolls away on mobile, where each screen keeps its own sticky row instead
 export function AppHeader({ user }: { user: AccountUser }) {
 	return (
 		<header className="relative top-0 z-30 border-b border-border bg-background pt-[env(safe-area-inset-top)] md:sticky">

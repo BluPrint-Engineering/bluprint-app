@@ -4,7 +4,6 @@ import type * as React from "react";
 
 import { cn } from "@/lib/utils";
 
-/** The design system draws a radio list as menu rows: the label, and a check on the chosen one. */
 function RadioGroup({
 	className,
 	...props

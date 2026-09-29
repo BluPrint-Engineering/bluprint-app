@@ -2,7 +2,6 @@ import { onlineManager } from "@tanstack/react-query";
 import { useSyncExternalStore } from "react";
 import { Spinner } from "@/components/ui/spinner";
 
-/** Shown while the session is checked, so no protected — or login — content flashes first. */
 export function SessionSplash() {
 	// paused, not failed, while offline: the check resumes by itself when the connection returns
 	const online = useSyncExternalStore(

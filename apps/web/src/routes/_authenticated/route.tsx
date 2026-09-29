@@ -6,7 +6,6 @@ import {
 	sessionQueryOptions,
 } from "@/features/auth";
 
-// a pathless layout: every screen of the product lives under it, so a new route is protected by default
 export const Route = createFileRoute("/_authenticated")({
 	beforeLoad: async ({ context, location }) => {
 		const session = await context.queryClient.query(sessionQueryOptions);

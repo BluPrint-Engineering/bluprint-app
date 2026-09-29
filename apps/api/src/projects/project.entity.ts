@@ -20,7 +20,6 @@ export const project = pgTable(
 			.notNull()
 			.references(() => organization.id, { onDelete: "cascade" }),
 		name: text().notNull(),
-		// a delivered project is frozen until reopened (ADR 0056)
 		status: projectStatus().notNull().default("active"),
 		createdAt: createdAt(),
 		// starts at creation; a write to operational content must bump it, a rename or status change must not

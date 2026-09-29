@@ -5,12 +5,10 @@ interface StateBlockProps {
 	icon: LucideIcon;
 	title: string;
 	description: string;
-	/** `alert` for a failure the person must act on. */
 	role?: "status" | "alert";
 	children?: React.ReactNode;
 }
 
-/** The list's place when there is no list: empty, failed or offline. */
 export function StateBlock({
 	icon: Icon,
 	title,

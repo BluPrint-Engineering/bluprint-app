@@ -29,12 +29,9 @@ import { StatusFilter } from "./StatusFilter";
 import { SORT_LABELS } from "./sortLabels";
 
 export interface ProjectsFilterSheetProps {
-	/** The filters the list behind shows. */
 	filters: ProjectsFilters;
-	/** The caller is the organization's admin, the only one who filters by manager. */
 	admin: boolean;
 	onApply: (filters: ProjectsFilters) => void;
-	/** Projects `filters` leave, `undefined` while the list loads. */
 	total: number | undefined;
 }
 
@@ -43,10 +40,6 @@ function filterCountText(count: number) {
 	return count === 1 ? "1 filtro ativo" : `${count} filtros ativos`;
 }
 
-/**
- * The phone's filters: the "Filtros" button and the bottom sheet it opens. A choice in the sheet is a
- * draft until "Ver N obras" applies it; closing the sheet any other way discards it.
- */
 export function ProjectsFilterSheet({
 	filters,
 	admin,
@@ -68,7 +61,6 @@ export function ProjectsFilterSheet({
 	const preview = useQuery({
 		...projectsTotalQueryOptions(draft),
 		enabled: open && pending,
-		// the count on the button stays while the next choice's loads
 		placeholderData: keepPreviousData,
 	});
 	const shown = pending ? preview.data : total;
@@ -120,7 +112,6 @@ export function ProjectsFilterSheet({
 								aria-labelledby={managerLabelId}
 								value={managerChoice(draft)}
 								onValueChange={(choice) => setDraft(withManager(draft, choice))}
-								// rows bleed into the padding so their labels line up with the section title
 								className="-mx-(--space-3) w-auto"
 							>
 								<RadioGroupItem value={ALL_MANAGERS}>
@@ -154,7 +145,6 @@ export function ProjectsFilterSheet({
 							onValueChange={(value) =>
 								setDraft({ ...draft, sort: projectSortSchema.parse(value) })
 							}
-							// rows bleed into the padding so their labels line up with the section title
 							className="-mx-(--space-3) w-auto"
 						>
 							{projectSorts.map((option) => (

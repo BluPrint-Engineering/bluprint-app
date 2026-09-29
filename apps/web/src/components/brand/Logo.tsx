@@ -23,7 +23,6 @@ const STACKED: Record<LogoTone, string> = {
 export type LogoTone = "gradient" | "blue" | "white" | "ink";
 
 export interface LogoProps extends React.ComponentPropsWithoutRef<"span"> {
-	/** gradient on light surfaces, white on brand blue or dark, ink/blue for flat single-colour use */
 	tone?: LogoTone;
 	/** Mark height in px; the lockups scale from it. */
 	size?: number;

@@ -10,7 +10,7 @@ function storedTheme(): boolean {
 	}
 }
 
-/** Toggles `.dark` on the document root and persists the choice; `index.html` applies it before first paint. */
+/** `index.html` reads the same stored choice to apply it before first paint. */
 export function useTheme() {
 	const [dark, setDark] = useState(storedTheme);
 

@@ -18,7 +18,6 @@ beforeAll(async () => {
 	configureApp(app);
 	await app.init();
 
-	// getHttpServer() is typed `any`; narrow once here instead of at every call.
 	server = app.getHttpServer() as Server;
 });
 

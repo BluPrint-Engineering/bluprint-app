@@ -30,7 +30,6 @@ let db: Database;
 
 type Caller = { userId: string; agent: ReturnType<typeof request.agent> };
 
-// one account per role this route distinguishes, shared: sign-up is rate limited at 5/min
 let admin: Caller;
 let manager: Caller;
 let assistant: Caller;

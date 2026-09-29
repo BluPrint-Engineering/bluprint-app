@@ -19,15 +19,12 @@ const GRID =
 const SKELETON_WIDTHS = ["62%", "48%", "70%", "55%", "66%", "44%"];
 
 interface ProjectsMainProps {
-	/** Of the whole list, not of what is on screen; `undefined` until it lands. */
 	total: number | undefined;
 	counting: boolean;
-	/** Between the title and the list; left out where there is nothing to sort or filter. */
 	toolbar?: React.ReactNode;
 	children: React.ReactNode;
 }
 
-/** The page around the list: the title with the count, the toolbar, then the list or what stands in for it. */
 export function ProjectsMain({
 	total,
 	counting,
@@ -71,7 +68,6 @@ export function firstLoadState(
 	return "loading";
 }
 
-/** Stands in for the list until its first page lands: loading, failed or waiting for the connection. */
 export function ListPlaceholder({ query }: { query: FirstLoad }) {
 	const state = firstLoadState(query);
 	if (state === "failed") {
@@ -111,7 +107,6 @@ function ListSkeleton() {
 			{SKELETON_WIDTHS.map((width) => (
 				<ProjectCardSkeleton key={width} width={width} />
 			))}
-			{/* a phone fills its screen with 6, a desktop grid needs a full page */}
 			{SKELETON_WIDTHS.map((width) => (
 				<ProjectCardSkeleton
 					key={`${width}-desktop`}
@@ -123,12 +118,10 @@ function ListSkeleton() {
 	);
 }
 
-/** Whether the person can see any project at all, whatever the status filter leaves on screen. */
 export function hasProjects(counts: ProjectListData["counts"]) {
 	return counts.active + counts.delivered > 0;
 }
 
-/** What stands in for a list with no projects at all: for the admin an invitation, for anyone else an explanation. */
 function NoProjects({ admin }: { admin: boolean | undefined }) {
 	// the wrong block, even for a moment, would tell an admin to wait for someone else
 	if (admin === undefined) return <ListSkeleton />;
@@ -150,14 +143,12 @@ function NoProjects({ admin }: { admin: boolean | undefined }) {
 	);
 }
 
-/** The clause a search-empty message appends, so its scope reads with the status it ran against. */
 function searchScopeText(status: ProjectStatusFilter): string {
 	if (status === "active") return " em obras em andamento";
 	if (status === "delivered") return " em obras entregues";
 	return "";
 }
 
-/** What a search that matches no project shows; "Limpar filtros" is the way back to the list. */
 export function NoResults({
 	q,
 	status,
@@ -185,14 +176,12 @@ export function NoResults({
 }
 
 interface EmptyListProps {
-	/** The caller is the organization's admin; `undefined` while their role loads. */
 	admin: boolean | undefined;
 	counts: ProjectListData["counts"];
 	filters: ProjectsFilters;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 }
 
-/** What stands in for a list with nothing on it: no project at all, or none in the status on screen. */
 export function EmptyList({
 	admin,
 	counts,
@@ -212,7 +201,6 @@ export function EmptyList({
 		);
 	}
 
-	// "all" cannot come up empty while any project exists, so what is left is a single status
 	if (filters.status === "delivered") {
 		return (
 			<StateBlock
@@ -252,7 +240,6 @@ export function ProjectList({
 	busy = false,
 }: {
 	projects: ProjectSummary[];
-	/** Dims the list while the one replacing it loads. */
 	busy?: boolean;
 }) {
 	return (

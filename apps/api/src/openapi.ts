@@ -54,7 +54,6 @@ transactional email provider exists (#11), and documenting them here would be
 maintenance with no reader.
 `.trim();
 
-/** Defaults to off in production so the route map is not public (ADR 0046) */
 export function apiDocsEnabled(config: ConfigService<Env, true>): boolean {
 	const flag = config.get("API_DOCS_ENABLED", { infer: true });
 	return flag ?? process.env.NODE_ENV !== "production";
@@ -100,7 +99,7 @@ export function setupApiDocs(app: INestApplication): void {
 			`${controllerKey.replace(/Controller$/, "").toLowerCase()}_${methodKey}`,
 	});
 
-	// The scanner never sees Better Auth's routes: see auth.openapi.ts.
+	// The scanner never sees Better Auth's routes; auth.openapi.ts documents them by hand.
 	document.paths = { ...document.paths, ...authPaths };
 	document.components = {
 		...document.components,

@@ -1,4 +1,3 @@
-/** First and last word only: "Guilherme Lopes da Silva" reads "GS". */
 export function initialsOf(name: string): string {
 	const words = name.trim().split(/\s+/).filter(Boolean);
 	const first = words[0]?.[0] ?? "";

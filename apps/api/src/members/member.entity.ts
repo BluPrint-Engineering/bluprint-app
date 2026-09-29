@@ -27,7 +27,6 @@ export const member = pgTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		// one organization per person, whatever path writes the row (RF-139)
 		uniqueIndex("member_user_id_uidx").on(table.userId),
 		index("member_organization_id_idx").on(table.organizationId),
 	],

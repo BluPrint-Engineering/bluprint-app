@@ -37,7 +37,6 @@ import {
 	signUpErrorMessage,
 } from "./signUpErrorMessage";
 
-// the same bounds and blocklist the API enforces, so only a breached password reaches the server to fail
 const signupFormSchema = z
 	.object({
 		name: z.string().trim().min(3, "Informe o seu nome completo."),

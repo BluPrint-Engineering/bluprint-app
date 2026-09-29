@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-/** A password field with a show/hide toggle, so a thumb-typed password can be checked on a phone. */
 export function PasswordInput(
 	props: Omit<React.ComponentProps<typeof Input>, "type" | "className">,
 ) {

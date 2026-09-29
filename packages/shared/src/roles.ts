@@ -1,6 +1,5 @@
 import { z } from "zod";
 
-/** Authorization reads this set alone (ADR 0024) */
 export const effectiveRoles = ["manager", "assistant"] as const;
 
 export const defaultRoles = ["admin", ...effectiveRoles] as const;

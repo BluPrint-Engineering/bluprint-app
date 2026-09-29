@@ -13,7 +13,6 @@ const badgeVariants = cva(
 				neutral: "bg-secondary text-secondary-foreground",
 				destructive: "bg-destructive/10 text-destructive",
 				outline: "border-border text-muted-foreground",
-				// a number on a control, such as the active filters on "Filtros"
 				count:
 					"h-5 min-w-5 px-1.5 bg-primary font-semibold text-primary-foreground tabular-nums",
 			},

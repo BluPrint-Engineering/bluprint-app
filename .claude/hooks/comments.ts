@@ -1,4 +1,3 @@
-// Comment extraction shared by comment-nudge.ts and comment-guard-tests.ts (ADR 0057).
 import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -27,7 +26,7 @@ export function isRelevantFile(filePath: string): boolean {
 	return true;
 }
 
-const TEST_FILE = /\.(?:spec|test|e2e-spec)\.tsx?$/;
+const TEST_FILE = /\.(?:spec|test|e2e-spec|int-spec)\.tsx?$/;
 const TEST_DIRS = ["/apps/e2e/", "/apps/web/src/test/", "/apps/api/test/"];
 
 export function isTestFile(filePath: string): boolean {
@@ -45,7 +44,6 @@ async function loadTypescript(cwd: string): Promise<typeof import("typescript")>
 	}
 }
 
-// Parses the real AST, so JSX text and template-literal bodies are never mistaken for comment trivia.
 function extractComments(ts: typeof import("typescript"), text: string, isTsx: boolean): string[] {
 	const sourceFile = ts.createSourceFile(
 		isTsx ? "nudge.tsx" : "nudge.ts",
@@ -83,12 +81,11 @@ function extractComments(ts: typeof import("typescript"), text: string, isTsx: b
 		ts.forEachChild(node, visit);
 	};
 	visit(sourceFile);
-	collectAt(sourceFile.endOfFileToken.getFullStart()); // trivia after the last real token
+	collectAt(sourceFile.endOfFileToken.getFullStart());
 
 	return comments;
 }
 
-// Comments in `newText` absent from every text in `baselines`, one-for-one.
 async function addedComments(
 	cwd: string,
 	baselines: string[],

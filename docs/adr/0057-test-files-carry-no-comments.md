@@ -4,7 +4,7 @@
 
 Agents copy the comment density of the code around them, so the fix works on the example they see, not only on the rule they read:
 
-- **Test files carry no comments.** `.claude/hooks/comment-guard-tests.ts` runs as a `PreToolUse` hook on `Edit|Write` and refuses, with exit code 2, an edit that adds a comment to a `*.spec`/`*.test`/`*.e2e-spec` file or under `apps/e2e/`, `apps/web/src/test/` or `apps/api/test/`. Only tool directives and `TODO(#n)` pass. A test's name, its `describe` and named helpers already say what a comment would.
+- **Test files carry no comments.** `.claude/hooks/comment-guard-tests.ts` runs as a `PreToolUse` hook on `Edit|Write` and refuses, with exit code 2, an edit that adds a comment to a `*.spec`/`*.test`/`*.e2e-spec`/`*.int-spec` file or under `apps/e2e/`, `apps/web/src/test/` or `apps/api/test/`. Only tool directives and `TODO(#n)` pass. A test's name, its `describe` and named helpers already say what a comment would.
 - **Source defaults to no comment.** The rule keeps a comment only for a hidden hazard, a unit or precondition no name or type can carry, a workaround and its source, a tool directive or `TODO(#n)`. `comment-nudge.ts` repeats that closed list instead of an open question, and still never blocks.
 - **A one-time sweep** removes the existing comments the new rule doesn't allow, so the code an agent reads next is the example to follow.
 

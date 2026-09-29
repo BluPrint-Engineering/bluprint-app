@@ -10,7 +10,6 @@ import { selfSignupAllowed } from "@/lib/env";
 
 export const Route = createFileRoute("/signup")({
 	beforeLoad: async ({ context }) => {
-		// the login footer already explains that access comes by invitation
 		if (!selfSignupAllowed()) throw redirect({ to: "/login" });
 		const session = await peekSession(context.queryClient);
 		if (session) throw redirect({ to: "/projects" });

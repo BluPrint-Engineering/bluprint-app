@@ -5,7 +5,6 @@ import { Drawer as DrawerPrimitive } from "vaul";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-/** The design system's Sheet: a bottom drawer over the scrim, dragged down or closed by its X. */
 function Drawer({
 	...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
@@ -73,7 +72,6 @@ function DrawerContent({
 	);
 }
 
-/** Title and description on the left, the 44px close X on the right. */
 function DrawerHeader({
 	className,
 	children,
