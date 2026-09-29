@@ -12,9 +12,9 @@ Closes #
 
 <!-- No interface change? Write n/a on this line and leave the boxes as they are. -->
 
-- [ ] **Mobile** screenshot of every changed state (iPhone 13), in the body — `/open-frontend-pr` uploads them
-- [ ] **Desktop** screenshot of every changed state (Desktop Chrome), in the body
-- [ ] Video of the flow, in the body, if the PR changes an interaction
+- [ ] **Mobile** screenshot of every changed state (390×664), in the body
+- [ ] **Desktop** screenshot of every changed state (1280×720), in the body
+- [ ] A changed interaction shown step by step, one state per step, in order
 - [ ] Interface text in pt-BR
 - [ ] Large touch targets, reachable with one hand
 - [ ] Status and discipline never conveyed by color alone: a label, icon or legend alongside
