@@ -12,7 +12,8 @@ import { OrganizationsRepository } from "../../organizations/organizations.repos
 import { ProjectsRepository } from "../../projects/projects.repository";
 import { DATABASE, Database, DatabaseAdapter } from "../database.module";
 import { member, organization, projectMember, session, user } from "../schema";
-import { SEED_PASSWORD, organizations, people, platformAdmin } from "./fixture";
+import { organizations, people, platformAdmin, rolesOf } from "./fixture";
+import { resolveSeedTarget } from "./seed-target";
 
 // relative to apps/api, the cwd every api script runs from
 config({ path: ["../../.env.local", "../../.env"] });
@@ -21,26 +22,15 @@ const env = envSchema.parse(process.env);
 
 type Auth = ReturnType<typeof createAuth>;
 
-// only guard between a typo'd DATABASE_URL and TRUNCATE hitting staging or production
-const LOCAL_HOSTNAMES = new Set(["localhost", "127.0.0.1", "::1"]);
-
-function assertLocalDatabase(databaseUrl: string): void {
-	const { hostname } = new URL(databaseUrl);
-	if (!LOCAL_HOSTNAMES.has(hostname)) {
-		throw new Error(
-			`Refusing to seed "${hostname}": db:seed only runs against a local database.`,
-		);
-	}
-}
-
 // TODO(#11): the discard step goes with self-signup (ADR 0012)
 async function signUpAndDiscardScaffolding(
 	db: Database,
 	auth: Auth,
 	person: { name: string; email: string },
+	password: string,
 ): Promise<string> {
 	const result = await auth.api.signUpEmail({
-		body: { name: person.name, email: person.email, password: SEED_PASSWORD },
+		body: { name: person.name, email: person.email, password },
 	});
 	const userId = result.user.id;
 
@@ -57,7 +47,7 @@ async function signUpAndDiscardScaffolding(
 }
 
 async function main(): Promise<void> {
-	assertLocalDatabase(env.DATABASE_URL);
+	const target = resolveSeedTarget(env.DATABASE_URL, process.env);
 
 	// signUpAndDiscardScaffolding needs self-signup on; dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads
 	process.env.ALLOW_SELF_SIGNUP = "true";
@@ -83,7 +73,12 @@ async function main(): Promise<void> {
 
 			const userIdByEmail = new Map<string, string>();
 			for (const person of people) {
-				const userId = await signUpAndDiscardScaffolding(db, auth, person);
+				const userId = await signUpAndDiscardScaffolding(
+					db,
+					auth,
+					person,
+					target.password,
+				);
 				userIdByEmail.set(person.email, userId);
 			}
 
@@ -144,11 +139,20 @@ async function main(): Promise<void> {
 			await db.delete(session);
 		});
 
-		console.log(
-			`Seeded ${people.length} accounts, password "${SEED_PASSWORD}":`,
-		);
-		for (const person of people) {
-			console.log(`  ${person.email}`);
+		if (target.remote) {
+			console.log(
+				`Seeded ${people.length} accounts on "${target.hostname}", password from SEED_PASSWORD:`,
+			);
+			for (const person of people) {
+				console.log(`  ${person.email} — ${rolesOf(person.email).join("; ")}`);
+			}
+		} else {
+			console.log(
+				`Seeded ${people.length} accounts, password "${target.password}":`,
+			);
+			for (const person of people) {
+				console.log(`  ${person.email}`);
+			}
 		}
 	} finally {
 		await app.close();

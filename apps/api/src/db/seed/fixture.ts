@@ -4,7 +4,7 @@ import type {
 	ProjectStatus,
 } from "@bluprint/shared";
 
-export const SEED_PASSWORD = "canteiro-de-obras-azul";
+export const FIXTURE_PASSWORD = "canteiro-de-obras-azul";
 
 export interface SeedPerson {
 	name: string;
@@ -152,3 +152,12 @@ export const organizations: SeedOrganization[] = [
 		projects: [],
 	},
 ];
+
+export function rolesOf(email: string): string[] {
+	const roles = organizations.flatMap((org) =>
+		org.members
+			.filter((orgMember) => orgMember.email === email)
+			.map((orgMember) => `${orgMember.role} at ${org.name}`),
+	);
+	return email === platformAdmin.email ? ["platform admin", ...roles] : roles;
+}
