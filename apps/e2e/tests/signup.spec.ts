@@ -3,7 +3,6 @@ import { expect, test } from "@playwright/test";
 
 test.describe("signed out", () => {
 	test.use({ storageState: { cookies: [], origins: [] } });
-	// /sign-up/email allows 5/min/IP and each project already spends one; a retry can't add to it
 	test.describe.configure({ retries: 0 });
 
 	test("creates an account through the screen and gets a real session", async ({

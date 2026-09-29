@@ -110,7 +110,6 @@ export function parseEnvFile(path: string): Record<string, string> {
 	return result;
 }
 
-// process.env wins, then .env.local, then .env (ADR 0049)
 export function resolveDatabaseUrl(cwd: string): string {
 	const sources = [
 		process.env as Record<string, string | undefined>,
@@ -250,7 +249,6 @@ function isProcessAlive(pid: number): boolean {
 	}
 }
 
-// A reservation is stale once its worktree or its process is gone.
 export function cleanStaleReservations(commonDir: string): void {
 	const dir = slotsDir(commonDir);
 	if (!existsSync(dir)) return;

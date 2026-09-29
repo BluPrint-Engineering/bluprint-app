@@ -2,7 +2,6 @@ import { expect, test as setup } from "@playwright/test";
 import { ADMIN_STORAGE_STATE } from "../auth-state";
 import { ADMIN_EMAIL, SEED_PASSWORD } from "../seed-account";
 
-// one real sign-in shared across projects via storageState — /sign-in/email rate-limits at 5/min/IP
 setup.describe.configure({ retries: 0 });
 
 setup("authenticate as an org admin", async ({ page }) => {

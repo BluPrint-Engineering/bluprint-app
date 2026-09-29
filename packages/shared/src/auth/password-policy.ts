@@ -1,4 +1,3 @@
-/** Better Auth's own bounds are configured from these, so the form and the server agree (ADR 0052). */
 export const PASSWORD_MIN_LENGTH = 8;
 export const PASSWORD_MAX_LENGTH = 64;
 
@@ -67,7 +66,6 @@ const LEET: Record<string, string> = {
 	$: "s",
 };
 
-// shorter than this, a name piece ("ana") matches too much, and a leftover is only dressing
 const MIN_CONTEXT_WORD_LENGTH = 4;
 
 function fold(text: string): string {
@@ -81,7 +79,6 @@ function unleet(text: string): string {
 	return text.replace(/[013457@$]/g, (char) => LEET[char] ?? char);
 }
 
-/** Every prefix left after cutting a letter-free tail: "s3nh@123" yields "s3nh@" as well as "s3nh". */
 function basesOf(folded: string): string[] {
 	const bases: string[] = [];
 	for (let end = folded.length; end > 0; end--) {
@@ -91,7 +88,6 @@ function basesOf(folded: string): string[] {
 	return bases;
 }
 
-/** The whole password is one short unit over and over: "12341234", "abcabcab". */
 function isRepeatedPattern(chars: string[]): boolean {
 	for (let unit = 1; unit <= chars.length / 2; unit++) {
 		const pattern = chars.slice(0, unit).join("");
@@ -105,7 +101,6 @@ function isRepeatedPattern(chars: string[]): boolean {
 	return false;
 }
 
-/** Length of the longest run that repeats a character or steps by one: 7 in "abcdefg1", 8 in "11111111a". */
 function longestRunLength(chars: string[]): number {
 	let longest = 1;
 	let run = 1;
@@ -135,7 +130,6 @@ function isRepeatedOrSequential(password: string): boolean {
 	);
 }
 
-/** Who the password belongs to; either half may be unknown, as on a password reset. */
 export interface PasswordContext {
 	name?: string | undefined;
 	email?: string | undefined;
@@ -153,10 +147,6 @@ function contextWords(context: PasswordContext): string[] {
 		.filter((piece) => piece.length >= MIN_CONTEXT_WORD_LENGTH);
 }
 
-/**
- * True when a context word, read through leetspeak and separators, covers all but fewer than 4 of
- * the password's real letters: "Blupr1nt-2026" and "SilvaSilva" do, "rosa-dos-ventos-azul" doesn't.
- */
 function isBuiltOnContextWord(folded: string, word: string): boolean {
 	const kept = [...folded].filter((char) => /[a-z]/.test(char) || char in LEET);
 	const readable = unleet(kept.join(""));
@@ -176,13 +166,7 @@ function isBuiltOnContextWord(folded: string, word: string): boolean {
 	return found && otherLetters < MIN_CONTEXT_WORD_LENGTH;
 }
 
-/**
- * The blocklist half of NIST SP 800-63B: a common password, a repeated or sequential run, or one
- * whose core is the product's name or the person's own name or e-mail — a passphrase that merely
- * contains one ("rosa-dos-ventos-azul" for Maria Rosa) passes. Outside 8–64 characters it returns
- * false and leaves the refusal to the length check, which also keeps this quadratic scan bounded
- * on hostile input. The breach lookup is the API's alone (ADR 0052).
- */
+/** False outside 8–64 characters: the length check refuses those, and the bound keeps this quadratic scan cheap on hostile input. */
 export function isGuessablePassword(
 	password: string,
 	context: PasswordContext = {},

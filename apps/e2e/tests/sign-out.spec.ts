@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import { MANAGER_EMAIL, MANAGER_NAME, SEED_PASSWORD } from "../seed-account";
 
 test.use({ storageState: { cookies: [], origins: [] } });
-// a real sign-in per project spends part of the 5/min/IP budget; a retry can't add to it
 test.describe.configure({ retries: 0 });
 
 test("signs out from the account menu, back to the login", async ({ page }) => {
@@ -11,7 +10,6 @@ test("signs out from the account menu, back to the login", async ({ page }) => {
 	await page.getByLabel("Senha", { exact: true }).fill(SEED_PASSWORD);
 	await page.getByRole("button", { name: "Entrar" }).click();
 	await expect(page).toHaveURL("/projects");
-	// asserted here, not in a test of its own: another sign-in would spend the 5/min budget
 	await expect(
 		page.getByRole("list", { name: "Obras" }).getByRole("listitem").first(),
 	).toBeVisible();

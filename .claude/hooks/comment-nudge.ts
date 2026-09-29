@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// PostToolUse nudge for Edit/Write outside test files (ADR 0048, ADR 0057).
 import { bullets, commentsAddedBy, type EditOrWriteInput, isRelevantFile, isTestFile } from "./comments";
 import { readStdinJson, runHook } from "./lib";
 
@@ -9,7 +8,6 @@ const NUDGE =
 const POINTER_NUDGE =
 	"Per .claude/rules/code-comments.md: a pointer alone says nothing. State the hazard in the comment and cite the ADR as a suffix, e.g. (ADR 0013); or delete it.";
 
-// A comment whose whole content is `docs/adr/...` or `ADR nnnn`, optionally prefixed by "see".
 const BARE_ADR_POINTER = /^(?:see\s+)?\(?(?:docs\/adr\/\S+?|ADR\s*\d{4})\)?\.?$/i;
 
 function isBareAdrPointer(comment: string): boolean {

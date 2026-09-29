@@ -3,7 +3,6 @@ import { ADMIN_EMAIL, SEED_PASSWORD } from "../seed-account";
 
 test.describe("signed out", () => {
 	test.use({ storageState: { cookies: [], origins: [] } });
-	// a real sign-in per project already spends part of the 5/min/IP budget; a retry can't add to it
 	test.describe.configure({ retries: 0 });
 
 	test("logs in through the screen and gets a real session", async ({

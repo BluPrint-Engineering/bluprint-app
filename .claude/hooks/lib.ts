@@ -1,4 +1,3 @@
-// Shared helpers for .claude/hooks/*.ts (ADR 0048).
 import path from "node:path";
 
 export async function readStdinJson<T>(): Promise<T> {
@@ -10,7 +9,7 @@ export function block(reason: string): never {
 	process.exit(2);
 }
 
-// Runs `main`; an unexpected error is reported on stderr but still exits 0 (fail open).
+// An unexpected error is reported on stderr but still exits 0: hooks fail open.
 export async function runHook(label: string, main: () => Promise<void>): Promise<void> {
 	try {
 		await main();

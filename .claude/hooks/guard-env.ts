@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// PreToolUse guard for Read/Edit/Write/Grep/Glob (ADR 0048).
 import { block, isEnvFile, readStdinJson, runHook } from "./lib";
 
 interface PreToolUseInput {
@@ -7,7 +6,7 @@ interface PreToolUseInput {
 	tool_input?: { file_path?: string; path?: string; pattern?: string; glob?: string };
 }
 
-// Grep's `pattern` is a search string, not a file, so it's never checked — only `path`/`glob` name files.
+// Grep's `pattern` is a search string, not a file: only `path`/`glob` name files.
 function candidates(input: PreToolUseInput): (string | undefined)[] {
 	const ti = input.tool_input ?? {};
 	if (input.tool_name === "Grep") {

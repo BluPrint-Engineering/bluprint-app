@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 
-// the seed gives the admin's organization 14 projects: one page of 12, then 2
 test.describe("project list", () => {
 	test("opening the app lands on the admin's projects", async ({ page }) => {
 		await page.goto("/");
@@ -62,7 +61,6 @@ test.describe("project list", () => {
 		).toHaveCount(2);
 		await expect(page.getByText("Residencial Jardins")).toBeVisible();
 
-		// a short page keeps the pages at the bottom of the screen, not right under the cards
 		const pages = await page
 			.getByRole("navigation", { name: "Páginas de obras" })
 			.boundingBox();
@@ -72,7 +70,6 @@ test.describe("project list", () => {
 		);
 	});
 
-	// Diego manages Edifício Aurora and Condomínio Porto Belo, and is only assistant on Residencial Jardins
 	test("on the desktop, the admin filters by manager from the toolbar", async ({
 		page,
 		isMobile,
@@ -108,7 +105,6 @@ test.describe("project list", () => {
 		await sheet.getByRole("button", { name: "Ver 2 obras" }).click();
 
 		await expect(page).toHaveURL(/\/projects\?manager=/);
-		// exact: the closing sheet's "Ver 2 obras" is still in the page for a moment
 		await expect(page.getByText("2 obras", { exact: true })).toBeVisible();
 		await expect(page.getByText("Condomínio Porto Belo")).toBeVisible();
 	});
