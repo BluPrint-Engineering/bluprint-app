@@ -28,7 +28,6 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-// one account per role this route distinguishes, shared: sign-up is rate limited at 5/min
 let admin: { userId: string; agent: ReturnType<typeof request.agent> };
 let linked: { userId: string; agent: ReturnType<typeof request.agent> };
 let unlinked: { userId: string; agent: ReturnType<typeof request.agent> };
@@ -38,14 +37,10 @@ let paginated: { userId: string; agent: ReturnType<typeof request.agent> };
 let projectOne: string;
 let projectTwo: string;
 let projectThree: string;
-// newest first, the order the list must answer in
 let paginatedIds: string[];
-// alphabetical, the order `sort=name` must answer in
 let paginatedIdsByName: string[];
-// most recent activity first, the order `sort=activity` must answer in
 let paginatedIdsByActivity: string[];
 
-// pt-BR alphabetical order: an accent or a lowercase initial keeps a name among its letter
 const NAMES_ALPHABETICAL = [
 	"Ágata Residencial",
 	"Alameda Santos",
@@ -57,7 +52,6 @@ const NAMES_ALPHABETICAL = [
 	"Élan Office",
 	"Estação Norte",
 	"Galpão Sul",
-	// straddles the first page break, which only the id orders
 	"Obra Duplicada",
 	"Obra Duplicada",
 	"Obra Duplicada",
@@ -114,14 +108,12 @@ beforeAll(async () => {
 	projectTwo = created[1]!.id;
 	projectThree = created[2]!.id;
 
-	// sign-up gave each its own organization; one per person (RF-139), so it goes before they join this one
 	for (const { userId } of [linked, unlinked]) {
 		await db
 			.delete(organization)
 			.where(eq(organization.id, await organizationOf(userId)));
 	}
 
-	// linked's access and roles come from project_member below, never this organization membership
 	await db.insert(member).values({
 		organizationId,
 		userId: linked.userId,
@@ -132,7 +124,6 @@ beforeAll(async () => {
 		{ projectId: projectTwo, userId: linked.userId, role: "assistant" },
 	]);
 
-	// same organization, no project: managers and assistants only see projects they belong to
 	await db.insert(member).values({
 		organizationId,
 		userId: unlinked.userId,
@@ -145,8 +136,6 @@ beforeAll(async () => {
 		role: "manager",
 	});
 
-	// 26 projects over 13 creation instants, two per instant, so pages cross ties that only the id breaks;
-	// names are shuffled against creation, so the two sorts disagree
 	const paginatedOrganization = await organizationOf(paginated.userId);
 	const base = Date.UTC(2026, 0, 1);
 	const rows = await db
@@ -156,7 +145,6 @@ beforeAll(async () => {
 				organizationId: paginatedOrganization,
 				name: NAMES_ALPHABETICAL[(i * 7) % 26]!,
 				createdAt: new Date(base + Math.floor(i / 2) * 60_000),
-				// reversed against creation, in pairs sharing an instant, so activity disagrees with the other sorts
 				lastActivityAt: new Date(base + Math.floor((25 - i) / 2) * 60_000),
 			})),
 		)
@@ -454,7 +442,6 @@ describe("GET /api/projects search", () => {
 	test("answers the total of the search across every page", async () => {
 		const first = await page("q=residencial&pageSize=5");
 
-		// "Residencial 14" to "Residencial 24" and "Ágata Residencial"
 		expect(first.total).toBe(12);
 		expect(first.items).toHaveLength(5);
 		expect((await page("q=residencial&pageSize=5&page=3")).items).toHaveLength(
@@ -526,7 +513,6 @@ describe("GET /api/projects manager filter", () => {
 	});
 
 	test("a project where the person is only assistant does not count", async () => {
-		// linked is assistant on projectTwo and manager on projectOne
 		const { items } = await listAs(admin, `manager=${linked.userId}`);
 
 		expect(items.map((p) => p.id)).not.toContain(projectTwo);

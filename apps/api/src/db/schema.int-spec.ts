@@ -20,7 +20,6 @@ const UUID_V7 =
 let app: INestApplication;
 let db: Database;
 
-// text because Better Auth owns user.id; any value is accepted since the column has no db default
 const userId = `test-user-${randomUUID()}`;
 let organizationId: string;
 let projectId: string;

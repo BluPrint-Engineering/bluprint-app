@@ -4,7 +4,6 @@ import type {
 	ProjectStatus,
 } from "@bluprint/shared";
 
-// fine as a fixed value: never used outside a local/dev database
 export const SEED_PASSWORD = "canteiro-de-obras-azul";
 
 export interface SeedPerson {
@@ -12,7 +11,6 @@ export interface SeedPerson {
 	email: string;
 }
 
-// the one user seed.ts flags is_platform_admin (ADR 0021)
 export const platformAdmin: SeedPerson = {
 	name: "Suporte BluPrint",
 	email: "suporte@bluprint.test",
@@ -30,7 +28,6 @@ interface SeedProjectMember {
 
 interface SeedProject {
 	name: string;
-	// omitted: active
 	status?: ProjectStatus | undefined;
 	members: SeedProjectMember[];
 }
@@ -57,7 +54,6 @@ export const people: SeedPerson[] = [
 	{ name: "Júlia Nunes", email: "julia@vertice.test" },
 	{ name: "Lucas Ferraz", email: "lucas@vertice.test" },
 	{ name: "Karina Duarte", email: "karina@alfa.test" },
-	// an outside consultant: her email domain is not the organization's (ADR 0026)
 	{ name: "Helena Martins", email: "helena@consultoria.test" },
 ];
 
@@ -72,9 +68,7 @@ export const organizations: SeedOrganization[] = [
 			{ email: "diego@horizonte.test", role: "manager" },
 			{ email: "elisa@horizonte.test", role: "assistant" },
 			{ email: "fabio@horizonte.test", role: "assistant" },
-			// invited before any project existed: default role only, no project_member row yet
 			{ email: "gabriela@horizonte.test", role: "assistant" },
-			// every project of his is delivered: the list opens on "Nenhuma obra em andamento"
 			{ email: "heitor@horizonte.test", role: "assistant" },
 			{ email: "helena@consultoria.test", role: "assistant" },
 		],
@@ -83,7 +77,6 @@ export const organizations: SeedOrganization[] = [
 				name: "Residencial Jardins",
 				members: [
 					{ email: "carla@horizonte.test", role: "manager" },
-					// A manager's default role does not carry over: assistant here.
 					{ email: "diego@horizonte.test", role: "assistant" },
 					{ email: "elisa@horizonte.test", role: "assistant" },
 					{ email: "helena@consultoria.test", role: "assistant" },
@@ -98,9 +91,7 @@ export const organizations: SeedOrganization[] = [
 					{ email: "fabio@horizonte.test", role: "assistant" },
 				],
 			},
-			// No project_member at all: only the two admins can see it.
 			{ name: "Galpão Logístico Sul", members: [] },
-			// the rest takes the admins' list past one page of 12, accents included for search
 			{
 				name: "Condomínio Porto Belo",
 				members: [{ email: "diego@horizonte.test", role: "manager" }],
@@ -115,7 +106,6 @@ export const organizations: SeedOrganization[] = [
 			{ name: "Condomínio Recanto Verde", members: [] },
 			{ name: "Edifício Pátio Central", members: [] },
 			{ name: "Torre Atlântica", members: [] },
-			// delivered ones: out of the default list, so the admins' in-progress projects still page past one page
 			{
 				name: "Residencial Vila Nova",
 				status: "delivered",
@@ -134,7 +124,6 @@ export const organizations: SeedOrganization[] = [
 	},
 	{
 		name: "Vértice Engenharia",
-		// both consumed by the two projects below: a third project answers 409 NO_FREE_LICENSE
 		licenses: 2,
 		members: [
 			{ email: "igor@vertice.test", role: "admin" },
@@ -147,7 +136,6 @@ export const organizations: SeedOrganization[] = [
 				name: "Residencial Jardins",
 				members: [
 					{ email: "julia@vertice.test", role: "manager" },
-					// Lucas's role differs by project (ADR 0022): assistant here, manager on Torre Ipê
 					{ email: "lucas@vertice.test", role: "assistant" },
 				],
 			},
@@ -159,7 +147,6 @@ export const organizations: SeedOrganization[] = [
 	},
 	{
 		name: "Alfa Construções",
-		// No project yet: the empty-state and "create the first project" case.
 		licenses: 3,
 		members: [{ email: "karina@alfa.test", role: "admin" }],
 		projects: [],

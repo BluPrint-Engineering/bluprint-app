@@ -23,7 +23,6 @@ let accountId: string;
 
 const BOOT_TIMEOUT = 30_000;
 
-/** Answers the HIBP range API as if only BREACHED_PASSWORD had ever leaked. */
 function stubPwnedPasswords() {
 	const hash = createHash("sha1")
 		.update(BREACHED_PASSWORD)
@@ -49,10 +48,8 @@ function signUp(password: string, name = "Engenheira de Obra") {
 }
 
 beforeAll(async () => {
-	// test/setup-env.ts turns the lookup off for every other suite; this one owns it, against a stub
 	process.env.PASSWORD_BREACH_CHECK = "true";
 	stubPwnedPasswords();
-	// dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads
 	const { AppModule } = await import("../../app.module.js");
 
 	const moduleRef = await Test.createTestingModule({
@@ -82,7 +79,6 @@ afterAll(async () => {
 	await app.close();
 });
 
-// /sign-up/email allows 5 attempts per minute and beforeAll spends one: four tests at most here
 describe("signing up", () => {
 	test("rejects a password built on the product's name", async () => {
 		const res = await signUp("bluprint123");

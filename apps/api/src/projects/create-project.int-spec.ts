@@ -22,7 +22,6 @@ let app: INestApplication;
 let server: Server;
 let db: Database;
 
-// one account per case, own organization from sign-up, shared: sign-up is rate limited at 5/min
 let creator: { userId: string; agent: ReturnType<typeof request.agent> };
 let exhausted: { userId: string; agent: ReturnType<typeof request.agent> };
 let contended: { userId: string; agent: ReturnType<typeof request.agent> };
@@ -68,11 +67,9 @@ beforeAll(async () => {
 	contended = await signUp("Admin Disputado");
 	nonAdmin = await signUp("Não Admin");
 
-	// `exhausted` starts with the sign-up's three free licenses; none survive.
 	const exhaustedOrg = await organizationOf(exhausted.userId);
 	await db.delete(license).where(eq(license.organizationId, exhaustedOrg));
 
-	// `contended` keeps exactly one of its three free licenses.
 	const contendedOrg = await organizationOf(contended.userId);
 	const contendedLicenses = await db.query.license.findMany({
 		where: eq(license.organizationId, contendedOrg),
@@ -83,7 +80,6 @@ beforeAll(async () => {
 			inArray(license.id, [contendedLicenses[0]!.id, contendedLicenses[1]!.id]),
 		);
 
-	// `nonAdmin` is downgraded from the admin sign-up gives everyone.
 	await db
 		.update(member)
 		.set({ role: "manager" })

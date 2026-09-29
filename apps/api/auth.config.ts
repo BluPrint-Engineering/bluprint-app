@@ -4,7 +4,7 @@ import { createAuth } from "./src/auth/auth";
 import { createDatabase } from "./src/db/database.module";
 import { envSchema } from "./src/lib/env";
 
-// read only by the Better Auth CLI, outside the Nest ConfigModule — same reason drizzle.config.ts exists
+// read only by the Better Auth CLI, outside the Nest ConfigModule
 config({ path: ["../../.env.local", "../../.env"] });
 
 const env = envSchema.parse(process.env);

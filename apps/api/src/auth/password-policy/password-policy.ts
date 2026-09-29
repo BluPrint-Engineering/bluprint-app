@@ -19,7 +19,6 @@ function field(body: unknown, key: string): string | undefined {
 	return typeof value === "string" ? value : undefined;
 }
 
-/** The new password and whose it is, for the paths that set one; a reset has no signed-in person. */
 async function passwordBeingSet(ctx: AuthMiddlewareContext) {
 	switch (ctx.path) {
 		case SIGN_UP_PATH:

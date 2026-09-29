@@ -14,7 +14,7 @@ import { DATABASE, Database, DatabaseAdapter } from "../database.module";
 import { member, organization, projectMember, session, user } from "../schema";
 import { SEED_PASSWORD, organizations, people, platformAdmin } from "./fixture";
 
-// Same cwd assumption as auth.config.ts and test/setup-env.ts.
+// relative to apps/api, the cwd every api script runs from
 config({ path: ["../../.env.local", "../../.env"] });
 
 const env = envSchema.parse(process.env);
@@ -61,7 +61,6 @@ async function main(): Promise<void> {
 
 	// signUpAndDiscardScaffolding needs self-signup on; dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads
 	process.env.ALLOW_SELF_SIGNUP = "true";
-	// the seed's one password is known not to be breached, so it runs offline
 	process.env.PASSWORD_BREACH_CHECK = "false";
 	const { AppModule } = await import("../../app.module.js");
 
@@ -125,7 +124,6 @@ async function main(): Promise<void> {
 							createdProject.id,
 						);
 						if (!license) {
-							// fixture bug: org.licenses above must cover every project listed for it
 							throw new Error(
 								`No free license left for "${seedProject.name}" in "${org.name}" — add one to fixture.ts.`,
 							);

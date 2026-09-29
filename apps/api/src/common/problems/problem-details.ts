@@ -5,7 +5,6 @@ export const PROBLEM_JSON = "application/problem+json";
 
 export interface ProblemInit {
 	status: number;
-	/** Defaults to the reason phrase in SCREAMING_SNAKE_CASE: 404 → `NOT_FOUND`. */
 	code?: string | undefined;
 	detail?: string | undefined;
 	instance?: string | undefined;

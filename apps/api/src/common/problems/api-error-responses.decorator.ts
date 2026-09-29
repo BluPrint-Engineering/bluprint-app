@@ -4,7 +4,6 @@ import { ApiExtraModels, ApiResponse, getSchemaPath } from "@nestjs/swagger";
 import { ProblemDetailsDto } from "./problem-details.dto";
 import { PROBLEM_JSON, problemDetails } from "./problem-details";
 
-/** Examples come from problemDetails(), the function the filter answers with, so they can't drift. */
 export function ApiErrorResponses(...statuses: number[]): MethodDecorator {
 	return applyDecorators(
 		ApiExtraModels(ProblemDetailsDto),

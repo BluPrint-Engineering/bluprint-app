@@ -139,7 +139,6 @@ describe("documented /api/auth/* routes", () => {
 		["/api/auth/sign-in/email", "post"],
 		["/api/auth/get-session", "get"],
 	] as const)("%s still exists on the real app", async (path, method) => {
-		// any status but 404: an empty body answers 400 or 429, depending on rate limit already spent
 		const res = await request(server)[method](path).send({});
 
 		expect(res.status).not.toBe(404);
