@@ -29,6 +29,15 @@
             "command": "bun \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/guard-env.ts"
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/comment-guard.ts"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -37,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/comment-nudge.ts"
+            "command": "bun \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/comment-guard.ts"
           }
         ]
       }
