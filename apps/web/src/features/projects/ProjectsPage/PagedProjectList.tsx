@@ -2,7 +2,7 @@ import { PROJECT_PAGE_SIZE } from "@bluprint/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { projectsQueryOptions } from "../api";
-import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
+import { clearAllFilters, isNarrowed, type ProjectsFilters } from "../filters";
 import {
 	EmptyList,
 	firstLoadState,
@@ -31,7 +31,7 @@ export function PagedProjectList({
 	onPageChange,
 }: PagedProjectListProps) {
 	const query = useQuery({
-		...projectsQueryOptions({ page, ...filters }),
+		...projectsQueryOptions(page, filters),
 		placeholderData: keepPreviousData,
 	});
 	const { data, isPlaceholderData } = query;

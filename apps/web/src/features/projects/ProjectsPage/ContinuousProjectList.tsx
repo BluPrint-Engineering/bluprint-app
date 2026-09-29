@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { projectsInfiniteQueryOptions } from "../api";
-import { clearAllFilters, isNarrowed, type ProjectsFilters } from "./filters";
+import { clearAllFilters, isNarrowed, type ProjectsFilters } from "../filters";
 import {
 	EmptyList,
 	firstLoadState,

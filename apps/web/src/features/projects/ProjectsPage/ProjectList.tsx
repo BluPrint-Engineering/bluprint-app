@@ -9,7 +9,7 @@ import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { clearAllFilters, type ProjectsFilters } from "./filters";
+import { clearAllFilters, type ProjectsFilters } from "../filters";
 import { ProjectCard, ProjectCardSkeleton } from "./ProjectCard";
 import { StateBlock } from "./StateBlock";
 

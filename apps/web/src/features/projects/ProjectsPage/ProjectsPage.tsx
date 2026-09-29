@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { organizationQueryOptions } from "../../account/api";
+import type { ProjectsFilters } from "../filters";
 import { ContinuousProjectList } from "./ContinuousProjectList";
-import type { ProjectsFilters } from "./filters";
 import { PagedProjectList } from "./PagedProjectList";
 
 interface ProjectsPageProps {
