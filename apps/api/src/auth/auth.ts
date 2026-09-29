@@ -18,6 +18,8 @@ export interface AuthOptions {
 	trustedOrigins: string[];
 	allowSelfSignup: boolean;
 	checkBreachedPasswords: boolean;
+	/** Set only when the proxy gate guarantees the header (ADR 0058); otherwise a client could forge its IP. */
+	clientIpHeader?: string | undefined;
 	onUserCreated: (user: { id: string; name: string }) => Promise<void>;
 }
 
@@ -31,6 +33,9 @@ export function createAuth(db: Database, options: AuthOptions) {
 		advanced: {
 			// pinned: Better Auth disables this itself when NODE_ENV is "test"
 			disableOriginCheck: false,
+			...(options.clientIpHeader && {
+				ipAddress: { ipAddressHeaders: [options.clientIpHeader] },
+			}),
 		},
 		emailAndPassword: {
 			enabled: true,

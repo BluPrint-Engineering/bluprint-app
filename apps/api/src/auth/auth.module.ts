@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { AuthModule as BetterAuthModule } from "@thallesp/nestjs-better-auth";
 import { DATABASE, Database } from "../db/database.module";
 import { Env } from "../lib/env";
+import { CLIENT_IP_HEADER } from "../proxy-gate/proxy-gate";
 import { createAuth } from "./auth";
 import { SignupProvisioning } from "./signup/signup-provisioning";
 import { SignupProvisioningModule } from "./signup/signup-provisioning.module";
@@ -26,6 +27,9 @@ import { SignupProvisioningModule } from "./signup/signup-provisioning.module";
 					checkBreachedPasswords: config.get("PASSWORD_BREACH_CHECK", {
 						infer: true,
 					}),
+					clientIpHeader: config.get("PROXY_SECRET", { infer: true })
+						? CLIENT_IP_HEADER
+						: undefined,
 					onUserCreated: (user) => provisioning.provisionOrDiscard(user),
 				}),
 				// without this, the module re-calls enableCors during init and overrides configureApp's CORS

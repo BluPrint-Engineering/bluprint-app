@@ -7,6 +7,7 @@ import { AllExceptionsFilter } from "./common/filters/all-exceptions.filter";
 import { RequestValidationPipe } from "./common/pipes/request-validation.pipe";
 import { Env } from "./lib/env";
 import { apiDocsEnabled, setupApiDocs } from "./openapi";
+import { proxyGate } from "./proxy-gate/proxy-gate";
 
 /** Better Auth reads the raw request stream; AuthModule restores the parser for every path but /api/auth/*. */
 export const nestApplicationOptions: NestApplicationOptions = {
@@ -19,6 +20,12 @@ export function configureApp(app: INestApplication): void {
 
 	app.setGlobalPrefix("api");
 	app.use(helmet());
+
+	const proxySecret = config.get("PROXY_SECRET", { infer: true });
+	if (proxySecret) {
+		app.use(proxyGate(proxySecret));
+	}
+
 	app.enableCors({ origin: config.get("CORS_ORIGIN", { infer: true }) });
 	app.useGlobalPipes(new RequestValidationPipe());
 	app.useGlobalFilters(new AllExceptionsFilter());
