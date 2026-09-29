@@ -4,11 +4,12 @@ Every non-2xx response from the API — our routes and Better Auth's alike — i
 
 The API speaks English only. `title` and `detail` are for a developer reading a response; a screen shows pt-BR text it maps from `code`, never from `detail` ([0009](0009-single-origin-api-prefix-and-proxy.md) keeps both on one origin, so nothing in between rewrites them).
 
-Three places produce the body, all through `problemDetails()` in `apps/api/src/common/problems/`:
+Four places produce the body, all through `problemDetails()` in `apps/api/src/common/problems/`:
 
 - `AllExceptionsFilter`, for everything thrown inside Nest. A `ProblemException` keeps its `code`, `detail` and `errors`; any other `HttpException` answers with its status alone, so a free-text message can never leak internals; anything else is a logged 500.
 - `RequestValidationPipe`, which wraps `nestjs-zod`'s pipe and rethrows its failure as `VALIDATION_FAILED` with `errors` — wrapped because the library's exception factory never learns whether the input was the body, the query or a param.
 - `withProblemDetails`, which wraps Better Auth's request handler and rewrites its `{ message, code }` bodies, keeping status, headers (`X-Retry-After`) and `code`. It wraps the handler rather than a plugin's `onResponse` because the rate limiter answers 429 before any plugin hook runs.
+- `proxyGate`, the Express middleware that answers `NOT_FROM_PROXY` when `PROXY_SECRET` is set and a request did not come through the Pages proxy. It writes the response itself because it runs before Nest's routing, so nothing it could throw would reach `AllExceptionsFilter`.
 
 ## Consequences
 

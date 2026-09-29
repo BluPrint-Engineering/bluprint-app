@@ -50,7 +50,7 @@ export default defineConfig(({ mode }) => {
 				},
 				{
 					extends: true,
-					// jsdom's Request wrapper drops a Request passed as another's init
+					// node, not jsdom: Vitest 4's jsdom Request wrapper ignores a Request passed as the init
 					test: {
 						name: "functions",
 						include: ["functions/**/*.test.ts"],

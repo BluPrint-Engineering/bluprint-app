@@ -4,9 +4,9 @@ export interface ProxyEnv {
 }
 
 const PROXY_SECRET_HEADER = "X-Proxy-Secret";
+/** Its own header, not X-Forwarded-For: Fly's proxy appends Cloudflare's IP to that one. */
 const CLIENT_IP_HEADER = "X-Client-IP";
 
-/** Its own header, not X-Forwarded-For: Fly's proxy appends Cloudflare's IP to that one. */
 export function proxyToApi(
 	request: Request,
 	env: ProxyEnv,
