@@ -212,7 +212,6 @@ interface ProjectsListShellProps {
 	admin: boolean | undefined;
 	onFiltersChange: (filters: ProjectsFilters) => void;
 	Toolbar: React.ComponentType<ProjectsToolbarProps>;
-	/** Rendered only while `loaded` has projects on it. */
 	children: React.ReactNode;
 }
 
