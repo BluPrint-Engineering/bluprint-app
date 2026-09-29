@@ -4,7 +4,7 @@ import type {
 	ProjectStatus,
 } from "@bluprint/shared";
 
-export const SEED_PASSWORD = "canteiro-de-obras-azul";
+export const FIXTURE_PASSWORD = "canteiro-de-obras-azul";
 
 export interface SeedPerson {
 	name: string;
@@ -32,7 +32,7 @@ interface SeedProject {
 	members: SeedProjectMember[];
 }
 
-interface SeedOrganization {
+export interface SeedOrganization {
 	name: string;
 	// total inserted; each project below consumes one, the rest is the free-license count
 	licenses: number;
