@@ -117,7 +117,7 @@ export function sameFilters(a: ProjectsFilters, b: ProjectsFilters): boolean {
 	);
 }
 
-/** The "no manager filter" radio value; a user id never takes this shape. */
+/** Never a user id, so this sentinel can't collide with a real manager. */
 export const ALL_MANAGERS = "all";
 
 export function managerChoice(filters: ProjectsFilters): string {

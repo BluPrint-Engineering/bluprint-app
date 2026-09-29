@@ -246,9 +246,13 @@ export function ProjectsListShell({
 		content = children;
 	}
 
-	// it stays over a search or status that finds nothing, or the person could not undo the filter
+	const nothingToFilter =
+		loaded !== undefined &&
+		loaded.total === 0 &&
+		!isNarrowed(filters) &&
+		!hasProjects(loaded.counts);
 	const showToolbar = loaded
-		? loaded.total > 0 || isNarrowed(filters) || hasProjects(loaded.counts)
+		? !nothingToFilter
 		: firstLoadState(query) === "loading";
 
 	return (
