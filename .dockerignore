@@ -1,0 +1,15 @@
+.git
+.claude
+.github
+docs
+scripts
+docker
+**/node_modules
+**/dist
+**/.env*
+**/coverage
+**/playwright-report
+**/test-results
+**/.playwright-mcp
+apps/web
+apps/e2e
