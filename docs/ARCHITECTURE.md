@@ -14,7 +14,7 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 ├── docs/                 ARCHITECTURE.md, data-model.md, requisitos.md (pt-BR product spec), adr/, agents/
 │   └── design/screens/   Claude Design handoffs, one folder per screen: README spec + HTML prototypes
 ├── docker/postgres/      init script that creates the test database
-├── .github/              CI workflow and PR template
+├── .github/              CI and deploy workflows, PR template
 ├── CONTEXT.md            domain glossary
 ├── docker-compose.yml    local Postgres
 ├── Dockerfile            API image (.dockerignore keeps the web app out)
@@ -86,7 +86,7 @@ flowchart LR
   api --> auth[Better Auth module]
   api --> pg[(PostgreSQL)]
   auth --> pg
-  api -.->|planned| s3[(Object storage, provider TBD)]
+  api -.->|planned| s3[(Object storage, provider open)]
 ```
 
 The browser only ever sees one origin, so the session cookie is first-party ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)). The API mounts everything under `/api`; `apiFetch` adds the prefix, so its callers pass `/health`, while the OpenAPI document and integration tests use `/api/health`.
@@ -124,21 +124,22 @@ The Zod schemas and types both apps validate against. TypeScript everywhere, str
 
 ### 4.1 PostgreSQL
 
-Primary database, each table a `<name>.entity.ts` in the feature that owns it, listed for Drizzle and `drizzle-kit` by the barrel `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/`. Migrated tables: Better Auth's `user`, `session`, `account`, `verification` ([0013](adr/0013-better-auth-tables-are-generated.md)) plus `organization`, `member`, `license`, `project`, `project_member`. The designed model and its reasoning: [`data-model.md`](data-model.md). Provider TBD; local container in development.
+Primary database, each table a `<name>.entity.ts` in the feature that owns it, listed for Drizzle and `drizzle-kit` by the barrel `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/`. Migrated tables: Better Auth's `user`, `session`, `account`, `verification` ([0013](adr/0013-better-auth-tables-are-generated.md)) plus `organization`, `member`, `license`, `project`, `project_member`. The designed model and its reasoning: [`data-model.md`](data-model.md). Production on Neon, AWS São Paulo, over the direct connection string; local container in development ([0059](adr/0059-first-deploy-neon-fly-pages.md)).
 
 ### 4.2 Object storage
 
-Plan images and pin photos, behind a generic S3-compatible API. Provider TBD ([0015](adr/0015-hosting-and-providers-deferred.md)); nothing stores files yet.
+Plan images and pin photos, behind a generic S3-compatible API. Provider still open, Cloudflare R2 the favourite, chosen with the first upload ([0059](adr/0059-first-deploy-neon-fly-pages.md)); nothing stores files yet.
 
 ## 5. External Integrations / APIs
 
-None yet. Better Auth is a library inside the API, not a service. A transactional email provider arrives with invitations (#11).
+No third-party API is called at runtime yet: Better Auth is a library inside the API, not a service, and a transactional email provider arrives with invitations (#11). The hosting providers are in §6.
 
 ## 6. Deployment & Infrastructure
 
-- **Hosts and providers**: open until the first deploy ([0015](adr/0015-hosting-and-providers-deferred.md)); the API's deploy config already targets Fly. Settled: the API is a long-lived process ([0016](adr/0016-api-is-a-long-lived-process.md)), and the web app and API share one registrable domain ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)).
-- **API image**: a multi-stage `Dockerfile` (Bun builds, Node 24 alpine runs `node dist/main`); `node dist/db/migrate` applies the migrations with Drizzle's programmatic migrator, so `drizzle-kit` stays a dev dependency. `fly.toml` is the Fly config: `release_command` runs the migrations before each release, the health check hits `GET /api/health`, and the machine scales to zero as a temporary exception to [0016](adr/0016-api-is-a-long-lived-process.md). Secrets are set on the host, never in the file.
+- **Hosts** ([0059](adr/0059-first-deploy-neon-fly-pages.md)): the API on Fly.io (`bluprint-api`, region `gru`), the web app on Cloudflare Pages (`bluprint`, `https://bluprint.pages.dev`), whose Function proxies `/api/*` to the API so the browser sees one origin ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)) and only that proxy gets through ([0058](adr/0058-api-only-answers-the-pages-proxy.md)); Postgres on Neon (§4.1). Accounts are on the company email.
+- **API image**: a multi-stage `Dockerfile` (Bun builds, Node 24 alpine runs `node dist/main`); `node dist/db/migrate` applies the migrations with Drizzle's programmatic migrator, so `drizzle-kit` stays a dev dependency. `fly.toml` is the Fly config: `release_command` runs the migrations before each release, the health check hits `GET /api/health`, and the machine scales to zero as a temporary exception to [0016](adr/0016-api-is-a-long-lived-process.md), until the first outside user ([0059](adr/0059-first-deploy-neon-fly-pages.md)). Secrets are set on the host, never in the file.
 - **CI**: GitHub Actions, one `ci` job running the root scripts against a Postgres service container ([0018](adr/0018-ci-runs-root-scripts.md)).
+- **Deploy**: `deploy.yml` runs on `workflow_run` after CI goes green on a push to `main`, on the commit CI approved, one deploy at a time: the `api` job (`flyctl deploy`, migrations as the release command), then the `web` job (build with `VITE_ALLOW_SELF_SIGNUP=false`, `wrangler pages deploy`). Secrets sit on the host that reads them; GitHub only holds `FLY_API_TOKEN`, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` ([0059](adr/0059-first-deploy-neon-fly-pages.md)).
 - **Runtime floor**: Node 24.9+ for the API ([0014](adr/0014-node-24-9-floor.md)).
 - **Monitoring & logging**: not yet.
 
