@@ -4,7 +4,7 @@ The API mounts everything under the global prefix `api` (`configureApp` in `app.
 
 ## Consequences
 
-- In production the web app and the API must share the same registrable domain. Free subdomains from different providers (`*.pages.dev` + `*.fly.dev`) are different domains and break the cookie, so owning a domain is a requirement of the first deploy.
+- In production the browser must see one origin. A Cloudflare Pages Function proxying `/api/*` gives that on `*.pages.dev` alone, with the API on `*.fly.dev` reached server-side, so owning a domain is not a requirement ([0059](0059-first-deploy-neon-fly-pages.md)).
 - The path in the API, in the OpenAPI document and in integration tests includes the prefix (`/api/health`); the path passed to `apiFetch` does not (`/health`).
 
 ## Considered Options

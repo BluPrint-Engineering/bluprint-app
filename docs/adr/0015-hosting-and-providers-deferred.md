@@ -1,5 +1,7 @@
 # Hosting and providers are deferred until the first deploy
 
+Superseded by [0059](0059-first-deploy-neon-fly-pages.md).
+
 Four choices stay open: **API host, web host, Postgres provider and object storage provider**. Every criterion that decides a host (real cost, request volume, instance size, how much cold start actually hurts) can only be measured with the application running, and none of it exists yet. The choice happens at the first deploy, with measured usage instead of estimates. Until then the code talks to a generic S3-compatible object storage.
 
 ## Consequences

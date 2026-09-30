@@ -4,7 +4,7 @@
 >
 > Expect divergence. When a migration contradicts this text, the migration wins. Fix the file in the same PR if the decision really changed; do not keep it in sync column by column.
 
-Visual design: **[Miro board](https://miro.com/app/board/uXjVHrUOxfg=/)**. Postgres + Drizzle; provider open ([0015](adr/0015-hosting-and-providers-deferred.md)). Vocabulary: [`CONTEXT.md`](../CONTEXT.md).
+Visual design: **[Miro board](https://miro.com/app/board/uXjVHrUOxfg=/)**. Postgres + Drizzle; Neon in production ([0059](adr/0059-first-deploy-neon-fly-pages.md)). Vocabulary: [`CONTEXT.md`](../CONTEXT.md).
 
 ---
 

@@ -1,4 +1,4 @@
-# No secrets here: the repository is public. DATABASE_URL, BETTER_AUTH_SECRET and PROXY_SECRET come from `fly secrets set`.
+# No secrets here: the repository is public. They come from `fly secrets set` (ADR 0059).
 app = "bluprint-api"
 primary_region = "gru"
 
