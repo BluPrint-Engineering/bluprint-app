@@ -16,7 +16,9 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 ├── docker/postgres/      init script that creates the test database
 ├── .github/              CI workflow and PR template
 ├── CONTEXT.md            domain glossary
-└── docker-compose.yml    local Postgres
+├── docker-compose.yml    local Postgres
+├── Dockerfile            API image (.dockerignore keeps the web app out)
+└── fly.toml              Fly config for the API
 ```
 
 A Bun workspaces monorepo; Bun runs scripts, the API runs on Node ([0001](adr/0001-bun-workspaces-node-runtime.md)).
@@ -134,7 +136,8 @@ None yet. Better Auth is a library inside the API, not a service. A transactiona
 
 ## 6. Deployment & Infrastructure
 
-- **Hosts and providers**: open until the first deploy ([0015](adr/0015-hosting-and-providers-deferred.md)). Settled: the API is a long-lived process ([0016](adr/0016-api-is-a-long-lived-process.md)), and the web app and API share one registrable domain ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)).
+- **Hosts and providers**: open until the first deploy ([0015](adr/0015-hosting-and-providers-deferred.md)); the API's deploy config already targets Fly. Settled: the API is a long-lived process ([0016](adr/0016-api-is-a-long-lived-process.md)), and the web app and API share one registrable domain ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)).
+- **API image**: a multi-stage `Dockerfile` (Bun builds, Node 24 alpine runs `node dist/main`); `node dist/db/migrate` applies the migrations with Drizzle's programmatic migrator, so `drizzle-kit` stays a dev dependency. `fly.toml` is the Fly config: `release_command` runs the migrations before each release, the health check hits `GET /api/health`, and the machine scales to zero as a temporary exception to [0016](adr/0016-api-is-a-long-lived-process.md). Secrets are set on the host, never in the file.
 - **CI**: GitHub Actions, one `ci` job running the root scripts against a Postgres service container ([0018](adr/0018-ci-runs-root-scripts.md)).
 - **Runtime floor**: Node 24.9+ for the API ([0014](adr/0014-node-24-9-floor.md)).
 - **Monitoring & logging**: not yet.
