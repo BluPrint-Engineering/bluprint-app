@@ -3,7 +3,7 @@ import { bullets, commentsAddedBy, type EditOrWriteInput, isRelevantFile, isTest
 import { readStdinJson, runHook } from "./lib";
 
 const NUDGE =
-	"Per .claude/rules/code-comments.md, the default is no comment. Keep one only if it states a hidden hazard, a unit or precondition no name or type can carry, or a workaround and its source. Delete every other one.";
+	"Per .claude/rules/code-comments.md, the default is no comment. Keep one only if it states a hazard forced by a dependency, platform, vendor or protocol, or a workaround and its source. A surprise in our own code gets a rename, an extraction or a type instead; a unit or precondition gets a type or an assertion. When in doubt, delete it.";
 
 const POINTER_NUDGE =
 	"Per .claude/rules/code-comments.md: a pointer alone says nothing. State the hazard in the comment and cite the ADR as a suffix, e.g. (ADR 0013); or delete it.";

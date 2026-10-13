@@ -1,5 +1,7 @@
 # Test files carry no comments
 
+Its keep-list for source is superseded by [0060](0060-narrower-comment-keep-list-checked-in-review.md); the rule for test files stands.
+
 `.claude/rules/code-comments.md` allowed a comment that said what the code couldn't, and `comment-nudge.ts` handed each new comment back with an open delete test ("would deleting this lose something?"). Agents answered the test in their own favour, since almost any comment can be framed as a why, and the code kept bloating. Checking every comment with a second agent would pay for the same code twice.
 
 Agents copy the comment density of the code around them, so the fix works on the example they see, not only on the rule they read:
