@@ -10,7 +10,7 @@ Three Bun TypeScript hooks in `.claude/hooks/`, registered in a committed `.clau
 
 `.claude/settings.json` is committed, not personal: every agent gets it regardless of `settings.local.json`. `jsdoc/informative-docs` (`eslint-plugin-jsdoc`) backs the same comment rule for the API with a real lint failure, since Biome has no JSDoc-content rule for the web app.
 
-A fourth guardrail lives in Lefthook, not a Claude Code hook: `pre-push` rejects a branch name outside `<type>/[<issue>-]<slug>` ([0045](0045-local-git-hooks-with-lefthook.md)). It belongs there rather than in `guard-bash.ts` because the rule is about repo state (the current branch), not a specific command, and a human can create a branch outside Claude Code too — `git worktree add` and Orca's own worktree tooling both name branches after the worktree (`worktree-*`) or the OS user (`user/...`), neither of which fits the convention.
+A fourth guardrail lives in Lefthook, not a Claude Code hook: `pre-push` rejects a branch name outside `<type>/[<issue>-]<slug>` ([0045](0045-local-git-hooks-with-lefthook.md)). It belongs there rather than in `guard-bash.ts` because the rule is about the branch a push sends (read from the refs git hands the hook, not from `HEAD`), not a specific command, and a human can create a branch outside Claude Code too — `git worktree add` and Orca's own worktree tooling both name branches after the worktree (`worktree-*`) or the OS user (`user/...`), neither of which fits the convention.
 
 ## Consequences
 
