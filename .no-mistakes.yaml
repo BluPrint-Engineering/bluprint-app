@@ -1,0 +1,10 @@
+review:
+  path_instructions:
+    - path: "*"
+      instructions: |
+        Check every comment this diff adds or touches in source against the keep-list in .claude/rules/code-comments.md (ADR 0060). A comment survives only when it states, in one line: non-obvious behaviour forced by a dependency, platform, vendor or protocol we cannot reshape; a workaround with the bug, version or upstream issue that forced it; a tool directive; or a TODO(#n) carrying its issue. When in doubt, the comment goes.
+        A surprise in our own code is not a keep. When code only reads correctly with its explanatory comment, flag the exact symbol as a refactor target (rename, extract, type or redesign) and delete the comment; never shorten it into a smaller justification.
+        A unit or precondition in a comment becomes a type (for example a branded type) or an assertion.
+        A suppression (biome-ignore, eslint-disable, @ts-expect-error, @ts-ignore and similar) stays only when its rule is faulty, pedantic or style-only. Look the rule up; if it catches real bugs or guards correctness or safety, remove the suppression and fix the code it silenced.
+        A constraint comment such as "do not remove", "IMPORTANT" or "talk to X before changing" is replaced by a proposed type, test or lint that enforces the constraint, not kept as prose.
+        Test files carry no comments beyond tool directives and TODO(#n) (ADR 0057).

@@ -29,10 +29,15 @@ pre-push:
       # Aliased into commit-msg's job below, so a new type is one edit, not two.
       env: &commit_types
         COMMIT_TYPES: "feat|fix|docs|refactor|chore|test|ci"
+      use_stdin: true
       run: |
-        branch=$(git rev-parse --abbrev-ref HEAD)
-        [ "$branch" = "main" ] || echo "$branch" | grep -qE "^($COMMIT_TYPES)/([0-9]+-)?[a-z0-9-]+$" \
-          || { echo "Branch '$branch' doesn't match <type>/[<issue>-]<slug> — see docs/ARCHITECTURE.md. Rename it: git branch -m <type>/<issue>-<slug>"; exit 1; }
+        while read -r local_ref local_sha remote_ref remote_sha; do
+          case "$local_sha" in *[!0]*) ;; *) continue ;; esac
+          case "$remote_ref" in refs/heads/*) ;; *) continue ;; esac
+          branch=${remote_ref#refs/heads/}
+          [ "$branch" = "main" ] || echo "$branch" | grep -qE "^($COMMIT_TYPES)/([0-9]+-)?[a-z0-9-]+$" \
+            || { echo "Branch '$branch' doesn't match <type>/[<issue>-]<slug> — see docs/ARCHITECTURE.md. Rename it: git branch -m <type>/<issue>-<slug>"; exit 1; }
+        done
     - run: bun run typecheck                    # builds @bluprint/shared first
     - run: bun run test:unit                    # api only, no database needed
     - run: bun run --filter @bluprint/web test  # web Vitest
