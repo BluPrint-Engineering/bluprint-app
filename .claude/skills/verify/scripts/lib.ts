@@ -32,7 +32,6 @@ export interface E2eConfig {
 	databaseUrl: string;
 }
 
-// apps/e2e/env.ts resolves .env.local/.env against the cwd and copies them into process.env, as `bun run e2e` does.
 export async function loadE2eConfig(): Promise<E2eConfig> {
 	const previous = process.cwd();
 	process.chdir(E2E_DIR);
