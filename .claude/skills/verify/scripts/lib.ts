@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { $ } from "bun";
@@ -84,9 +84,18 @@ export async function treeDigest(): Promise<string> {
 	const hash = createHash("sha256").update(status).update(diff);
 	const untracked = await $`git ls-files --others --exclude-standard -z`.cwd(REPO_ROOT).quiet().text();
 	for (const file of untracked.split("\0").filter(Boolean)) {
-		hash.update(file).update(readFileSync(resolve(REPO_ROOT, file)));
+		const contents = readRegularFile(resolve(REPO_ROOT, file));
+		if (contents) hash.update(file).update(contents);
 	}
 	return hash.digest("hex");
+}
+
+function readRegularFile(path: string): Buffer | undefined {
+	try {
+		return statSync(path).isFile() ? readFileSync(path) : undefined;
+	} catch {
+		return undefined;
+	}
 }
 
 export function isGroupAlive(pgid: number): boolean {

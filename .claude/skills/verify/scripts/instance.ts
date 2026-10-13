@@ -135,6 +135,8 @@ async function up(): Promise<void> {
 		}
 	}
 
+	const head = await gitHead();
+	const digest = await treeDigest();
 	await $`bun run --filter @bluprint/shared build`.cwd(REPO_ROOT);
 	await $`bun run --filter @bluprint/api build`.cwd(REPO_ROOT);
 	await $`bun run --filter @bluprint/web build`.cwd(REPO_ROOT).env({ ...process.env, VITE_ALLOW_SELF_SIGNUP: "true" });
@@ -167,8 +169,8 @@ async function up(): Promise<void> {
 		apiUrl: config.apiUrl,
 		webUrl: config.webUrl,
 		databaseUrl: config.databaseUrl,
-		head: await gitHead(),
-		treeDigest: await treeDigest(),
+		head,
+		treeDigest: digest,
 		startedAt: new Date().toISOString(),
 	});
 
