@@ -23,5 +23,5 @@ Workaround comments with their source, `TODO(#n)` and the test-file rule are unc
 ## Considered Options
 
 - **Install pstack and run `/no-comments`**: brings a persona, its own subagents and skills (`/how`, `/why`, `/architect`) that this repo does not use, for criteria that fit in a rule and a review prompt.
-- **Block every added comment in source**: still held back for the reasons in [0057](0057-test-files-carry-no-comments.md); the narrower list and the review step are the next step that bet named.
+- **Block every added comment in source**: still held back for the reasons in [0057](0057-test-files-carry-no-comments.md); the narrower list and the review step come first, and the hard block in source stays the next step 0057 named if comment density creeps back up.
 - **Leave the rule as it was**: the hazard and precondition clauses kept excusing comments in our own code.
