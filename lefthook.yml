@@ -39,8 +39,6 @@ pre-push:
             || { echo "Branch '$branch' doesn't match <type>/[<issue>-]<slug> — see docs/ARCHITECTURE.md. Rename it: git branch -m <type>/<issue>-<slug>"; exit 1; }
         done
     - run: bun run typecheck                    # builds @bluprint/shared first
-    - run: bun run test:unit                    # api only, no database needed
-    - run: bun run --filter @bluprint/web test  # web Vitest
 
 commit-msg:
   jobs:

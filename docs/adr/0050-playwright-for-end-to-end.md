@@ -13,7 +13,7 @@ The smoke test in `health.spec.ts` opened the health page anonymously as a place
 ## Consequences
 
 - `apps/e2e` builds `@bluprint/api` and `@bluprint/web` first, then starts them (`bun run start`, `vite preview`) as Playwright `webServer` entries — no `dev` server, no hot reload, closer to what ships.
-- Its `package.json` has only `e2e` and `typecheck` scripts, deliberately without `test`: the root `test` script and Lefthook's pre-push job run every workspace's `test` script without a server or a database behind it.
+- Its `package.json` has only `e2e` and `typecheck` scripts, deliberately without `test`: the root `test` script runs every workspace's `test` script without a server or a database behind it.
 - CI's Playwright browser cache is keyed on the resolved `@playwright/test` version, and OS-level browser dependencies are still installed on a cache hit, since only `~/.cache/ms-playwright` is cached, not `apt`'s state.
 
 ## Considered Options
