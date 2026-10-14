@@ -1,5 +1,7 @@
 # CI runs the root scripts, in a deliberate order
 
+The single-job layout is superseded by [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md); the root scripts and the order inside each job stand.
+
 `.github/workflows/ci.yml` has a single job, id `ci`, on every `pull_request` and on `push` to `main`. It calls the root scripts, not the tools behind them, so a new workspace needs no YAML edit and "passes here" and "passes there" are the same command. Order:
 
 1. `bun install --frozen-lockfile`
