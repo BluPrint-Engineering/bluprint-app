@@ -13,6 +13,6 @@ Lefthook over Husky + lint-staged: one Go binary (`bunx lefthook`, no shell wrap
 ## Consequences
 
 - **Hooks are advisory, CI is the gate.** `--no-verify` or `LEFTHOOK=0 git commit` skips them outright; CI still runs the full suite unscoped. Nothing here replaces a required check. An agent can no longer reach for either bypass: `guard-bash.ts` blocks both ([0048](0048-hooks-enforce-agent-guardrails.md)). A human still can.
-- **`bun install` wires the hooks** via a root `"prepare": "lefthook install"` script — no separate setup step, and harmless to re-run in CI (nothing calls `git commit` there).
+- **`bun install` wires the hooks** via a root `"prepare"` script that runs `lefthook install` through `scripts/install-hooks.sh`, skipping it when git's hooks dir is read-only — no separate setup step, and harmless to re-run in CI (nothing calls `git commit` there).
 - **Integration tests, `lint:fix`'s Prettier-in-API pass, and `build` stay out of both hooks.** They're either too slow for a commit/push cadence or need infrastructure (Postgres) a hook shouldn't assume is running.
 - **A new commit type means editing `lefthook.yml`'s `COMMIT_TYPES`**, same file, same review, as adding it to `docs/ARCHITECTURE.md` §8.

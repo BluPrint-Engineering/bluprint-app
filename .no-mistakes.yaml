@@ -8,3 +8,12 @@ review:
         A suppression (biome-ignore, eslint-disable, @ts-expect-error, @ts-ignore and similar) stays only when its rule is faulty, pedantic or style-only. Look the rule up; if it catches real bugs or guards correctness or safety, remove the suppression and fix the code it silenced.
         A constraint comment such as "do not remove", "IMPORTANT" or "talk to X before changing" is replaced by a proposed type, test or lint that enforces the constraint, not kept as prose.
         Test files carry no comments beyond tool directives and TODO(#n) (ADR 0057).
+
+test:
+  instructions: |
+    Load the project's `verify` skill (.claude/skills/verify/SKILL.md) and follow it to prove the change end to end in the running app: `instance.ts up`, `instance.ts doctor`, then drive every entry point the feature map (.claude/skills/verify/features/) lists for each feature the change touches, on the phone and the desktop, with `drive.ts --out <this run's evidence directory>`.
+    Finish with `instance.ts down`, also after a failure.
+    A change with no user-visible effect still proves the app starts and signs in: drive .claude/skills/verify/journeys/login.ts with --as none.
+
+pr:
+  template: .github/pull_request_template.md
