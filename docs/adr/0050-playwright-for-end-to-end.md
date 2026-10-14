@@ -1,5 +1,7 @@
 # Playwright for end-to-end tests
 
+Its Playwright browser cache and OS-dependency step are superseded by [0065](0065-e2e-runs-in-the-playwright-container-image.md): `e2e` runs in the Playwright container image; the rest stands.
+
 Running E2E inside the existing `ci` job is superseded by [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md): E2E is now its own `e2e` job behind the fan-in `ci`; the rest stands.
 
 Vitest and Jest exercise components and modules in isolation ([0007](0007-jest-for-api-vitest-for-web.md)), but neither runs a real browser: the single-origin cookie ([0009](0009-single-origin-api-prefix-and-proxy.md)) needs the Vite proxy actually in front of a page, Better Auth's origin check needs a real `Origin` header, and Safari's cookie handling only shows up in WebKit, not jsdom. `apps/e2e` runs Playwright against the built web app and API — `iPhone 13` (WebKit) and `Desktop Chrome` — as the check that these hold together, and CI publishes its screenshots and traces as the evidence a PR review used to ask for by hand.

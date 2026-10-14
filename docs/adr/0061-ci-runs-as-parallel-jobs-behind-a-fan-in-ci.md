@@ -1,5 +1,7 @@
 # CI runs as parallel jobs behind a fan-in `ci`
 
+The Playwright browser cache and OS-package step in `e2e`, and its `DATABASE_URL_E2E` on the runner's `localhost`, are superseded by [0065](0065-e2e-runs-in-the-playwright-container-image.md): the job runs in the Playwright container image and reaches its Postgres at host `postgres`; the rest stands.
+
 Supersedes the single-job layout of [0018](0018-ci-runs-root-scripts.md), whose rule that CI calls the root scripts, and the order inside each job, stand; and the part of [0050](0050-playwright-for-end-to-end.md) that ran E2E inside the existing `ci` job.
 
 On a push to `main` only `static` runs, per [0064](0064-push-to-main-reruns-only-static.md); the rest stands.

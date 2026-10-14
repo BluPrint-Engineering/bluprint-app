@@ -1,13 +1,29 @@
 name: Setup workspace
 description: Install Bun and Node, restore the Bun install cache and install dependencies.
 
+inputs:
+  job-container:
+    description: The job runs in a container with neither `unzip`, which setup-bun needs, nor `zstd`, without which the install cache costs more than a cold install.
+    default: "false"
+
 runs:
   using: composite
   steps:
+    - name: Pin Bun version
+      id: bun
+      shell: bash
+      run: echo "version=1.4.0" >> "$GITHUB_OUTPUT"
+
     - name: Setup Bun
+      if: inputs.job-container != 'true'
       uses: oven-sh/setup-bun@v2
       with:
-        bun-version: 1.4.0
+        bun-version: ${{ steps.bun.outputs.version }}
+
+    - name: Setup Bun from npm
+      if: inputs.job-container == 'true'
+      shell: bash
+      run: npm install --global "bun@${{ steps.bun.outputs.version }}"
 
     - name: Setup Node
       uses: actions/setup-node@v4
@@ -16,12 +32,19 @@ runs:
         node-version: 24
 
     - name: Cache Bun install cache
+      if: inputs.job-container != 'true'
       uses: actions/cache@v4
       with:
         path: ~/.bun/install/cache
         key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
         restore-keys: |
           ${{ runner.os }}-bun-
+
+    - name: Trust the workspace checkout
+      if: inputs.job-container == 'true'
+      shell: bash
+      # The container runs as root over a workspace the runner user owns, and actions/checkout drops its safe.directory once it ends (actions/runner#2033).
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
     - name: Install dependencies
       shell: bash

@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { Client } from "pg";
 import { DATABASE_URL_E2E } from "./env";
+import { SEED_PASSWORD } from "./seed-account";
 
 async function ensureDatabaseExists(): Promise<void> {
 	const target = new URL(DATABASE_URL_E2E);
@@ -34,7 +35,7 @@ async function ensureDatabaseExists(): Promise<void> {
 function runApiScript(script: "db:migrate" | "db:seed"): void {
 	execFileSync("bun", ["run", "--filter", "@bluprint/api", script], {
 		stdio: "inherit",
-		env: { ...process.env, DATABASE_URL: DATABASE_URL_E2E },
+		env: { ...process.env, DATABASE_URL: DATABASE_URL_E2E, SEED_PASSWORD },
 	});
 }
 
