@@ -78,12 +78,10 @@ jobs:
   e2e:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    # Browsers and their OS packages ship in the image.
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
       options: --ipc=host
     env:
-      # The seed truncates on every run, so E2E reuses the service's single database rather than provisioning another one.
       # Inside a job container the service is reached by its name, not on the runner's localhost.
       DATABASE_URL_E2E: postgresql://bluprint:bluprint@postgres:5432/bluprint
       SEED_ALLOW_HOST: postgres
