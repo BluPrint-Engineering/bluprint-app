@@ -7,7 +7,7 @@ Requirements: RF-112, RF-201
 ## Consequences
 
 - The `id` becomes part of the create contract in `packages/shared`, required and validated as a UUID.
-- The repeated-id lookup runs before the license check, so a retry after the create took the last license still answers the project instead of a missing license.
+- The repeated-id lookup runs before the license check, so a retry after the create took the last license still answers the project; a duplicate still in flight hits the primary-key conflict on insert, rolls back its own work and answers the project the first request committed, so one license is consumed in total.
 - A repeated id answers the first request's project unchanged: a name edited before the retry is ignored, and the response, toast and redirect carry the original name.
 - An id that already belongs to another organization is refused with a conflict that reveals nothing about that project.
 - A future offline outbox for creation can replay the same request without any new rule, because the replay is the same id.
