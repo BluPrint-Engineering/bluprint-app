@@ -53,7 +53,7 @@ jobs:
         if: github.event_name == 'push'
         uses: ./.github/actions/setup-playwright
         with:
-          os-deps: "false"
+          warm-only: "true"
 
   test:
     if: github.event_name == 'pull_request'
