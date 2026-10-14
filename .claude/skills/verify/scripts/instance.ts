@@ -81,6 +81,13 @@ function spawnGroup(command: string[], cwd: string, env: NodeJS.ProcessEnv, logP
 	}
 }
 
+async function runPlain(command: $.ShellPromise): Promise<void> {
+	const { exitCode, stdout, stderr } = await command.nothrow().quiet();
+	process.stdout.write(Bun.stripANSI(stdout.toString()));
+	process.stderr.write(Bun.stripANSI(stderr.toString()));
+	if (exitCode !== 0) throw new Error(`setup command exited with code ${exitCode}`);
+}
+
 function tail(path: string, lines = 30): string {
 	if (!existsSync(path)) return "(no log)";
 	return readFileSync(path, "utf8").trimEnd().split("\n").slice(-lines).join("\n");
@@ -124,7 +131,7 @@ async function up(): Promise<void> {
 	await ensurePostgres();
 	process.env.BETTER_AUTH_SECRET ||= randomBytes(32).toString("base64");
 	if ((await isLinkedWorktree(REPO_ROOT)) && !existsSync(resolve(REPO_ROOT, ".env.local"))) {
-		await $`bun run worktree:setup`.cwd(REPO_ROOT);
+		await runPlain($`bun run worktree:setup`.cwd(REPO_ROOT));
 	}
 
 	const config = await loadE2eConfig();
@@ -139,10 +146,12 @@ async function up(): Promise<void> {
 
 	const head = await gitHead();
 	const digest = await treeDigest();
-	await $`bun run --filter @bluprint/shared build`.cwd(REPO_ROOT);
-	await $`bun run --filter @bluprint/api build`.cwd(REPO_ROOT);
-	await $`bun run --filter @bluprint/web build`.cwd(REPO_ROOT).env({ ...process.env, VITE_ALLOW_SELF_SIGNUP: "true" });
-	await $`bun prepare-database.ts`.cwd(E2E_DIR);
+	await runPlain($`bun run --filter @bluprint/shared build`.cwd(REPO_ROOT));
+	await runPlain($`bun run --filter @bluprint/api build`.cwd(REPO_ROOT));
+	await runPlain(
+		$`bun run --filter @bluprint/web build`.cwd(REPO_ROOT).env({ ...process.env, VITE_ALLOW_SELF_SIGNUP: "true" }),
+	);
+	await runPlain($`bun prepare-database.ts`.cwd(E2E_DIR));
 
 	mkdirSync(INSTANCE_DIR, { recursive: true });
 	const apiPgid = spawnGroup(
