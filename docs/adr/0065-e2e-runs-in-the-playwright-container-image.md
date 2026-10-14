@@ -34,7 +34,7 @@ The job now declares `container: mcr.microsoft.com/playwright:v<version>-noble`,
 
 - **Both projects, the retries and the report upload are untouched**: `iPhone 13` on WebKit, `Desktop Chrome`, `retries: 2` on CI, the `playwright-report` artifact, and the required check name `ci`.
 - **`static` on a push to `main` no longer saves a browser cache.** Nothing restores one, so the step has no reason to exist; the Bun install cache that `setup-workspace` saves there is still what `static` and `test` restore on later pull requests.
-- **The image is pulled on every run.** Its pull replaces the cache restore and the `apt` step; the trade is measured in the pull request that introduced it.
+- **The image is pulled on every run.** Its pull replaces the browser-cache restore and the `apt` step. The linux/amd64 image is 956 MB compressed (the sum of the 7 layer sizes in its `docker manifest inspect` manifest) and 3.55 GB on disk (`docker images`). `docker pull mcr.microsoft.com/playwright:v1.63.0-noble` took 4m30.5s wall time with Docker 29.8.0 on 2026-10-14, measured on a home network: that figure is not representative of a GitHub runner, and no runner figure is derived from it. The pull time on a GitHub runner and the net change in `e2e` job duration are measured on the pull request's first CI run and reported with the task, not here.
 - **`--ipc=host`** is Playwright's documented option for Chromium in a container, so a small `/dev/shm` cannot crash it.
 
 ## Considered Options
