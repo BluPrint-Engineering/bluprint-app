@@ -27,7 +27,7 @@ A screen's handoff in `docs/design/screens/<screen>/` is a high-fidelity referen
 
 ### `apps/web/functions`
 
-The Cloudflare Pages Function that answers `/api/*` in production: `api/[[path]].ts` is the Pages entry, `proxyToApi.ts` the handler beside its test, with a `tsconfig.json` of its own for the Workers types ([0058](adr/0058-api-only-answers-the-pages-proxy.md)).
+The Cloudflare Pages Function that answers `/api/*` in production: `api/[[path]].ts` is the Pages entry, `proxyToApi.ts` the handler beside its test, with a `tsconfig.json` of its own for the Workers types ([0066](adr/0066-api-only-answers-the-pages-proxy.md)).
 
 ### `apps/web/src`
 
@@ -61,7 +61,7 @@ auth/            Better Auth instance, the module that mounts it, its hand-writt
                  password-policy/ and signup/ (the self-signup scaffolding) beside them
 <domain>/        one module per domain: controller, service, repository, module, entity, dto/
 common/          cross-cutting filters, pipes, guards, interceptors; problems/ holds the error contract
-proxy-gate/      the Express middleware that refuses anything not sent by the Pages proxy ([0058](adr/0058-api-only-answers-the-pages-proxy.md))
+proxy-gate/      the Express middleware that refuses anything not sent by the Pages proxy ([0066](adr/0066-api-only-answers-the-pages-proxy.md))
 db/              DatabaseModule: pool, Drizzle instance, the entity barrel, shared columns, boot connection check
 lib/             stateful or talks to the world: env schema, clients
 utils/           pure functions, no state or I/O
@@ -136,7 +136,7 @@ No third-party API is called at runtime yet: Better Auth is a library inside the
 
 ## 6. Deployment & Infrastructure
 
-- **Hosts** ([0059](adr/0059-first-deploy-neon-fly-pages.md)): the API on Fly.io (`bluprint-api`, region `gru`), the web app on Cloudflare Pages (`bluprint`, `https://bluprint.pages.dev`), whose Function proxies `/api/*` to the API so the browser sees one origin ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)) and only that proxy gets through ([0058](adr/0058-api-only-answers-the-pages-proxy.md)); Postgres on Neon (§4.1). Accounts are on the company email.
+- **Hosts** ([0059](adr/0059-first-deploy-neon-fly-pages.md)): the API on Fly.io (`bluprint-api`, region `gru`), the web app on Cloudflare Pages (`bluprint`, `https://bluprint.pages.dev`), whose Function proxies `/api/*` to the API so the browser sees one origin ([0009](adr/0009-single-origin-api-prefix-and-proxy.md)) and only that proxy gets through ([0066](adr/0066-api-only-answers-the-pages-proxy.md)); Postgres on Neon (§4.1). Accounts are on the company email.
 - **API image**: a multi-stage `Dockerfile` (Bun builds, Node 24 alpine runs `node dist/main`); `node dist/db/migrate` applies the migrations with Drizzle's programmatic migrator, so `drizzle-kit` stays a dev dependency. `fly.toml` is the Fly config: `release_command` runs the migrations before each release, the health check hits `GET /api/health`, and the machine scales to zero as a temporary exception to [0016](adr/0016-api-is-a-long-lived-process.md), until the first outside user ([0059](adr/0059-first-deploy-neon-fly-pages.md)). Secrets are set on the host, never in the file.
 - **CI**: GitHub Actions running the root scripts ([0018](adr/0018-ci-runs-root-scripts.md)) in parallel `static`, `test` and `e2e` jobs, the last two each against their own Postgres service container, behind a fan-in `ci` job that is the required check ([0061](adr/0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md)). A push to `main` runs only `static`, which also keeps the Bun cache that pull requests restore warm ([0064](adr/0064-push-to-main-reruns-only-static.md)); `e2e` runs in the Playwright container image ([0065](adr/0065-e2e-runs-in-the-playwright-container-image.md)).
 - **Deploy**: `deploy.yml` runs on `workflow_run` after CI goes green (`static`, see above) on a push to `main`, on the commit CI approved, one deploy at a time: the `api` job (`flyctl deploy`, migrations as the release command), then the `web` job (build with `VITE_ALLOW_SELF_SIGNUP=false`, `wrangler pages deploy`). Secrets sit on the host that reads them; GitHub only holds `FLY_API_TOKEN`, `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` ([0059](adr/0059-first-deploy-neon-fly-pages.md)).
@@ -147,7 +147,7 @@ No third-party API is called at runtime yet: Better Auth is a library inside the
 
 - **Authentication**: email and password through Better Auth; `httpOnly`, `SameSite=Lax` session cookie valid 90 days, renewed per day of use ([0010](adr/0010-self-hosted-better-auth.md)). Self-signup is scaffolding, off by default ([0011](adr/0011-self-signup-is-scaffolding.md)).
 - **Authorization**: a global `AuthGuard` protects every route; `@AllowAnonymous()` opts one out, and only `health` does. Roles are read from the project membership ([0022](adr/0022-roles-live-on-project-membership.md)); response DTOs strip fields outside the contract ([0004](adr/0004-response-dto-on-every-route.md)).
-- **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, keyed on the `X-Client-IP` the Pages proxy sets, behind the `PROXY_SECRET` gate that only lets that proxy through ([0058](adr/0058-api-only-answers-the-pages-proxy.md)); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it, and `PROXY_SECRET` too when `NODE_ENV=production`.
+- **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, keyed on the `X-Client-IP` the Pages proxy sets, behind the `PROXY_SECRET` gate that only lets that proxy through ([0066](adr/0066-api-only-answers-the-pages-proxy.md)); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it, and `PROXY_SECRET` too when `NODE_ENV=production`.
 - **Platform admin** never sees project content ([0021](adr/0021-platform-admin-sees-only-metadata.md)).
 - **API docs** (`/api/docs`) are on by default in development and off in production, via `API_DOCS_ENABLED` ([0046](adr/0046-openapi-via-nestjs-swagger.md)).
 

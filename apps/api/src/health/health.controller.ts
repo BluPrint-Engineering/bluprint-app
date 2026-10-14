@@ -20,7 +20,7 @@ export class HealthController {
 	@ApiOperation({
 		summary: "Health check",
 		description:
-			"Tells whether the API is up and whether it reaches Postgres. It is the route deployment uses as a healthcheck, and the API's only public route.",
+			"Tells whether the API is up and whether it reaches Postgres. It is the route deployment uses as a healthcheck, and the only public route in the API's own Nest controllers; Better Auth's routes under `/api/auth` are public too.",
 	})
 	@ZodResponse({
 		status: 200,

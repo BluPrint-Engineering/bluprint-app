@@ -18,7 +18,7 @@ export interface AuthOptions {
 	trustedOrigins: string[];
 	allowSelfSignup: boolean;
 	checkBreachedPasswords: boolean;
-	/** Set only when the proxy gate guarantees the header (ADR 0058); otherwise a client could forge its IP. */
+	/** Set only when the proxy gate guarantees the header (ADR 0066); otherwise a client could forge its IP. */
 	clientIpHeader?: string | undefined;
 	onUserCreated: (user: { id: string; name: string }) => Promise<void>;
 }
