@@ -292,15 +292,22 @@ const DRIVE_SCRIPT = resolve(import.meta.dirname, "drive.ts");
 const LOGIN_JOURNEY = resolve(import.meta.dirname, "../journeys/login.ts");
 const JOURNEY_SIGN_IN = /^(.+)@(admin|manager|none)$/;
 
-async function runPhase(name: string, args: string[]): Promise<{ ok: boolean; output: string }> {
+async function runPhase(name: string, args: string[], signal?: AbortSignal): Promise<{ ok: boolean; output: string }> {
 	const started = Date.now();
-	const result = await $`${process.execPath} ${args}`
-		.cwd(REPO_ROOT)
-		.env({ ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" })
-		.nothrow()
-		.quiet();
-	const output = Bun.stripANSI(`${result.stdout.toString()}${result.stderr.toString()}`).trimEnd();
-	const ok = result.exitCode === 0;
+	const child = Bun.spawn([process.execPath, ...args], {
+		cwd: REPO_ROOT,
+		env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+		stdout: "pipe",
+		stderr: "pipe",
+		signal,
+	});
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
+	const output = Bun.stripANSI(`${stdout}${stderr}`).trimEnd();
+	const ok = exitCode === 0;
 	console.log(`${ok ? "ok  " : "FAIL"} ${name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
 	return { ok, output };
 }
@@ -326,10 +333,18 @@ async function check(): Promise<void> {
 		["doctor", [INSTANCE_SCRIPT, "doctor"]],
 		...[`${LOGIN_JOURNEY}@none`, ...values.journey].map((journey) => drivePhase(journey, out)),
 	];
+	const interrupt = new AbortController();
+	for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+		process.on(signal, () => interrupt.abort(signal));
+	}
 	let failure: { name: string; output: string } | undefined;
 	try {
 		for (const [name, args] of phases) {
-			const { ok, output } = await runPhase(name, args);
+			const { ok, output } = await runPhase(name, args, interrupt.signal);
+			if (interrupt.signal.aborted) {
+				failure = { name, output: `${output}\ninterrupted by ${interrupt.signal.reason}`.trimStart() };
+				break;
+			}
 			if (!ok) {
 				failure = { name, output };
 				break;

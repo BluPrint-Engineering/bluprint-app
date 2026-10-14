@@ -16,7 +16,7 @@ The feature map in [`features/README.md`](features/README.md) is the recipe book
 
 ## Check
 
-`bun .claude/skills/verify/scripts/instance.ts check [--out <dir>] [--journey <journey.ts>[@admin|manager|none]]...` runs `up`, `doctor`, `drive.ts journeys/login.ts --as none`, then each `--journey` (signed in as the `@` role, `admin` by default), all on phone and desktop into one evidence dir, and `down`. It refuses to start when this checkout already runs an instance, and once it has started one it always runs `down`, also after a failure. Success prints one `ok` line per phase and the evidence directory; a failure prints the failing phase's full output and exits non-zero. Use it whenever a run ends with `down`: one boot proves sign-in and every journey the change needs. Use the steps below to keep an instance up while you write and iterate on a journey.
+`bun .claude/skills/verify/scripts/instance.ts check [--out <dir>] [--journey <journey.ts>[@admin|manager|none]]...` runs `up`, `doctor`, `drive.ts journeys/login.ts --as none`, then each `--journey` (signed in as the `@` role, `admin` by default), all on phone and desktop into one evidence dir, and `down`. It refuses to start when this checkout already runs an instance, and once it has started one it always runs `down`, also after a failure or a SIGINT, SIGTERM or SIGHUP (only SIGKILL leaves the instance up; run `down` then). Success prints one `ok` line per phase and the evidence directory; a failure prints the failing phase's full output and exits non-zero. Use it whenever a run ends with `down`: one boot proves sign-in and every journey the change needs. Use the steps below to keep an instance up while you write and iterate on a journey.
 
 ## Launch
 
