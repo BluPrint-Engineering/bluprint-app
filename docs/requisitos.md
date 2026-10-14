@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 27/09/2026 — novos RF-139 a RF-142, RF-215 e RF-216, da spec da lista de obras.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 14/10/2026, novo RF-217 e admin no RF-402, do refinamento da nova obra.
 
 ---
 
@@ -127,6 +127,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-214 | Exclusão definitiva de um item arquivado, restrita a gerente de obra e admin, com confirmação que informa exatamente o que será perdido ("12 pins, 8 fotos, 2 plantas") | S |
 | RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin marca a obra como entregue e pode reabri-la | M |
 | RF-216 | Obra **entregue** fica congelada: ninguém cria, edita, conclui ou exclui pin, foto, planta ou estrutura até ela ser reaberta. Relatórios são exportados em qualquer status | M |
+| RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento, inclusive entregue, para corrigir o nome. Renomear não libera a licença: a obra nunca é apagada, e o que já tem conteúdo é arquivado (RF-210), então uma obra não vira outra obra com a mesma licença | M |
 
 ## 3. Empresas executoras
 
@@ -149,7 +150,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | ID | Requisito | Prio |
 | --- | --- | --- |
 | RF-401 | Três disciplinas padrão em toda obra: **Geral** (antes chamada de arquitetônica), **Hidráulica** e **Elétrica** | M |
-| RF-402 | Criação de disciplinas extras (alvenaria, estrutural, pintura…) por gerente **ou** assistente. Na criação o sistema pergunta **se a disciplina terá planta própria** e pede a **cor** | M |
+| RF-402 | Criação de disciplinas extras (alvenaria, estrutural, pintura…) por gerente, assistente **ou** admin. Na criação o sistema pergunta **se a disciplina terá planta própria** e pede a **cor** | M |
 | RF-403 | O seletor de cor bloqueia azul (hidráulica), âmbar (elétrica), cinza (reservado a pin concluído) e as cores já usadas por outras disciplinas daquela obra | M |
 | RF-404 | Disciplina criada vale para a obra inteira e fica disponível a todos os usuários daquela obra | M |
 | RF-405 | Upload da planta (imagem/PDF) **por unidade, andar ou área comum, e por disciplina**, conforme a etapa da obra avança | M |
