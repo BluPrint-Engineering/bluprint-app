@@ -1,6 +1,6 @@
 # Local git hooks with Lefthook
 
-Its pre-push test jobs are superseded by [0061](0061-pre-push-runs-typecheck-only.md); the rest stands.
+Its pre-push test jobs are superseded by [0062](0062-pre-push-runs-typecheck-only.md); the rest stands.
 
 CI (`.github/workflows/ci.yml`, [0018](0018-ci-runs-root-scripts.md)) is the only place a forgotten `bun run lint` or a broken test is caught, and that is minutes after the push. Lefthook adds three local hooks that catch the common cases before that round trip, without becoming a second source of truth for what "passing" means: they run the same root scripts CI runs, just narrowed to what's fast enough to sit in front of a commit or a push.
 
