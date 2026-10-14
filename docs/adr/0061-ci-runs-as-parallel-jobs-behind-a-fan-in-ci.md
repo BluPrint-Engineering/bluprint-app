@@ -1,6 +1,6 @@
 # CI runs as parallel jobs behind a fan-in `ci`
 
-Supersedes the single-job layout of [0018](0018-ci-runs-root-scripts.md); its rule that CI calls the root scripts, and the order inside each job, stand.
+Supersedes the single-job layout of [0018](0018-ci-runs-root-scripts.md), whose rule that CI calls the root scripts, and the order inside each job, stand; and the part of [0050](0050-playwright-for-end-to-end.md) that ran E2E inside the existing `ci` job.
 
 The one serial `ci` job took about 190s on a pull request (lint, typecheck, build, tests, Playwright setup and e2e in sequence) and grew with every suite added. `.github/workflows/ci.yml` now has four jobs:
 

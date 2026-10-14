@@ -1,5 +1,7 @@
 # Playwright for end-to-end tests
 
+Running E2E inside the existing `ci` job is superseded by [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md): E2E is now its own `e2e` job behind the fan-in `ci`; the rest stands.
+
 Vitest and Jest exercise components and modules in isolation ([0007](0007-jest-for-api-vitest-for-web.md)), but neither runs a real browser: the single-origin cookie ([0009](0009-single-origin-api-prefix-and-proxy.md)) needs the Vite proxy actually in front of a page, Better Auth's origin check needs a real `Origin` header, and Safari's cookie handling only shows up in WebKit, not jsdom. `apps/e2e` runs Playwright against the built web app and API — `iPhone 13` (WebKit) and `Desktop Chrome` — as the check that these hold together, and CI publishes its screenshots and traces as the evidence a PR review used to ask for by hand.
 
 E2E runs inside the existing `ci` job, after `bun run test`, rather than a job of its own ([0018](0018-ci-runs-root-scripts.md)): a second job would re-run `bun install` and the Postgres service container for no gain, and CI stays one required check. One E2E test exists per user flow that crosses the browser boundary; everything else — validation, error mapping, business logic — stays in Vitest or Jest, where it is faster to write and to debug. `apps/e2e` runs against its own `bluprint_e2e` database and its own ports (3100/5273 by default), so a developer's `bun run dev` and `bun run e2e` can run at the same time without colliding.
