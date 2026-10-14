@@ -119,6 +119,8 @@ async function up(): Promise<void> {
 	}
 	rmSync(INSTANCE_DIR, { recursive: true, force: true });
 
+	process.env.NO_COLOR = "1";
+	process.env.FORCE_COLOR = "0";
 	await ensurePostgres();
 	process.env.BETTER_AUTH_SECRET ||= randomBytes(32).toString("base64");
 	if ((await isLinkedWorktree(REPO_ROOT)) && !existsSync(resolve(REPO_ROOT, ".env.local"))) {
