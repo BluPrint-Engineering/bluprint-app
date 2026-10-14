@@ -1,0 +1,28 @@
+name: Setup workspace
+description: Install Bun and Node, restore the Bun install cache and install dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup Bun
+      uses: oven-sh/setup-bun@v2
+      with:
+        bun-version: 1.4.0
+
+    - name: Setup Node
+      uses: actions/setup-node@v4
+      with:
+        # 24.9+ is what Jest needs to require() Better Auth's ESM-only build.
+        node-version: 24
+
+    - name: Cache Bun install cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.bun/install/cache
+        key: ${{ runner.os }}-bun-${{ hashFiles('bun.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-bun-
+
+    - name: Install dependencies
+      shell: bash
+      run: bun install --frozen-lockfile
