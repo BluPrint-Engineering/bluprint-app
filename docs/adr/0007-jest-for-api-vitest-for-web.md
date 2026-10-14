@@ -1,5 +1,7 @@
 # Jest in the API, Vitest in the web app
 
+Its claim that `ts-jest` reads the same `tsconfig` as the build is superseded by [0063](0063-api-tests-transpile-only.md); Jest as the API runner stands.
+
 Jest is the runner Nest assumes: `@nestjs/testing` + Supertest is the documented path, and `ts-jest` reads the same `tsconfig` as the build, so decorators and `emitDecoratorMetadata` behave the same in tests and in production. A divergence there does not produce a red test; it produces `Nest can't resolve dependencies` at runtime. Vitest stays in the web app, where DOM and JSX matter.
 
 ## Consequences
