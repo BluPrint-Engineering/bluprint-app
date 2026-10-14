@@ -5,4 +5,4 @@
 ## Consequences
 
 - A database that goes down **after** boot is not covered; that is what the `database` / `status: "degraded"` field of `/health` reports.
-- In production a database blip becomes a crash loop. The mitigation is restart with backoff on the host, decided with deployment (#21).
+- In production a database blip becomes a crash loop. The mitigation is the restart policy in `fly.toml` (`[[restart]]`, `policy = "on-failure"`, `retries = 10`), so the machine stops restarting after ten failed boots instead of looping forever.

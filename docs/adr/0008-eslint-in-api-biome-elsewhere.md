@@ -7,3 +7,4 @@ Biome runs no type-aware rules, and the API needs exactly those: `no-floating-pr
 - Both tools use tabs and double quotes: the boundary is tooling, not style.
 - ESLint has no native equivalent of Biome's automatic `organizeImports`.
 - ESLint in `apps/api` is type-aware, so it needs `packages/shared` built; without it, `@bluprint/shared` resolves as `any` and the rules degrade silently. The root `lint` and `lint:fix` scripts build it first, same as every other root script.
+- **The API stays on TypeScript 5.9.x while the rest of the monorepo is on 7.0.x** (`apps/api/package.json` pins `typescript` 5.9.3; the root, `apps/web`, `apps/e2e` and `packages/shared` pin 7.0.2). `typescript-eslint` is the reason, so aligning the API's version would break its lint. The API can move to TypeScript 7 once `typescript-eslint` supports the native compiler. Open question: no issue or date tracks that.

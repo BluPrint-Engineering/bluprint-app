@@ -26,5 +26,5 @@ Closes #
 
 - [ ] New route is documented in OpenAPI (`@ApiTags`, `@ApiOperation`, `@ZodResponse`, `@ApiErrorResponses`) — checked at `/api/docs`
 - [ ] A failure the client acts on throws `ProblemException` with a stable `code`, and the web maps that `code` to pt-BR
-- [ ] New route follows the contract: schema in `packages/shared`, `nestjs-zod` DTO in the API, parsed in the web app's `apiFetch` (`/health` is the complete example)
+- [ ] New route follows the contract: schema in `packages/shared`, `nestjs-zod` DTO in the API, parsed in the web app's `apiFetch` (`projects` is the complete example: `packages/shared/src/projects`, `apps/api/src/projects`, `apps/web/src/features/projects/api.ts`)
 - [ ] The action records author, project and time

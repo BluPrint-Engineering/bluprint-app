@@ -13,7 +13,7 @@ This design system was built for [issue #41 — *1.6 Fundação visual: tokens, 
 | `assets/bluprint-lockup-original.webp`, `assets/bluprint-mark-original.webp` (the raster originals) | The brand. Colors were sampled pixel-by-pixel from these files; the vector marks in `assets/` are traced from them |
 | [Miro board](https://miro.com/app/board/uXjVHrUOxfg=/) (referenced in `docs/data-model.md`) | **Not read** — no access. If it holds screen designs, it should be reviewed against this system |
 
-Read the repository if you are going to design for BluPrint: `docs/requisitos.md` is the product's source of truth (pt-BR, `RF-xxx` ids), `CONTEXT.md` is the glossary that decides what things are called, and `docs/adr/` records why each decision went the way it did. The product is **specified far ahead of what is built** — at the time of writing, `apps/web` contains only a health-check page, one Button and one Card.
+Read the repository if you are going to design for BluPrint: `docs/requisitos.md` is the product's source of truth (pt-BR, `RF-xxx` ids), `CONTEXT.md` is the glossary that decides what things are called, and `docs/adr/` records why each decision went the way it did. The product is **specified far ahead of what is built** — when this system was written, `apps/web` contained only a health-check page, one Button and one Card; it now has the login, signup and obras list pages and 18 shadcn primitives in `components/ui/`.
 
 ## Products and surfaces
 
@@ -46,7 +46,7 @@ This project holds only the design system. Screens (Entrar #42, Criar conta #43,
 
 ### Component inventory, and why it is this size
 
-`apps/web` defines exactly **two** components today: `Button` and `Card`. Both are recreated here with the same values (`rounded-lg`, hairline `ring-1`, 1px press nudge, 3px focus ring, tinted-not-solid destructive).
+`apps/web` started with exactly **two** components, `Button` and `Card`; `components/ui/` now holds 18 shadcn primitives. `Button` and `Card` are recreated here with the same values (`rounded-lg`, hairline `ring-1`, 1px press nudge, 3px focus ring, tinted-not-solid destructive).
 
 **Intentional additions** — each one is required by the acceptance criteria of #42/#43 and would be added to `apps/web` with `bunx shadcn add`:
 

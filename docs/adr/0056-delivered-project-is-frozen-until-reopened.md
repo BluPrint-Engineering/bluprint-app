@@ -10,7 +10,7 @@ Requirements: RF-215, RF-216
 - **Status and name are project metadata, not operational content.** Marking a project delivered or reopening it is allowed to a manager and an admin without conflicting with [0024](0024-admin-is-read-and-export-only.md); an assistant may not. Those routes belong to the project screen, and they are the only writes a delivered project accepts.
 - **Last activity does not move** when the status or the name changes, only when operational content does, so delivering a project does not make it look freshly worked on.
 - **The list shows delivered projects, quieter, and hides them by default.** `GET /api/projects` answers `status=active` unless asked otherwise, and `counts` reports both statuses whatever the filter, so a person whose projects are all delivered sees "Nenhuma obra em andamento" with a way to reach them instead of an empty list.
-- Migration `0005` adds the `project_status` enum and the column with default `active`, so every existing project stays in progress.
+- Migration `0006` adds the `project_status` enum and the column with default `active`, so every existing project stays in progress.
 - A third status (on hold, cancelled, post-delivery support) enters through a new RF and one more enum value; until then a pendency found after delivery is solved by reopening the project.
 
 ## Considered Options

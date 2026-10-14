@@ -1,5 +1,7 @@
 # Hooks enforce agent guardrails
 
+Since this ADR, `.claude/settings.json` registers two more hooks, `session-start.ts` ([0049](0049-per-worktree-isolation.md)) and `comment-guard-tests.ts` ([0057](0057-test-files-carry-no-comments.md)), and `guard-bash.ts` also blocks `git -c core.hooksPath=...`, `git config core.hooksPath` and `LEFTHOOK_EXCLUDE=`; the list below is the original three.
+
 Several rules used to live only in `CLAUDE.md`, memory or an agent's own judgment: don't merge a PR, don't push or force-push `main`, don't skip Lefthook, don't run a destructive `drizzle-kit` command, don't read or write `.env`. That was enough for one agent watched step by step; it isn't enough for several agents running unattended in parallel worktrees. Claude Code hooks make the deterministic subset of those rules mechanical instead of advisory, so an agent can be trusted to work and commit without a human checking every command.
 
 Three Bun TypeScript hooks in `.claude/hooks/`, registered in a committed `.claude/settings.json`:
