@@ -1,0 +1,38 @@
+name: Setup Playwright
+description: Restore the Playwright browser cache, keyed on the resolved version, and install the browsers on a miss.
+
+inputs:
+  warm-only:
+    description: Only make sure the cache is saved, without downloading it on a hit or installing the OS packages the browsers need.
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    - name: Get Playwright version
+      id: playwright-version
+      shell: bash
+      run: |
+        VERSION=$(grep -m1 -oP '"@playwright/test@\K[0-9.]+(?=")' bun.lock)
+        test -n "$VERSION" || { echo "Could not find @playwright/test in bun.lock" >&2; exit 1; }
+        echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+    - name: Cache Playwright browsers
+      id: playwright-cache
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+        lookup-only: ${{ inputs.warm-only }}
+
+    - name: Install Playwright browsers
+      if: steps.playwright-cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: apps/e2e
+      run: bunx playwright install ${{ inputs.warm-only != 'true' && '--with-deps' || '' }} chromium webkit
+
+    - name: Install Playwright OS dependencies
+      if: steps.playwright-cache.outputs.cache-hit == 'true' && inputs.warm-only != 'true'
+      shell: bash
+      working-directory: apps/e2e
+      run: bunx playwright install-deps chromium webkit
