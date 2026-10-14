@@ -1,13 +1,24 @@
 name: Setup workspace
 description: Install Bun and Node, restore the Bun install cache and install dependencies.
 
+inputs:
+  bun-from-npm:
+    description: Install Bun from npm, for a job container that has no `unzip`, which setup-bun needs.
+    default: "false"
+
 runs:
   using: composite
   steps:
     - name: Setup Bun
+      if: inputs.bun-from-npm != 'true'
       uses: oven-sh/setup-bun@v2
       with:
         bun-version: 1.4.0
+
+    - name: Setup Bun from npm
+      if: inputs.bun-from-npm == 'true'
+      shell: bash
+      run: npm install --global bun@1.4.0
 
     - name: Setup Node
       uses: actions/setup-node@v4

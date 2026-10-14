@@ -1,5 +1,7 @@
 # A push to `main` reruns only `static`
 
+Warming the Playwright browser cache on a push is superseded by [0065](0065-e2e-runs-in-the-playwright-container-image.md), since `e2e` no longer restores one; the rest stands.
+
 Narrows the trigger of the layout in [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md): pull requests keep every job, a push to `main` runs one.
 
 Branch protection requires a pull request to be up to date with `main` and history to be linear, so the tree a push produces is one that already passed `ci` on its pull request (39 of 39 sampled pushes). Rerunning `test` and `e2e` on it only delayed the deploy: merge to production took about 5.5 minutes instead of 2.5 to 3.

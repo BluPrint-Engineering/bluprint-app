@@ -48,13 +48,6 @@ jobs:
       - name: Check routeTree.gen.ts is up to date
         run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
 
-      # A pull request only restores caches saved on main, so main must save the one `e2e` restores (ADR 0064).
-      - name: Warm Playwright browser cache
-        if: github.event_name == 'push'
-        uses: ./.github/actions/setup-playwright
-        with:
-          warm-only: "true"
-
   test:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
@@ -88,6 +81,18 @@ jobs:
   e2e:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    # Browsers and their OS packages ship in the image. The tag is checked against bun.lock below (ADR 0065).
+    container:
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      # Inside a job container the service is reached by its name, not on the runner's localhost.
+      DATABASE_URL: postgresql://bluprint:bluprint@postgres:5432/bluprint
+      DATABASE_URL_TEST: postgresql://bluprint:bluprint@postgres:5432/bluprint
+      DATABASE_URL_E2E: postgresql://bluprint:bluprint@postgres:5432/bluprint
+      # The seed refuses any host but localhost until it is named and given a password, and the tests sign in with the fixture's.
+      SEED_ALLOW_HOST: postgres
+      SEED_PASSWORD: canteiro-de-obras-azul
     services:
       postgres:
         image: postgres:18-alpine
@@ -95,8 +100,6 @@ jobs:
           POSTGRES_USER: bluprint
           POSTGRES_PASSWORD: bluprint
           POSTGRES_DB: bluprint
-        ports:
-          - 5432:5432
         options: >-
           --health-cmd "pg_isready -U bluprint -d bluprint"
           --health-interval 2s
@@ -106,11 +109,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Check the container image matches the Playwright version in bun.lock
+        env:
+          IMAGE: ${{ job.container.image }}
+        run: |
+          VERSION=$(grep -m1 -oP '"@playwright/test@\K[0-9.]+(?=")' bun.lock)
+          test -n "$VERSION" || { echo "Could not find @playwright/test in bun.lock" >&2; exit 1; }
+          EXPECTED="mcr.microsoft.com/playwright:v${VERSION}-noble"
+          test "$IMAGE" = "$EXPECTED" || { echo "::error::e2e container image is $IMAGE but bun.lock pins Playwright $VERSION: set the image to $EXPECTED in .github/workflows/ci.yml" >&2; exit 1; }
+
       - name: Setup workspace
         uses: ./.github/actions/setup-workspace
-
-      - name: Setup Playwright
-        uses: ./.github/actions/setup-playwright
+        with:
+          bun-from-npm: "true"
 
       - name: E2E
         run: bun run e2e
