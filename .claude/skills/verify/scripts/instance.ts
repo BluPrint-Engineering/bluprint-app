@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { connect } from "node:net";
 import { resolve } from "node:path";
+import { parseArgs } from "node:util";
 import { $ } from "bun";
 import { describeError, isLinkedWorktree, resolveDatabaseUrl } from "../../../../scripts/worktree-core";
 import {
@@ -281,9 +282,56 @@ async function down(): Promise<void> {
 	console.log(`verify: stopped process groups ${groups.join(", ")}; evidence kept in ${EVIDENCE_ROOT}`);
 }
 
-const commands: Record<string, () => Promise<void>> = { up, doctor, down };
+const SCRIPTS_DIR = import.meta.dirname;
+const LOGIN_JOURNEY = resolve(SCRIPTS_DIR, "../journeys/login.ts");
+
+async function runPhase(name: string, args: string[]): Promise<{ ok: boolean; output: string }> {
+	const started = Date.now();
+	const result = await $`${process.execPath} ${args}`
+		.cwd(REPO_ROOT)
+		.env({ ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" })
+		.nothrow()
+		.quiet();
+	const output = Bun.stripANSI(`${result.stdout.toString()}${result.stderr.toString()}`).trimEnd();
+	const ok = result.exitCode === 0;
+	console.log(`${ok ? "ok  " : "FAIL"} ${name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+	return { ok, output };
+}
+
+async function check(): Promise<void> {
+	const { values } = parseArgs({ args: process.argv.slice(3), options: { out: { type: "string" } } });
+	const instance = resolve(SCRIPTS_DIR, "instance.ts");
+	const drive = [resolve(SCRIPTS_DIR, "drive.ts"), LOGIN_JOURNEY, "--as", "none", ...(values.out ? ["--out", values.out] : [])];
+	const phases: [string, string[]][] = [
+		["up", [instance, "up"]],
+		["doctor", [instance, "doctor"]],
+		["drive login (phone + desktop)", drive],
+	];
+	let failure: { name: string; output: string } | undefined;
+	let evidence: string | undefined;
+	try {
+		for (const [name, args] of phases) {
+			const { ok, output } = await runPhase(name, args);
+			if (!ok) {
+				failure = { name, output };
+				break;
+			}
+			evidence = output.match(/verify: evidence in (.+)$/m)?.[1] ?? evidence;
+		}
+	} finally {
+		const stopped = await runPhase("down", [resolve(SCRIPTS_DIR, "instance.ts"), "down"]);
+		if (!stopped.ok) failure ??= { name: "down", output: stopped.output };
+	}
+	if (failure) {
+		console.error(`--- ${failure.name} ---\n${failure.output}`);
+		fail(`check failed at ${failure.name}.`);
+	}
+	console.log(`verify: check passed${evidence ? `; evidence in ${evidence}` : ""}`);
+}
+
+const commands: Record<string, () => Promise<void>> = { up, doctor, down, check };
 const command = commands[process.argv[2] ?? ""];
-if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down>");
+if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down|check [--out <dir>]>");
 try {
 	await command();
 } catch (error) {

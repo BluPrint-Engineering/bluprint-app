@@ -9,10 +9,14 @@ BluPrint's surface is the web app: a user signs in at `/login`, lands on `/proje
 
 This skill runs the same production build `bun run e2e` uses, on the E2E ports and database, so it never collides with the developer's `bun run dev` (:5173/:3000) or with another worktree. Two helpers do the work, both run from the repo root:
 
-- `bun .claude/skills/verify/scripts/instance.ts up|doctor|down` starts, checks and stops one instance per checkout.
+- `bun .claude/skills/verify/scripts/instance.ts up|doctor|down|check` starts, checks and stops one instance per checkout; `check` is the whole boot-and-sign-in proof in one call.
 - `bun .claude/skills/verify/scripts/drive.ts <journey.ts> [--device phone|desktop|both] [--as admin|manager|none] [--out <dir>]` runs a journey in Playwright and records evidence.
 
 The feature map in [`features/README.md`](features/README.md) is the recipe book: read it, pick the feature your change touches, and drive every entry point it lists.
+
+## Check
+
+`bun .claude/skills/verify/scripts/instance.ts check [--out <dir>]` runs `up`, `doctor`, `drive.ts journeys/login.ts --as none` (phone and desktop) and `down` in one call, and always runs `down`, also after a failure. Success prints one `ok` line per phase and the evidence directory; a failure prints the failing phase's full output and exits non-zero. Use it to prove the app boots and signs in; use the steps below when a feature's journeys must run against the instance.
 
 ## Launch
 
