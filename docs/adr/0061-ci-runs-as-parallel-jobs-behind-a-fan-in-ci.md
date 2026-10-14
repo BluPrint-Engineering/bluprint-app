@@ -17,7 +17,7 @@ The one serial `ci` job took about 190s on a pull request (lint, typecheck, buil
 - **`ci` runs on failure and cancellation on purpose.** A required check that is skipped counts as passing, and a job whose `needs` failed is skipped unless it has `if: always()`. The job therefore checks `needs.*.result` itself, so a failed, cancelled or skipped job can never read as green.
 - **[`deploy.yml`](../../.github/workflows/deploy.yml) is untouched.** `workflow_run` fires when the whole `CI` workflow completes, and a workflow only concludes `success` when every job did, including the fan-in.
 - **Each database job has its own Postgres.** `test` and `e2e` no longer share state through one database; `DATABASE_URL`, `DATABASE_URL_TEST` and `DATABASE_URL_E2E` still all point at the runner's local `bluprint` database, which is private to the job.
-- **The shared setup lives in `.github/actions/setup-workspace`**: Bun and Node pins, the Bun cache and `bun install`, so a version bump is one edit and not three.
+- **The shared setup lives in `.github/actions/setup-workspace`**: Bun and Node pins, the Bun cache and `bun install`, so a version bump in CI is one edit and not three; `deploy.yml` keeps its own pins.
 - **More runner minutes, not more cost.** Each job repeats the checkout, install and (for the database jobs) the Postgres pull; standard runners are free for a public repository.
 - **`bun run e2e` still rebuilds shared, api and web**, so `e2e` does not depend on `static`'s build.
 
