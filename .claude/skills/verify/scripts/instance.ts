@@ -3,7 +3,8 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { connect } from "node:net";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
+import { parseArgs } from "node:util";
 import { $ } from "bun";
 import { describeError, isLinkedWorktree, resolveDatabaseUrl } from "../../../../scripts/worktree-core";
 import {
@@ -17,6 +18,7 @@ import {
 	loadSeedAccounts,
 	REPO_ROOT,
 	readState,
+	stamp,
 	treeDigest,
 	writeState,
 } from "./lib";
@@ -24,6 +26,7 @@ import {
 const COMPOSE_DEFAULT_DATABASE_URL = "postgresql://bluprint:bluprint@localhost:5432/bluprint";
 const READY_TIMEOUT_MS = 90_000;
 const STOP_TIMEOUT_MS = 10_000;
+const PHASE_KILL_GRACE_MS = 5_000;
 const API_LOG = resolve(INSTANCE_DIR, "api.log");
 const WEB_LOG = resolve(INSTANCE_DIR, "web.log");
 
@@ -119,11 +122,15 @@ async function ensurePostgres(): Promise<void> {
 	}
 }
 
-async function up(): Promise<void> {
+function refuseRunningInstance(): void {
 	const existing = readState();
 	if (existing && (isGroupAlive(existing.apiPgid) || isGroupAlive(existing.webPgid))) {
 		fail(`an instance is already running at ${existing.webUrl}; run \`doctor\`, or \`down\` first.`);
 	}
+}
+
+async function up(): Promise<void> {
+	refuseRunningInstance();
 	rmSync(INSTANCE_DIR, { recursive: true, force: true });
 
 	process.env.NO_COLOR = "1";
@@ -281,9 +288,91 @@ async function down(): Promise<void> {
 	console.log(`verify: stopped process groups ${groups.join(", ")}; evidence kept in ${EVIDENCE_ROOT}`);
 }
 
-const commands: Record<string, () => Promise<void>> = { up, doctor, down };
+const INSTANCE_SCRIPT = import.meta.path;
+const DRIVE_SCRIPT = resolve(import.meta.dirname, "drive.ts");
+const LOGIN_JOURNEY = resolve(import.meta.dirname, "../journeys/login.ts");
+const JOURNEY_SIGN_IN = /^(.+)@(admin|manager|none)$/;
+
+async function runPhase(name: string, args: string[], signal?: AbortSignal): Promise<{ ok: boolean; output: string }> {
+	const started = Date.now();
+	const child = Bun.spawn([process.execPath, ...args], {
+		cwd: REPO_ROOT,
+		env: { ...process.env, NO_COLOR: "1", FORCE_COLOR: "0" },
+		stdout: "pipe",
+		stderr: "pipe",
+		signal,
+	});
+	let killTimer: Timer | undefined;
+	const killAfterGrace = () => {
+		killTimer = setTimeout(() => child.kill("SIGKILL"), PHASE_KILL_GRACE_MS);
+	};
+	signal?.addEventListener("abort", killAfterGrace, { once: true });
+	const [stdout, stderr, exitCode] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]).finally(() => {
+		clearTimeout(killTimer);
+		signal?.removeEventListener("abort", killAfterGrace);
+	});
+	const output = Bun.stripANSI(`${stdout}${stderr}`).trimEnd();
+	const ok = exitCode === 0;
+	console.log(`${ok ? "ok  " : "FAIL"} ${name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
+	return { ok, output };
+}
+
+function drivePhase(journeyArg: string, out: string): [string, string[]] {
+	const [, path = journeyArg, signIn = "admin"] = journeyArg.match(JOURNEY_SIGN_IN) ?? [];
+	const journey = resolve(path);
+	return [
+		`drive ${basename(journey)} --as ${signIn} (phone + desktop)`,
+		[DRIVE_SCRIPT, journey, "--as", signIn, "--out", out],
+	];
+}
+
+async function check(): Promise<void> {
+	const { values } = parseArgs({
+		args: process.argv.slice(3),
+		options: { out: { type: "string" }, journey: { type: "string", multiple: true, default: [] } },
+	});
+	refuseRunningInstance();
+	const out = resolve(values.out ?? resolve(EVIDENCE_ROOT, `${stamp()}-check`));
+	const phases: [string, string[]][] = [
+		["up", [INSTANCE_SCRIPT, "up"]],
+		["doctor", [INSTANCE_SCRIPT, "doctor"]],
+		...[`${LOGIN_JOURNEY}@none`, ...values.journey].map((journey) => drivePhase(journey, out)),
+	];
+	const interrupt = new AbortController();
+	for (const signal of ["SIGINT", "SIGTERM", "SIGHUP"] as const) {
+		process.on(signal, () => interrupt.abort(signal));
+	}
+	let failure: { name: string; output: string } | undefined;
+	try {
+		for (const [name, args] of phases) {
+			const { ok, output } = await runPhase(name, args, interrupt.signal);
+			if (interrupt.signal.aborted) {
+				failure = { name, output: `${output}\ninterrupted by ${interrupt.signal.reason}`.trimStart() };
+				break;
+			}
+			if (!ok) {
+				failure = { name, output };
+				break;
+			}
+		}
+	} finally {
+		const stopped = await runPhase("down", [INSTANCE_SCRIPT, "down"]);
+		if (!stopped.ok) failure ??= { name: "down", output: stopped.output };
+	}
+	if (failure) {
+		console.error(`--- ${failure.name} ---\n${failure.output}`);
+		fail(`check failed at ${failure.name}; evidence in ${out}`);
+	}
+	console.log(`verify: check passed; evidence in ${out}`);
+}
+
+const commands: Record<string, () => Promise<void>> = { up, doctor, down, check };
 const command = commands[process.argv[2] ?? ""];
-if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down>");
+if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down|check [--out <dir>] [--journey <journey.ts>[@admin|manager|none]]...>");
 try {
 	await command();
 } catch (error) {

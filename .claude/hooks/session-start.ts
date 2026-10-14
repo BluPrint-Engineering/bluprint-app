@@ -1,11 +1,15 @@
 // cwd comes from the hook's JSON input, not CLAUDE_PROJECT_DIR (ADR 0049).
 import { existsSync } from "node:fs";
-import { resolve } from "node:path";
+import { homedir } from "node:os";
+import { resolve, sep } from "node:path";
 import { $ } from "bun";
 import { describeError, isLinkedWorktree, worktreeRoot } from "../../scripts/worktree-core";
 
 async function main(): Promise<void> {
 	const { cwd: rawCwd } = JSON.parse(await Bun.stdin.text()) as { cwd: string };
+	if (rawCwd.startsWith(`${resolve(homedir(), ".no-mistakes/worktrees")}${sep}`)) {
+		return;
+	}
 	const cwd = await worktreeRoot(rawCwd);
 
 	const alreadySetUp = existsSync(resolve(cwd, ".env.local"));
