@@ -11,8 +11,8 @@ review:
 
 test:
   instructions: |
-    Load the project's `verify` skill (.claude/skills/verify/SKILL.md). Prove the app boots and signs in in one call: `NO_COLOR=1 FORCE_COLOR=0 bun .claude/skills/verify/scripts/instance.ts check --out <this run's evidence directory>`. It runs `up`, `doctor`, the login journey on phone and desktop, and `down` (also after a failure).
-    When the diff touches a user-facing feature, also run `instance.ts up`, drive every entry point the feature map (.claude/skills/verify/features/) lists for each feature the change touches, on the phone and the desktop, with `drive.ts --out <this run's evidence directory>`, and finish with `instance.ts down`, also after a failure.
+    Load the project's `verify` skill (.claude/skills/verify/SKILL.md) and prove the change end to end in one call: `NO_COLOR=1 FORCE_COLOR=0 bun .claude/skills/verify/scripts/instance.ts check --out <this run's evidence directory>`. It runs `up`, `doctor`, the login journey on phone and desktop, and `down` (also after a failure).
+    When the diff touches a user-facing feature, first write a journey for every entry point the feature map (.claude/skills/verify/features/) lists for each feature the change touches, and pass each to that same `check` call as `--journey <journey.ts>[@admin|manager|none]`, so one boot drives them all on the phone and the desktop.
     Do not rebuild or rerun CI jobs in a fresh clone: the PR's own CI run validates CI changes before merge.
     Evidence ends up in the PR body, and an ESC byte there makes no-mistakes refuse its own PR (upstream kunchenguid/no-mistakes#1454): run every command whose output you capture with `NO_COLOR=1 FORCE_COLOR=0`, and before finishing strip ANSI escape sequences and other control characters from every text evidence file (logs, `.txt`, `.md`, `.json`) with `perl -pi -e 's/\e\[[0-9;?]*[ -\/]*[@-~]//g; s/\e\][^\a\e]*(?:\a|\e\\)//g; s/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]//g; s/\xc2[\x80-\x9f]//g' <file>`.
 

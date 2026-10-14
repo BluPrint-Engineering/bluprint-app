@@ -3,7 +3,7 @@ import { spawn } from "node:child_process";
 import { randomBytes } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readFileSync, rmSync } from "node:fs";
 import { connect } from "node:net";
-import { resolve } from "node:path";
+import { basename, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { $ } from "bun";
 import { describeError, isLinkedWorktree, resolveDatabaseUrl } from "../../../../scripts/worktree-core";
@@ -18,6 +18,7 @@ import {
 	loadSeedAccounts,
 	REPO_ROOT,
 	readState,
+	stamp,
 	treeDigest,
 	writeState,
 } from "./lib";
@@ -120,11 +121,15 @@ async function ensurePostgres(): Promise<void> {
 	}
 }
 
-async function up(): Promise<void> {
+function refuseRunningInstance(): void {
 	const existing = readState();
 	if (existing && (isGroupAlive(existing.apiPgid) || isGroupAlive(existing.webPgid))) {
 		fail(`an instance is already running at ${existing.webUrl}; run \`doctor\`, or \`down\` first.`);
 	}
+}
+
+async function up(): Promise<void> {
+	refuseRunningInstance();
 	rmSync(INSTANCE_DIR, { recursive: true, force: true });
 
 	process.env.NO_COLOR = "1";
@@ -282,8 +287,10 @@ async function down(): Promise<void> {
 	console.log(`verify: stopped process groups ${groups.join(", ")}; evidence kept in ${EVIDENCE_ROOT}`);
 }
 
-const SCRIPTS_DIR = import.meta.dirname;
-const LOGIN_JOURNEY = resolve(SCRIPTS_DIR, "../journeys/login.ts");
+const INSTANCE_SCRIPT = import.meta.path;
+const DRIVE_SCRIPT = resolve(import.meta.dirname, "drive.ts");
+const LOGIN_JOURNEY = resolve(import.meta.dirname, "../journeys/login.ts");
+const JOURNEY_SIGN_IN = /^(.+)@(admin|manager|none)$/;
 
 async function runPhase(name: string, args: string[]): Promise<{ ok: boolean; output: string }> {
 	const started = Date.now();
@@ -298,17 +305,28 @@ async function runPhase(name: string, args: string[]): Promise<{ ok: boolean; ou
 	return { ok, output };
 }
 
+function drivePhase(journeyArg: string, out: string): [string, string[]] {
+	const [, path = journeyArg, signIn = "admin"] = journeyArg.match(JOURNEY_SIGN_IN) ?? [];
+	const journey = resolve(path);
+	return [
+		`drive ${basename(journey)} --as ${signIn} (phone + desktop)`,
+		[DRIVE_SCRIPT, journey, "--as", signIn, "--out", out],
+	];
+}
+
 async function check(): Promise<void> {
-	const { values } = parseArgs({ args: process.argv.slice(3), options: { out: { type: "string" } } });
-	const instance = resolve(SCRIPTS_DIR, "instance.ts");
-	const drive = [resolve(SCRIPTS_DIR, "drive.ts"), LOGIN_JOURNEY, "--as", "none", ...(values.out ? ["--out", values.out] : [])];
+	const { values } = parseArgs({
+		args: process.argv.slice(3),
+		options: { out: { type: "string" }, journey: { type: "string", multiple: true, default: [] } },
+	});
+	refuseRunningInstance();
+	const out = resolve(values.out ?? resolve(EVIDENCE_ROOT, `${stamp()}-check`));
 	const phases: [string, string[]][] = [
-		["up", [instance, "up"]],
-		["doctor", [instance, "doctor"]],
-		["drive login (phone + desktop)", drive],
+		["up", [INSTANCE_SCRIPT, "up"]],
+		["doctor", [INSTANCE_SCRIPT, "doctor"]],
+		...[`${LOGIN_JOURNEY}@none`, ...values.journey].map((journey) => drivePhase(journey, out)),
 	];
 	let failure: { name: string; output: string } | undefined;
-	let evidence: string | undefined;
 	try {
 		for (const [name, args] of phases) {
 			const { ok, output } = await runPhase(name, args);
@@ -316,22 +334,21 @@ async function check(): Promise<void> {
 				failure = { name, output };
 				break;
 			}
-			evidence = output.match(/verify: evidence in (.+)$/m)?.[1] ?? evidence;
 		}
 	} finally {
-		const stopped = await runPhase("down", [resolve(SCRIPTS_DIR, "instance.ts"), "down"]);
+		const stopped = await runPhase("down", [INSTANCE_SCRIPT, "down"]);
 		if (!stopped.ok) failure ??= { name: "down", output: stopped.output };
 	}
 	if (failure) {
 		console.error(`--- ${failure.name} ---\n${failure.output}`);
-		fail(`check failed at ${failure.name}.`);
+		fail(`check failed at ${failure.name}; evidence in ${out}`);
 	}
-	console.log(`verify: check passed${evidence ? `; evidence in ${evidence}` : ""}`);
+	console.log(`verify: check passed; evidence in ${out}`);
 }
 
 const commands: Record<string, () => Promise<void>> = { up, doctor, down, check };
 const command = commands[process.argv[2] ?? ""];
-if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down|check [--out <dir>]>");
+if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down|check [--out <dir>] [--journey <journey.ts>[@admin|manager|none]]...>");
 try {
 	await command();
 } catch (error) {

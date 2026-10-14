@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { randomBytes } from "node:crypto";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import { parseArgs } from "node:util";
@@ -42,6 +43,7 @@ if (!state || !isGroupAlive(state.apiPgid) || !isGroupAlive(state.webPgid)) {
 }
 
 const journeyName = basename(journeyPath).replace(/\.[^.]+$/, "");
+const run = `${journeyName}-${signIn}`;
 const out = resolve(values.out ?? resolve(EVIDENCE_ROOT, `${stamp()}-${journeyName}`));
 mkdirSync(out, { recursive: true });
 
@@ -59,13 +61,14 @@ const query = async (text: string, params: unknown[] = []) => (await db.query(te
 let failed = false;
 for (const device of devices) {
 	const { descriptor, browser: browserName } = DEVICES[device];
-	const log = resolve(out, `${device}.log`);
+	const log = resolve(out, `${run}-${device}.log`);
 	const note = (line: string) => appendFileSync(log, `${new Date().toISOString()} ${line}\n`);
 	const browser = await (browserName === "webkit" ? webkit : chromium).launch();
 	const context = await browser.newContext({
 		...descriptors[descriptor],
 		baseURL: state.webUrl,
-		recordVideo: { dir: resolve(out, `${device}-video`) },
+		extraHTTPHeaders: { "x-forwarded-for": `10.${[...randomBytes(3)].join(".")}` },
+		recordVideo: { dir: resolve(out, `${run}-${device}-video`) },
 	});
 	await context.tracing.start({ screenshots: true, snapshots: true });
 	const page = await context.newPage();
@@ -80,7 +83,7 @@ for (const device of devices) {
 	let shots = 0;
 	const shot = async (name: string) => {
 		shots += 1;
-		const file = resolve(out, `${device}-${String(shots).padStart(2, "0")}-${name}.png`);
+		const file = resolve(out, `${run}-${device}-${String(shots).padStart(2, "0")}-${name}.png`);
 		await page.screenshot({ path: file, fullPage: true });
 		note(`shot ${basename(file)} at ${page.url()}`);
 		return file;
@@ -104,7 +107,7 @@ for (const device of devices) {
 		note(`journey failed: ${describeError(error)}`);
 		console.error(`verify: ${journeyName} FAILED on ${device}: ${describeError(error)}`);
 	} finally {
-		await context.tracing.stop({ path: resolve(out, `${device}-trace.zip`) });
+		await context.tracing.stop({ path: resolve(out, `${run}-${device}-trace.zip`) });
 		await context.close();
 		await browser.close();
 	}
