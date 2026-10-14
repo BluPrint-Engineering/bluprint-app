@@ -83,7 +83,8 @@
 				{
 					"tsconfig": {
 						"module": "commonjs",
-						"moduleResolution": "node10"
+						"moduleResolution": "node10",
+						"isolatedModules": true
 					}
 				}
 			]
