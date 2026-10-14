@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 27/09/2026 — novos RF-139 a RF-142, RF-215 e RF-216, da spec da lista de obras.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 14/10/2026, novo RF-217, do refinamento da nova obra.
 
 ---
 
@@ -127,6 +127,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-214 | Exclusão definitiva de um item arquivado, restrita a gerente de obra e admin, com confirmação que informa exatamente o que será perdido ("12 pins, 8 fotos, 2 plantas") | S |
 | RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin marca a obra como entregue e pode reabri-la | M |
 | RF-216 | Obra **entregue** fica congelada: ninguém cria, edita, conclui ou exclui pin, foto, planta ou estrutura até ela ser reaberta. Relatórios são exportados em qualquer status | M |
+| RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento, inclusive entregue, para corrigir o nome. Renomear não libera a licença: a obra nunca é apagada, e o que já tem conteúdo é arquivado (RF-210), então uma obra não vira outra obra com a mesma licença | M |
 
 ## 3. Empresas executoras
 

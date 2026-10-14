@@ -21,6 +21,10 @@ _Avoid_: site, work, construction
 Either *active* (*em andamento*) or *delivered* (*entregue*), set and reverted by an admin or a manager. A delivered project's content is frozen until it is reopened; reports export in either status.
 _Avoid_: archived, finished, closed
 
+**Project configuration** (pt-BR: *configuração da obra*):
+What sets a project up for work to be recorded in it: its name, status, structure, project memberships, disciplines and contractors. The admin and everyone on the project edit it, each within their role; whatever already holds content is archived, never deleted.
+_Avoid_: settings, setup
+
 **Last activity** (pt-BR: *última atividade*):
 When anyone last changed a project's operational content: pins, photos, plans or structure. Reading and exporting are not activity.
 
@@ -47,7 +51,7 @@ BluPrint staff. Sees organization and license metadata only, never project conte
 _Avoid_: super admin, superuser
 
 **Admin** (pt-BR: *admin da construtora*, *gerente geral*):
-The top role of an organization. Sees every project in it, read-and-export only on operational content.
+The top role of an organization. Sees every project in it and edits any project's configuration, but never records pins or changes pin and unit statuses: on that work it reads and exports only.
 _Avoid_: general manager, owner
 
 **Manager** (pt-BR: *gerente de obra*):
