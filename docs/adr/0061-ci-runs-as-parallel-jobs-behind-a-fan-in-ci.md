@@ -2,6 +2,8 @@
 
 Supersedes the single-job layout of [0018](0018-ci-runs-root-scripts.md), whose rule that CI calls the root scripts, and the order inside each job, stand; and the part of [0050](0050-playwright-for-end-to-end.md) that ran E2E inside the existing `ci` job.
 
+On a push to `main` only `static` runs, per [0064](0064-push-to-main-reruns-only-static.md); the rest stands.
+
 The one serial `ci` job took about 190s on a pull request (lint, typecheck, build, tests, Playwright setup and e2e in sequence) and grew with every suite added. `.github/workflows/ci.yml` now has four jobs:
 
 - `static`: `bun run lint`, `typecheck`, `build`, then `git diff --exit-code` on `routeTree.gen.ts`, in that order.
