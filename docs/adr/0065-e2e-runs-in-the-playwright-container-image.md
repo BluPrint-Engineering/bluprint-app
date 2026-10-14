@@ -12,7 +12,26 @@ The job now declares `container: mcr.microsoft.com/playwright:v<version>-noble`,
 - **The Postgres service is reached at host `postgres`.** Inside a job container the service is a sibling on a Docker network, not a port on the runner's `localhost`. `DATABASE_URL_E2E`, the only database variable `e2e` reads, is set on the job itself; the workflow-level `DATABASE_URL` and `DATABASE_URL_TEST` serve `test`, which runs on the runner. The API and Vite servers Playwright starts live in the same container, so `localhost` for them is unchanged.
 - **The seed's remote-host guard is satisfied, not bypassed.** `resolveSeedTarget` refuses any host but `localhost` until `SEED_ALLOW_HOST` names it and `SEED_PASSWORD` is set, so the job sets `SEED_ALLOW_HOST=postgres`, and `apps/e2e/prepare-database.ts` hands the seed the password the Playwright login uses, so it has one source. The target is the job's own throwaway service container.
 - **Bun comes from npm in this job.** The image has no `unzip`, which `oven-sh/setup-bun` needs on a cache miss, so `setup-workspace` takes `job-container: "true"` and runs `npm install --global bun@<version>` instead; the other jobs keep `setup-bun`, and both read the version from the one step in that file that pins it.
-- **`e2e` installs dependencies without the Bun install cache.** The image has no `zstd` either, so `actions/cache` falls back to gzip there: it cannot restore the zstd archive the runner jobs save, and its own archive of the roughly 1 GB cache measured 37s to save and 10s to restore, plus 4s of warm install, against 7s for a cold `bun install`. Skipping the cache is the fast path, not a fallback.
+- **`e2e` installs dependencies without the Bun install cache, because a cold install is faster there.** The image has no `zstd` either, so `actions/cache` falls back to gzip: it cannot restore the zstd archive the runner jobs save, and an archive of its own is slower than a cold `bun install`. Measured in `mcr.microsoft.com/playwright:v1.63.0-noble` (x86_64, 8 CPUs, Bun 1.4.0, this `bun.lock`), three runs each:
+
+  | Path | Time |
+  | --- | --- |
+  | Cold `bun install --frozen-lockfile` | 6.7s, 5.3s, 5.3s |
+  | Cache restore (gzip `tar -xz` of 253 MB) + warm install | 9.8s + 1.3s, 8.9s + 0.6s, 9.5s + 0.6s |
+  | Cache save (gzip `tar -cz` of the 996 MB cache) | 36.0s, once per new `bun.lock` |
+
+  The restore figure leaves out downloading the 253 MB archive, which a real restore adds. Commands, run inside the image with the repository's `package.json` files and `bun.lock` copied to `/work` (`--ignore-scripts` only because the copy omits `scripts/install-hooks.sh`, which both paths run alike in CI):
+
+  ```bash
+  npm install --global bun@1.4.0
+  rm -rf ~/.bun/install/cache node_modules apps/*/node_modules packages/*/node_modules
+  time bun install --frozen-lockfile --ignore-scripts                     # cold
+  time tar -cz -f /tmp/cache.tgz -P -C /work ~/.bun/install/cache         # save
+  rm -rf ~/.bun/install/cache node_modules apps/*/node_modules packages/*/node_modules
+  time tar -xz -f /tmp/cache.tgz -P -C /work                              # restore
+  time bun install --frozen-lockfile --ignore-scripts                     # warm
+  ```
+
 - **Both projects, the retries and the report upload are untouched**: `iPhone 13` on WebKit, `Desktop Chrome`, `retries: 2` on CI, the `playwright-report` artifact, and the required check name `ci`.
 - **`static` on a push to `main` no longer saves a browser cache.** Nothing restores one, so the step has no reason to exist; the Bun install cache that `setup-workspace` saves there is still what `static` and `test` restore on later pull requests.
 - **The image is pulled on every run.** Its pull replaces the cache restore and the `apt` step; the trade is measured in the pull request that introduced it.
