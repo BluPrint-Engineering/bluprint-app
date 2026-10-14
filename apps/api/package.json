@@ -10,7 +10,7 @@
 		"test": "NODE_OPTIONS=--experimental-vm-modules jest",
 		"test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns \"\\.int-spec\\.ts$\"",
 		"test:int": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns \"\\.int-spec\\.ts$\"",
-		"typecheck": "tsc --noEmit",
+		"typecheck": "tsc -p tsconfig.typecheck.json",
 		"build": "nest build",
 		"lint": "eslint . && prettier --check .",
 		"lint:fix": "eslint . --fix && prettier --write .",
