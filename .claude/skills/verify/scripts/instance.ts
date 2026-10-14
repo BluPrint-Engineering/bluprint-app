@@ -26,6 +26,7 @@ import {
 const COMPOSE_DEFAULT_DATABASE_URL = "postgresql://bluprint:bluprint@localhost:5432/bluprint";
 const READY_TIMEOUT_MS = 90_000;
 const STOP_TIMEOUT_MS = 10_000;
+const PHASE_KILL_GRACE_MS = 5_000;
 const API_LOG = resolve(INSTANCE_DIR, "api.log");
 const WEB_LOG = resolve(INSTANCE_DIR, "web.log");
 
@@ -301,11 +302,19 @@ async function runPhase(name: string, args: string[], signal?: AbortSignal): Pro
 		stderr: "pipe",
 		signal,
 	});
+	let killTimer: Timer | undefined;
+	const killAfterGrace = () => {
+		killTimer = setTimeout(() => child.kill("SIGKILL"), PHASE_KILL_GRACE_MS);
+	};
+	signal?.addEventListener("abort", killAfterGrace, { once: true });
 	const [stdout, stderr, exitCode] = await Promise.all([
 		new Response(child.stdout).text(),
 		new Response(child.stderr).text(),
 		child.exited,
-	]);
+	]).finally(() => {
+		clearTimeout(killTimer);
+		signal?.removeEventListener("abort", killAfterGrace);
+	});
 	const output = Bun.stripANSI(`${stdout}${stderr}`).trimEnd();
 	const ok = exitCode === 0;
 	console.log(`${ok ? "ok  " : "FAIL"} ${name} (${((Date.now() - started) / 1000).toFixed(1)}s)`);
