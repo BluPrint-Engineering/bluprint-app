@@ -40,6 +40,12 @@ runs:
         restore-keys: |
           ${{ runner.os }}-bun-
 
+    - name: Trust the workspace checkout
+      if: inputs.job-container == 'true'
+      shell: bash
+      # The container runs as root over a workspace the runner user owns, and actions/checkout drops its safe.directory once it ends (actions/runner#2033).
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
     - name: Install dependencies
       shell: bash
       run: bun install --frozen-lockfile
