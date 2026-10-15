@@ -126,7 +126,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-213 | Cômodo em uso por algum pin não pode ser excluído. Pode ser **renomeado**, e o novo nome se propaga aos pins e aos relatórios | M |
 | RF-214 | Exclusão definitiva de um item arquivado, restrita a gerente de obra e admin, com confirmação que informa exatamente o que será perdido ("12 pins, 8 fotos, 2 plantas") | S |
 | RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin entrega a obra depois de confirmar, num diálogo, o que acontece. A entrega é definitiva: o app não reabre a obra, e uma obra entregue por engano só é reaberta pelo suporte da BluPrint, a pedido da construtora e com registro | M |
-| RF-216 | Obra **entregue** fica fechada de vez: ninguém cria, edita, conclui ou exclui pin, foto, planta, estrutura, equipe ou o nome da obra. Relatórios são exportados em qualquer status | M |
+| RF-216 | Obra **entregue** fica fechada de vez: nada nela muda. Ninguém cria, edita, conclui ou exclui pin, foto, planta, estrutura, equipe, disciplina, empresa executora ou o nome da obra. Relatórios são exportados em qualquer status | M |
 | RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento antes da entrega, para corrigir o nome. Renomear não libera a licença: a obra nunca é apagada, e o que já tem conteúdo é arquivado (RF-210), então uma obra não vira outra obra com a mesma licença | M |
 
 ## 3. Empresas executoras

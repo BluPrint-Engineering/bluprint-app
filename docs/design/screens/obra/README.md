@@ -4,9 +4,22 @@
 
 Three screens close epic #5 and open the obra itself: **Nova obra** (`/projects/new`), the **tela da obra**
 (início `/projects/:id` and configuração `/projects/:id/configuration`) and the **página não encontrada**.
-The tela da obra is drawn as its whole vision; this document marks what #46 builds. Product decisions from
-the refinement (form is a page, routes, who configures, RF-217 rename, `NO_FREE_LICENSE`, client-generated
-id per ADR 0068, hidden-not-faked sections, two not-found cases) are unchanged and not repeated here.
+The tela da obra is drawn as its whole vision; this document marks what #46 builds.
+
+## Decided
+
+| Topic | Decision |
+| --- | --- |
+| Where the form lives | Its own page, `/projects/new`, on mobile and desktop. Not a sheet, not a dialog. |
+| After creating | Go to `/projects/:id/configuration` of the new obra, toast "Obra “Casa Moinhos” criada." |
+| Two routes for the obra | `/projects/:id` = início (the everyday entry, later the dashboard and the navigation); `/projects/:id/configuration` = configuração. The list card opens the início; the list's "Nova obra" links to `/projects/new`. |
+| Who configures | The admin and everyone on the obra, each within their role (ADR 0067, glossary term *Project configuration*). |
+| Rename | RF-217: gerente de obra or admin rename the obra any time before delivery. The assistente does not. Renaming never frees the license. |
+| Deliver (RF-215, RF-216) | Admin or gerente, after a confirmation dialog. Final: no reopen in the app, nothing on a delivered obra changes, its name included; only BluPrint support reopens one delivered by mistake (ADR 0069). Built in a later ticket of the obra screen, not in #46. |
+| No license | Recognized by the API's `NO_FREE_LICENSE` code; the sentence is always "Sem licenças disponíveis. Fale com a BluPrint." |
+| Retry is safe | The page generates the obra id when it opens; resending answers the obra already created, never a second one (ADR 0068). |
+| Hidden, not faked | Sections whose epic is not built are **not shown** in the app, never "em breve". The design shows them all; this handoff marks which ship with #46. |
+| Not found | Two cases: a route that does not exist, and an obra that does not exist or the person cannot see (the API answers 404 for both, to reveal nothing). Without a session the route guard sends the person to `/login`; the not-found page is never the answer to "not signed in". |
 
 ## About the design files
 
@@ -51,6 +64,8 @@ Breakpoint **768px**. App header (logo + user menu) exactly as on Obras: 56px mo
   disponível." / no license: "Sem licenças disponíveis. Fale com a BluPrint.". Loading: Skeleton 220 × 16.
   Count failed: line hidden.
 - Field "Nome da obra", Input placeholder "Ex.: Casa Moinhos", `autoComplete="off"`, autofocus ≥ 768px only.
+- Validation on the client before sending, same rules as the API (trimmed, 1–120 characters); the error is
+  icon + text under the field, never a red border alone. A repeated name is allowed and gets no warning.
 - Button `lg` 52px, full width, "Criar obra". Sending: spinner + "Criando obra…", field disabled, submit
   ignored.
 - Alert (danger, no title) at the top of the form for API failures.
@@ -146,9 +161,9 @@ of it. #46 does not render it: the header badge already shows the status.
 - **Confirmation (C5)**: an AlertDialog (`.claude/skills/bluprint-design/components/overlay/AlertDialog.*`), centered on
   desktop (max-width 30rem, padding 24px, `--popover`, radius 14px, `--shadow-lg`, `--overlay` scrim) and the
   DS Sheet on mobile (footer buttons `lg` full width, primary on top).
-  - Title "Entregar “Casa Moinhos”?". Text "A entrega fecha a obra de vez. Depois de confirmar:" then four lines
-    with an 18px muted icon: `lock` "Ninguém mais cria, altera ou exclui pins, fotos, plantas, estrutura, equipe
-    ou o nome da obra." · `x` "A obra não pode ser reaberta." · `circle-check` "Os relatórios continuam
+  - Title "Entregar “Casa Moinhos”?". Text "A entrega fecha a obra de vez. Depois de confirmar:" then three lines
+    with an 18px muted icon: `lock` "Ninguém mais cria, altera ou exclui pins, fotos, plantas, estrutura, equipe,
+    disciplinas, empresas executoras ou o nome da obra: nada mais na obra muda." · `x` "A obra não pode ser reaberta." · `circle-check` "Os relatórios continuam
     disponíveis para exportar." The license is not mentioned: creating the obra already said one is spent.
   - Checkbox "Entendi que a obra não poderá ser reaberta." The primary `circle-check` "Entregar obra" stays
     disabled until it is checked: one deliberate step more than a click, without typing the obra name (names
@@ -246,10 +261,19 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 
 ## What the API serves today vs. future
 
-Unchanged from the brief: create (served, gains `id`), licenses, one obra and rename ship with #46; structure,
-team, disciplines, contractors, dashboard with their epics. Changed: deliver is a later ticket and is final (no
-reopen route); a delivered obra refuses rename too. The delivered line "Entregue em … por …" needs who and when
-the obra was delivered, which `project` does not store today (`status` only).
+| Element | Status |
+| --- | --- |
+| `POST /api/projects` `{ name }` → `ProjectSummary`, `409 NO_FREE_LICENSE` | Served; gains the client-generated `id` (ADR 0068) in #46 |
+| Available licenses `GET /api/organization/licenses` → `{ available }`, admin only | #46 |
+| One obra `GET /api/projects/:id` (same visibility as the list, 404 otherwise) | #46 |
+| Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente; refused on a delivered obra | #46 |
+| Deliver, admin or gerente; final, no reopen route (ADR 0069) | Later ticket of the obra screen |
+| Structure, team, disciplines, contractors | Their epics (#6, #11, #8, #9); no table migrated yet |
+| Dashboard, unit map, navigation | #13, #6 |
+
+`ProjectSummary` already carries id, name, status, createdAt, lastActivityAt and the caller's role. The
+delivered line "Entregue em … por …" needs who and when the obra was delivered, which `project` does not store
+today (`status` only).
 
 ## Components and assets
 

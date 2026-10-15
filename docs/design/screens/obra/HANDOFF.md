@@ -65,7 +65,8 @@ Cancelar · "Não foi possível salvar o nome. Confira sua conexão e tente de n
 não pode mais ser alterado." · Status da obra · "A equipe registra e resolve pendências. Entregue a obra quando
 ela for passada ao cliente: depois disso ela fica fechada e não pode ser reaberta." · Entregar obra · Entregando
 obra… · "Entregar “Casa Moinhos”?" · "A entrega fecha a obra de vez. Depois de confirmar:" · "Ninguém mais cria,
-altera ou exclui pins, fotos, plantas, estrutura, equipe ou o nome da obra." · "A obra não pode ser reaberta." ·
+altera ou exclui pins, fotos, plantas, estrutura, equipe, disciplinas, empresas executoras ou o nome da
+obra: nada mais na obra muda." · "A obra não pode ser reaberta." ·
 "Os relatórios continuam disponíveis para exportar." · "Entendi que a obra não poderá ser reaberta." · "Não foi possível entregar a obra. Confira sua conexão
 e tente de novo." · "Obra “Casa Moinhos” entregue." · "Entregue em 14/10/2026 por Rafael Souza. A obra está
 fechada: nada mais pode ser alterado. Os relatórios continuam disponíveis."

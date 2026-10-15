@@ -283,7 +283,7 @@
       <div style="display:grid; gap:var(--space-4)">
           <p style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); text-wrap:pretty">A entrega fecha a obra de vez. Depois de confirmar:</p>
           <ul style="margin:0; padding:0; list-style:none; display:grid; gap:var(--space-2); font-size:var(--text-sm); line-height:var(--leading-normal)">
-            <sc-for list="{{ deliverFacts }}" as="f" hint-placeholder-count="4">
+            <sc-for list="{{ deliverFacts }}" as="f" hint-placeholder-count="3">
               <li style="display:grid; grid-template-columns:18px minmax(0,1fr); gap:var(--space-2); align-items:start">
                 <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ f.icon }}" size="{{ 18 }}" style="margin-top:1px; color:var(--muted-foreground)" hint-size="18px,18px"></x-import>
                 <span style="text-wrap:pretty">{{ f.text }}</span>
@@ -305,7 +305,7 @@
         <div style="display:grid; gap:var(--space-4)">
           <p style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); text-wrap:pretty">A entrega fecha a obra de vez. Depois de confirmar:</p>
           <ul style="margin:0; padding:0; list-style:none; display:grid; gap:var(--space-2); font-size:var(--text-sm); line-height:var(--leading-normal)">
-            <sc-for list="{{ deliverFacts }}" as="f" hint-placeholder-count="4">
+            <sc-for list="{{ deliverFacts }}" as="f" hint-placeholder-count="3">
               <li style="display:grid; grid-template-columns:18px minmax(0,1fr); gap:var(--space-2); align-items:start">
                 <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ f.icon }}" size="{{ 18 }}" style="margin-top:1px; color:var(--muted-foreground)" hint-size="18px,18px"></x-import>
                 <span style="text-wrap:pretty">{{ f.text }}</span>
@@ -566,7 +566,7 @@ class Component extends DCLogic {
     ];
 
     const deliverFacts = [
-      { icon: "lock", text: "Ninguém mais cria, altera ou exclui pins, fotos, plantas, estrutura, equipe ou o nome da obra." },
+      { icon: "lock", text: "Ninguém mais cria, altera ou exclui pins, fotos, plantas, estrutura, equipe, disciplinas, empresas executoras ou o nome da obra: nada mais na obra muda." },
       { icon: "x", text: "A obra não pode ser reaberta." },
       { icon: "circle-check", text: "Os relatórios continuam disponíveis para exportar." },
     ];
