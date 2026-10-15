@@ -85,7 +85,7 @@
             </a>
             <sc-if value="{{ showConfigIcon }}" hint-placeholder-val="{{ false }}">
               <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" size="icon" aria-label="Configuração da obra" onClick="{{ goConfig }}" hint-size="44px,44px">
-                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="settings" base-path="./icons" size="{{ 20 }}" hint-size="20px,20px"></x-import>
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="settings" size="{{ 20 }}" hint-size="20px,20px"></x-import>
               </x-import>
             </sc-if>
           </div>
@@ -110,7 +110,7 @@
               </div>
               <sc-if value="{{ showConfigBtn }}" hint-placeholder-val="{{ false }}">
                 <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ goConfig }}" hint-size="200px,44px">
-                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="settings" base-path="./icons" size="{{ 20 }}" hint-size="20px,20px"></x-import>Configuração da obra
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="settings" size="{{ 20 }}" hint-size="20px,20px"></x-import>Configuração da obra
                 </x-import>
               </sc-if>
             </div>
@@ -124,7 +124,7 @@
 
         <sc-if value="{{ showBlock }}" hint-placeholder-val="{{ false }}">
           <div role="{{ blockRole }}" style="display:grid; justify-items:center; gap:var(--space-4); text-align:center; padding:{{ blockPad }}; max-width:26rem; width:100%; margin:0 auto; color:var(--muted-foreground)">
-            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ blockIcon }}" base-path="{{ blockIconBase }}" size="{{ 24 }}" hint-size="24px,24px"></x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ blockIcon }}" size="{{ 24 }}" hint-size="24px,24px"></x-import>
             <div style="display:grid; gap:var(--space-1)">
               <sc-if value="{{ blockIsH1 }}" hint-placeholder-val="{{ false }}">
                 <h1 style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); color:var(--foreground)">{{ blockTitle }}</h1>
@@ -175,7 +175,7 @@
               <nav aria-label="Seções da configuração" style="position:sticky; top:88px; display:grid; gap:2px">
                 <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
                   <a href="{{ n.href }}" onClick="{{ n.go }}" aria-current="{{ n.current }}" style="display:flex; align-items:center; gap:var(--space-3); min-height:var(--tap-min); padding:0 var(--space-3); border-radius:var(--radius-lg); font-size:var(--text-sm); font-weight:500; text-decoration:none; color:{{ n.color }}; background:{{ n.bg }}; transition:background var(--duration-fast) var(--ease-standard)" style-hover="color:var(--foreground); background:var(--muted)">
-                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ n.icon }}" base-path="{{ n.base }}" size="{{ 18 }}" hint-size="18px,18px"></x-import>{{ n.label }}
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ n.icon }}" size="{{ 18 }}" hint-size="18px,18px"></x-import>{{ n.label }}
                   </a>
                 </sc-for>
               </nav>
@@ -197,7 +197,7 @@
                           </div>
                           <sc-if value="{{ canRename }}" hint-placeholder-val="{{ true }}">
                             <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ startRename }}" hint-size="130px,44px">
-                              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="pencil" base-path="./icons" size="{{ 18 }}" hint-size="18px,18px"></x-import>Renomear
+                              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="pencil" size="{{ 18 }}" hint-size="18px,18px"></x-import>Renomear
                             </x-import>
                           </sc-if>
                         </div>
@@ -333,7 +333,6 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;manager&quot;,&quot;assistant&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'manager'|'assistant'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new&quot;,&quot;home&quot;,&quot;configuration&quot;,&quot;not-found&quot;],&quot;default&quot;:&quot;new&quot;,&quot;tsType&quot;:&quot;'new'|'home'|'configuration'|'not-found'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;last-license&quot;,&quot;invalid-empty&quot;,&quot;invalid-long&quot;,&quot;sending&quot;,&quot;no-license-submit&quot;,&quot;no-license-open&quot;,&quot;failed&quot;,&quot;count-loading&quot;,&quot;blank&quot;,&quot;blank-structure&quot;,&quot;delivered&quot;,&quot;loading&quot;,&quot;error&quot;,&quot;offline&quot;,&quot;vision&quot;,&quot;created&quot;,&quot;hub&quot;,&quot;renaming&quot;,&quot;rename-invalid&quot;,&quot;rename-saving&quot;,&quot;rename-failed&quot;,&quot;deliver-confirm&quot;,&quot;deliver-sending&quot;,&quot;deliver-failed&quot;,&quot;route&quot;,&quot;project&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;vision&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;licensesAvailable&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:5,&quot;default&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;submitResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;no-license&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'no-license'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;renameResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;deliverResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;framed&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
-const ICONS = "./icons";
 const USERS = {
   admin: { name: "Carla Mendes", email: "carla@construtoraatlas.com.br" },
   manager: { name: "Rafael Souza", email: "rafael.souza@construtoraatlas.com.br" },
@@ -529,12 +528,12 @@ class Component extends DCLogic {
     let block = null;
     if (isNF) block = st.notFound === "project"
       ? { icon: "building", title: "Obra não encontrada", desc: "Ela não existe ou você não tem acesso a ela.", back: true, h1: true }
-      : { icon: "map-pin-off", base: ICONS, title: "Página não encontrada", desc: "O endereço pode estar errado ou a página mudou de lugar.", back: true, h1: true };
+      : { icon: "map-pin-off", title: "Página não encontrada", desc: "O endereço pode estar errado ou a página mudou de lugar.", back: true, h1: true };
     else if (isProject && phase === "error") block = { icon: "circle-alert", title: "Não foi possível carregar a obra", desc: "Confira sua conexão e tente de novo.", retry: true, role: "alert", h1: true };
     else if (isProject && phase === "offline") block = { icon: "wifi-off", title: "Sem conexão.", desc: "Continuamos assim que a internet voltar.", h1: true };
     else if (isHome && ready && !vision && !st.delivered) block = st.structureCta
-      ? { icon: "layers", base: ICONS, title: "A obra ainda não tem estrutura", desc: "Cadastre torres, andares e unidades para começar a mapear pendências.", configure: true }
-      : { icon: "layers", base: ICONS, title: "A obra ainda não tem estrutura", desc: "As pendências aparecem aqui quando a obra tiver estrutura." };
+      ? { icon: "layers", title: "A obra ainda não tem estrutura", desc: "Cadastre torres, andares e unidades para começar a mapear pendências.", configure: true }
+      : { icon: "layers", title: "A obra ainda não tem estrutura", desc: "As pendências aparecem aqui quando a obra tiver estrutura." };
 
     const chev = DS.Icon ? h(DS.Icon, { name: "chevron-down", size: 16, style: { color: "var(--muted-foreground)" } }) : null;
     const menuTrigger = DS.Button ? h(DS.Button, {
@@ -543,12 +542,12 @@ class Component extends DCLogic {
     }, h(DS.Avatar, { name: user.name, size: "md" }), desk ? h("span", null, user.name) : null, desk ? chev : null) : h("span");
 
     const navDefs = [
-      ["dados-da-obra", "Dados da obra", "building"], ["status-da-obra", "Status da obra", "circle-check"], ["estrutura", "Estrutura", "layers", ICONS], ["equipe", "Equipe", "users", ICONS],
-      ["disciplinas", "Disciplinas", "wrench", ICONS], ["empresas-executoras", "Empresas executoras", "hard-hat"],
+      ["dados-da-obra", "Dados da obra", "building"], ["status-da-obra", "Status da obra", "circle-check"], ["estrutura", "Estrutura", "layers"], ["equipe", "Equipe", "users"],
+      ["disciplinas", "Disciplinas", "wrench"], ["empresas-executoras", "Empresas executoras", "hard-hat"],
     ];
-    const navItems = navDefs.map(([id, label, icon, base]) => {
+    const navItems = navDefs.map(([id, label, icon]) => {
       const cur = st.section === id;
-      return { href: "#" + id, label, icon, base, go: this.goSection(id), current: cur ? "true" : undefined,
+      return { href: "#" + id, label, icon, go: this.goSection(id), current: cur ? "true" : undefined,
         color: cur ? "var(--accent-foreground)" : "var(--muted-foreground)", bg: cur ? "var(--accent)" : "transparent" };
     });
     const futureSections = [
@@ -640,7 +639,6 @@ class Component extends DCLogic {
       showBlock: !!block,
       blockRole: block && block.role ? block.role : "status",
       blockIcon: block ? block.icon : "building",
-      blockIconBase: block ? block.base : undefined,
       blockTitle: block ? block.title : "",
       blockDesc: block ? block.desc : "",
       blockIsH1: !!(block && block.h1), blockIsH2: !!(block && !block.h1),

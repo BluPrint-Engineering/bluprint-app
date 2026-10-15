@@ -3,14 +3,12 @@
 Short version of `README.md`. Built from BluPrint design-system primitives (Alert, Avatar, Badge, Button, Checkbox,
 DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Sheet, Skeleton, Toast/Toaster) and AlertDialog. Two
 new primitive variants, a **destructive DropdownMenuItem** and AlertDialog's `actionVariant`, and eleven new lucide glyphs,
-added to the design system with this screen. `_ds_bundle.js` is generated and does not carry them yet, so the
-prototype loads the glyphs from `icons/` with `Icon basePath`.
+added to the design system with this screen, and carried by `_ds_bundle.js`.
 
 | File | What it is |
 | --- | --- |
 | `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role`, `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`, `createResult`, `removeResult`; also read from the URL |
 | `Estrutura QA.dc.html` | E1–E5, T1–T6, F1–F4, U1–U5, W1–W10, C1–C6, R1–R8 frozen, mobile + desktop, light + dark |
-| `icons/` | Glyphs the generated `_ds_bundle.js` does not carry yet |
 
 | Screen | Route | #6 builds |
 | --- | --- | --- |

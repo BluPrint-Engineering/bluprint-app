@@ -3,15 +3,13 @@
 Short version of `README.md`. Built from BluPrint design-system primitives (Alert, Avatar, Badge, Button,
 Card, Checkbox, DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Sheet, Skeleton, Toast/Toaster).
 **One new primitive, AlertDialog** (deliver confirmation), and six new lucide glyphs: `settings`, `pencil`,
-`layers`, `users`, `wrench`, `map-pin-off`, all in `.claude/skills/bluprint-design/`. The generated
-`_ds_bundle.js` does not carry them yet, so the prototype draws the dialog inline and loads the glyphs from
-`icons/` with `Icon basePath`.
+`layers`, `users`, `wrench`, `map-pin-off`, all in `.claude/skills/bluprint-design/` and carried by
+`_ds_bundle.js`; the prototype draws the dialog inline.
 
 | File | What it is |
 | --- | --- |
 | `Obra.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `screen` (new / home / configuration / not-found), `state`, `vision`, `licensesAvailable`, `submitResult`, `renameResult`, `deliverResult` |
 | `Obra QA.dc.html` | N1–N8, P1–P5 (with P1c), C1–C6, X1–X2 frozen, mobile + desktop, light + dark |
-| `icons/` | The six new lucide glyphs |
 
 | Screen | Route | #46 builds |
 | --- | --- | --- |
