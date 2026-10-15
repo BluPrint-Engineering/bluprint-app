@@ -263,7 +263,9 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
 - **R1 empty leaf**: deleted at once, toast "Unidade 904 excluída." with outline `sm` "Desfazer" (`undo-2`), 6s.
   Undo recreates it with the same id.
 - **R2 empty with children**: "Excluir o 9º andar?" · "O 9º andar não tem pins, plantas nem dados. As 4 unidades e a
-  área comum dele também são excluídas." · Cancelar / destructive "Excluir" (`trash-2`).
+  área comum dele também são excluídas." · Cancelar / destructive "Excluir" (`trash-2`). A tower counts its floors,
+  their units and its own common areas: "A Torre B não tem pins, plantas nem dados. Os 10 andares, as 20 unidades e a
+  área comum dela também são excluídos." Each count is singular or plural as it falls, and a zero count is left out.
 - **R3 with content** (built with #7): "Arquivar o 9º andar?" · "O 9º andar tem conteúdo registrado em campo, então
   ele não é excluído:" then `archive` "Guarda 12 pins, 2 plantas e os dados de 3 unidades, com as 4 unidades e o
   hall." · `eye-off` "Sai da fachada, das contagens e dos relatórios." · `archive-restore` "O gerente de obra ou o
@@ -271,8 +273,9 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
   "9º andar arquivado.". Anyone who edits may archive.
 - **R4 excluir de vez** (RF-214, manager or admin, built with #7): "Excluir de vez o 9º andar?" · "Isto apaga para
   sempre, sem como recuperar:" with three `trash-2` lines ("15 pins e as 38 fotos deles", "2 plantas", "4 unidades e
-  o hall, com os dados das unidades"), counting what was archived inside it before it, like 902 · Checkbox "Entendi
-  que não dá para desfazer." · destructive "Excluir de vez", disabled until checked.
+  o hall, com os dados das unidades"), counting what was archived inside it before it, like 902, which leaves the list
+  with it; each archived item counts its own subtree (902: "3 pins e as 7 fotos deles", "os dados da unidade") ·
+  Checkbox "Entendi que não dá para desfazer." · destructive "Excluir de vez", disabled until checked.
 - **R5 restore, name taken** (built with #7): "Restaurar o Salão de festas?" · "Já existe uma área comum Salão de festas
   na Torre A, criada depois. Dê outro nome para o restaurado." · Field "Nome" prefilled "Salão de festas (antigo)" ·
   primary "Restaurar". Without a conflict the dialog only says "Volta para onde estava, com pins, fotos e plantas."

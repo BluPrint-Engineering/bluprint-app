@@ -342,9 +342,9 @@ class Component extends DCLogic {
     const t = p.data.towers[0];
     const f9 = t && (t.floors.find(f => f.num === 9) || t.floors[t.floors.length - 1]);
     const archivedSample = [
-      { id: "x1", name: "9º andar", path: "Torre B", content: "12 pins · 2 plantas · 3 unidades e o hall", by: "Ana Lima", at: "12/10/2026", restorable: true, kind: "floor" },
-      { id: "x2", name: "902", path: "Torre B › 9º andar", content: "3 pins · arquivada antes do andar", by: "Rafael Souza", at: "02/10/2026", restorable: false, blockedBy: "9º andar", blockedByKind: "floor", kind: "unit" },
-      { id: "x3", name: "Salão de festas", path: "Torre A", content: "1 planta · 5 pins", by: "Paula Rocha", at: "28/09/2026", restorable: true, kind: "area" },
+      { id: "x1", name: "9º andar", path: "Torre B", content: "12 pins · 2 plantas · 3 unidades e o hall", by: "Ana Lima", at: "12/10/2026", restorable: true, kind: "floor", lost: ["15 pins e as 38 fotos deles", "2 plantas", "4 unidades e o hall, com os dados das unidades"] },
+      { id: "x2", name: "902", path: "Torre B › 9º andar", content: "3 pins · arquivada antes do andar", by: "Rafael Souza", at: "02/10/2026", restorable: false, blockedBy: "9º andar", blockedByKind: "floor", within: "x1", kind: "unit", lost: ["3 pins e as 7 fotos deles", "os dados da unidade"] },
+      { id: "x3", name: "Salão de festas", path: "Torre A", content: "1 planta · 5 pins", by: "Paula Rocha", at: "28/09/2026", restorable: true, kind: "area", lost: ["5 pins e as 12 fotos deles", "1 planta"] },
     ];
     const W = (extra) => Object.assign(wizardDefault(false), extra);
     const map = {
@@ -1039,9 +1039,17 @@ class Component extends DCLogic {
     let title = "", body = null, action = null, role = "alertdialog";
     if (dg.kind === "delete") {
       const n = ix[dg.target] ? ix[dg.target].node : { kind: "floor", name: "9º andar", units: [], areas: [] };
-      const kids = (n.units || []).length, areas = (n.areas || []).length;
+      const floors = n.floors || [];
+      const parts = [
+        { n: floors.length, one: "andar", many: "andares", fem: false },
+        { n: n.kind === "tower" ? floors.reduce((s, f) => s + f.units.length, 0) : (n.units || []).length, one: "unidade", many: "unidades", fem: true },
+        { n: (n.areas || []).length, one: "área comum", many: "áreas comuns", fem: true },
+      ].filter(x => x.n > 0).map(x => ({ fem: x.fem, many: x.n > 1, text: x.n === 1 ? (x.fem ? "a " : "o ") + x.one : (x.fem ? "as " : "os ") + x.n + " " + x.many }));
+      const list = parts.map(x => x.text).join(", ").replace(/, ([^,]*)$/, " e $1");
+      const several = parts.length > 1 || parts.some(x => x.many);
+      const cascade = parts.length ? list.charAt(0).toUpperCase() + list.slice(1) + (feminine(n.kind) ? " dela" : " dele") + " também " + (several ? "são " : "é ") + "excluíd" + (parts.some(x => !x.fem) ? "o" : "a") + (several ? "s." : ".") : "";
       title = "Excluir " + article(n.kind) + n.name + "?";
-      body = [para(article(n.kind).toUpperCase() + n.name + " não tem pins, plantas nem dados. " + (kids ? "As " + plural(kids, "unidade", "unidades") + (areas ? " e " + (areas === 1 ? "a área comum" : "as " + areas + " áreas comuns") : "") + (feminine(n.kind) ? " dela" : " dele") + " também são excluídas." : ""))];
+      body = [para(article(n.kind).toUpperCase() + n.name + " não tem pins, plantas nem dados. " + cascade)];
       action = { label: "Excluir", icon: "trash-2", variant: "destructive", go: () => this.doDelete(dg.target) };
     } else if (dg.kind === "archive") {
       const n = ix[dg.target] ? ix[dg.target].node : { kind: "floor", name: "9º andar" };
@@ -1053,11 +1061,11 @@ class Component extends DCLogic {
       ])];
       action = { label: "Arquivar", icon: "archive", variant: "default", go: () => { this.setState({ dialog: null }); this.toastFor(n.name + " " + agree(n.kind, "arquivad") + ".", "default"); } };
     } else if (dg.kind === "purge") {
-      const a = st.archived.find(x => x.id === dg.target) || { kind: "floor", name: "9º andar" };
+      const a = st.archived.find(x => x.id === dg.target) || { kind: "floor", name: "9º andar", lost: [] };
       title = "Excluir de vez " + article(a.kind) + a.name + "?";
-      body = [para("Isto apaga para sempre, sem como recuperar:"), facts([["trash-2", "15 pins e as 38 fotos deles"], ["trash-2", "2 plantas"], ["trash-2", "4 unidades e o hall, com os dados das unidades"]]),
+      body = [para("Isto apaga para sempre, sem como recuperar:"), facts(a.lost.map(text => ["trash-2", text])),
         h(DS.Checkbox, { key: "ack", label: "Entendi que não dá para desfazer.", checked: !!dg.ack, onChange: ev => this.setState({ dialog: Object.assign({}, dg, { ack: ev.target.checked }) }) })];
-      action = { label: "Excluir de vez", icon: "trash-2", variant: "destructive", disabled: !dg.ack, go: () => { this.setState({ dialog: null, archived: st.archived.filter(x => x.id !== dg.target) }); this.toastFor(a.name + " " + agree(a.kind, "excluíd") + " de vez.", "default"); } };
+      action = { label: "Excluir de vez", icon: "trash-2", variant: "destructive", disabled: !dg.ack, go: () => { this.setState({ dialog: null, archived: st.archived.filter(x => x.id !== dg.target && x.within !== dg.target) }); this.toastFor(a.name + " " + agree(a.kind, "excluíd") + " de vez.", "default"); } };
     } else if (dg.kind === "restore") {
       const a = st.archived.find(x => x.id === dg.target) || { name: "" };
       const conflict = a.id === "x3";
