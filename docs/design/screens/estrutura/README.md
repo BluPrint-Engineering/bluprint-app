@@ -212,9 +212,10 @@ com 4 unidades por andar."
    10px mono, the same aligned columns as T1; new floors in W9 with a dashed `--primary` border). On desktop the
    towers scroll inside the card (`max-height: calc(100dvh - 520px)`) so the button never leaves the screen.
 
-- **W5 validation**: on "Continuar" (mobile) or "Criar estrutura": "Informe o nome da torre.", "Informe o último
-  andar.", "O último andar precisa ser igual ou maior que o primeiro.", "De 1 a 30 unidades por andar." under the
-  fields; mobile goes back to step 1; the page scrolls to the first invalid field and focuses it.
+- **W5 validation**: on "Continuar" (mobile) or "Criar estrutura": "Informe o nome da torre.", "Informe o primeiro
+  andar.", "Informe o último andar.", "O último andar precisa ser igual ou maior que o primeiro." (only with both
+  filled), "De 1 a 30 unidades por andar." under the fields; mobile goes back to step 1; the page scrolls to the
+  first invalid field and focuses it.
 - **W6 sending**: "Criando estrutura…" with spinner; every control stays as it is, the button is the lock.
 - **W7 failure**: danger Alert in the Prévia, above the button: "Não foi possível criar a estrutura. Confira sua
   conexão e tente de novo. Nada foi salvo." Values kept. The request carries client-generated ids, so a retry never
@@ -243,10 +244,10 @@ the other epics. Sections are cards (padding 20px, radius 14px), h3 18px/600.
   salva. 44 unidades atualizadas."
 - **Arquivados** (built with #7, Q12): lead "Locais removidos que tinham pins, plantas ou dados. Não aparecem na
   navegação, nas contagens nem nos relatórios." (empty: "Nada arquivado. Um local removido com pins, plantas ou dados
-  aparece aqui e pode ser restaurado."). Rows: name + " · Torre B" path, "12 pins · 2 plantas · 4 unidades e o hall",
+  aparece aqui e pode ser restaurado."). Rows: name + " · Torre B" path, "12 pins · 2 plantas · 3 unidades e o hall",
   "Arquivado por Ana Lima em 12/10/2026" ("Arquivada" for a unit), then outline `sm` "Restaurar" (`archive-restore`) and a menu with "Excluir
   de vez". Only locations archived on their own are listed; one archived with its parent comes back with it, and one
-  archived before its parent shows "Volta junto quando o 9º andar for restaurado, ou depois dele." with no button.
+  archived before its parent shows "Pode ser restaurada depois que o 9º andar for restaurado." (the parent's name) with no button.
 - **C4 assistente**: no actions; `lock` "Só o gerente de obra ou o admin restaura ou exclui de vez."
 - **C6 delivered**: nothing editable; Arquivados with `lock` "A obra foi entregue: os arquivados não podem mais ser
   restaurados."

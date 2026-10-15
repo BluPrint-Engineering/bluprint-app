@@ -222,8 +222,9 @@ function validateWizard(w) {
   w.towers.slice(0, w.count).forEach((t, i) => {
     const from = parseInt(t.from, 10), to = parseInt(t.to, 10), u = parseInt(t.units, 10);
     if (w.count > 1 && !t.name.trim()) errors["name" + i] = "Informe o nome da torre.";
+    if (!t.from.trim()) errors["from" + i] = "Informe o primeiro andar.";
     if (!t.to.trim()) errors["to" + i] = "Informe o último andar.";
-    else if (!(to >= from)) errors["to" + i] = "O último andar precisa ser igual ou maior que o primeiro.";
+    else if (t.from.trim() && !(to >= from)) errors["to" + i] = "O último andar precisa ser igual ou maior que o primeiro.";
     if (!(u >= 1 && u <= 30)) errors["units" + i] = "De 1 a 30 unidades por andar.";
   });
   return errors;
@@ -338,7 +339,7 @@ class Component extends DCLogic {
     const t = p.data.towers[0];
     const f9 = t && (t.floors.find(f => f.num === 9) || t.floors[t.floors.length - 1]);
     const archivedSample = [
-      { id: "x1", name: "9º andar", path: "Torre B", content: "12 pins · 2 plantas · 4 unidades e o hall", by: "Ana Lima", at: "12/10/2026", restorable: true, kind: "floor" },
+      { id: "x1", name: "9º andar", path: "Torre B", content: "12 pins · 2 plantas · 3 unidades e o hall", by: "Ana Lima", at: "12/10/2026", restorable: true, kind: "floor" },
       { id: "x2", name: "902", path: "Torre B › 9º andar", content: "3 pins · arquivada antes do andar", by: "Rafael Souza", at: "02/10/2026", restorable: false, blockedBy: "9º andar", kind: "unit" },
       { id: "x3", name: "Salão de festas", path: "Torre A", content: "1 planta · 5 pins", by: "Paula Rocha", at: "28/09/2026", restorable: true, kind: "area" },
     ];
@@ -564,7 +565,6 @@ class Component extends DCLogic {
     this.enter("wizard", null, { phase: "ready", wizard: wizardDefault(!!extend), menu: null });
   }
 
-  // ---------- render helpers ----------
   facade(tower, desk, canEdit) {
     const h = React.createElement;
     const rows = [...tower.floors].reverse();
@@ -639,7 +639,6 @@ class Component extends DCLogic {
       action || null);
   }
 
-  // ---------- screens ----------
   homeBody(desk, canEdit) {
     const DS = window.BluPrintDesignSystem_d4fa62 || {};
     const h = React.createElement;
@@ -799,7 +798,6 @@ class Component extends DCLogic {
       children);
     const count = w.count;
 
-    // Step 1: towers
     const stepper = h("div", { style: { display: "flex", alignItems: "center", gap: "var(--space-2)" } },
       h(DS.Button, { variant: "outline", size: "icon", "aria-label": "Uma torre a menos", disabled: count <= 1, onClick: () => setW(ww => ({ count: Math.max(1, ww.count - 1) })) }, h("span", { style: { fontSize: "20px", lineHeight: 1 } }, "−")),
       h("span", { "aria-live": "polite", style: { minWidth: "48px", textAlign: "center", fontSize: "var(--text-lg)", fontWeight: 600, fontFamily: "var(--font-mono)" } }, count),
@@ -824,7 +822,6 @@ class Component extends DCLogic {
           h(DS.SegmentedControl, { label: "Numeração das unidades", block: !desk, options: [{ value: "number", label: "101, 102" }, { value: "letter", label: "1A, 1B" }], value: w.numbering, onChange: v => setW({ numbering: v }) }),
           h("span", { style: { fontSize: "var(--text-sm)", color: "var(--muted-foreground)" } }, "Depois, qualquer nome se troca na própria unidade."))));
 
-    // Step 2: common areas
     const tags = (list, onRemove) => h("div", { style: { display: "flex", flexWrap: "wrap", gap: "var(--space-2)" } },
       list.map((n, i) => h("span", { key: n + i, className: "es-tag" }, n, h("button", { type: "button", "aria-label": "Tirar " + n, onClick: () => onRemove(i) }, this.ic("x", 16)))));
     const addTag = (id, placeholder, onAdd) => h("form", { onSubmit: ev => { ev.preventDefault(); const inp = ev.currentTarget.elements[0]; if (inp.value.trim()) { onAdd(inp.value.trim()); inp.value = ""; } }, style: { display: "flex", gap: "var(--space-2)" } },
@@ -841,7 +838,6 @@ class Component extends DCLogic {
         group("Num andar só", "Para o que só existe ali, como o terraço da cobertura.", floorAreaRows.length ? this.listCard(floorAreaRows) : h("span", { style: { fontSize: "var(--text-sm)", color: "var(--muted-foreground)" } }, "Nenhuma.")),
         h(DS.Button, { variant: "ghost", iconStart: this.ic("plus", 18), style: { justifySelf: "start", color: "var(--primary)" }, onClick: () => setW(ww => ({ floorAreas: [...ww.floorAreas, { tower: Math.min(1, ww.count - 1), floor: ww.towers[Math.min(1, ww.count - 1)].to || "1", name: "Terraço" }] })) }, "Área comum num andar")));
 
-    // Step 3: unit types
     const types = TYPES0;
     const typeCards = types.map(t => h("div", { key: t.id, style: { display: "grid", alignContent: "start", gap: "var(--space-3)", padding: "var(--space-4)", borderRadius: "var(--radius-lg)", boxShadow: "var(--ring-hairline)", background: "var(--background)" } },
       h("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: "var(--space-2)", flexWrap: "wrap" } },
@@ -874,9 +870,8 @@ class Component extends DCLogic {
           h(DS.Button, { variant: "ghost", iconStart: this.ic("plus", 18), style: { justifySelf: "start", color: "var(--primary)" }, onClick: () => setW(ww => ({ rules: [...ww.rules, { tower: 0, finals: "todos", from: ww.towers[0].from, to: ww.towers[0].to, type: "ta" }] })) }, "Regra"),
           h("span", { style: { fontSize: "var(--text-sm)", color: "var(--muted-foreground)", textWrap: "pretty" } }, "Uma obra com todas as unidades iguais tem uma tipologia só, em todos os finais e andares. Unidade sem regra fica sem tipologia, e os cômodos dela se cadastram nela."))));
 
-    // Preview
-    const pv = previewFrom(w);
-    const pvTowers = pv.towers.map((t, i) => h("div", { key: i, style: { display: "grid", gap: "var(--space-2)" } },
+    const preview = previewFrom(w);
+    const previewTowers = preview.towers.map((t, i) => h("div", { key: i, style: { display: "grid", gap: "var(--space-2)" } },
       h("span", { style: { fontSize: "var(--text-sm)", fontWeight: 600 } }, t.name),
       t.invalid ? h("span", { style: { fontSize: "var(--text-sm)", color: "var(--destructive)" } }, "Confira os andares desta torre.") :
       h("div", { style: { display: "grid", gap: "3px" } }, t.rows.map((r, j) => {
@@ -888,8 +883,8 @@ class Component extends DCLogic {
           r.units.length ? h("span", { style: { gridColumn: (maxU + 2) + " / span 1", display: "grid", gap: "3px", minWidth: 0 } }, r.areas.map((a, k) => area(a, k))) :
             h("span", { style: { gridColumn: "2 / -1", display: "flex", gap: "3px", minWidth: 0 } }, r.areas.map((a, k) => area(a, k, { flex: "1 1 0" }))));
       }))));
-    const typeLine = Object.entries(pv.typeCount).map(([id, n]) => this.typeName(id) + ": " + n).join(" · ") + (pv.untyped ? " · Sem tipologia: " + pv.untyped : "");
-    const createLabel = w.sending ? (w.extend ? "Adicionando andares…" : "Criando estrutura…") : (w.extend ? "Adicionar " + plural(pv.floors, "andar", "andares") : "Criar estrutura");
+    const typeLine = Object.entries(preview.typeCount).map(([id, n]) => this.typeName(id) + ": " + n).join(" · ") + (preview.untyped ? " · Sem tipologia: " + preview.untyped : "");
+    const createLabel = w.sending ? (w.extend ? "Adicionando andares…" : "Criando estrutura…") : (w.extend ? "Adicionar " + plural(preview.floors, "andar", "andares") : "Criar estrutura");
     const submit = () => {
       const errors = validateWizard(w);
       if (Object.keys(errors).length) { setW({ errors, step: 0 }); this.revealFirstError(true); return; }
@@ -900,16 +895,16 @@ class Component extends DCLogic {
         if (this.prop("createResult") === "fail") return setW({ sending: false, error: "Não foi possível criar a estrutura. " + ERR_NET + " Nada foi salvo." });
         const data = w.extend ? this.state.data : makeData(w.count === 1 ? "single" : "multi");
         this.enter(w.extend ? "tower" : "home", w.extend ? this.state.data.towers[1].id : null, { phase: "ready", data, wizard: wizardDefault(false) });
-        this.toastFor(w.extend ? "2 andares adicionados à Torre B." : "Estrutura criada: " + plural(pv.count, "torre", "torres") + " e " + plural(pv.units, "unidade", "unidades") + ".");
+        this.toastFor(w.extend ? "2 andares adicionados à Torre B." : "Estrutura criada: " + plural(preview.count, "torre", "torres") + " e " + plural(preview.units, "unidade", "unidades") + ".");
       }, 1100);
     };
     const createBtn = h(DS.Button, { size: "lg", block: true, loading: w.sending, iconStart: w.sending ? null : this.ic("check", 20), onClick: submit }, createLabel);
-    const towersBlock = h("div", { key: "t", style: { display: "grid", gap: "var(--space-4)", maxHeight: desk ? "calc(100dvh - 520px)" : "none", minHeight: desk ? "180px" : 0, overflowY: desk ? "auto" : "visible", paddingRight: desk ? "4px" : 0 } }, pvTowers);
+    const towersBlock = h("div", { key: "t", style: { display: "grid", gap: "var(--space-4)", maxHeight: desk ? "calc(100dvh - 520px)" : "none", minHeight: desk ? "180px" : 0, overflowY: desk ? "auto" : "visible", paddingRight: desk ? "4px" : 0 } }, previewTowers);
     const previewInner = [
       h("div", { key: "c", style: { display: "grid", gap: "var(--space-1)" } },
-        h("span", { style: { fontSize: "var(--text-base)", fontWeight: 600 } }, w.extend ? "Torre B ganha " + plural(pv.floors, "andar", "andares") + " e " + plural(pv.units, "unidade", "unidades") : [plural(pv.count, "torre", "torres"), plural(pv.floors, "andar", "andares"), plural(pv.units, "unidade", "unidades")].join(" · ")),
-        h("span", { style: { fontSize: "var(--text-sm)", color: "var(--muted-foreground)" } }, plural(pv.areas, "área comum", "áreas comuns") + (typeLine ? " · " + typeLine : ""))),
-      pv.untyped ? h(DS.Alert, { key: "u", tone: "info" }, plural(pv.untyped, "unidade fica", "unidades ficam") + " sem tipologia. Os cômodos delas se cadastram em cada uma.") : null,
+        h("span", { style: { fontSize: "var(--text-base)", fontWeight: 600 } }, w.extend ? "Torre B ganha " + plural(preview.floors, "andar", "andares") + " e " + plural(preview.units, "unidade", "unidades") : [plural(preview.count, "torre", "torres"), plural(preview.floors, "andar", "andares"), plural(preview.units, "unidade", "unidades")].join(" · ")),
+        h("span", { style: { fontSize: "var(--text-sm)", color: "var(--muted-foreground)" } }, plural(preview.areas, "área comum", "áreas comuns") + (typeLine ? " · " + typeLine : ""))),
+      preview.untyped ? h(DS.Alert, { key: "u", tone: "info" }, plural(preview.untyped, "unidade fica", "unidades ficam") + " sem tipologia. Os cômodos delas se cadastram em cada uma.") : null,
       desk ? null : towersBlock,
       w.error ? h(DS.Alert, { key: "e", tone: "danger", role: "alert" }, w.error) : null,
       desk ? h("div", { key: "b" }, createBtn) : null,
@@ -1001,7 +996,7 @@ class Component extends DCLogic {
         h("span", null, h("span", { style: { fontWeight: 500, fontFamily: a.kind === "unit" ? "var(--font-mono)" : "inherit" } }, a.name), h("span", { style: { color: "var(--muted-foreground)", fontSize: "var(--text-sm)" } }, " · " + a.path)),
         h("span", { className: "es-row__meta" }, a.content),
         h("span", { className: "es-row__meta" }, (a.kind === "unit" ? "Arquivada por " : "Arquivado por ") + a.by + " em " + a.at),
-        !a.restorable ? h("span", { className: "es-row__meta", style: { color: "var(--foreground)" } }, "Volta junto quando o " + a.blockedBy + " for restaurado, ou depois dele.") : null),
+        !a.restorable ? h("span", { className: "es-row__meta", style: { color: "var(--foreground)" } }, "Pode ser restaurada depois que o " + a.blockedBy + " for restaurado.") : null),
       canRestore && !delivered ? h("div", { style: { display: "flex", gap: "var(--space-1)", alignItems: "center" } },
         a.restorable ? h(DS.Button, { variant: "outline", size: "sm", iconStart: this.ic("archive-restore", 16), onClick: () => this.setState({ dialog: { kind: "restore", target: a.id, value: a.name, error: null } }) }, "Restaurar") : null,
         this.menuEl("arch-" + a.id, [{ label: "Excluir de vez", icon: "trash-2", danger: true, go: () => this.setState({ dialog: { kind: "purge", target: a.id, ack: false }, menu: null }) }], this.dotsButton("Ações de " + a.name), "Ações de " + a.name)) : null));
