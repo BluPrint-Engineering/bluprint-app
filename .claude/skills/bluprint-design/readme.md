@@ -39,7 +39,7 @@ This skill holds the design system; screens live in `docs/design/screens/<screen
 | `components/overlay/` | **DropdownMenu** (+ `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`), **Sheet**, **AlertDialog** |
 | `components/navigation/` | **Pagination**, **SegmentedControl** |
 | `components/brand/` | **Logo** |
-| `guidelines/` | The foundation specimen cards rendered in the Design System tab |
+| `guidelines/` | The foundation specimen cards, one `*.card.html` per token group or brand asset |
 | `SKILL.md` | Agent-skill front matter, so this folder works as a Claude Code skill |
 | `HANDOFF.md` | What to do with this system in `apps/web`: where each piece lands, what transfers verbatim, what gets rebuilt |
 

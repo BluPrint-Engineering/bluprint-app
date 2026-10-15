@@ -29,7 +29,6 @@ and open `docs/design/screens/estrutura/Estrutura.dc.html`; demo props also read
 | `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`, `createResult`, `removeResult` |
 | `Estrutura QA.dc.html` | The 44 states below frozen, mobile 390 × 844 and desktop 1280 × 800, light and dark |
 
-
 ## Routes and files in `apps/web`
 
 ```
