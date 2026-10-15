@@ -29,6 +29,8 @@ export interface DropdownMenuItemProps extends Omit<React.ComponentPropsWithoutR
   loading?: boolean;
   /** Do not close the menu on select. */
   keepOpen?: boolean;
+  /** Label and icon in `--destructive`: the last item, after a separator ("Remover unidade"). */
+  destructive?: boolean;
   onSelect?: () => void;
 }
 export declare function DropdownMenuItem(props: DropdownMenuItemProps): JSX.Element;

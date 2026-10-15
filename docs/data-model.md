@@ -64,6 +64,8 @@ Who may invite whom is validated in the service, not in the schema ([0023](adr/0
 | `path` | Materialized ancestor chain (`/1/2/4/`). Archiving a subtree, counting per tower and building the breadcrumb become `LIKE`, not `WITH RECURSIVE`. |
 | `archived_at`, `archived_by` | An item with content is never deleted, only archived ([0036](adr/0036-empty-structure-deletes-work-archives.md)). |
 | `archived_directly` | `true` = archived on its own; `false` = archived in cascade. |
+| `position` | Stored order among siblings: floors and units do not sort by name ([0071](adr/0071-structure-is-edited-where-it-is-navigated.md)). |
+| `unit_type_id?` | On a unit, the unit type it follows ([0072](adr/0072-unit-type-is-linked-and-units-keep-their-changes.md)). |
 
 **Valid parent → child pairs**, validated in the service (the database alone would accept `floor` inside `floor`):
 
@@ -86,6 +88,12 @@ Status history is **out of the MVP**. When it comes, it is a generic `activity_l
 ### `room`
 
 Hangs on a **unit or common area**, outside the `location` tree ([0041](adr/0041-room-hangs-outside-the-location-tree.md)). Towers and floors have no rooms, so a pin on their plans has `room_id` null.
+
+A room created from the unit's type carries `unit_type_room_id`, so renaming the type's room renames it everywhere; a room the unit dropped from its type is recorded so the type cannot add it back ([0072](adr/0072-unit-type-is-linked-and-units-keep-their-changes.md)).
+
+### `unit_type` and `unit_type_room`
+
+A project's unit types (*tipologias*) and their ordered room names. Names are unique per project; a name of a location is unique within its tower (a common area's within its parent), among locations not archived ([0071](adr/0071-structure-is-edited-where-it-is-navigated.md)).
 
 ## 4. Disciplines and plans
 

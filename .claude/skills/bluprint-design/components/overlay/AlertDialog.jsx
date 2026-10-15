@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert } from "../feedback/Alert.jsx";
 
-export function AlertDialog({ open, onClose, title, actionLabel, actionIcon = null, onAction, actionDisabled = false, pending = false, error = null, contained = false, className = "", children }) {
+export function AlertDialog({ open, onClose, title, actionLabel, actionIcon = null, actionVariant = "default", onAction, actionDisabled = false, pending = false, error = null, contained = false, className = "", children }) {
   const id = React.useId ? React.useId() : "bp-alert-dialog";
   const close = () => { if (!pending && onClose) onClose(); };
   React.useEffect(() => {
@@ -20,7 +20,7 @@ export function AlertDialog({ open, onClose, title, actionLabel, actionIcon = nu
         {error ? <Alert tone="danger">{error}</Alert> : null}
         <footer className="bp-alert-dialog__footer">
           <button type="button" className="bp-btn bp-btn--outline bp-btn--md" disabled={pending} onClick={close}>Cancelar</button>
-          <button type="button" className="bp-btn bp-btn--default bp-btn--md" disabled={actionDisabled || pending} aria-busy={pending || undefined} onClick={onAction}>
+          <button type="button" className={`bp-btn bp-btn--${actionVariant} bp-btn--md`} disabled={actionDisabled || pending} aria-busy={pending || undefined} onClick={onAction}>
             {pending ? <span className="bp-spinner" style={{ width: "1.15em", height: "1.15em" }} aria-hidden="true" /> : actionIcon}
             {actionLabel}
           </button>

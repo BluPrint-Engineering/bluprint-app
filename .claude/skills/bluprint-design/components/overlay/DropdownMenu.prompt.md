@@ -9,5 +9,6 @@ One-line: a menu under a trigger — items are 44px rows with a 20px icon; radio
 ```
 
 - In `apps/web`: `bunx shadcn add dropdown-menu` (Radix). Keep the 44px rows and the `locked` behavior.
+- `destructive` paints the item red; it is always the last item, after a separator. In `apps/web` it is the item's `variant="destructive"`.
 - `locked` keeps it open and disables every item but the busy one — used while signing out.
 - Outside click and Escape close it. Non-item children (a theme switch) do not close it.

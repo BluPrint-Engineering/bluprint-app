@@ -75,15 +75,38 @@ _Avoid_: vendor, subcontractor
 Any node of a project's physical tree: a tower, a floor, a unit or a common area.
 _Avoid_: space, place
 
+**Tower** (pt-BR: *torre*):
+One building of a project; holds floors and common areas. A project with a single tower never shows it.
+_Avoid_: building, block, bloco
+
+**Floor** (pt-BR: *andar*):
+One level of a tower, such as Térreo, 9º andar or Cobertura; holds units and common areas, in a stored order.
+_Avoid_: level, story, pavimento
+
 **Unit** (pt-BR: *unidade*):
 An apartment or office; always hangs on a floor. Has a status and a sale status.
 _Avoid_: apartment
+
+**Stack** (pt-BR: *final*):
+The units at the same position on every floor of a tower, named by the last two digits of their number (final 01).
+_Avoid_: column, line
 
 **Common area** (pt-BR: *área comum*):
 A shared location with no unit number or status, such as a hall, garage, party room or façade.
 
 **Room** (pt-BR: *cômodo*):
 A room inside a unit or common area, used as the place of a pin. Not a location.
+
+**Unit type** (pt-BR: *tipologia*):
+A named list of rooms shared by units built alike. A unit follows its unit type, so a change to the type reaches every unit of it, and may still add or drop rooms of its own.
+_Avoid_: template, apartamento tipo, planta tipo
+
+**Location content** (pt-BR: *conteúdo*):
+What field work has recorded on a location or anywhere below it: pins, plans and filled-in unit data. Structure, rooms and unit types are not content.
+
+**Archived** (pt-BR: *arquivado*):
+A location with content that was removed: it leaves navigation, counts and reports, keeps everything it holds and can be restored. A location without content is deleted instead.
+_Avoid_: deleted, hidden, inactive
 
 ### Plans and pins
 

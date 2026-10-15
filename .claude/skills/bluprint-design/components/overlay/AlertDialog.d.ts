@@ -8,6 +8,8 @@ export interface AlertDialogProps {
   title: React.ReactNode;
   actionLabel: React.ReactNode;
   actionIcon?: React.ReactNode;
+  /** `destructive` for an action that destroys ("Excluir de vez"); archiving and restoring stay `default`. */
+  actionVariant?: "default" | "destructive";
   onAction: () => void;
   /** Keeps the action off until the body's acknowledgement is given. */
   actionDisabled?: boolean;
