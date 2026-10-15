@@ -132,6 +132,9 @@ const pad2 = n => (n < 10 ? "0" : "") + n;
 const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const unitName = (floor, i, numbering) => numbering === "letter" ? floor + letters[i] : String(floor) + pad2(i + 1);
 const plural = (n, one, many) => n + " " + (n === 1 ? one : many);
+const feminine = kind => kind === "tower" || kind === "unit";
+const article = kind => feminine(kind) ? "a " : "o ";
+const agree = (kind, stem) => stem + (feminine(kind) ? "a" : "o");
 
 let seq = 0;
 const nid = p => p + (++seq);
@@ -340,7 +343,7 @@ class Component extends DCLogic {
     const f9 = t && (t.floors.find(f => f.num === 9) || t.floors[t.floors.length - 1]);
     const archivedSample = [
       { id: "x1", name: "9º andar", path: "Torre B", content: "12 pins · 2 plantas · 3 unidades e o hall", by: "Ana Lima", at: "12/10/2026", restorable: true, kind: "floor" },
-      { id: "x2", name: "902", path: "Torre B › 9º andar", content: "3 pins · arquivada antes do andar", by: "Rafael Souza", at: "02/10/2026", restorable: false, blockedBy: "9º andar", kind: "unit" },
+      { id: "x2", name: "902", path: "Torre B › 9º andar", content: "3 pins · arquivada antes do andar", by: "Rafael Souza", at: "02/10/2026", restorable: false, blockedBy: "9º andar", blockedByKind: "floor", kind: "unit" },
       { id: "x3", name: "Salão de festas", path: "Torre A", content: "1 planta · 5 pins", by: "Paula Rocha", at: "28/09/2026", restorable: true, kind: "area" },
     ];
     const W = (extra) => Object.assign(wizardDefault(false), extra);
@@ -995,8 +998,8 @@ class Component extends DCLogic {
       h("div", { style: { flex: "1 1 14rem", minWidth: 0, display: "grid", gap: "2px" } },
         h("span", null, h("span", { style: { fontWeight: 500, fontFamily: a.kind === "unit" ? "var(--font-mono)" : "inherit" } }, a.name), h("span", { style: { color: "var(--muted-foreground)", fontSize: "var(--text-sm)" } }, " · " + a.path)),
         h("span", { className: "es-row__meta" }, a.content),
-        h("span", { className: "es-row__meta" }, (a.kind === "unit" ? "Arquivada por " : "Arquivado por ") + a.by + " em " + a.at),
-        !a.restorable ? h("span", { className: "es-row__meta", style: { color: "var(--foreground)" } }, "Pode ser restaurada depois que o " + a.blockedBy + " for restaurado.") : null),
+        h("span", { className: "es-row__meta" }, agree(a.kind, "Arquivad") + " por " + a.by + " em " + a.at),
+        !a.restorable ? h("span", { className: "es-row__meta", style: { color: "var(--foreground)" } }, "Pode ser " + agree(a.kind, "restaurad") + " depois que " + article(a.blockedByKind) + a.blockedBy + " for " + agree(a.blockedByKind, "restaurad") + ".") : null),
       canRestore && !delivered ? h("div", { style: { display: "flex", gap: "var(--space-1)", alignItems: "center" } },
         a.restorable ? h(DS.Button, { variant: "outline", size: "sm", iconStart: this.ic("archive-restore", 16), onClick: () => this.setState({ dialog: { kind: "restore", target: a.id, value: a.name, error: null } }) }, "Restaurar") : null,
         this.menuEl("arch-" + a.id, [{ label: "Excluir de vez", icon: "trash-2", danger: true, go: () => this.setState({ dialog: { kind: "purge", target: a.id, ack: false }, menu: null }) }], this.dotsButton("Ações de " + a.name), "Ações de " + a.name)) : null));
@@ -1035,33 +1038,33 @@ class Component extends DCLogic {
     const para = txt => h("p", { style: { margin: 0, fontSize: "var(--text-sm)", lineHeight: "var(--leading-normal)", textWrap: "pretty" } }, txt);
     let title = "", body = null, action = null, role = "alertdialog";
     if (dg.kind === "delete") {
-      const n = ix[dg.target] ? ix[dg.target].node : { name: "9º andar", units: [], areas: [] };
+      const n = ix[dg.target] ? ix[dg.target].node : { kind: "floor", name: "9º andar", units: [], areas: [] };
       const kids = (n.units || []).length, areas = (n.areas || []).length;
-      title = "Excluir o " + n.name + "?";
-      body = [para("O " + n.name + " não tem pins, plantas nem dados. " + (kids ? "As " + plural(kids, "unidade", "unidades") + (areas ? " e " + (areas === 1 ? "a área comum" : "as " + areas + " áreas comuns") : "") + " dele também são excluídas." : ""))];
+      title = "Excluir " + article(n.kind) + n.name + "?";
+      body = [para(article(n.kind).toUpperCase() + n.name + " não tem pins, plantas nem dados. " + (kids ? "As " + plural(kids, "unidade", "unidades") + (areas ? " e " + (areas === 1 ? "a área comum" : "as " + areas + " áreas comuns") : "") + (feminine(n.kind) ? " dela" : " dele") + " também são excluídas." : ""))];
       action = { label: "Excluir", icon: "trash-2", variant: "destructive", go: () => this.doDelete(dg.target) };
     } else if (dg.kind === "archive") {
-      const n = ix[dg.target] ? ix[dg.target].node : { name: "9º andar" };
-      title = "Arquivar o " + n.name + "?";
-      body = [para("O " + n.name + " tem conteúdo registrado em campo, então ele não é excluído:"), facts([
+      const n = ix[dg.target] ? ix[dg.target].node : { kind: "floor", name: "9º andar" };
+      title = "Arquivar " + article(n.kind) + n.name + "?";
+      body = [para(article(n.kind).toUpperCase() + n.name + " tem conteúdo registrado em campo, então " + (feminine(n.kind) ? "ela não é excluída:" : "ele não é excluído:")), facts([
         ["archive", "Guarda 12 pins, 2 plantas e os dados de 3 unidades, com as 4 unidades e o hall."],
         ["eye-off", "Sai da fachada, das contagens e dos relatórios."],
         ["archive-restore", "O gerente de obra ou o admin restaura em Configuração › Arquivados, com tudo como estava."],
       ])];
-      action = { label: "Arquivar", icon: "archive", variant: "default", go: () => { this.setState({ dialog: null }); this.toastFor(n.name + " arquivado.", "default"); } };
+      action = { label: "Arquivar", icon: "archive", variant: "default", go: () => { this.setState({ dialog: null }); this.toastFor(n.name + " " + agree(n.kind, "arquivad") + ".", "default"); } };
     } else if (dg.kind === "purge") {
-      const a = st.archived.find(x => x.id === dg.target) || { name: "9º andar" };
-      title = "Excluir de vez o " + a.name + "?";
-      body = [para("Isto apaga para sempre, sem como recuperar:"), facts([["trash-2", "12 pins e as 31 fotos deles"], ["trash-2", "2 plantas"], ["trash-2", "4 unidades e o hall, com os dados das unidades"]]),
+      const a = st.archived.find(x => x.id === dg.target) || { kind: "floor", name: "9º andar" };
+      title = "Excluir de vez " + article(a.kind) + a.name + "?";
+      body = [para("Isto apaga para sempre, sem como recuperar:"), facts([["trash-2", "15 pins e as 38 fotos deles"], ["trash-2", "2 plantas"], ["trash-2", "4 unidades e o hall, com os dados das unidades"]]),
         h(DS.Checkbox, { key: "ack", label: "Entendi que não dá para desfazer.", checked: !!dg.ack, onChange: ev => this.setState({ dialog: Object.assign({}, dg, { ack: ev.target.checked }) }) })];
-      action = { label: "Excluir de vez", icon: "trash-2", variant: "destructive", disabled: !dg.ack, go: () => { this.setState({ dialog: null, archived: st.archived.filter(x => x.id !== dg.target) }); this.toastFor(a.name + " excluído de vez.", "default"); } };
+      action = { label: "Excluir de vez", icon: "trash-2", variant: "destructive", disabled: !dg.ack, go: () => { this.setState({ dialog: null, archived: st.archived.filter(x => x.id !== dg.target) }); this.toastFor(a.name + " " + agree(a.kind, "excluíd") + " de vez.", "default"); } };
     } else if (dg.kind === "restore") {
       const a = st.archived.find(x => x.id === dg.target) || { name: "" };
       const conflict = a.id === "x3";
-      title = "Restaurar " + (a.kind === "area" ? "a " : "o ") + a.name + "?";
+      title = "Restaurar " + article(a.kind) + a.name + "?";
       body = [conflict ? para("Já existe uma área comum " + a.name + " na Torre A, criada depois. Dê outro nome para o restaurado.") : para("Volta para onde estava, com pins, fotos e plantas."),
         conflict ? h(DS.Field, { key: "f", label: "Nome", htmlFor: "restore-name", error: dg.error }, h(DS.Input, { id: "restore-name", value: dg.value, autoComplete: "off", onChange: ev => this.setState({ dialog: Object.assign({}, dg, { value: ev.target.value, error: null }) }) })) : null];
-      action = { label: "Restaurar", icon: "archive-restore", variant: "default", go: () => { this.setState({ dialog: null, archived: st.archived.filter(x => x.id !== dg.target) }); this.toastFor((conflict ? dg.value : a.name) + " restaurado.", "success"); } };
+      action = { label: "Restaurar", icon: "archive-restore", variant: "default", go: () => { this.setState({ dialog: null, archived: st.archived.filter(x => x.id !== dg.target) }); this.toastFor((conflict ? dg.value : a.name) + " " + agree(a.kind, "restaurad") + ".", "success"); } };
       role = "dialog";
     } else if (dg.kind === "rename") {
       const e = ix[dg.target]; const n = e ? e.node : { kind: "unit", name: "" };

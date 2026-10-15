@@ -245,9 +245,11 @@ the other epics. Sections are cards (padding 20px, radius 14px), h3 18px/600.
 - **Arquivados** (built with #7, Q12): lead "Locais removidos que tinham pins, plantas ou dados. Não aparecem na
   navegação, nas contagens nem nos relatórios." (empty: "Nada arquivado. Um local removido com pins, plantas ou dados
   aparece aqui e pode ser restaurado."). Rows: name + " · Torre B" path, "12 pins · 2 plantas · 3 unidades e o hall",
-  "Arquivado por Ana Lima em 12/10/2026" ("Arquivada" for a unit), then outline `sm` "Restaurar" (`archive-restore`) and a menu with "Excluir
-  de vez". Only locations archived on their own are listed; one archived with its parent comes back with it, and one
-  archived before its parent shows "Pode ser restaurada depois que o 9º andar for restaurado." (the parent's name) with no button.
+  "Arquivado por Ana Lima em 12/10/2026" ("Arquivada" for a tower or a unit), then outline `sm` "Restaurar"
+  (`archive-restore`) and a menu with "Excluir de vez". Only locations archived on their own are listed; one archived
+  with its parent comes back with it, and one archived before its parent shows "Pode ser restaurada depois que o 9º
+  andar for restaurado." with no button: the first participle agrees with the item, the article and the second with
+  the parent ("Pode ser restaurado depois que a Torre B for restaurada.").
 - **C4 assistente**: no actions; `lock` "Só o gerente de obra ou o admin restaura ou exclui de vez."
 - **C6 delivered**: nothing editable; Arquivados with `lock` "A obra foi entregue: os arquivados não podem mais ser
   restaurados."
@@ -268,9 +270,9 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
   admin restaura em Configuração › Arquivados, com tudo como estava." · Cancelar / primary "Arquivar". Toast
   "9º andar arquivado.". Anyone who edits may archive.
 - **R4 excluir de vez** (RF-214, manager or admin, built with #7): "Excluir de vez o 9º andar?" · "Isto apaga para
-  sempre, sem como recuperar:" with three `trash-2` lines ("12 pins e as 31 fotos deles", "2 plantas", "4 unidades e
-  o hall, com os dados das unidades") · Checkbox "Entendi que não dá para desfazer." · destructive "Excluir de vez",
-  disabled until checked.
+  sempre, sem como recuperar:" with three `trash-2` lines ("15 pins e as 38 fotos deles", "2 plantas", "4 unidades e
+  o hall, com os dados das unidades"), counting what was archived inside it before it, like 902 · Checkbox "Entendi
+  que não dá para desfazer." · destructive "Excluir de vez", disabled until checked.
 - **R5 restore, name taken** (built with #7): "Restaurar o Salão de festas?" · "Já existe uma área comum Salão de festas
   na Torre A, criada depois. Dê outro nome para o restaurado." · Field "Nome" prefilled "Salão de festas (antigo)" ·
   primary "Restaurar". Without a conflict the dialog only says "Volta para onde estava, com pins, fotos e plantas."
