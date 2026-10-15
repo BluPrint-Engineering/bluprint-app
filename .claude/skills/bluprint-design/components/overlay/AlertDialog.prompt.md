@@ -12,4 +12,5 @@ One-line: confirmation for an action that cannot be undone: what happens, an ack
 
 - In `apps/web`: `bunx shadcn add alert-dialog`, restyled to these tokens; below 768px render it as the bottom sheet (`drawer`), action on top and both buttons `lg` full width.
 - Initial focus on the first control in the body, never on the action. The error sits above the buttons, next to the action that failed.
+- `actionVariant="destructive"` turns the action into the tinted destructive button, for deleting (`docs/design/screens/estrutura/`).
 - First use: delivering an obra (`docs/design/screens/obra/`, [0069](../../../../docs/adr/0069-delivering-a-project-is-final.md)).

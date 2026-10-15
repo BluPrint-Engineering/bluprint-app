@@ -20,7 +20,7 @@ Router + Tailwind v4 + shadcn (radix-nova), `lucide-react`, `@fontsource-variabl
 | Transfers as-is | Rebuild in the app's stack |
 | --- | --- |
 | `tokens/*.css`: the CSS custom properties, both themes | `components/**/*.jsx`: rebuild as shadcn components |
-| `assets/`: logos, wordmarks, the 30 lucide glyphs | `css/components.css`: Tailwind classes instead |
+| `assets/`: logos, wordmarks, the 41 lucide glyphs | `css/components.css`: Tailwind classes instead |
 | `css/base.css`: resets, body, headings, link colors | |
 | `readme.md`: the rules themselves | |
 

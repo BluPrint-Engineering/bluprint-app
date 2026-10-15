@@ -1,5 +1,7 @@
 # Empty structure is deleted easily; structure holding field work is only archived
 
+Content and the single remove action are defined in [0073](0073-one-remove-action-decided-by-content.md).
+
 An item with no content disappears immediately. An item with pins or plans is archived, never deleted: a construction photo cannot be retaken, and by the time someone notices the mistake the recorded problem may already be fixed.
 
 ## Consequences

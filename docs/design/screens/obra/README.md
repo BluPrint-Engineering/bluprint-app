@@ -100,9 +100,7 @@ Main: max-width 72rem, padding mobile `20px 16px 32px`, desktop `32px 32px 48px`
   `layers` 24px muted · "A obra ainda não tem estrutura" (18px/600) · "As pendências aparecem aqui quando a
   obra tiver estrutura." (14px muted). No button: nothing in #46 adds structure, and the header already
   leads to the configuração.
-- **P1c blank obra with the structure editor (vision, #6)**: same block, "Cadastre torres, andares e unidades
-  para começar a mapear pendências." · primary `lg` "Cadastrar estrutura" (full width on mobile) → the
-  structure editor. Not a decision: the #6 refinement sets its copy and destination.
+- **P1c blank obra with the structure editor (#6)**: replaced by E1 in `../estrutura/`.
 - **P2 delivered**: only the header is decided here (badge "Entregue"). The rest of the início of a delivered obra
   is the dashboard and navigation of #13 and #6, not refined yet, so the prototype shows the P5 frame.
 - **P3 loading**: header skeletons + a skeleton block (24 circle, 240 × 20, 300 × 14) where the empty state
@@ -190,7 +188,7 @@ hub itself (the side nav and the stacked sections are the #46 frame, not a const
 
 | Section | Requirements | Epic |
 | --- | --- | --- |
-| Estrutura | RF-202 to RF-214 | #6 |
+| Estrutura | RF-202 to RF-214 | #6, replaced by the sections in `../estrutura/` |
 | Equipe | RF-126, RF-128, RF-129 | #11 |
 | Disciplinas | RF-401, RF-402, RF-404 | #8 |
 | Empresas executoras | RF-301 | #9 |

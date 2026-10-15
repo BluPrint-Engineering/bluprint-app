@@ -36,13 +36,13 @@ export function DropdownMenu({ trigger, open: openProp, defaultOpen = false, onO
   );
 }
 
-export function DropdownMenuItem({ icon = null, checked, disabled = false, loading = false, keepOpen = false, onSelect, className = "", children, ...rest }) {
+export function DropdownMenuItem({ icon = null, checked, disabled = false, loading = false, keepOpen = false, destructive = false, onSelect, className = "", children, ...rest }) {
   const ctx = React.useContext(MenuCtx);
   const radio = checked !== undefined;
   return (
     <button type="button" role={radio ? "menuitemradio" : "menuitem"} aria-checked={radio ? checked : undefined}
       aria-busy={loading || undefined} disabled={disabled || loading || (ctx.locked && !loading)}
-      className={`bp-menu__item ${className}`}
+      className={`bp-menu__item ${destructive ? "bp-menu__item--destructive" : ""} ${className}`}
       onClick={() => { if (onSelect) onSelect(); if (!keepOpen) ctx.close(); }} {...rest}>
       {loading ? <span className="bp-spinner" style={{ width: 18, height: 18 }} aria-hidden="true" /> : icon}
       <span className="bp-menu__item-label">{children}</span>

@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 15/10/2026, entrega definitiva (RF-215, RF-216, RF-217) e admin convidando assistentes (RF-126), da revisão do design da obra.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 15/10/2026, RF-205, RF-207 e RF-209, do refinamento da estrutura da obra.
 
 ---
 
@@ -115,11 +115,11 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-202 | Cadastro da hierarquia física: **torres → andares → unidades → cômodos**, incluindo áreas comuns | M |
 | RF-203 | Definição da nomenclatura/numeração de andares e unidades (901, 901A, etc.) | M |
 | RF-204 | Cadastro dos **cômodos** de cada unidade (lavabo, cozinha, sacada…), usados como "local" do pin | M |
-| RF-205 | **Todos os vinculados à obra** — admin, gerentes e assistentes — podem criar e alterar a estrutura a qualquer momento. A estrutura é editável de ponta a ponta, para corrigir erro ou completar o que faltou | M |
+| RF-205 | **Todos os vinculados à obra** — admin, gerentes e assistentes — podem criar e alterar a estrutura enquanto a obra estiver em andamento. A estrutura é editável de ponta a ponta, para corrigir erro ou completar o que faltou | M |
 | RF-206 | Geração automática da estrutura (ex.: "12 andares × 4 unidades") com ajuste manual depois | S |
-| RF-207 | Template de unidade: definir os cômodos uma vez e aplicar a todas as unidades iguais | S |
+| RF-207 | **Tipologia**: definir os cômodos uma vez e aplicar às unidades iguais, por final e faixa de andares. Mudar a tipologia muda todas as unidades dela; cada unidade pode ter cômodos a mais ou a menos | S |
 | RF-208 | Duplicar/clonar andar ou unidade já configurada | C |
-| RF-209 | Unidade, andar ou torre **sem conteúdo** (nenhum pin e nenhuma planta) pode ser excluída direto, por qualquer vinculado à obra e sem cerimônia — é o caso do erro de cadastro | M |
+| RF-209 | Unidade, andar, torre ou área comum **sem conteúdo** (nenhum pin, nenhuma planta e nenhum dado de unidade preenchido, nela ou abaixo dela) pode ser excluída direto, por qualquer vinculado à obra e sem cerimônia — é o caso do erro de cadastro | M |
 | RF-210 | Item **com conteúdo** nunca é excluído: é **arquivado**. Sai do mapa de unidades, das contagens e dos relatórios, e passa a viver numa lista de arquivados na configuração da obra | M |
 | RF-211 | Arquivar um andar ou uma torre arquiva a subárvore inteira; restaurar devolve tudo como estava, com pins, fotos e plantas intactos | M |
 | RF-212 | O item arquivado registra quem arquivou e quando; a restauração é feita por gerente de obra ou admin | M |

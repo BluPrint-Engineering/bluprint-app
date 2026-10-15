@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div style="padding:64px; background:var(--secondary); color:var(--foreground); font-family:var(--font-sans); display:grid; gap:72px; width:max-content">
+  <header style="display:grid; gap:8px; max-width:760px">
+    <h1 style="margin:0; font-size:var(--text-3xl); font-weight:600; letter-spacing:var(--tracking-tight)">Estrutura (#6) · QA</h1>
+    <p style="margin:0; font-size:var(--text-base); color:var(--muted-foreground); text-wrap:pretty">Cada linha é um estado congelado de <a href="Estrutura.dc.html">Estrutura</a>, em mobile 390 × 844 e desktop 1280 × 800, claro e escuro. Linhas marcadas “construído no #7” mostram o arquivamento, que só existe quando houver plantas e pins.</p>
+  </header>
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+    <section style="display:grid; gap:48px">
+      <h2 style="margin:0; font-size:var(--text-2xl); font-weight:600; letter-spacing:var(--tracking-tight)">{{ g.title }}</h2>
+      <sc-for list="{{ g.rows }}" as="row" hint-placeholder-count="3">
+        <div data-screen-label="{{ row.id }}" style="display:grid; gap:12px">
+          <div style="display:flex; align-items:baseline; gap:12px">
+            <span style="font-family:var(--font-mono); font-size:var(--text-sm); color:var(--muted-foreground)">{{ row.id }}</span>
+            <span style="font-size:var(--text-lg); font-weight:600">{{ row.title }}</span>
+            <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ row.note }}</span>
+          </div>
+          <sc-if value="{{ row.placeholder }}" hint-placeholder-val="{{ true }}">
+            <div style="width:3436px; height:844px; border-radius:24px; background:var(--muted); display:grid; place-items:center; color:var(--muted-foreground); font-size:var(--text-sm)">Carregando {{ row.id }}…</div>
+          </sc-if>
+          <sc-if value="{{ row.shown }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:32px; align-items:flex-start">
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Mobile · claro</span>
+                <div style="width:390px; height:844px; border-radius:24px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#fff"><dc-import style="display:block; width:100%; height:100%" name="Estrutura" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" structure="{{ row.structure }}" theme="light" viewport="mobile" framed="{{ true }}" hint-size="390px,844px"></dc-import></div></div>
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Mobile · escuro</span>
+                <div style="width:390px; height:844px; border-radius:24px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#081830"><dc-import style="display:block; width:100%; height:100%" name="Estrutura" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" structure="{{ row.structure }}" theme="dark" viewport="mobile" framed="{{ true }}" hint-size="390px,844px"></dc-import></div></div>
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Desktop · claro</span>
+                <div style="width:1280px; height:800px; border-radius:12px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#fff"><dc-import style="display:block; width:100%; height:100%" name="Estrutura" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" structure="{{ row.structure }}" theme="light" viewport="desktop" framed="{{ true }}" hint-size="1280px,800px"></dc-import></div></div>
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Desktop · escuro</span>
+                <div style="width:1280px; height:800px; border-radius:12px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#081830"><dc-import style="display:block; width:100%; height:100%" name="Estrutura" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" structure="{{ row.structure }}" theme="dark" viewport="desktop" framed="{{ true }}" hint-size="1280px,800px"></dc-import></div></div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const GROUPS = [
+  ["Início da obra · /projects/:id", [
+    ["E1", "Obra sem estrutura", "home", "live", "admin", "empty", "Substitui o P1/P1c do #46: o primeiro passo é o assistente"],
+    ["E2", "Várias torres", "home", "live", "manager", "multi", "Torres como cartões com andares, unidades, áreas comuns e tipologias"],
+    ["E3", "Torre única", "home", "live", "admin", "single", "A torre não aparece: a obra abre na fachada (Q7)"],
+    ["E4", "Carregando", "home", "loading", "manager", "multi", ""],
+    ["E5", "Obra entregue", "home", "delivered", "manager", "multi", "Só leitura: sem Adicionar nem menus"],
+  ]],
+  ["Torre · /projects/:id/locations/:towerId", [
+    ["T1", "Fachada", "tower", "live", "manager", "multi", "Cada andar é uma linha; unidade e área comum são tocáveis (Q2)"],
+    ["T2", "Menu da torre", "tower", "tower-menu", "manager", "multi", ""],
+    ["T3", "Torre sem andares", "tower", "tower-empty", "admin", "multi", "Logo depois de adicionar uma torre à mão"],
+    ["T4", "Erro ao carregar", "tower", "error", "manager", "multi", ""],
+    ["T5", "Local não encontrado", "tower", "not-found", "assistant", "multi", "Excluído, arquivado ou sem acesso: 404"],
+    ["T6", "Obra entregue", "tower", "delivered", "admin", "multi", ""],
+  ]],
+  ["Andar · /projects/:id/locations/:floorId", [
+    ["F1", "Andar", "floor", "live", "assistant", "multi", "Assistente edita como todos (RF-205)"],
+    ["F2", "Menu da unidade", "floor", "row-menu", "manager", "multi", ""],
+    ["F3", "Adicionando unidade", "floor", "adding", "manager", "multi", "Próximo número sugerido"],
+    ["F4", "Nome em uso", "floor", "adding-conflict", "manager", "multi", "Único na torre (Q5)"],
+  ]],
+  ["Unidade e área comum", [
+    ["U1", "Unidade na tipologia", "unit", "live", "manager", "single", "Sem alterações"],
+    ["U2", "Unidade com alterações", "unit", "live", "manager", "multi", "Um cômodo a mais e um tirado (Q8)"],
+    ["U3", "Adicionando cômodo", "unit", "adding-room", "assistant", "multi", ""],
+    ["U4", "Trocar tipologia", "unit", "change-type", "manager", "multi", ""],
+    ["U5", "Área comum com cômodos", "area", "live", "manager", "multi", ""],
+  ]],
+  ["Assistente · /projects/:id/structure/new", [
+    ["W1", "Torres e andares", "wizard", "live", "admin", "empty", "Duas torres diferentes num passo só (Q4)"],
+    ["W2", "Áreas comuns", "wizard", "w-areas", "admin", "empty", ""],
+    ["W3", "Tipologias por final", "wizard", "w-types", "admin", "empty", "Ímpares A, pares B, cobertura (Q8)"],
+    ["W4", "Prévia", "wizard", "w-preview", "admin", "empty", ""],
+    ["W5", "Validação", "wizard", "w-invalid", "admin", "empty", ""],
+    ["W6", "Criando", "wizard", "w-sending", "admin", "empty", ""],
+    ["W7", "Falha", "wizard", "w-failed", "admin", "empty", "Nada foi salvo"],
+    ["W8", "Torre única", "wizard", "w-single", "manager", "empty", "Sem nome de torre"],
+    ["W9", "Adicionar andares a uma torre", "wizard", "w-extend", "manager", "multi", "O mesmo assistente, a partir do menu da torre"],
+    ["W10", "Estrutura criada", "home", "created", "admin", "multi", "Volta ao início com o aviso"],
+  ]],
+  ["Configuração · /projects/:id/configuration", [
+    ["C1", "Estrutura, tipologias e arquivados", "configuration", "live", "admin", "multi", "Substitui a moldura do #46"],
+    ["C2", "Editando tipologia", "configuration", "type-edit", "manager", "multi", "Diz quantas unidades muda"],
+    ["C3", "Arquivados", "configuration", "archived", "manager", "multi", "Construído no #7 (Q12)"],
+    ["C4", "Arquivados · assistente", "configuration", "archived-assistant", "assistant", "multi", "Sem restaurar nem excluir de vez"],
+    ["C5", "Obra sem estrutura", "configuration", "live", "admin", "empty", ""],
+    ["C6", "Obra entregue", "configuration", "delivered", "manager", "multi", "Tudo só leitura"],
+  ]],
+  ["Remover, renomear e restaurar", [
+    ["R1", "Excluída, com desfazer", "floor", "deleted-undo", "manager", "multi", "Vazio e sem filhos: sai na hora (RF-209)"],
+    ["R2", "Excluir com filhos", "floor", "confirm-delete", "manager", "multi", "Vazio, mas leva unidades e hall"],
+    ["R3", "Arquivar com conteúdo", "floor", "confirm-archive", "assistant", "multi", "Construído no #7 (Q9, Q12)"],
+    ["R4", "Excluir de vez", "configuration", "confirm-purge", "admin", "multi", "RF-214 · construído no #7"],
+    ["R5", "Restaurar com nome em uso", "configuration", "restore-conflict", "manager", "multi", "Construído no #7"],
+    ["R6", "Renomear", "floor", "rename", "manager", "multi", ""],
+    ["R7", "Renomear · nome em uso", "floor", "rename-conflict", "manager", "multi", ""],
+    ["R8", "Falha ao remover", "floor", "remove-failed", "manager", "multi", ""],
+  ]],
+];
+const ORDER = GROUPS.flatMap(g => g[1].map(r => r[0]));
+
+class Component extends DCLogic {
+  state = { seen: 0 };
+  componentDidMount() {
+    this.scan = setInterval(() => {
+      if (this.state.seen >= ORDER.length) return clearInterval(this.scan);
+      this.setState(s => ({ seen: s.seen + 1 }));
+    }, 400);
+  }
+  componentWillUnmount() { clearInterval(this.scan); }
+  renderVals() {
+    const seen = this.state.seen;
+    return {
+      groups: GROUPS.map(([title, rows]) => ({
+        title,
+        rows: rows.map(([id, t, screen, state, role, structure, note]) => {
+          const shown = ORDER.indexOf(id) < seen;
+          return { id, title: t, screen, state, role, structure, note: note || "", shown, placeholder: !shown };
+        }),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>
