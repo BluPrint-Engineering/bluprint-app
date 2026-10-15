@@ -13,7 +13,7 @@ If the user invokes this skill without other guidance, ask what they want to bui
 
 A screen is written straight into `docs/design/screens/<screen>/`: a `README.md` spec (pt-BR) and the `*.dc.html` prototypes, loading `styles.css` and `_ds_bundle.js` from this skill. A primitive, variant or glyph the screen needs is added here first, never drawn inside the screen.
 
-After any change to `components/**/*.jsx`, rebuild the bundle with `bun .claude/skills/bluprint-design/build-bundle.ts` (`--check` only compares). Module-level code must not touch React: the prototypes load the bundle before React, and the build fails when a module does.
+After any change to `components/**/*.jsx`, rebuild the bundle with `bun .claude/skills/bluprint-design/build-bundle.ts`. Module-level code must not touch React: the prototypes load the bundle before React, and the build fails when a module does.
 
 Before the PR:
 

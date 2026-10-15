@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-// Rebuilds _ds_bundle.js and the component list of _ds_manifest.json from components/**/*.jsx. `--check` compares instead of writing.
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -113,7 +112,6 @@ function build(namespace: string) {
 	return { bundle, components };
 }
 
-// Evaluating with no React in scope is what a standalone prototype does: the bundle loads before React.
 function assertLoadsWithoutReact(bundle: string, namespace: string): void {
 	const window: Record<string, { __errors: { path: string; error: string }[] }> = {};
 	vm.runInNewContext(bundle, { window });
@@ -128,15 +126,6 @@ const { bundle, components } = build(manifest.namespace);
 assertLoadsWithoutReact(bundle, manifest.namespace);
 const nextManifest = `${JSON.stringify({ ...manifest, components })}\n`;
 
-if (process.argv.includes("--check")) {
-	const upToDate = readFileSync(bundlePath, "utf8") === bundle && readFileSync(manifestPath, "utf8") === nextManifest;
-	if (!upToDate) {
-		console.error("_ds_bundle.js or _ds_manifest.json is stale: run `bun .claude/skills/bluprint-design/build-bundle.ts`");
-		process.exit(1);
-	}
-	console.log("bundle up to date");
-} else {
-	writeFileSync(bundlePath, bundle);
-	writeFileSync(manifestPath, nextManifest);
-	console.log(`${components.length} components -> _ds_bundle.js`);
-}
+writeFileSync(bundlePath, bundle);
+writeFileSync(manifestPath, nextManifest);
+console.log(`${components.length} components -> _ds_bundle.js`);

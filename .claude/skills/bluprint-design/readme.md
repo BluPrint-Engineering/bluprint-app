@@ -42,7 +42,6 @@ This skill holds the design system; screens live in `docs/design/screens/<screen
 | `guidelines/` | The foundation specimen cards rendered in the Design System tab |
 | `SKILL.md` | Agent-skill front matter, so this folder works as a Claude Code skill |
 | `HANDOFF.md` | What to do with this system in `apps/web`: where each piece lands, what transfers verbatim, what gets rebuilt |
-| `github.md` | Source-repo association and sync record |
 
 ### Component inventory, and why it is this size
 
