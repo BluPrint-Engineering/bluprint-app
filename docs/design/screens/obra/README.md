@@ -279,8 +279,7 @@ Alert, Avatar, Badge, Button, Card, DropdownMenu, Field, Icon, Input, Logo, Segm
 Toast (sonner), Checkbox, Sheet. New in the design system for this screen: **AlertDialog**
 (`components/overlay/AlertDialog.*`, shadcn `alert-dialog`), the `--badge-primary` tokens that lift the
 "Em andamento" badge in dark mode, and six lucide glyphs: `settings`, `pencil`, `layers`, `users`, `wrench`,
-`map-pin-off`. `_ds_bundle.js` is generated and does not carry them yet, so until it is rebuilt the prototype
-draws the dialog inline and loads the glyphs from `icons/` with `Icon basePath`. In the app they come from
+`map-pin-off`. `_ds_bundle.js` carries them; the prototype draws the dialog inline. In the app the glyphs come from
 `lucide-react`. The status badge uses the existing `success` tone for "Entregue" (`apps/web` gains the
 variant).
 

@@ -1,8 +1,10 @@
 import React from "react";
 
-const MenuCtx = React.createContext({ close: () => {}, locked: false });
+let menuCtx;
+const MenuCtx = () => (menuCtx ??= React.createContext({ close: () => {}, locked: false }));
 
 export function DropdownMenu({ trigger, open: openProp, defaultOpen = false, onOpenChange, align = "end", locked = false, width = 264, label, className = "", children }) {
+  const Ctx = MenuCtx();
   const [inner, setInner] = React.useState(defaultOpen);
   const open = openProp !== undefined ? openProp : inner;
   const ref = React.useRef(null);
@@ -29,7 +31,7 @@ export function DropdownMenu({ trigger, open: openProp, defaultOpen = false, onO
       {t}
       {open ? (
         <div role="menu" aria-label={label} aria-busy={locked || undefined} className={`bp-menu bp-menu--${align}`} style={{ width }}>
-          <MenuCtx.Provider value={{ close: () => set(false), locked }}>{children}</MenuCtx.Provider>
+          <Ctx.Provider value={{ close: () => set(false), locked }}>{children}</Ctx.Provider>
         </div>
       ) : null}
     </div>
@@ -37,7 +39,7 @@ export function DropdownMenu({ trigger, open: openProp, defaultOpen = false, onO
 }
 
 export function DropdownMenuItem({ icon = null, checked, disabled = false, loading = false, keepOpen = false, destructive = false, onSelect, className = "", children, ...rest }) {
-  const ctx = React.useContext(MenuCtx);
+  const ctx = React.useContext(MenuCtx());
   const radio = checked !== undefined;
   return (
     <button type="button" role={radio ? "menuitemradio" : "menuitem"} aria-checked={radio ? checked : undefined}

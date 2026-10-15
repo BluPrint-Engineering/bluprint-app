@@ -23,7 +23,7 @@ One product, one codebase: a **mobile-first React web app** (Vite + TanStack Rou
 2. **Office app** — dashboards (unit map by status, common-area strip), project structure, people, contractors. *Specified in RF-8xx / RF-2xx, not built.*
 3. **Worker report** — the PDF, the only artifact that leaves the platform. Carries BluPrint's brand, must stay legible printed in black and white (ADR-0034, RF-704).
 
-This project holds only the design system. Screens (Entrar #42, Criar conta #43, Obras #45 and whatever comes next) live in a separate screens project that links this one. When a screen needs a primitive that is missing, it is added here, not there.
+This skill holds the design system; screens live in `docs/design/screens/<screen>/` and load it from here. When a screen needs a primitive that is missing, it is added here, not in the screen.
 
 ## Index
 
@@ -39,10 +39,9 @@ This project holds only the design system. Screens (Entrar #42, Criar conta #43,
 | `components/overlay/` | **DropdownMenu** (+ `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`), **Sheet**, **AlertDialog** |
 | `components/navigation/` | **Pagination**, **SegmentedControl** |
 | `components/brand/` | **Logo** |
-| `guidelines/` | The foundation specimen cards rendered in the Design System tab |
+| `guidelines/` | The foundation specimen cards, one `*.card.html` per token group or brand asset |
 | `SKILL.md` | Agent-skill front matter, so this folder works as a Claude Code skill |
 | `HANDOFF.md` | What to do with this system in `apps/web`: where each piece lands, what transfers verbatim, what gets rebuilt |
-| `github.md` | Source-repo association and sync record |
 
 ### Component inventory, and why it is this size
 
@@ -58,9 +57,9 @@ This project holds only the design system. Screens (Entrar #42, Criar conta #43,
 
 **Added for the obra list ([#45](https://github.com/BluPrint-Engineering/bluprint-app/issues/45))** — `Avatar`, `Badge`, `Skeleton`, `Toast`, `DropdownMenu`, `Sheet`, `Pagination`, `SegmentedControl`, `SearchInput`. Each maps to a shadcn primitive (`avatar`, `badge`, `skeleton`, `sonner`, `dropdown-menu`, `drawer`, `pagination`, `toggle-group`, `input`), and six more lucide glyphs came with them: `search`, `sliders-horizontal`, `x`, `chevron-left`, `chevron-down`, `check`.
 
-**Added for the obra screen ([#46](https://github.com/BluPrint-Engineering/bluprint-app/issues/46))** — `AlertDialog` (shadcn `alert-dialog`), the confirmation for an action that cannot be undone, first used to deliver an obra; the `--badge-primary` tokens, which lift the "Em andamento" badge in dark mode; and six lucide glyphs: `settings`, `pencil`, `layers`, `users`, `wrench`, `map-pin-off`. They were written here by hand, not exported, so `_ds_bundle.js` and `_ds_manifest.json` do not carry them yet: until the bundle is rebuilt, a prototype draws the dialog from `css/components.css` classes and loads the six glyphs through `Icon basePath`.
+**Added for the obra screen ([#46](https://github.com/BluPrint-Engineering/bluprint-app/issues/46))** — `AlertDialog` (shadcn `alert-dialog`), the confirmation for an action that cannot be undone, first used to deliver an obra; the `--badge-primary` tokens, which lift the "Em andamento" badge in dark mode; and six lucide glyphs: `settings`, `pencil`, `layers`, `users`, `wrench`, `map-pin-off`. `_ds_bundle.js` carries them.
 
-**Added for the estrutura ([#6](https://github.com/BluPrint-Engineering/bluprint-app/issues/6))** — the `destructive` variant of `DropdownMenuItem` (the last item of a row menu, "Remover …"), `actionVariant` on `AlertDialog` (a destructive action such as "Excluir de vez"), and eleven lucide glyphs: `ellipsis`, `trash-2`, `archive`, `archive-restore`, `arrow-up`, `arrow-down`, `copy`, `undo-2`, `building-2`, `layout-grid`, `list-plus`. Also written by hand, so `_ds_bundle.js` does not carry them yet either.
+**Added for the estrutura ([#6](https://github.com/BluPrint-Engineering/bluprint-app/issues/6))** — the `destructive` variant of `DropdownMenuItem` (the last item of a row menu, "Remover …"), `actionVariant` on `AlertDialog` (a destructive action such as "Excluir de vez"), and eleven lucide glyphs: `ellipsis`, `trash-2`, `archive`, `archive-restore`, `arrow-up`, `arrow-down`, `copy`, `undo-2`, `building-2`, `layout-grid`, `list-plus`. `_ds_bundle.js` carries them.
 
 Nothing else was invented. There is no Tabs or Table here, because no screen asks for one yet. When the plan viewer and dashboards get specs, the pin, the status cell and the discipline legend become components — they are domain objects with their own palettes and belong here, not in a screen.
 

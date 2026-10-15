@@ -28,11 +28,6 @@ and open `docs/design/screens/estrutura/Estrutura.dc.html`; demo props also read
 | --- | --- |
 | `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`, `createResult`, `removeResult` |
 | `Estrutura QA.dc.html` | The 44 states below frozen, mobile 390 × 844 and desktop 1280 × 800, light and dark |
-| `icons/` | Lucide glyphs the generated `_ds_bundle.js` does not carry yet |
-
-The prototype re-evaluates `_ds_bundle.js` once after mounting when the bundle recorded `React is not defined`
-errors (Alert, Toast and DropdownMenu evaluate JSX at module load, and the bundle can load before React). That is a
-prototype workaround, not app behavior.
 
 ## Routes and files in `apps/web`
 
@@ -338,8 +333,8 @@ Alert, Avatar, Badge, Button, Checkbox, DropdownMenu, Field, Icon, Input, Logo, 
 Toast (with `action` for "Desfazer"), AlertDialog. Added to `.claude/skills/bluprint-design/` with this screen: the
 DropdownMenuItem `destructive` variant, AlertDialog `actionVariant`, and 11 lucide glyphs (`ellipsis`, `trash-2`,
 `archive`, `archive-restore`, `arrow-up`, `arrow-down`, `copy`, `undo-2`, `building-2`, `layout-grid`, `list-plus`).
-`_ds_bundle.js` is generated and does not carry them yet (nor `settings`, `pencil` and `layers` from the obra), so
-until it is rebuilt the prototype loads them from `icons/` and draws the dialog with the `bp-alert-dialog` classes.
+`_ds_bundle.js` carries them (with `settings`, `pencil` and `layers` from the obra); the prototype draws its dialog
+with the `bp-alert-dialog` classes because its role and footer vary by action.
 
 ## Open points
 

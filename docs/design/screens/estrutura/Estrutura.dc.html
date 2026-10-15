@@ -114,9 +114,6 @@
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;manager&quot;,&quot;assistant&quot;],&quot;default&quot;:&quot;manager&quot;,&quot;tsType&quot;:&quot;'admin'|'manager'|'assistant'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;structure&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;multi&quot;,&quot;single&quot;,&quot;empty&quot;],&quot;default&quot;:&quot;multi&quot;,&quot;tsType&quot;:&quot;'multi'|'single'|'empty'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;home&quot;,&quot;tower&quot;,&quot;floor&quot;,&quot;unit&quot;,&quot;area&quot;,&quot;wizard&quot;,&quot;configuration&quot;],&quot;default&quot;:&quot;home&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;string&quot;,&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;delivered&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;createResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;removeResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;framed&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
-const ICONS = "./icons";
-const DS_BUNDLE = "../../../../.claude/skills/bluprint-design/_ds_bundle.js";
-const LOCAL_ICONS = ["ellipsis", "trash-2", "archive", "archive-restore", "arrow-up", "arrow-down", "copy", "undo-2", "building-2", "layout-grid", "list-plus", "settings", "pencil", "layers"];
 const USERS = { admin: "Carla Mendes", manager: "Rafael Souza", assistant: "Paula Rocha" };
 const OBRA = "Casa Moinhos";
 const TYPES0 = [
@@ -291,21 +288,11 @@ class Component extends DCLogic {
   isDark() { return this.state.dark ?? (this.prop("theme") === "dark"); }
 
   componentDidMount() {
-    const ds = window.BluPrintDesignSystem_d4fa62;
-    if (ds && ds.__errors && ds.__errors.length && !window.__esBundleReloaded) {
-      window.__esBundleReloaded = true;
-      const tag = document.createElement("script");
-      tag.src = DS_BUNDLE;
-      tag.onload = () => { const fresh = window.BluPrintDesignSystem_d4fa62; const before = ds.__errors.length; if (fresh.__errors.length === before * 2 || fresh.__errors.length === before) fresh.__errors = fresh.__errors.slice(before); window.dispatchEvent(new Event("es-ds-ready")); };
-      document.head.appendChild(tag);
-    }
-    this.onDsReady = () => this.forceUpdate();
-    window.addEventListener("es-ds-ready", this.onDsReady);
     const el = this.rootRef.current;
     if (el && window.ResizeObserver) { this.ro = new ResizeObserver(([e]) => this.setState({ w: e.contentRect.width })); this.ro.observe(el); }
     if (this.frozen()) this.applyFrozen(); else this.enter(this.state.screen, this.defaultLoc(this.state.screen, this.state.data));
   }
-  componentWillUnmount() { window.removeEventListener("es-ds-ready", this.onDsReady); if (this.ro) this.ro.disconnect(); [this.t, this.t2, this.t3].forEach(clearTimeout); }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); [this.t, this.t2, this.t3].forEach(clearTimeout); }
   componentDidUpdate(prev) {
     const p = this.props;
     if (prev.state !== p.state || prev.screen !== p.screen || prev.role !== p.role || prev.structure !== p.structure || prev.delivered !== p.delivered) {
@@ -510,7 +497,7 @@ class Component extends DCLogic {
   ic(name, size, style) {
     const DS = window.BluPrintDesignSystem_d4fa62 || {};
     if (!DS.Icon) return null;
-    return React.createElement(DS.Icon, { name, size: size || 18, basePath: LOCAL_ICONS.includes(name) ? ICONS : undefined, style });
+    return React.createElement(DS.Icon, { name, size: size || 18, style });
   }
 
   menuFor(node, where) {
@@ -1160,7 +1147,7 @@ class Component extends DCLogic {
     }
 
     let body = null;
-    const dsReady = DS.Button && !(DS.__errors && DS.__errors.length);
+    const dsReady = !!DS.Button;
     if (dsReady) {
       if (phase === "loading") {
         body = h("div", { "aria-busy": true, style: { display: "grid", gap: "6px", padding: desk ? "var(--space-5)" : "var(--space-3)", borderRadius: "var(--radius-xl)", boxShadow: "var(--ring-hairline)", maxWidth: desk ? "calc(100% - 352px)" : "none" } },
