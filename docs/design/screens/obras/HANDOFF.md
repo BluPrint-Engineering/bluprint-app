@@ -50,7 +50,7 @@ params with `history.replaceState` when opened on its own.
   see their role in that obra (Gerente de obra / Assistente de obra) as a muted line under the name.
 - Card: name (2 lines max) with the status badge top-right; role line (non-admins); divider; open pins left,
   last activity right. No chevron: the whole card is the link.
-- Delivered obra: neutral badge, card without fill (hairline only), muted pin count. Still clickable.
+- Delivered obra: success badge with `circle-check` instead of the dot, card without fill (hairline only), muted pin count. Still clickable.
 - Filter count on the mobile button and in the sheet counts status ≠ Em andamento and gerente ≠ todos.
   Sort is not a filter. "Limpar filtros" resets status and gerente (and the search, in the no-results state).
 
