@@ -63,6 +63,8 @@
   --sidebar-border:var(--n-200);
   --sidebar-ring:var(--brand-blue);
   --overlay:rgb(8 24 48 / .55);
+  --badge-primary:var(--accent);
+  --badge-primary-foreground:var(--accent-foreground);
 
   /* Field surface: white paper under a floor plan, always lighter than the page */
   --field-surface:#FFFFFF;
@@ -107,5 +109,7 @@
   --sidebar-border:rgb(255 255 255 / .12);
   --sidebar-ring:#2E8CFF;
   --overlay:rgb(2 8 18 / .7);
+  --badge-primary:color-mix(in srgb,var(--primary) 28%,transparent);
+  --badge-primary-foreground:#D6E8FF;
   --field-surface:#F6F8FB;
 }

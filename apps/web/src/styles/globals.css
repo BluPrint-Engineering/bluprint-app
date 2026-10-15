@@ -46,6 +46,8 @@
 	--color-brand-ink: var(--brand-ink);
 	--color-field-surface: var(--field-surface);
 	--color-overlay: var(--overlay);
+	--color-badge-primary: var(--badge-primary);
+	--color-badge-primary-foreground: var(--badge-primary-foreground);
 	--radius-sm: calc(var(--radius) * 0.6);
 	--radius-md: calc(var(--radius) * 0.8);
 	--radius-lg: var(--radius);
@@ -132,6 +134,8 @@
 	--brand-badge-shadow: 0 6px 18px rgb(3 22 52 / 0.2);
 	--field-surface: #ffffff;
 	--overlay: rgb(8 24 48 / 0.55);
+	--badge-primary: var(--accent);
+	--badge-primary-foreground: var(--accent-foreground);
 
 	/* Elevation: shadows differ per theme, so they stay plain vars and are consumed as
 	   shadow-(--shadow-md), never aliased into @theme — Tailwind inlines @theme values statically
@@ -228,6 +232,8 @@
 		inset 0 0 0 1.5px rgb(46 140 255 / 0.55), 0 0 22px rgb(46 140 255 / 0.28);
 	--field-surface: #f6f8fb;
 	--overlay: rgb(2 8 18 / 0.7);
+	--badge-primary: color-mix(in srgb, var(--primary) 28%, transparent);
+	--badge-primary-foreground: #d6e8ff;
 
 	--ring-hairline: inset 0 0 0 1px rgb(255 255 255 / 0.12);
 	--shadow-sm: 0 1px 2px rgb(0 0 0 / 0.4);

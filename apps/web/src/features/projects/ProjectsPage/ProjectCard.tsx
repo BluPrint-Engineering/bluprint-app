@@ -3,6 +3,7 @@ import type {
 	ProjectStatus,
 	ProjectSummary,
 } from "@bluprint/shared";
+import { CircleCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,8 +18,8 @@ const ROLE_LABELS: Record<EffectiveRole, string> = {
 
 const STATUS_BADGE_VARIANT = {
 	active: "primary",
-	delivered: "neutral",
-} as const satisfies Record<ProjectStatus, "primary" | "neutral">;
+	delivered: "success",
+} as const satisfies Record<ProjectStatus, "primary" | "success">;
 
 const CARD = "rounded-xl shadow-(--ring-hairline) ring-0";
 
@@ -40,10 +41,14 @@ export function ProjectCard({ project }: { project: ProjectSummary }) {
 						)}
 					</div>
 					<Badge variant={STATUS_BADGE_VARIANT[project.status]}>
-						<span
-							aria-hidden="true"
-							className="size-1.5 rounded-full bg-current"
-						/>
+						{project.status === "delivered" ? (
+							<CircleCheck aria-hidden="true" />
+						) : (
+							<span
+								aria-hidden="true"
+								className="size-1.5 rounded-full bg-current"
+							/>
+						)}
 						{STATUS_LABELS[project.status]}
 					</Badge>
 				</div>
