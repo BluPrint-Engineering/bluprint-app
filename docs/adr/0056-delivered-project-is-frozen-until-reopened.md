@@ -1,5 +1,7 @@
 # A delivered project is frozen until it is reopened
 
+Its reopening, and the rename of a delivered project, are superseded by [0069](0069-delivering-a-project-is-final.md): delivery is final; the freeze of operational content and its error stand.
+
 A project is `active` or `delivered` (`project.status`, RF-215). A delivered project keeps its content exactly as it was handed over: every write route on its operational content refuses it, until an admin or a manager reopens the project (RF-216). Reading and exporting a report never depend on the status, so a delivered project still opens, lists and exports for the client or the contractor after the handover.
 
 Requirements: RF-215, RF-216

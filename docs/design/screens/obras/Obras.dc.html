@@ -153,7 +153,7 @@
                           <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ c.role }}</span>
                         </sc-if>
                       </div>
-                      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Badge" tone="{{ c.tone }}" dot="{{ true }}" style="flex:none" hint-size="112px,24px">{{ c.statusLabel }}</x-import>
+                      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Badge" tone="{{ c.tone }}" dot="{{ c.dot }}" icon="{{ c.icon }}" style="flex:none" hint-size="112px,24px">{{ c.statusLabel }}</x-import>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:baseline; gap:var(--space-3); flex-wrap:wrap; padding-top:var(--space-3); border-top:1px solid var(--border); font-size:var(--text-sm)">
                       <span style="font-weight:500; font-variant-numeric:tabular-nums; color:{{ c.pinsColor }}">{{ c.pins }}</span>
@@ -516,7 +516,9 @@ class Component extends DCLogic {
     const cards = shown.map(o => ({
       href: "#/projects/" + o.id,
       name: o.name,
-      tone: o.delivered ? "neutral" : "primary",
+      tone: o.delivered ? "success" : "primary",
+      dot: !o.delivered,
+      icon: o.delivered && DS.Icon ? h(DS.Icon, { name: "circle-check", size: 14 }) : null,
       statusLabel: o.delivered ? "Entregue" : "Em andamento",
       role: o.role,
       showRole: !admin,

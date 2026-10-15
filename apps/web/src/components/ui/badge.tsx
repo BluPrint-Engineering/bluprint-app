@@ -9,8 +9,9 @@ const badgeVariants = cva(
 	{
 		variants: {
 			variant: {
-				primary: "bg-accent text-accent-foreground",
+				primary: "bg-badge-primary text-badge-primary-foreground",
 				neutral: "bg-secondary text-secondary-foreground",
+				success: "bg-success/12 text-success",
 				destructive: "bg-destructive/10 text-destructive",
 				outline: "border-border text-muted-foreground",
 				count:

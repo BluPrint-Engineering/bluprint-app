@@ -22,7 +22,7 @@ export const projectSummarySchema = z.object({
 	role: projectAccessRoleSchema,
 	status: projectStatusSchema.meta({
 		description:
-			"`active`: in progress. `delivered`: handed over to the client; its content is frozen until it is reopened.",
+			"`active`: in progress. `delivered`: handed over to the client; delivery is final, so nothing in the project changes again.",
 	}),
 });
 

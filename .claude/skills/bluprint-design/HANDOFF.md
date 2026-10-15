@@ -20,7 +20,7 @@ Router + Tailwind v4 + shadcn (radix-nova), `lucide-react`, `@fontsource-variabl
 | Transfers as-is | Rebuild in the app's stack |
 | --- | --- |
 | `tokens/*.css`: the CSS custom properties, both themes | `components/**/*.jsx`: rebuild as shadcn components |
-| `assets/`: logos, wordmarks, the 24 lucide glyphs | `css/components.css`: Tailwind classes instead |
+| `assets/`: logos, wordmarks, the 30 lucide glyphs | `css/components.css`: Tailwind classes instead |
 | `css/base.css`: resets, body, headings, link colors | |
 | `readme.md`: the rules themselves | |
 
@@ -43,6 +43,7 @@ apps/web/public/brand/            ← assets/logo-*.svg, wordmark*.svg
 | Avatar, Badge | `avatar`, `badge` |
 | DropdownMenu | `dropdown-menu` |
 | Sheet | `drawer` (bottom sheet on mobile) |
+| AlertDialog | `alert-dialog`; below 768px the `drawer` |
 | Pagination | `pagination` |
 | SegmentedControl | `toggle-group` |
 
@@ -61,7 +62,7 @@ tokens (ADR-0035): blue as *hidráulica* and blue as `--primary` are different b
 
 ## Known gaps
 
-- No Tabs, Table or Dialog primitive: no specified screen needs one yet.
+- No Tabs or Table primitive: no specified screen needs one yet.
 - The pin marker, the discipline legend and the unit status cell are domain objects that belong in this
   system, but they wait for the plan viewer and dashboard specs.
 - The Miro board referenced in `docs/data-model.md` was never accessible; if it holds screen designs, they

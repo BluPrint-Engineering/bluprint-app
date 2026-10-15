@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <meta name="design_doc_mode" content="canvas">
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div style="padding:64px; background:var(--secondary); color:var(--foreground); font-family:var(--font-sans); display:grid; gap:72px; width:max-content">
+  <header style="display:grid; gap:8px; max-width:760px">
+    <h1 style="margin:0; font-size:var(--text-3xl); font-weight:600; letter-spacing:var(--tracking-tight)">Obra (#46) · QA</h1>
+    <p style="margin:0; font-size:var(--text-base); color:var(--muted-foreground); text-wrap:pretty">Cada linha é um estado congelado de <a href="Obra.dc.html">Obra</a>, em mobile 390 × 844 e desktop 1280 × 800, claro e escuro. Linhas marcadas “visão” mostram seções que o #46 não constrói; no app elas ficam ocultas até o épico delas sair.</p>
+  </header>
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+    <section style="display:grid; gap:48px">
+      <h2 style="margin:0; font-size:var(--text-2xl); font-weight:600; letter-spacing:var(--tracking-tight)">{{ g.title }}</h2>
+      <sc-for list="{{ g.rows }}" as="row" hint-placeholder-count="3">
+        <div data-screen-label="{{ row.id }}" style="display:grid; gap:12px">
+          <div style="display:flex; align-items:baseline; gap:12px">
+            <span style="font-family:var(--font-mono); font-size:var(--text-sm); color:var(--muted-foreground)">{{ row.id }}</span>
+            <span style="font-size:var(--text-lg); font-weight:600">{{ row.title }}</span>
+            <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ row.note }}</span>
+          </div>
+          <sc-if value="{{ row.placeholder }}" hint-placeholder-val="{{ true }}">
+            <div style="width:3436px; height:844px; border-radius:24px; background:var(--muted); display:grid; place-items:center; color:var(--muted-foreground); font-size:var(--text-sm)">Carregando {{ row.id }}…</div>
+          </sc-if>
+          <sc-if value="{{ row.shown }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; gap:32px; align-items:flex-start">
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Mobile · claro</span>
+                <div style="width:390px; height:844px; border-radius:24px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#fff"><dc-import style="display:block; width:100%; height:100%" name="Obra" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" theme="light" viewport="mobile" framed="{{ true }}" hint-size="390px,844px"></dc-import></div></div>
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Mobile · escuro</span>
+                <div style="width:390px; height:844px; border-radius:24px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#081830"><dc-import style="display:block; width:100%; height:100%" name="Obra" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" theme="dark" viewport="mobile" framed="{{ true }}" hint-size="390px,844px"></dc-import></div></div>
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Desktop · claro</span>
+                <div style="width:1280px; height:800px; border-radius:12px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#fff"><dc-import style="display:block; width:100%; height:100%" name="Obra" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" theme="light" viewport="desktop" framed="{{ true }}" hint-size="1280px,800px"></dc-import></div></div>
+              <div style="display:grid; gap:8px"><span style="font-size:var(--text-sm); color:var(--muted-foreground)">Desktop · escuro</span>
+                <div style="width:1280px; height:800px; border-radius:12px; overflow:hidden; box-shadow:var(--ring-hairline),var(--shadow-md); background:#081830"><dc-import style="display:block; width:100%; height:100%" name="Obra" screen="{{ row.screen }}" state="{{ row.state }}" role="{{ row.role }}" theme="dark" viewport="desktop" framed="{{ true }}" hint-size="1280px,800px"></dc-import></div></div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-for>
+    </section>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const GROUPS = [
+  ["Nova obra · /projects/new", "new", [
+    ["N1", "Vazio, com licenças", "default", "admin", "Autofoco só no desktop"],
+    ["N2", "Última licença", "last-license", "admin"],
+    ["N3a", "Validação · vazio", "invalid-empty", "admin"],
+    ["N3b", "Validação · mais de 120 caracteres", "invalid-long", "admin"],
+    ["N4", "Enviando", "sending", "admin", "Botão e Enter travados"],
+    ["N5", "Sem licença no envio", "no-license-submit", "admin", "Nome mantido, botão desativado"],
+    ["N6", "Aberta sem licença", "no-license-open", "admin", "Campo e botão desativados"],
+    ["N7", "Outra falha", "failed", "admin", "Nome mantido, botão ativo"],
+    ["N8", "Contagem de licenças carregando", "count-loading", "admin"],
+  ]],
+  ["Início da obra · /projects/:id", "home", [
+    ["P1", "Obra em branco · admin", "blank", "admin", "O que o #46 constrói: sem botão, nada prometido"],
+    ["P1b", "Obra em branco · gerente", "blank", "manager", "Papel ao lado do status"],
+    ["P1c", "Obra em branco · com o editor de estrutura", "blank-structure", "admin", "Visão · entra com o #6, que decide o texto e o destino"],
+    ["P2", "Obra entregue", "delivered", "manager", "Só o cabeçalho é decisão; o conteúdo do início é o dashboard (#13)"],
+    ["P3", "Carregando", "loading", "admin"],
+    ["P4a", "Erro ao carregar", "error", "admin"],
+    ["P4b", "Sem conexão", "offline", "admin", "Retoma sozinho quando a conexão volta"],
+    ["P5", "Visão: dashboard e navegação", "vision", "admin", "Visão · regiões desenhadas no #6 e no #13"],
+  ]],
+  ["Configuração da obra · /projects/:id/configuration", "configuration", [
+    ["C1", "Logo após criar", "created", "admin", "Toast + Dados da obra, o que o #46 constrói: status só no badge do cabeçalho"],
+    ["C2", "Configuração completa, tudo vazio", "hub", "admin", "Visão · só molduras; cada refinamento decide o conteúdo e pode refazer o hub"],
+    ["C2b", "Configuração completa · assistente", "hub", "assistant", "Visão · sem renomear, sem status"],
+    ["C3a", "Renomeando", "renaming", "manager"],
+    ["C3b", "Renomeando · validação", "rename-invalid", "manager"],
+    ["C3c", "Renomeando · salvando", "rename-saving", "manager"],
+    ["C3d", "Renomeando · falha", "rename-failed", "manager", "Nome digitado mantido"],
+    ["C4", "Assistente · só leitura", "blank", "assistant", "Sem renomear; o status entra com o ticket dele"],
+    ["C5a", "Entregar · diálogo", "deliver-confirm", "manager", "Construído depois do #46 · botão só com a caixa marcada"],
+    ["C5b", "Entregar · enviando", "deliver-sending", "admin", "Construído depois do #46"],
+    ["C5c", "Entregar · falha", "deliver-failed", "manager", "Construído depois do #46 · caixa continua marcada"],
+    ["C6", "Obra entregue", "delivered", "manager", "Fechada: sem renomear, sem reabrir"],
+  ]],
+  ["Página não encontrada", "not-found", [
+    ["X1", "Rota que não existe", "route", "admin"],
+    ["X2", "Obra não encontrada", "project", "manager", "A API responde 404 nos dois casos"],
+  ]],
+];
+const ORDER = GROUPS.flatMap(g => g[2].map(r => r[0]));
+
+class Component extends DCLogic {
+  state = { seen: 0 };
+  componentDidMount() {
+    this.scan = setInterval(() => {
+      if (this.state.seen >= ORDER.length) return clearInterval(this.scan);
+      this.setState(s => ({ seen: s.seen + 1 }));
+    }, 400);
+  }
+  componentWillUnmount() { clearInterval(this.scan); }
+  renderVals() {
+    const seen = this.state.seen;
+    return {
+      groups: GROUPS.map(([title, screen, rows]) => ({
+        title,
+        rows: rows.map(([id, t, state, role, note]) => {
+          const shown = ORDER.indexOf(id) < seen;
+          return { id, title: t, screen, state, role, note: note || "", shown, placeholder: !shown };
+        }),
+      })),
+    };
+  }
+}
+</script>
+</body>
+</html>

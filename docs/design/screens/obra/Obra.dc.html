@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="../../../../.claude/skills/bluprint-design/styles.css">
+  <script src="../../../../.claude/skills/bluprint-design/_ds_bundle.js"></script>
+  <style>html,body{margin:0;height:100%}a{color:var(--primary)}a:hover{color:color-mix(in oklch,var(--primary),#000 15%)}</style>
+</helmet>
+<div ref="{{ rootRef }}" class="{{ themeClass }}" style="position:relative; display:flex; flex-direction:column; height:{{ rootH }}; overflow:hidden; background:var(--background); color:var(--foreground); font-family:var(--font-sans)">
+  <div ref="{{ scrollRef }}" style="flex:1; min-height:0; overflow-y:auto; overflow-x:hidden; scrollbar-width:{{ scrollbarWidth }}">
+
+    <header style="position:{{ headerPos }}; top:0; z-index:30; background:var(--background); border-bottom:1px solid var(--border); padding-top:env(safe-area-inset-top)">
+      <div style="max-width:var(--content-max-wide); margin:0 auto; height:{{ headerH }}; padding:0 {{ pad }}; display:flex; align-items:center; justify-content:space-between; gap:var(--space-3)">
+        <a href="#" onClick="{{ goObras }}" aria-label="BluPrint, obras" style="display:flex; align-items:center; min-height:var(--tap-min)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Logo" wordmark="{{ true }}" tone="{{ logoTone }}" size="{{ logoSize }}" hint-size="102px,28px"></x-import>
+        </a>
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenu" trigger="{{ menuTrigger }}" open="{{ menuOpen }}" onOpenChange="{{ onMenuOpenChange }}" locked="{{ signingOut }}" align="end" width="{{ 312 }}" label="Conta" hint-size="44px,44px">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuLabel" hint-size="100%,64px">
+            <div style="display:flex; align-items:center; gap:var(--space-3); padding-block:var(--space-1)">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Avatar" name="{{ user.name }}" size="lg" hint-size="48px,48px"></x-import>
+              <div style="display:grid; gap:2px; min-width:0">
+                <span style="font-size:var(--text-base); font-weight:600; line-height:var(--leading-snug)">{{ user.name }}</span>
+                <span style="font-size:var(--text-sm); color:var(--muted-foreground); overflow:hidden; text-overflow:ellipsis; white-space:nowrap">{{ user.email }}</span>
+                <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size:var(--text-sm); color:var(--muted-foreground)">Admin da construtora</span>
+                </sc-if>
+              </div>
+            </div>
+          </x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuSeparator" hint-size="100%,9px"></x-import>
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); min-height:var(--tap-min); padding-left:var(--space-3)">
+            <span>Tema</span>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.SegmentedControl" size="sm" label="Tema" options="{{ themeOptions }}" value="{{ themeValue }}" onChange="{{ onTheme }}" hint-size="90px,36px"></x-import>
+          </div>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuSeparator" hint-size="100%,9px"></x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.DropdownMenuItem" icon="{{ logoutIcon }}" loading="{{ signingOut }}" keepOpen="{{ true }}" onSelect="{{ signOut }}" hint-size="100%,44px">Sair</x-import>
+        </x-import>
+      </div>
+    </header>
+
+    <sc-if value="{{ isNew }}" hint-placeholder-val="{{ true }}">
+      <main style="display:flex; justify-content:center; padding:{{ newPad }}">
+        <div style="width:100%; max-width:var(--content-max); display:grid; gap:{{ newGap }}; align-content:start">
+          <a href="#" onClick="{{ goObras }}" style="justify-self:start; display:inline-flex; align-items:center; gap:var(--space-1); min-height:var(--tap-min); padding-right:var(--space-2); margin-left:-6px; font-size:var(--text-sm); font-weight:500; color:var(--muted-foreground); text-decoration:none" style-hover="color:var(--foreground)">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="chevron-left" size="{{ 20 }}" hint-size="20px,20px"></x-import>Obras
+          </a>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" dc-props="{{ newCardProps }}" hint-size="100%,300px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardHeader" dc-props="{{ padProps }}" hint-size="100%,60px">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardTitle" dc-props="{{ newTitleProps }}" hint-size="100%,32px">Nova obra</x-import>
+              <sc-if value="{{ licLoading }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 220 }}" height="{{ 16 }}" radius="sm" style="margin-top:2px" hint-size="220px,16px"></x-import>
+              </sc-if>
+              <sc-if value="{{ showLicText }}" hint-placeholder-val="{{ true }}">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardDescription" hint-size="100%,20px">{{ licText }}</x-import>
+              </sc-if>
+            </x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" dc-props="{{ padProps }}" hint-size="100%,160px">
+              <form onSubmit="{{ submitNew }}" noValidate="{{ true }}" style="display:grid; gap:var(--form-gap)">
+                <sc-if value="{{ newApi }}" hint-placeholder-val="{{ false }}">
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Alert" tone="danger" hint-size="100%,56px">{{ newApi }}</x-import>
+                </sc-if>
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Nome da obra" html-for="project-name" error="{{ newError }}" hint-size="100%,72px">
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="project-name" auto-complete="off" placeholder="Ex.: Casa Moinhos" value="{{ newName }}" onChange="{{ onNewName }}" invalid="{{ newInvalid }}" disabled="{{ fieldDisabled }}" auto-focus="{{ newAutoFocus }}" hint-size="100%,44px"></x-import>
+                </x-import>
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="submit" size="lg" block="{{ true }}" loading="{{ sending }}" disabled="{{ newBtnDisabled }}" hint-size="100%,52px">{{ newBtnLabel }}</x-import>
+              </form>
+            </x-import>
+          </x-import>
+        </div>
+      </main>
+    </sc-if>
+
+    <sc-if value="{{ showBand }}" hint-placeholder-val="{{ false }}">
+      <div style="border-bottom:1px solid var(--border)">
+        <div style="max-width:var(--content-max-wide); margin:0 auto; padding:{{ bandPad }}; display:grid; gap:var(--space-2)">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); min-height:var(--tap-min)">
+            <a href="#" onClick="{{ goBack }}" style="display:inline-flex; align-items:center; gap:var(--space-1); min-height:var(--tap-min); padding-right:var(--space-2); margin-left:-6px; font-size:var(--text-sm); font-weight:500; color:var(--muted-foreground); text-decoration:none" style-hover="color:var(--foreground)">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="chevron-left" size="{{ 20 }}" hint-size="20px,20px"></x-import>{{ backLabel }}
+            </a>
+            <sc-if value="{{ showConfigIcon }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" size="icon" aria-label="Configuração da obra" onClick="{{ goConfig }}" hint-size="44px,44px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="settings" base-path="./icons" size="{{ 20 }}" hint-size="20px,20px"></x-import>
+              </x-import>
+            </sc-if>
+          </div>
+          <sc-if value="{{ showObraHead }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:var(--space-4); flex-wrap:wrap">
+              <div style="display:grid; gap:var(--space-2); min-width:0; flex:1 1 18rem">
+                <sc-if value="{{ headLoading }}" hint-placeholder-val="{{ false }}">
+                  <div aria-busy="true" aria-label="Carregando obra" style="display:grid; gap:var(--space-3); padding-block:4px">
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ headSkW }}" height="{{ headSkH }}" radius="md" hint-size="60%,28px"></x-import>
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 116 }}" height="{{ 24 }}" radius="full" hint-size="116px,24px"></x-import>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ headReady }}" hint-placeholder-val="{{ false }}">
+                  <h1 style="margin:0; font-size:{{ titleSize }}; font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-tight); text-wrap:balance; overflow-wrap:anywhere">{{ obraName }}</h1>
+                  <div style="display:flex; align-items:center; gap:var(--space-3); flex-wrap:wrap">
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Badge" tone="{{ statusTone }}" dot="{{ statusDot }}" icon="{{ statusBadgeIcon }}" hint-size="112px,24px">{{ statusLabel }}</x-import>
+                    <sc-if value="{{ showRole }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size:var(--text-sm); color:var(--muted-foreground)">{{ roleLabel }}</span>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </div>
+              <sc-if value="{{ showConfigBtn }}" hint-placeholder-val="{{ false }}">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ goConfig }}" hint-size="200px,44px">
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="settings" base-path="./icons" size="{{ 20 }}" hint-size="20px,20px"></x-import>Configuração da obra
+                </x-import>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ showMain }}" hint-placeholder-val="{{ false }}">
+      <main style="max-width:var(--content-max-wide); margin:0 auto; padding:{{ mainPad }}; display:grid; gap:{{ mainGap }}">
+
+        <sc-if value="{{ showBlock }}" hint-placeholder-val="{{ false }}">
+          <div role="{{ blockRole }}" style="display:grid; justify-items:center; gap:var(--space-4); text-align:center; padding:{{ blockPad }}; max-width:26rem; width:100%; margin:0 auto; color:var(--muted-foreground)">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ blockIcon }}" base-path="{{ blockIconBase }}" size="{{ 24 }}" hint-size="24px,24px"></x-import>
+            <div style="display:grid; gap:var(--space-1)">
+              <sc-if value="{{ blockIsH1 }}" hint-placeholder-val="{{ false }}">
+                <h1 style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); color:var(--foreground)">{{ blockTitle }}</h1>
+              </sc-if>
+              <sc-if value="{{ blockIsH2 }}" hint-placeholder-val="{{ false }}">
+                <h2 style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); color:var(--foreground)">{{ blockTitle }}</h2>
+              </sc-if>
+              <p style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); text-wrap:pretty">{{ blockDesc }}</p>
+            </div>
+            <sc-if value="{{ blockRetry }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" onClick="{{ retry }}" hint-size="160px,52px">Tentar de novo</x-import>
+            </sc-if>
+            <sc-if value="{{ blockConfigure }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" block="{{ isMobile }}" onClick="{{ noop }}" hint-size="180px,52px">Cadastrar estrutura</x-import>
+            </sc-if>
+            <sc-if value="{{ blockBack }}" hint-placeholder-val="{{ false }}">
+              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" size="lg" block="{{ isMobile }}" onClick="{{ goObras }}" hint-size="180px,52px">Voltar para obras</x-import>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ homeLoading }}" hint-placeholder-val="{{ false }}">
+          <div aria-hidden="true" style="display:grid; justify-items:center; gap:var(--space-4); padding:{{ blockPad }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 24 }}" height="{{ 24 }}" radius="full" hint-size="24px,24px"></x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 240 }}" height="{{ 20 }}" radius="md" hint-size="240px,20px"></x-import>
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 300 }}" height="{{ 14 }}" radius="sm" hint-size="300px,14px"></x-import>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showVision }}" hint-placeholder-val="{{ false }}">
+          <div style="display:grid; grid-template-columns:{{ visionCols }}; gap:var(--space-3)">
+            <sc-for list="{{ regions }}" as="r" hint-placeholder-count="4">
+              <div style="grid-column:{{ r.span }}; min-height:{{ r.minH }}; display:grid; align-content:start; gap:var(--space-1); padding:var(--space-4); border:1px dashed var(--input); border-radius:var(--radius-xl)">
+                <div style="display:flex; justify-content:space-between; align-items:baseline; gap:var(--space-3); flex-wrap:wrap">
+                  <span style="font-size:var(--text-base); font-weight:600">{{ r.title }}</span>
+                  <span style="font-family:var(--font-mono); font-size:var(--text-sm); color:var(--muted-foreground)">{{ r.ref }}</span>
+                </div>
+                <span style="font-size:var(--text-sm); color:var(--muted-foreground); text-wrap:pretty">{{ r.desc }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ showConfig }}" hint-placeholder-val="{{ false }}">
+          <h2 style="margin:0; font-size:var(--text-xl); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-tight)">Configuração</h2>
+          <div style="display:grid; grid-template-columns:{{ cfgCols }}; gap:var(--space-8); align-items:start">
+            <sc-if value="{{ showCfgNav }}" hint-placeholder-val="{{ false }}">
+              <nav aria-label="Seções da configuração" style="position:sticky; top:88px; display:grid; gap:2px">
+                <sc-for list="{{ navItems }}" as="n" hint-placeholder-count="5">
+                  <a href="{{ n.href }}" onClick="{{ n.go }}" aria-current="{{ n.current }}" style="display:flex; align-items:center; gap:var(--space-3); min-height:var(--tap-min); padding:0 var(--space-3); border-radius:var(--radius-lg); font-size:var(--text-sm); font-weight:500; text-decoration:none; color:{{ n.color }}; background:{{ n.bg }}; transition:background var(--duration-fast) var(--ease-standard)" style-hover="color:var(--foreground); background:var(--muted)">
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ n.icon }}" base-path="{{ n.base }}" size="{{ 18 }}" hint-size="18px,18px"></x-import>{{ n.label }}
+                  </a>
+                </sc-for>
+              </nav>
+            </sc-if>
+            <div style="display:grid; gap:var(--space-4); min-width:0; max-width:48rem">
+
+              <section id="dados-da-obra" aria-label="Dados da obra" style="scroll-margin-top:88px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" hint-size="100%,220px">
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardHeader" hint-size="100%,28px">
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardTitle" dc-props="{{ sectionTitleProps }}" hint-size="100%,24px">Dados da obra</x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" hint-size="100%,180px">
+                    <div style="display:grid">
+                      <sc-if value="{{ nameReading }}" hint-placeholder-val="{{ true }}">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap; padding-bottom:var(--space-4)">
+                          <div style="display:grid; gap:2px; min-width:0; flex:1 1 14rem">
+                            <span style="font-size:var(--text-sm); color:var(--muted-foreground)">Nome da obra</span>
+                            <span style="font-size:var(--text-base); font-weight:500; overflow-wrap:anywhere">{{ obraName }}</span>
+                          </div>
+                          <sc-if value="{{ canRename }}" hint-placeholder-val="{{ true }}">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ startRename }}" hint-size="130px,44px">
+                              <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="pencil" base-path="./icons" size="{{ 18 }}" hint-size="18px,18px"></x-import>Renomear
+                            </x-import>
+                          </sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ nameEditing }}" hint-placeholder-val="{{ false }}">
+                        <form onSubmit="{{ saveRename }}" noValidate="{{ true }}" style="display:grid; gap:var(--space-3); padding-bottom:var(--space-4)">
+                          <sc-if value="{{ renameApi }}" hint-placeholder-val="{{ false }}">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Alert" tone="danger" hint-size="100%,56px">{{ renameApi }}</x-import>
+                          </sc-if>
+                          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Nome da obra" html-for="rename" error="{{ renameError }}" hint-size="100%,72px">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="rename" auto-complete="off" placeholder="Ex.: Casa Moinhos" value="{{ draft }}" onChange="{{ onDraft }}" invalid="{{ renameInvalid }}" disabled="{{ saving }}" auto-focus="{{ liveFocus }}" hint-size="100%,44px"></x-import>
+                          </x-import>
+                          <div style="display:flex; gap:var(--space-2); flex-wrap:wrap">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="submit" loading="{{ saving }}" dc-props="{{ btnProps }}" hint-size="120px,44px">{{ saveLabel }}</x-import>
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="button" variant="outline" disabled="{{ saving }}" onClick="{{ cancelRename }}" dc-props="{{ btnProps }}" hint-size="110px,44px">Cancelar</x-import>
+                          </div>
+                        </form>
+                      </sc-if>
+                      <sc-if value="{{ renameLock }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex; align-items:flex-start; gap:var(--space-2); padding-top:var(--space-4); border-top:1px solid var(--border); font-size:var(--text-sm); color:var(--muted-foreground); text-wrap:pretty">
+                          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="lock" size="{{ 16 }}" style="margin-top:2px" hint-size="16px,16px"></x-import>
+                          <span>{{ renameLock }}</span>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </x-import>
+                </x-import>
+              </section>
+
+              <sc-if value="{{ showStatusCard }}" hint-placeholder-val="{{ false }}">
+              <section id="status-da-obra" aria-label="Status da obra" style="scroll-margin-top:88px">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" hint-size="100%,160px">
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardHeader" hint-size="100%,28px">
+                    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardTitle" dc-props="{{ sectionTitleProps }}" hint-size="100%,24px">Status da obra</x-import>
+                  </x-import>
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" hint-size="100%,120px">
+                    <div style="display:grid; gap:var(--space-4)">
+                      <div style="display:grid; gap:var(--space-3)">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap">
+                          <div style="display:grid; gap:var(--space-2); justify-items:start; min-width:0; flex:1 1 16rem">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Badge" tone="{{ statusTone }}" dot="{{ statusDot }}" icon="{{ statusBadgeIcon }}" hint-size="112px,24px">{{ statusLabel }}</x-import>
+                            <sc-if value="{{ statusDesc }}" hint-placeholder-val="{{ false }}">
+                              <span style="font-size:var(--text-sm); color:var(--muted-foreground); line-height:var(--leading-normal); text-wrap:pretty">{{ statusDesc }}</span>
+                            </sc-if>
+                          </div>
+                          <sc-if value="{{ showStatusBtn }}" hint-placeholder-val="{{ false }}">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="{{ statusVariant }}" iconStart="{{ statusIcon }}" onClick="{{ askStatus }}" hint-size="190px,44px">{{ statusBtnLabel }}</x-import>
+                          </sc-if>
+                        </div>
+                      </div>
+                      <sc-if value="{{ statusLock }}" hint-placeholder-val="{{ false }}">
+                        <div style="display:flex; align-items:flex-start; gap:var(--space-2); padding-top:var(--space-4); border-top:1px solid var(--border); font-size:var(--text-sm); color:var(--muted-foreground); text-wrap:pretty">
+                          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="lock" size="{{ 16 }}" style="margin-top:2px" hint-size="16px,16px"></x-import>
+                          <span>Só o gerente de obra ou o admin da construtora entrega a obra.</span>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </x-import>
+                </x-import>
+              </section>
+              </sc-if>
+
+              <sc-if value="{{ showFuture }}" hint-placeholder-val="{{ false }}">
+                <sc-for list="{{ futureSections }}" as="s" hint-placeholder-count="4">
+                  <section id="{{ s.id }}" aria-label="{{ s.title }}" style="scroll-margin-top:88px; min-height:120px; display:grid; align-content:start; gap:var(--space-1); padding:var(--space-4); border:1px dashed var(--input); border-radius:var(--radius-xl)">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline; gap:var(--space-3); flex-wrap:wrap">
+                      <span role="heading" aria-level="3" style="font-size:var(--text-base); font-weight:600">{{ s.title }}</span>
+                      <span style="font-family:var(--font-mono); font-size:var(--text-sm); color:var(--muted-foreground)">{{ s.ref }}</span>
+                    </div>
+                    <span style="font-size:var(--text-sm); color:var(--muted-foreground); text-wrap:pretty">{{ s.text }}</span>
+                  </section>
+                </sc-for>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+      </main>
+    </sc-if>
+  </div>
+
+  <sc-if value="{{ dialogSheet }}" hint-placeholder-val="{{ false }}">
+    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Sheet" open="{{ true }}" contained="{{ true }}" title="{{ deliverTitle }}" footer="{{ deliverFooter }}" onClose="{{ cancelConfirm }}" hint-size="100%,520px">
+      <div style="display:grid; gap:var(--space-4)">
+          <p style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); text-wrap:pretty">A entrega fecha a obra de vez. Depois de confirmar:</p>
+          <ul style="margin:0; padding:0; list-style:none; display:grid; gap:var(--space-2); font-size:var(--text-sm); line-height:var(--leading-normal)">
+            <sc-for list="{{ deliverFacts }}" as="f" hint-placeholder-count="3">
+              <li style="display:grid; grid-template-columns:18px minmax(0,1fr); gap:var(--space-2); align-items:start">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ f.icon }}" size="{{ 18 }}" style="margin-top:1px; color:var(--muted-foreground)" hint-size="18px,18px"></x-import>
+                <span style="text-wrap:pretty">{{ f.text }}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Checkbox" label="Entendi que a obra não poderá ser reaberta." checked="{{ ack }}" onChange="{{ onAck }}" disabled="{{ statusSaving }}" hint-size="100%,44px"></x-import>
+          <sc-if value="{{ deliverError }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Alert" tone="danger" role="alert" hint-size="100%,56px">{{ deliverError }}</x-import>
+          </sc-if>
+        </div>
+    </x-import>
+  </sc-if>
+  <sc-if value="{{ dialogCentered }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; z-index:70; display:grid; place-items:center; padding:var(--space-4)">
+      <div onClick="{{ cancelConfirm }}" style="position:absolute; inset:0; background:var(--overlay)"></div>
+      <div role="alertdialog" aria-modal="true" aria-label="{{ deliverTitle }}" style="position:relative; width:100%; max-width:30rem; display:grid; gap:var(--space-5); padding:var(--space-6); border-radius:var(--radius-xl); background:var(--popover); color:var(--popover-foreground); box-shadow:var(--shadow-lg)">
+        <h2 style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug); overflow-wrap:anywhere">{{ deliverTitle }}</h2>
+        <div style="display:grid; gap:var(--space-4)">
+          <p style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); text-wrap:pretty">A entrega fecha a obra de vez. Depois de confirmar:</p>
+          <ul style="margin:0; padding:0; list-style:none; display:grid; gap:var(--space-2); font-size:var(--text-sm); line-height:var(--leading-normal)">
+            <sc-for list="{{ deliverFacts }}" as="f" hint-placeholder-count="3">
+              <li style="display:grid; grid-template-columns:18px minmax(0,1fr); gap:var(--space-2); align-items:start">
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="{{ f.icon }}" size="{{ 18 }}" style="margin-top:1px; color:var(--muted-foreground)" hint-size="18px,18px"></x-import>
+                <span style="text-wrap:pretty">{{ f.text }}</span>
+              </li>
+            </sc-for>
+          </ul>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Checkbox" label="Entendi que a obra não poderá ser reaberta." checked="{{ ack }}" onChange="{{ onAck }}" disabled="{{ statusSaving }}" hint-size="100%,44px"></x-import>
+          <sc-if value="{{ deliverError }}" hint-placeholder-val="{{ false }}">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Alert" tone="danger" role="alert" hint-size="100%,56px">{{ deliverError }}</x-import>
+          </sc-if>
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:var(--space-2)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" disabled="{{ statusSaving }}" onClick="{{ cancelConfirm }}" hint-size="110px,44px">Cancelar</x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" loading="{{ statusSaving }}" disabled="{{ deliverBlocked }}" iconStart="{{ statusIcon }}" onClick="{{ confirmStatus }}" hint-size="170px,44px">{{ deliverLabel }}</x-import>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Toaster" contained="{{ true }}" position="{{ toastPos }}" hint-size="0px,0px">
+      <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Toast" tone="success" onDismiss="{{ dismissToast }}" hint-size="100%,64px">{{ toast }}</x-import>
+    </x-import>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;manager&quot;,&quot;assistant&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'manager'|'assistant'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new&quot;,&quot;home&quot;,&quot;configuration&quot;,&quot;not-found&quot;],&quot;default&quot;:&quot;new&quot;,&quot;tsType&quot;:&quot;'new'|'home'|'configuration'|'not-found'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;last-license&quot;,&quot;invalid-empty&quot;,&quot;invalid-long&quot;,&quot;sending&quot;,&quot;no-license-submit&quot;,&quot;no-license-open&quot;,&quot;failed&quot;,&quot;count-loading&quot;,&quot;blank&quot;,&quot;blank-structure&quot;,&quot;delivered&quot;,&quot;loading&quot;,&quot;error&quot;,&quot;offline&quot;,&quot;vision&quot;,&quot;created&quot;,&quot;hub&quot;,&quot;renaming&quot;,&quot;rename-invalid&quot;,&quot;rename-saving&quot;,&quot;rename-failed&quot;,&quot;deliver-confirm&quot;,&quot;deliver-sending&quot;,&quot;deliver-failed&quot;,&quot;route&quot;,&quot;project&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;vision&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;licensesAvailable&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:5,&quot;default&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;submitResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;no-license&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'no-license'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;renameResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;deliverResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;framed&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+const ICONS = "./icons";
+const USERS = {
+  admin: { name: "Carla Mendes", email: "carla@construtoraatlas.com.br" },
+  manager: { name: "Rafael Souza", email: "rafael.souza@construtoraatlas.com.br" },
+  assistant: { name: "Paula Rocha", email: "paula.rocha@construtoraatlas.com.br" },
+};
+const ROLE_LABEL = { manager: "Gerente de obra", assistant: "Assistente de obra" };
+const STATUS_VARIANT = "outline";
+const NAME = "Casa Moinhos";
+const RENAMED = "Casa Moinhos · Torre A";
+const LONG = "Residencial Parque das Águas Claras · Torres A, B e C · Fase 2 · Quadra 7, Lote 14 · Avenida Senador Salgado Filho, 4500 · Moinhos de Vento";
+const NO_LIC = "Sem licenças disponíveis. Fale com a BluPrint.";
+const ERR_CREATE = "Não foi possível criar a obra. Confira sua conexão e tente de novo.";
+const ERR_DELIVER = "Não foi possível entregar a obra. Confira sua conexão e tente de novo.";
+const DELIVERED_BY = "Entregue em 14/10/2026 por Rafael Souza.";
+const ERR_RENAME = "Não foi possível salvar o nome. Confira sua conexão e tente de novo.";
+const validateName = v => { const t = v.trim(); if (!t) return "Informe o nome da obra."; if (t.length > 120) return "O nome pode ter no máximo 120 caracteres."; return null; };
+const created = n => "Obra \u201C" + n + "\u201D criada.";
+
+class Component extends DCLogic {
+  rootRef = React.createRef();
+  scrollRef = React.createRef();
+  url = (() => { try { return new URLSearchParams(window.location.search); } catch (e) { return new URLSearchParams(); } })();
+  state = Object.assign({ w: 1280, dark: null }, this.base());
+
+  base() {
+    const p = this.props || {};
+    return {
+      screen: p.screen ?? this.url.get("screen") ?? "new", phase: "ready", name: NAME, delivered: false, visionOn: false, section: "dados-da-obra",
+      newName: "", newError: null, newApi: null, sending: false, licLoading: false, licGone: false,
+      editing: false, draft: "", renameError: null, renameApi: null, saving: false,
+      confirm: null, ack: false, deliverError: null, statusSaving: false, statusShipped: false, structureCta: false, toast: null, menuOpen: false, signingOut: false, notFound: "route",
+    };
+  }
+  frozen() { return this.props.state != null && this.props.state !== "live"; }
+  role() { return this.props.role ?? this.url.get("role") ?? "admin"; }
+  isDark() { return this.state.dark ?? ((this.props.theme ?? this.url.get("theme")) === "dark"); }
+
+  componentDidMount() {
+    const el = this.rootRef.current;
+    if (el && window.ResizeObserver) { this.ro = new ResizeObserver(([e]) => this.setState({ w: e.contentRect.width })); this.ro.observe(el); }
+    if (this.frozen()) this.applyFrozen(); else this.enter(this.state.screen);
+  }
+  componentWillUnmount() { if (this.ro) this.ro.disconnect(); [this.t, this.t2, this.t3, this.t4].forEach(clearTimeout); }
+  componentDidUpdate(prev) {
+    const p = this.props;
+    if (prev.state !== p.state || prev.screen !== p.screen || prev.role !== p.role) { if (this.frozen()) this.applyFrozen(); else this.setState(this.base(), () => this.enter(this.state.screen)); }
+    if (prev.theme !== p.theme) this.setState({ dark: null });
+  }
+
+  enter(screen, extra) {
+    clearTimeout(this.t);
+    const sc = this.scrollRef.current; if (sc) sc.scrollTop = 0;
+    if (screen === "new") {
+      this.setState(Object.assign({ screen, licLoading: true }, extra));
+      this.t = setTimeout(() => this.setState({ licLoading: false }), 600);
+    } else if (screen === "home" || screen === "configuration") {
+      const skip = extra && extra.phase === "ready";
+      this.setState(Object.assign({ screen, phase: skip ? "ready" : "loading" }, extra));
+      if (!skip) this.t = setTimeout(() => this.setState({ phase: navigator.onLine === false ? "offline" : "ready" }), 700);
+    } else this.setState(Object.assign({ screen }, extra));
+  }
+
+  applyFrozen() {
+    const s = this.props.state;
+    const scr = this.props.screen ?? "new";
+    const p = Object.assign(this.base(), { screen: scr });
+    const map = {
+      "invalid-empty": { newError: "Informe o nome da obra." },
+      "invalid-long": { newName: LONG, newError: "O nome pode ter no máximo 120 caracteres." },
+      "sending": { newName: NAME, sending: true },
+      "no-license-submit": { newName: NAME, newApi: NO_LIC, licGone: true },
+      "no-license-open": { licGone: true },
+      "failed": { newName: NAME, newApi: ERR_CREATE },
+      "count-loading": { licLoading: true },
+      "delivered": { delivered: true, statusShipped: true },
+      "blank-structure": { structureCta: true },
+      "loading": { phase: "loading" },
+      "error": { phase: "error" },
+      "offline": { phase: "offline" },
+      "vision": { visionOn: true },
+      "hub": { visionOn: true },
+      "created": { toast: created(NAME) },
+      "renaming": { editing: true, draft: NAME },
+      "rename-invalid": { editing: true, draft: "", renameError: "Informe o nome da obra." },
+      "rename-saving": { editing: true, draft: RENAMED, saving: true },
+      "rename-failed": { editing: true, draft: RENAMED, renameApi: ERR_RENAME },
+      "deliver-confirm": { confirm: "deliver", statusShipped: true },
+      "deliver-sending": { confirm: "deliver", ack: true, statusSaving: true, statusShipped: true },
+      "deliver-failed": { confirm: "deliver", ack: true, deliverError: ERR_DELIVER, statusShipped: true },
+      "route": { notFound: "route" },
+      "project": { notFound: "project" },
+    };
+    Object.assign(p, map[s] || {});
+    this.setState(p, () => { const sc = this.scrollRef.current; if (sc) sc.scrollTop = 0; });
+  }
+
+  noop = e => { if (e && e.preventDefault) e.preventDefault(); };
+  goObras = e => {
+    this.noop(e);
+    if (this.props.framed || this.frozen()) return;
+    window.location.href = "../obras/Obras.dc.html?role=" + (this.role() === "admin" ? "admin" : "manager") + "&theme=" + (this.isDark() ? "dark" : "light");
+  };
+  goHome = e => { this.noop(e); if (this.frozen()) return; this.enter("home", { phase: "ready", editing: false, confirm: null }); };
+  goConfig = e => { this.noop(e); if (this.frozen()) return; this.enter("configuration", { phase: "ready" }); };
+
+  submitNew = e => {
+    this.noop(e);
+    const st = this.state;
+    if (st.sending || st.licGone) return;
+    const err = validateName(st.newName);
+    if (err) return this.setState({ newError: err, newApi: null });
+    this.setState({ sending: true, newError: null, newApi: null });
+    clearTimeout(this.t2);
+    this.t2 = setTimeout(() => {
+      const r = this.props.submitResult ?? "success";
+      if (r === "fail") return this.setState({ sending: false, newApi: ERR_CREATE });
+      if (r === "no-license") return this.setState({ sending: false, newApi: NO_LIC, licGone: true });
+      const name = this.state.newName.trim();
+      this.enter("configuration", { phase: "ready", sending: false, name, delivered: false, visionOn: false, toast: created(name) });
+      clearTimeout(this.t4);
+      this.t4 = setTimeout(() => this.setState({ toast: null }), 6000);
+    }, 1000);
+  };
+
+  saveRename = e => {
+    this.noop(e);
+    if (this.state.saving) return;
+    const err = validateName(this.state.draft);
+    if (err) return this.setState({ renameError: err, renameApi: null });
+    this.setState({ saving: true, renameError: null, renameApi: null });
+    clearTimeout(this.t2);
+    this.t2 = setTimeout(() => {
+      if (this.props.renameResult === "fail" || this.frozen()) return this.setState({ saving: false, renameApi: ERR_RENAME });
+      this.setState(s => ({ saving: false, editing: false, name: s.draft.trim() }));
+    }, 800);
+  };
+
+  confirmStatus = () => {
+    if (this.state.statusSaving || !this.state.ack) return;
+    this.setState({ statusSaving: true, deliverError: null });
+    clearTimeout(this.t2);
+    this.t2 = setTimeout(() => {
+      if (this.frozen()) return this.setState({ statusSaving: false });
+      if (this.props.deliverResult === "fail") return this.setState({ statusSaving: false, deliverError: ERR_DELIVER });
+      this.setState(s => ({ statusSaving: false, confirm: null, delivered: true, editing: false, toast: "Obra \u201C" + s.name + "\u201D entregue." }));
+      clearTimeout(this.t4);
+      this.t4 = setTimeout(() => this.setState({ toast: null }), 6000);
+    }, 1000);
+  };
+
+  signOut = () => {
+    if (this.state.signingOut) return;
+    this.setState({ signingOut: true });
+    clearTimeout(this.t3);
+    this.t3 = setTimeout(() => {
+      if (this.props.framed || this.frozen()) return this.setState({ signingOut: false, menuOpen: false });
+      window.location.href = "../auth/Entrar.dc.html" + (this.isDark() ? "?theme=dark" : "");
+    }, 1200);
+  };
+
+  goSection = id => e => {
+    this.noop(e);
+    this.setState({ section: id });
+    const root = this.rootRef.current, sc = this.scrollRef.current;
+    const el = root && root.querySelector("#" + id);
+    if (el && sc) sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 88;
+  };
+
+  renderVals() {
+    const DS = window.BluPrintDesignSystem_d4fa62 || {};
+    const h = React.createElement;
+    const st = this.state;
+    const vp = this.props.viewport ?? "auto";
+    const desk = vp === "desktop" || (vp !== "mobile" && st.w >= 768);
+    const dark = this.isDark();
+    const role = this.role();
+    const admin = role === "admin";
+    const canEdit = role !== "assistant";
+    const user = USERS[role] || USERS.admin;
+    const ps = this.props.state;
+    const live = !this.frozen() && !this.props.framed;
+    const scr = st.screen;
+    const isNew = scr === "new", isHome = scr === "home", isConfig = scr === "configuration", isNF = scr === "not-found";
+    const isProject = isHome || isConfig;
+    const phase = st.phase, ready = phase === "ready";
+    const vision = st.visionOn || !!this.props.vision;
+
+    const avail = st.licGone ? 0 : ps === "last-license" ? 1 : (this.props.licensesAvailable ?? 5);
+    const noLic = avail <= 0;
+    const licText = noLic ? NO_LIC : avail === 1 ? "Usa a última licença disponível." : "Usa 1 das " + avail + " licenças disponíveis.";
+    const openedNoLic = noLic && !st.newApi;
+
+    let block = null;
+    if (isNF) block = st.notFound === "project"
+      ? { icon: "building", title: "Obra não encontrada", desc: "Ela não existe ou você não tem acesso a ela.", back: true, h1: true }
+      : { icon: "map-pin-off", base: ICONS, title: "Página não encontrada", desc: "O endereço pode estar errado ou a página mudou de lugar.", back: true, h1: true };
+    else if (isProject && phase === "error") block = { icon: "circle-alert", title: "Não foi possível carregar a obra", desc: "Confira sua conexão e tente de novo.", retry: true, role: "alert", h1: true };
+    else if (isProject && phase === "offline") block = { icon: "wifi-off", title: "Sem conexão.", desc: "Continuamos assim que a internet voltar.", h1: true };
+    else if (isHome && ready && !vision && !st.delivered) block = st.structureCta
+      ? { icon: "layers", base: ICONS, title: "A obra ainda não tem estrutura", desc: "Cadastre torres, andares e unidades para começar a mapear pendências.", configure: true }
+      : { icon: "layers", base: ICONS, title: "A obra ainda não tem estrutura", desc: "As pendências aparecem aqui quando a obra tiver estrutura." };
+
+    const chev = DS.Icon ? h(DS.Icon, { name: "chevron-down", size: 16, style: { color: "var(--muted-foreground)" } }) : null;
+    const menuTrigger = DS.Button ? h(DS.Button, {
+      variant: "ghost", size: desk ? "md" : "icon", "aria-label": "Conta de " + user.name,
+      style: desk ? { paddingInline: "var(--space-1) var(--space-2)", gap: "var(--space-2)", fontSize: "var(--text-sm)" } : null,
+    }, h(DS.Avatar, { name: user.name, size: "md" }), desk ? h("span", null, user.name) : null, desk ? chev : null) : h("span");
+
+    const navDefs = [
+      ["dados-da-obra", "Dados da obra", "building"], ["status-da-obra", "Status da obra", "circle-check"], ["estrutura", "Estrutura", "layers", ICONS], ["equipe", "Equipe", "users", ICONS],
+      ["disciplinas", "Disciplinas", "wrench", ICONS], ["empresas-executoras", "Empresas executoras", "hard-hat"],
+    ];
+    const navItems = navDefs.map(([id, label, icon, base]) => {
+      const cur = st.section === id;
+      return { href: "#" + id, label, icon, base, go: this.goSection(id), current: cur ? "true" : undefined,
+        color: cur ? "var(--accent-foreground)" : "var(--muted-foreground)", bg: cur ? "var(--accent)" : "transparent" };
+    });
+    const futureSections = [
+      { id: "estrutura", title: "Estrutura", ref: "RF-202 a RF-214 · #6", epic: "#6" },
+      { id: "equipe", title: "Equipe", ref: "RF-126, RF-128, RF-129 · #11", epic: "#11" },
+      { id: "disciplinas", title: "Disciplinas", ref: "RF-401, RF-402, RF-404 · #8", epic: "#8" },
+      { id: "empresas-executoras", title: "Empresas executoras", ref: "RF-301 · #9", epic: "#9" },
+    ].map(s => Object.assign({ text: "Conteúdo e forma decididos no refinamento do " + s.epic + "." }, s));
+
+    const regions = [
+      { title: "Indicadores", ref: "RF-804 · #13", desc: "Pins resolvidos × pendentes e a disciplina com mais pendências.", span: "1 / -1", minH: "112px" },
+      { title: "Mapa de unidades por status", ref: "RF-801 · #13", desc: "Uma célula por unidade, por torre e andar, na paleta de status.", span: desk ? "span 3" : "auto", minH: desk ? "360px" : "240px" },
+      { title: "Navegação da obra", ref: "RF-604 · #6", desc: "Torre → andar → unidade → disciplina → planta.", span: desk ? "span 1" : "auto", minH: desk ? "360px" : "140px" },
+      { title: "Áreas comuns", ref: "RF-808 · #13", desc: "Um bloco por área, medido pela contagem de pendências.", span: "1 / -1", minH: "112px" },
+    ];
+
+    const deliverFacts = [
+      { icon: "lock", text: "Ninguém mais cria, altera ou exclui pins, fotos, plantas, estrutura, equipe, disciplinas, empresas executoras ou o nome da obra: nada mais na obra muda." },
+      { icon: "x", text: "A obra não pode ser reaberta." },
+      { icon: "circle-check", text: "Os relatórios continuam disponíveis para exportar." },
+    ];
+    const dialogOpen = canEdit && st.confirm === "deliver" && !st.delivered;
+    const deliverFooter = DS.Button ? h("div", { style: { display: "grid", gap: "var(--space-2)", width: "100%" } },
+      h(DS.Button, { size: "lg", block: true, loading: st.statusSaving, disabled: !st.ack, iconStart: st.statusSaving ? null : h(DS.Icon, { name: "circle-check", size: 18 }), onClick: this.confirmStatus }, st.statusSaving ? "Entregando obra…" : "Entregar obra"),
+      h(DS.Button, { size: "lg", block: true, variant: "outline", disabled: st.statusSaving, onClick: () => this.setState({ confirm: null, ack: false, deliverError: null }) }, "Cancelar")) : null;
+
+    return {
+      rootRef: this.rootRef, scrollRef: this.scrollRef,
+      themeClass: dark ? "dark" : "",
+      rootH: this.props.framed ? "100%" : "100dvh",
+      scrollbarWidth: desk ? "auto" : "none",
+      headerPos: desk ? "sticky" : "relative",
+      headerH: desk ? "64px" : "56px",
+      pad: desk ? "var(--page-pad-desktop)" : "var(--page-pad)",
+      logoTone: dark ? "white" : "gradient",
+      logoSize: desk ? 32 : 28,
+      noop: this.noop, goObras: this.goObras, goConfig: this.goConfig,
+      user, isAdmin: admin, isMobile: !desk,
+      menuTrigger, menuOpen: st.menuOpen, signingOut: st.signingOut,
+      onMenuOpenChange: v => this.setState({ menuOpen: v }),
+      themeOptions: DS.Icon ? [
+        { value: "light", icon: h(DS.Icon, { name: "sun", size: 18 }), ariaLabel: "Tema claro" },
+        { value: "dark", icon: h(DS.Icon, { name: "moon", size: 18 }), ariaLabel: "Tema escuro" },
+      ] : [],
+      themeValue: dark ? "dark" : "light",
+      onTheme: v => this.setState({ dark: v === "dark" }),
+      logoutIcon: DS.Icon ? h(DS.Icon, { name: "log-out", size: 20 }) : null,
+      signOut: this.signOut,
+
+      isNew,
+      newPad: desk ? "var(--space-8) var(--page-pad-desktop) var(--space-12)" : "var(--space-2) var(--page-pad) var(--space-10)",
+      newGap: desk ? "var(--space-3)" : "var(--space-2)",
+      newCardProps: desk ? { style: { gap: "var(--space-5)" } } : { style: { gap: "var(--space-5)", borderRadius: 0, background: "transparent", paddingBlock: 0, boxShadow: "none" } },
+      padProps: desk ? {} : { style: { paddingInline: 0 } },
+      newTitleProps: { role: "heading", "aria-level": 1, style: { fontSize: "var(--text-2xl)", fontWeight: 600, letterSpacing: "var(--tracking-tight)", lineHeight: "var(--leading-tight)" } },
+      licLoading: st.licLoading,
+      showLicText: !st.licLoading,
+      licText,
+      newApi: st.newApi, newError: st.newError, newName: st.newName, newInvalid: !!st.newError,
+      onNewName: e => this.setState({ newName: e.target.value, newError: null, newApi: st.licGone ? st.newApi : null }),
+      fieldDisabled: openedNoLic || st.sending,
+      newAutoFocus: desk && live,
+      sending: st.sending,
+      newBtnDisabled: noLic,
+      newBtnLabel: st.sending ? "Criando obra…" : "Criar obra",
+      submitNew: this.submitNew,
+
+      showBand: isProject,
+      bandPad: desk ? "var(--space-4) var(--page-pad-desktop) var(--space-6)" : "var(--space-1) var(--page-pad) var(--space-5)",
+      backLabel: isConfig ? "Início da obra" : "Obras",
+      goBack: isConfig ? this.goHome : this.goObras,
+      showConfigIcon: isHome && ready && !desk,
+      showConfigBtn: isHome && ready && desk,
+      showObraHead: isProject && (ready || phase === "loading"),
+      headLoading: phase === "loading",
+      headReady: ready,
+      headSkW: desk ? 360 : "70%", headSkH: desk ? 36 : 28,
+      titleSize: desk ? "var(--text-3xl)" : "var(--text-2xl)",
+      obraName: st.name,
+      statusTone: st.delivered ? "success" : "primary",
+      statusDot: !st.delivered,
+      statusBadgeIcon: st.delivered && DS.Icon ? h(DS.Icon, { name: "circle-check", size: 14 }) : null,
+      statusLabel: st.delivered ? "Entregue" : "Em andamento",
+      showRole: !admin, roleLabel: ROLE_LABEL[role] || "",
+
+      showMain: isProject || isNF,
+      mainPad: desk ? "var(--space-8) var(--page-pad-desktop) var(--space-12)" : "var(--space-5) var(--page-pad) var(--space-8)",
+      mainGap: desk ? "var(--space-5)" : "var(--space-4)",
+      showBlock: !!block,
+      blockRole: block && block.role ? block.role : "status",
+      blockIcon: block ? block.icon : "building",
+      blockIconBase: block ? block.base : undefined,
+      blockTitle: block ? block.title : "",
+      blockDesc: block ? block.desc : "",
+      blockIsH1: !!(block && block.h1), blockIsH2: !!(block && !block.h1),
+      blockRetry: !!(block && block.retry),
+      blockConfigure: !!(block && block.configure),
+      blockBack: !!(block && block.back),
+      blockPad: desk ? "var(--space-16) 0" : "var(--space-12) 0",
+      retry: () => {
+        this.setState({ phase: "loading" });
+        clearTimeout(this.t);
+        this.t = setTimeout(() => this.setState({ phase: this.frozen() ? this.props.state : "ready" }), 900);
+      },
+      homeLoading: isHome && phase === "loading",
+
+      showVision: isHome && ready && (vision || st.delivered),
+      visionCols: desk ? "repeat(4, minmax(0, 1fr))" : "minmax(0, 1fr)",
+      regions,
+
+      showConfig: isConfig && ready,
+      cfgCols: desk && vision ? "200px minmax(0, 1fr)" : "minmax(0, 1fr)",
+      showCfgNav: desk && vision,
+      navItems,
+      sectionTitleProps: { role: "heading", "aria-level": 3, style: { fontSize: "var(--text-lg)", fontWeight: 600, letterSpacing: "var(--tracking-tight)" } },
+      canEdit,
+      canRename: canEdit && !st.delivered,
+      renameLock: st.delivered ? "A obra foi entregue: o nome não pode mais ser alterado." : !canEdit ? "Só o gerente de obra ou o admin da construtora renomeia a obra." : null,
+      nameReading: !st.editing || !canEdit || st.delivered,
+      nameEditing: st.editing && canEdit && !st.delivered,
+      startRename: () => this.setState({ editing: true, draft: st.name, renameError: null, renameApi: null }),
+      cancelRename: () => this.setState({ editing: false, renameError: null, renameApi: null }),
+      saveRename: this.saveRename,
+      draft: st.draft, onDraft: e => this.setState({ draft: e.target.value, renameError: null }),
+      renameError: st.renameError, renameInvalid: !!st.renameError, renameApi: st.renameApi,
+      saving: st.saving, saveLabel: st.saving ? "Salvando…" : "Salvar",
+      liveFocus: live,
+      btnProps: { style: { flex: desk ? "none" : "1 1 0" } },
+      statusDesc: st.delivered ? DELIVERED_BY + " A obra está fechada: nada mais pode ser alterado. Os relatórios continuam disponíveis." : "A equipe registra e resolve pendências. Entregue a obra quando ela for passada ao cliente: depois disso ela fica fechada e não pode ser reaberta.",
+      showStatusCard: vision || st.statusShipped,
+      showStatusBtn: canEdit && !st.delivered,
+      statusBtnLabel: "Entregar obra",
+      statusVariant: STATUS_VARIANT,
+      statusIcon: DS.Icon && !st.statusSaving ? h(DS.Icon, { name: "circle-check", size: 18 }) : null,
+      askStatus: () => this.setState({ confirm: "deliver", ack: false, deliverError: null }),
+      statusLock: !canEdit && !st.delivered,
+      dialogSheet: dialogOpen && !desk,
+      dialogCentered: dialogOpen && desk,
+      deliverTitle: "Entregar \u201C" + st.name + "\u201D?",
+      deliverFacts, deliverFooter,
+      deliverError: st.deliverError,
+      ack: st.ack, onAck: e => this.setState({ ack: e.target.checked }),
+      deliverBlocked: !st.ack,
+      deliverLabel: st.statusSaving ? "Entregando obra…" : "Entregar obra",
+      statusSaving: st.statusSaving,
+      confirmStatus: this.confirmStatus,
+      cancelConfirm: () => { if (!this.state.statusSaving) this.setState({ confirm: null, ack: false, deliverError: null }); },
+      showFuture: vision,
+      futureSections,
+
+      toast: st.toast,
+      toastPos: desk ? "bottom-right" : "bottom-center",
+      dismissToast: () => this.setState({ toast: null }),
+    };
+  }
+}
+</script>
+</body>
+</html>

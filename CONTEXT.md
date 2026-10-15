@@ -18,7 +18,7 @@ One construction development, enabled by one license. Ex.: Casa Moinhos.
 _Avoid_: site, work, construction
 
 **Project status** (pt-BR: *status da obra*):
-Either *active* (*em andamento*) or *delivered* (*entregue*), set and reverted by an admin or a manager. A delivered project's content is frozen until it is reopened; reports export in either status.
+Either *active* (*em andamento*) or *delivered* (*entregue*). An admin or a manager delivers a project, and delivery is final: a delivered project accepts no change, its name included, and only BluPrint support reopens one delivered by mistake; reports export in either status.
 _Avoid_: archived, finished, closed
 
 **Project configuration** (pt-BR: *configuração da obra*):
