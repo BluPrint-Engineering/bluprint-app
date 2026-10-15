@@ -34,7 +34,7 @@ Card, Checkbox, DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Sheet,
 - **Future sections (vision)**: dashed frames with name, requirements and epic, "Conteúdo e forma decididos no
   refinamento do #N.". No content: each epic's refinement decides it and may redesign the hub.
 - **Início blank obra**: #46 (P1) has no button, "As pendências aparecem aqui quando a obra tiver estrutura.".
-  The vision P1c ("Cadastrar estrutura") belongs to #6, which decides its copy and destination.
+  The vision P1c is replaced by E1 in `../estrutura/`.
 - **Status**: #46 shows it only in the header badge; the Status da obra card arrives with the later ticket.
 - **Rename**: inline. "Renomear" (outline, `pencil`) turns the name row into a Field + "Salvar" / "Cancelar".
   Saving: "Salvando…", field locked. Success returns to read mode and the header shows the new name.
