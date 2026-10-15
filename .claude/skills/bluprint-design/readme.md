@@ -32,11 +32,11 @@ This project holds only the design system. Screens (Entrar #42, Criar conta #43,
 | `styles.css` | The single entry point. Nothing but `@import` lines |
 | `tokens/` | `colors.css` (brand + light/dark UI), `domain-palettes.css` (unit status, discipline), `typography.css`, `spacing.css`, `radius.css`, `elevation.css`, `motion.css`, `fonts.css` |
 | `css/` | `base.css` (resets, body, headings, links), `components.css` (the `.bp-*` classes the components use) |
-| `assets/` | Vector logos (`logo-mark*.svg`, `wordmark*.svg`, `logo-lockup*.svg`, `logo-stacked*.svg`), the two raster originals, `icons/` (24 lucide glyphs). The glyphs and logo SVGs are also embedded in `Icon` and `Logo`, so screens render them without this folder; `assets/` is the source for the repo (`public/brand/`) and for regenerating those components |
+| `assets/` | Vector logos (`logo-mark*.svg`, `wordmark*.svg`, `logo-lockup*.svg`, `logo-stacked*.svg`), the two raster originals, `icons/` (30 lucide glyphs). The glyphs and logo SVGs are also embedded in `Icon` and `Logo`, so screens render them without this folder; `assets/` is the source for the repo (`public/brand/`) and for regenerating those components |
 | `components/core/` | **Button**, **Card** (+ `CardHeader`, `CardTitle`, `CardDescription`, `CardContent`, `CardFooter`), **Icon**, **Avatar**, **Badge** |
 | `components/forms/` | **Field**, **Input**, **Label**, **Checkbox**, **SearchInput** |
 | `components/feedback/` | **Alert**, **Spinner**, **Skeleton**, **Toast** (+ `Toaster`) |
-| `components/overlay/` | **DropdownMenu** (+ `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`), **Sheet** |
+| `components/overlay/` | **DropdownMenu** (+ `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator`), **Sheet**, **AlertDialog** |
 | `components/navigation/` | **Pagination**, **SegmentedControl** |
 | `components/brand/` | **Logo** |
 | `guidelines/` | The foundation specimen cards rendered in the Design System tab |
@@ -58,7 +58,9 @@ This project holds only the design system. Screens (Entrar #42, Criar conta #43,
 
 **Added for the obra list ([#45](https://github.com/BluPrint-Engineering/bluprint-app/issues/45))** — `Avatar`, `Badge`, `Skeleton`, `Toast`, `DropdownMenu`, `Sheet`, `Pagination`, `SegmentedControl`, `SearchInput`. Each maps to a shadcn primitive (`avatar`, `badge`, `skeleton`, `sonner`, `dropdown-menu`, `drawer`, `pagination`, `toggle-group`, `input`), and six more lucide glyphs came with them: `search`, `sliders-horizontal`, `x`, `chevron-left`, `chevron-down`, `check`.
 
-Nothing else was invented. There is no Tabs, Dialog primitive or Table here, because no screen asks for one yet. When the plan viewer and dashboards get specs, the pin, the status cell and the discipline legend become components — they are domain objects with their own palettes and belong here, not in a screen.
+**Added for the obra screen ([#46](https://github.com/BluPrint-Engineering/bluprint-app/issues/46))** — `AlertDialog` (shadcn `alert-dialog`), the confirmation for an action that cannot be undone, first used to deliver an obra; the `--badge-primary` tokens, which lift the "Em andamento" badge in dark mode; and six lucide glyphs: `settings`, `pencil`, `layers`, `users`, `wrench`, `map-pin-off`. They were written here by hand, not exported, so `_ds_bundle.js` and `_ds_manifest.json` do not carry them yet: until the bundle is rebuilt, a prototype draws the dialog from `css/components.css` classes and loads the six glyphs through `Icon basePath`.
+
+Nothing else was invented. There is no Tabs or Table here, because no screen asks for one yet. When the plan viewer and dashboards get specs, the pin, the status cell and the discipline legend become components — they are domain objects with their own palettes and belong here, not in a screen.
 
 ## Content fundamentals
 
@@ -117,7 +119,7 @@ Nothing else was invented. There is no Tabs, Dialog primitive or Table here, bec
 
 ## Iconography
 
-**Lucide**, at its default 24px box and 1.5px stroke — the app declares `iconLibrary: "lucide"` in `components.json` and imports `lucide-react`. The 24 glyphs the screens here need were copied from the [lucide repository](https://github.com/lucide-icons/lucide) into `assets/icons/`: `eye`, `eye-off`, `mail`, `lock`, `user`, `circle-alert`, `circle-check`, `map-pin`, `chevron-right`, `log-out`, `plus`, `arrow-left`, `sun`, `moon`, `hard-hat`, `refresh-cw`, `wifi-off`, `building`, `search`, `sliders-horizontal`, `x`, `chevron-left`, `chevron-down`, `check`. Need another? Copy the SVG from lucide by its kebab-case name; do not draw one.
+**Lucide**, at its default 24px box and 1.5px stroke — the app declares `iconLibrary: "lucide"` in `components.json` and imports `lucide-react`. The 30 glyphs the screens here need were copied from the [lucide repository](https://github.com/lucide-icons/lucide) into `assets/icons/`: `eye`, `eye-off`, `mail`, `lock`, `user`, `circle-alert`, `circle-check`, `map-pin`, `chevron-right`, `log-out`, `plus`, `arrow-left`, `sun`, `moon`, `hard-hat`, `refresh-cw`, `wifi-off`, `building`, `search`, `sliders-horizontal`, `x`, `chevron-left`, `chevron-down`, `check`, `settings`, `pencil`, `layers`, `users`, `wrench`, `map-pin-off`. Need another? Copy the SVG from lucide by its kebab-case name; do not draw one.
 
 Rules: icons are 20px inline and 24px inside a 44px tap target; they inherit `currentColor` (the `Icon` component uses a CSS mask to keep that behavior); an icon never stands alone as the only signal of state; **no emoji and no unicode glyphs as icons**, anywhere, including the report. There is no icon font and no sprite sheet in the repo.
 
@@ -154,6 +156,7 @@ Clear space around the mark is one counter-circle radius on every side. Minimum 
 - Toast (Toaster)
 - DropdownMenu (DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator)
 - Sheet
+- AlertDialog
 - Pagination
 - SegmentedControl
 - Logo

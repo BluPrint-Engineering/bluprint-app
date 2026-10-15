@@ -43,6 +43,7 @@ apps/web/public/brand/            ← assets/logo-*.svg, wordmark*.svg
 | Avatar, Badge | `avatar`, `badge` |
 | DropdownMenu | `dropdown-menu` |
 | Sheet | `drawer` (bottom sheet on mobile) |
+| AlertDialog | `alert-dialog`; below 768px the `drawer` |
 | Pagination | `pagination` |
 | SegmentedControl | `toggle-group` |
 

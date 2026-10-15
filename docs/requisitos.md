@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 14/10/2026, novo RF-217 e admin no RF-402, do refinamento da nova obra.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 15/10/2026, entrega definitiva (RF-215, RF-216, RF-217) e admin convidando assistentes (RF-126), da revisão do design da obra.
 
 ---
 
@@ -89,7 +89,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-123 | O **papel padrão** tem duas funções, ambas de interface: gravar o papel de quem é convidado pelo painel geral (onde ainda não há obra) e pré-preencher a seleção ao adicionar a pessoa numa obra | M |
 | RF-124 | A mesma pessoa pode ter papéis diferentes em obras diferentes. Alterar o papel padrão **não altera** os vínculos já existentes com obras | M |
 | RF-125 | Login por e-mail, sem exigência de domínio corporativo | M |
-| RF-126 | Só o **admin da construtora** convida gerentes de obra. Gerente convida apenas assistentes. Assistente não convida ninguém | M |
+| RF-126 | Só o **admin da construtora** convida gerentes de obra; ele também convida assistentes. Gerente convida apenas assistentes. Assistente não convida ninguém | M |
 | RF-127 | Convite geral pelo painel da organização, **em lote** (colar vários e-mails de uma vez), sem vincular a nenhuma obra | M |
 | RF-128 | Ao adicionar pessoas a uma obra, **dropdown** com quem já está cadastrado na organização, agrupado pelo papel padrão | M |
 | RF-129 | Se a pessoa não está no dropdown, o convite é feito por e-mail ali mesmo — ela sai vinculada à organização **e** já vinculada àquela obra | M |
@@ -125,9 +125,9 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-212 | O item arquivado registra quem arquivou e quando; a restauração é feita por gerente de obra ou admin | M |
 | RF-213 | Cômodo em uso por algum pin não pode ser excluído. Pode ser **renomeado**, e o novo nome se propaga aos pins e aos relatórios | M |
 | RF-214 | Exclusão definitiva de um item arquivado, restrita a gerente de obra e admin, com confirmação que informa exatamente o que será perdido ("12 pins, 8 fotos, 2 plantas") | S |
-| RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin marca a obra como entregue e pode reabri-la | M |
-| RF-216 | Obra **entregue** fica congelada: ninguém cria, edita, conclui ou exclui pin, foto, planta ou estrutura até ela ser reaberta. Relatórios são exportados em qualquer status | M |
-| RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento, inclusive entregue, para corrigir o nome. Renomear não libera a licença: a obra nunca é apagada, e o que já tem conteúdo é arquivado (RF-210), então uma obra não vira outra obra com a mesma licença | M |
+| RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin entrega a obra depois de confirmar, num diálogo, o que acontece. A entrega é definitiva: o app não reabre a obra, e uma obra entregue por engano só é reaberta pelo suporte da BluPrint, a pedido da construtora e com registro | M |
+| RF-216 | Obra **entregue** fica fechada de vez: ninguém cria, edita, conclui ou exclui pin, foto, planta, estrutura, equipe ou o nome da obra. Relatórios são exportados em qualquer status | M |
+| RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento antes da entrega, para corrigir o nome. Renomear não libera a licença: a obra nunca é apagada, e o que já tem conteúdo é arquivado (RF-210), então uma obra não vira outra obra com a mesma licença | M |
 
 ## 3. Empresas executoras
 

@@ -162,8 +162,9 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
      - Left: **name**, 18px/600, tracking -0.02em, leading 1.3, clamped to 2 lines. Under it, **for
        managers and assistants only**, their role in that obra: "Gerente de obra" or "Assistente de obra",
        14px `--muted-foreground`, 2px gap. Admins don't see a role line (it would be the same on every card).
-     - Right: status **Badge** with dot, no shrink: "Em andamento" (tone `primary`: bg `--accent`, text
-       `--accent-foreground`) or "Entregue" (tone `neutral`: bg `--secondary`, text `--secondary-foreground`).
+     - Right: status **Badge** with dot, no shrink: "Em andamento" (tone `primary`: bg `--badge-primary`, text
+       `--badge-primary-foreground`, the accent pair in light and lifted in dark) or "Entregue" (tone `success` with the `circle-check` icon instead of the dot:
+       bg `--success` at 12%, text `--success`; a delivered obra reads as concluded).
        24px tall, 12px/500 text, 6px dot.
   2. Footer row: `border-top: 1px solid --border`, padding-top 12px, `space-between`, baseline, 14px:
      - Left: open pins, 500 weight, tabular numbers: "42 pendências abertas" / "1 pendência aberta" /
@@ -172,9 +173,9 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
        latest change to the obra's content (pins, photos, plans, structure); creating the obra counts, so a
        new obra reads its creation time.
      - The open-pin count is hidden until pins exist (#7).
-- **Delivered obra**: quieter, not disabled. Card background transparent (hairline ring only), neutral
-  badge, muted pin count. Still opens the obra and exports reports; its content is frozen until a gerente
-  or admin reopens it (RF-216).
+- **Delivered obra**: quieter, not disabled. Card background transparent (hairline ring only), success
+  badge, muted pin count. Still opens the obra and exports reports; delivery is final, nothing in it changes
+  again (RF-216, [0069](../../../adr/0069-delivering-a-project-is-final.md)).
 - Not on the card: organization name, cover photo, chevron.
 - States: hover adds `box-shadow: 0 0 0 1px --input` on the link (radius 14px); focus-visible
   `--shadow-focus`; active `translateY(1px)`. Transition 120ms.
