@@ -15,4 +15,4 @@ Requirements: RF-209, RF-210, RF-211, RF-212, RF-214
 ## Considered Options
 
 - **Separate "delete" and "archive" actions**: the action names its outcome, but the menu changes from item to item and a person looking for "delete" on a unit with a plan does not find it.
-- **Only pins and plans count as content** (the wording of RF-209): a unit with its status, contractor and notes filled in but no pin yet would be deleted outright.
+- **Only pins and plans count as content** (the former wording of RF-209): a unit with its status, contractor and notes filled in but no pin yet would be deleted outright.
