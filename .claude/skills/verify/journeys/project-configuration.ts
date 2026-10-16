@@ -4,7 +4,6 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	const role = email === accounts.ADMIN_EMAIL ? "admin" : email === accounts.MANAGER_EMAIL ? "manager" : "assistant";
 	const card = page.getByRole("region", { name: "Dados da obra" });
 	const nameField = page.getByRole("textbox", { name: "Nome da obra" });
-	const lastActivity = async () => (await query("SELECT last_activity_at FROM project WHERE name LIKE 'Residencial Jardins%'"))[0].last_activity_at.toISOString();
 
 	await page.goto("/projects?q=Jardins");
 	await page.getByRole("link", { name: /Residencial Jardins/ }).click();
@@ -13,6 +12,9 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	await shot("home-entry");
 	await entry.click();
 	await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}\/configuration$/);
+	const projectId = new URL(page.url()).pathname.split("/")[2];
+	const lastActivity = async () =>
+		(await query("SELECT last_activity_at FROM project WHERE id = $1", [projectId]))[0].last_activity_at.toISOString();
 	await expect(page.getByRole("heading", { level: 2, name: "Configuração" })).toBeVisible();
 	await expect(card.getByRole("heading", { level: 3, name: "Dados da obra" })).toBeVisible();
 	await expect(card.getByText("Residencial Jardins")).toBeVisible();

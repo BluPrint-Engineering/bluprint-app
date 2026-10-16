@@ -8,6 +8,6 @@ export const projectNameSchema = z
 	.min(1)
 	.max(PROJECT_NAME_MAX_LENGTH)
 	.meta({
-		description: "The project's name, chosen by the organization admin.",
+		description: "The project's name.",
 		example: "Casa Moinhos",
 	});

@@ -9,6 +9,7 @@ import {
 } from "@bluprint/shared";
 import {
 	infiniteQueryOptions,
+	type Query,
 	queryOptions,
 	useMutation,
 	useQueryClient,
@@ -103,6 +104,8 @@ export function isProjectDelivered(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === PROJECT_DELIVERED;
 }
 
+const isListQuery = (query: Query) => query.queryKey[1] !== "detail";
+
 export function useRenameProjectMutation(projectId: string) {
 	const queryClient = useQueryClient();
 	const { queryKey } = projectQueryOptions(projectId);
@@ -117,12 +120,10 @@ export function useRenameProjectMutation(projectId: string) {
 			queryClient.setQueryData(queryKey, renamed);
 			return queryClient.invalidateQueries({
 				queryKey: ["projects"],
-				// the renamed project is already in the cache
-				predicate: (query) => query.queryKey[1] !== "detail",
+				predicate: isListQuery,
 			});
 		},
 		onError: (error) => {
-			// a stale tab renamed a project someone delivered meanwhile; reload it so the screen shows it closed
 			if (isProjectDelivered(error)) {
 				return queryClient.invalidateQueries({ queryKey });
 			}
