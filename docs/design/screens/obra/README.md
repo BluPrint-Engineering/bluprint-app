@@ -36,7 +36,7 @@ Query, Tailwind v4, shadcn radix-nova, `lucide-react`); do not copy the prototyp
 ## Route and files in `apps/web`
 
 ```
-src/routes/__root.tsx                                            ← notFoundComponent
+src/routes/_authenticated/$/route.tsx                            ← route 404 (X1), signed-out visitors go to /login first
 src/routes/_authenticated/projects/new.tsx                       ← admin only; others redirect to /projects
 src/routes/_authenticated/projects/$projectId/index.tsx          ← início
 src/routes/_authenticated/projects/$projectId/configuration.tsx  ← configuração
@@ -48,7 +48,7 @@ src/features/projects/
 src/components/NotFound.tsx                                      ← both cases; route 404 and obra 404
 ```
 
-`$projectId` loaders: on API 404 throw `notFound()` with the "obra" variant so the root renders X2.
+The início renders X2 itself (`NotFound variant="project"`) for an id that is not a UUID, without calling the API, and on `404 PROJECT_NOT_FOUND`.
 
 ---
 
@@ -324,7 +324,7 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
   `useCreateProjectMutation` sends `{ id, name, units }` with `id = crypto.randomUUID()` generated once when the
   page mounts (kept across retries). On `error.problem.code === "NO_UNITS_LEFT"` set the query's `free` to
   `problem.available` and the field error (N5). The "sobram" help is derived from `free` and the typed value. Success invalidates the units query and the list.
-- `useProjectQuery(id)` shared by início and configuração; 404 → `notFound()`.
+- `projectQueryOptions(id)` shared by início and configuração; `404 PROJECT_NOT_FOUND` is not retried and renders X2.
 - `useRenameProjectMutation` → `setQueryData` on the project and invalidate the list.
 - `useChangeReservationMutation` (2.12) sends `{ reserved }`; success → `setQueryData` on the project's `units`,
   invalidate the organization units query and the list. Branch on `RESERVATION_BELOW_USED`, `NO_UNITS_LEFT` and
@@ -338,9 +338,9 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 | --- | --- |
 | `POST /api/projects` `{ id, name, units }` → `ProjectSummary`; `409 NO_UNITS_LEFT` with `requested` and `available`; `PROJECT_ID_TAKEN` and the idempotent retry (ADR 0068) | Served today as `{ name, units }` with `409 NO_UNITS_LEFT` (`requested`, `available`); `id`, `PROJECT_ID_TAKEN` and the idempotent retry are not served yet; #151 builds the page |
 | Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | Served; `reclaimable` equals the reservas until #165 |
-| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects` and the create response; `used` is 0 until #165 |
+| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects`, `GET /api/projects/:id` and the create response; `used` is 0 until #165 |
 | Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | 2.12 |
-| One obra `GET /api/projects/:id` (same visibility as the list, 404 otherwise) | #46 |
+| One obra `GET /api/projects/:id` (same visibility as the list, `404 PROJECT_NOT_FOUND` otherwise) | Served |
 | Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente; refused on a delivered obra | #46 |
 | Deliver, admin or gerente; final, no reopen route (ADR 0069) | Later ticket of the obra screen |
 | Structure, team, disciplines, contractors | Their epics (#6, #11, #8, #9); no table migrated yet |
