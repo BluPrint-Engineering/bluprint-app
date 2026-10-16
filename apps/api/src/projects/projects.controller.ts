@@ -1,5 +1,5 @@
 import { ProjectList, ProjectManager, ProjectSummary } from "@bluprint/shared";
-import { Body, Controller, Get, Post, Query } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
@@ -8,6 +8,7 @@ import { CreateProjectDto } from "./dto/create-project.dto";
 import { ProjectListQueryDto } from "./dto/project-list-query.dto";
 import { ProjectListDto } from "./dto/project-list.dto";
 import { ProjectManagersDto } from "./dto/project-managers.dto";
+import { ProjectParamsDto } from "./dto/project-params.dto";
 import { ProjectSummaryDto } from "./dto/project-summary.dto";
 import { ProjectsService } from "./projects.service";
 
@@ -49,6 +50,25 @@ export class ProjectsController {
 	@ApiErrorResponses(401, 403)
 	listManagers(@Session() session: UserSession): Promise<ProjectManager[]> {
 		return this.projects.listManagers(session.user.id);
+	}
+
+	@Get(":id")
+	@ApiOperation({
+		summary: "One project",
+		description:
+			"The project's summary, the same one the list gives. The visibility is the list's: the caller must have a membership on the project, or be the `admin` of its organization. A project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`, so the answer never reveals whether it exists.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The project.",
+		type: ProjectSummaryDto,
+	})
+	@ApiErrorResponses(400, 401, 404)
+	read(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+	): Promise<ProjectSummary> {
+		return this.projects.findVisible(session.user.id, params.id);
 	}
 
 	@Post()

@@ -1,9 +1,12 @@
 import {
 	type CreateProject,
+	EffectiveRole,
 	NO_UNITS_LEFT,
+	PROJECT_NOT_FOUND,
 	ProjectList,
 	ProjectListQuery,
 	ProjectManager,
+	ProjectStatus,
 	ProjectSummary,
 	ProjectUnits,
 } from "@bluprint/shared";
@@ -17,6 +20,27 @@ import { ProjectsRepository } from "./projects.repository";
 // TODO(#165): used becomes the units the project has created or spent
 function unitsOf(reserved: number): ProjectUnits {
 	return { reserved, used: 0 };
+}
+
+function toSummary(row: {
+	id: string;
+	name: string;
+	createdAt: Date;
+	lastActivityAt: Date;
+	effectiveRole: EffectiveRole | null;
+	reservedUnits: number;
+	status: ProjectStatus;
+}): ProjectSummary {
+	return {
+		id: row.id,
+		name: row.name,
+		// z.iso.datetime() needs a string, not a Date, or the serializer 500s
+		createdAt: row.createdAt.toISOString(),
+		lastActivityAt: row.lastActivityAt.toISOString(),
+		role: row.effectiveRole ?? "admin",
+		units: unitsOf(row.reservedUnits),
+		status: row.status,
+	};
 }
 
 @Injectable()
@@ -41,20 +65,23 @@ export class ProjectsService {
 			offset: (page - 1) * pageSize,
 		});
 
-		return {
-			items: items.map((row) => ({
-				id: row.id,
-				name: row.name,
-				// z.iso.datetime() needs a string, not a Date, or the serializer 500s
-				createdAt: row.createdAt.toISOString(),
-				lastActivityAt: row.lastActivityAt.toISOString(),
-				role: row.effectiveRole ?? "admin",
-				units: unitsOf(row.reservedUnits),
-				status: row.status,
-			})),
-			total,
-			counts,
-		};
+		return { items: items.map(toSummary), total, counts };
+	}
+
+	async findVisible(
+		userId: string,
+		projectId: string,
+	): Promise<ProjectSummary> {
+		const found = await this.projects.findVisible(userId, projectId);
+		if (!found) {
+			throw new ProblemException({
+				status: 404,
+				code: PROJECT_NOT_FOUND,
+				detail: "The project does not exist or is not visible to the caller.",
+			});
+		}
+
+		return toSummary(found);
 	}
 
 	async listManagers(userId: string): Promise<ProjectManager[]> {

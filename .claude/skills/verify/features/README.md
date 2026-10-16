@@ -33,4 +33,5 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Sign up](./sign-up.md): self-signup scaffolding, the terms checkbox, landing signed in.
 - [Account menu and sign out](./account-menu.md): the header account menu, theme choice, signing out.
 - [Project list](./project-list.md): the Obras screen, phone infinite scroll versus desktop pagination.
+- [Project home and not found](./project-home.md): a card opens the project's home (name, status, role, blank state), and the not-found pages for unknown addresses and projects the user cannot see.
 - [Project filters, search and sort](./project-filters.md): status, manager, name search and sort, from the desktop toolbar and the phone sheet.

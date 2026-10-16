@@ -2,15 +2,15 @@ import type {
 	ProjectList as ProjectListData,
 	ProjectStatusFilter,
 } from "@bluprint/shared";
-import type { FetchStatus } from "@tanstack/react-query";
 import { Building, CircleAlert, Search, WifiOff } from "lucide-react";
 import type * as React from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { type FirstLoad, firstLoadState } from "../components/firstLoadState";
+import { StateBlock } from "../components/StateBlock";
 import { clearAllFilters, isNarrowed, type ProjectsFilters } from "../filters";
 import { ListSkeleton } from "./ProjectList";
 import type { ProjectsToolbarProps } from "./ProjectsToolbar";
-import { StateBlock } from "./StateBlock";
 
 interface ProjectsMainProps {
 	total: number | undefined;
@@ -44,20 +44,6 @@ function ProjectsMain({
 			{children}
 		</main>
 	);
-}
-
-interface FirstLoad {
-	isError: boolean;
-	isFetching: boolean;
-	fetchStatus: FetchStatus;
-	refetch: () => unknown;
-}
-
-function firstLoadState(query: FirstLoad): "loading" | "failed" | "offline" {
-	if (query.isError && !query.isFetching) return "failed";
-	// paused, not failed: TanStack Query resumes the request when the connection returns
-	if (query.fetchStatus === "paused") return "offline";
-	return "loading";
 }
 
 function ListPlaceholder({ query }: { query: FirstLoad }) {

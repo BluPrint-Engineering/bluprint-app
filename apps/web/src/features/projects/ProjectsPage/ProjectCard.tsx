@@ -1,65 +1,47 @@
-import type {
-	EffectiveRole,
-	ProjectStatus,
-	ProjectSummary,
-} from "@bluprint/shared";
-import { CircleCheck } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import type { ProjectSummary } from "@bluprint/shared";
+import { Link } from "@tanstack/react-router";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ProjectStatusBadge } from "../components/ProjectStatusBadge";
+import { ROLE_LABELS } from "../components/roleLabels";
 import { formatLastActivity } from "./lastActivity";
-import { STATUS_LABELS } from "./statusLabels";
-
-const ROLE_LABELS: Record<EffectiveRole, string> = {
-	manager: "Gerente de obra",
-	assistant: "Assistente de obra",
-};
-
-const STATUS_BADGE_VARIANT = {
-	active: "primary",
-	delivered: "success",
-} as const satisfies Record<ProjectStatus, "primary" | "success">;
 
 const CARD = "rounded-xl shadow-(--ring-hairline) ring-0";
 
 export function ProjectCard({ project }: { project: ProjectSummary }) {
 	return (
-		<Card
-			className={cn(CARD, project.status === "delivered" && "bg-transparent")}
+		<Link
+			to="/projects/$projectId"
+			params={{ projectId: project.id }}
+			className="block rounded-xl transition-[box-shadow,transform] duration-(--duration-fast) ease-standard outline-none hover:shadow-[0_0_0_1px_var(--input)] focus-visible:shadow-(--shadow-focus) active:translate-y-px"
 		>
-			<CardContent className="grid gap-(--space-3)">
-				<div className="flex min-h-13 items-start justify-between gap-(--space-3)">
-					<div className="grid min-w-0 content-start gap-0.5">
-						<h2 className="line-clamp-2 text-lg leading-snug font-semibold tracking-tight text-pretty">
-							{project.name}
-						</h2>
-						{project.role !== "admin" && (
-							<p className="text-sm text-muted-foreground">
-								{ROLE_LABELS[project.role]}
-							</p>
-						)}
+			<Card
+				className={cn(CARD, project.status === "delivered" && "bg-transparent")}
+			>
+				<CardContent className="grid gap-(--space-3)">
+					<div className="flex min-h-13 items-start justify-between gap-(--space-3)">
+						<div className="grid min-w-0 content-start gap-0.5">
+							<h2 className="line-clamp-2 text-lg leading-snug font-semibold tracking-tight text-pretty">
+								{project.name}
+							</h2>
+							{project.role !== "admin" && (
+								<p className="text-sm text-muted-foreground">
+									{ROLE_LABELS[project.role]}
+								</p>
+							)}
+						</div>
+						<ProjectStatusBadge status={project.status} />
 					</div>
-					<Badge variant={STATUS_BADGE_VARIANT[project.status]}>
-						{project.status === "delivered" ? (
-							<CircleCheck aria-hidden="true" />
-						) : (
-							<span
-								aria-hidden="true"
-								className="size-1.5 rounded-full bg-current"
-							/>
-						)}
-						{STATUS_LABELS[project.status]}
-					</Badge>
-				</div>
-				{/* TODO(#7): the open-pin count takes the left side once pins exist */}
-				<div className="flex justify-end border-t pt-(--space-3) text-sm text-muted-foreground">
-					<time dateTime={project.lastActivityAt}>
-						{formatLastActivity(project.lastActivityAt, Date.now())}
-					</time>
-				</div>
-			</CardContent>
-		</Card>
+					{/* TODO(#7): the open-pin count takes the left side once pins exist */}
+					<div className="flex justify-end border-t pt-(--space-3) text-sm text-muted-foreground">
+						<time dateTime={project.lastActivityAt}>
+							{formatLastActivity(project.lastActivityAt, Date.now())}
+						</time>
+					</div>
+				</CardContent>
+			</Card>
+		</Link>
 	);
 }
 

@@ -5,7 +5,7 @@ import {
 } from "@bluprint/shared";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
-import { STATUS_FILTER_LABELS } from "./statusLabels";
+import { STATUS_FILTER_LABELS } from "../components/statusLabels";
 
 interface StatusFilterProps {
 	value: ProjectStatusFilter;

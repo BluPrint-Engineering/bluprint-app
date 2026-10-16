@@ -1,0 +1,1 @@
+export const PROJECT_NOT_FOUND = "PROJECT_NOT_FOUND";
