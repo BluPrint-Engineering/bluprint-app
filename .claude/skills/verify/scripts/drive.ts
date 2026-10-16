@@ -11,7 +11,7 @@ const DEVICES = {
 	desktop: { descriptor: "Desktop Chrome", browser: "chromium" },
 } as const;
 type Device = keyof typeof DEVICES;
-const SIGN_INS = ["admin", "manager", "none"] as const;
+const SIGN_INS = ["admin", "manager", "assistant", "none"] as const;
 type SignIn = (typeof SIGN_INS)[number];
 
 const { values, positionals } = parseArgs({
@@ -30,7 +30,7 @@ function fail(message: string): never {
 
 const journeyPath = positionals[0];
 if (!journeyPath) {
-	fail("usage: bun .claude/skills/verify/scripts/drive.ts <journey.ts> [--device phone|desktop|both] [--as admin|manager|none] [--out <dir>]");
+	fail("usage: bun .claude/skills/verify/scripts/drive.ts <journey.ts> [--device phone|desktop|both] [--as admin|manager|assistant|none] [--out <dir>]");
 }
 const devices: Device[] = values.device === "both" ? ["phone", "desktop"] : [values.device as Device];
 if (!devices.every((device) => device in DEVICES)) fail(`unknown --device "${values.device}"`);
@@ -92,7 +92,8 @@ for (const device of devices) {
 	try {
 		if (signIn !== "none") {
 			await page.goto("/login");
-			await page.getByLabel("E-mail").fill(signIn === "admin" ? accounts.ADMIN_EMAIL : accounts.MANAGER_EMAIL);
+			const email = { admin: accounts.ADMIN_EMAIL, manager: accounts.MANAGER_EMAIL, assistant: accounts.ASSISTANT_EMAIL }[signIn];
+			await page.getByLabel("E-mail").fill(email);
 			await page.getByLabel("Senha", { exact: true }).fill(accounts.SEED_PASSWORD);
 			await page.getByRole("button", { name: "Entrar" }).click();
 			await expect(page).toHaveURL("/projects");

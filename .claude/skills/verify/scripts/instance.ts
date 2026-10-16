@@ -291,7 +291,7 @@ async function down(): Promise<void> {
 const INSTANCE_SCRIPT = import.meta.path;
 const DRIVE_SCRIPT = resolve(import.meta.dirname, "drive.ts");
 const LOGIN_JOURNEY = resolve(import.meta.dirname, "../journeys/login.ts");
-const JOURNEY_SIGN_IN = /^(.+)@(admin|manager|none)$/;
+const JOURNEY_SIGN_IN = /^(.+)@(admin|manager|assistant|none)$/;
 
 async function runPhase(name: string, args: string[], signal?: AbortSignal): Promise<{ ok: boolean; output: string }> {
 	const started = Date.now();
@@ -372,7 +372,7 @@ async function check(): Promise<void> {
 
 const commands: Record<string, () => Promise<void>> = { up, doctor, down, check };
 const command = commands[process.argv[2] ?? ""];
-if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down|check [--out <dir>] [--journey <journey.ts>[@admin|manager|none]]...>");
+if (!command) fail("usage: bun .claude/skills/verify/scripts/instance.ts <up|doctor|down|check [--out <dir>] [--journey <journey.ts>[@admin|manager|assistant|none]]...>");
 try {
 	await command();
 } catch (error) {

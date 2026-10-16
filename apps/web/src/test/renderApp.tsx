@@ -25,7 +25,10 @@ export function json(body: unknown, status = 200): Promise<Response> {
 	return Promise.resolve(new Response(JSON.stringify(body), { status }));
 }
 
-export type ApiHandler = (url: URL) => Promise<Response> | Response | undefined;
+export type ApiHandler = (
+	url: URL,
+	init?: RequestInit,
+) => Promise<Response> | Response | undefined;
 
 export function stubApi(
 	initial: Session,
@@ -36,7 +39,7 @@ export function stubApi(
 	} = {},
 ) {
 	let session = initial;
-	const fetchMock = vi.fn((input: RequestInfo | URL) => {
+	const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
 		const url = new URL(String(input), "http://localhost");
 		if (url.pathname.endsWith("/get-session")) return json(session);
 		if (
@@ -51,7 +54,7 @@ export function stubApi(
 			session = null;
 			return json({ success: true });
 		}
-		const answered = options.api?.(url);
+		const answered = options.api?.(url, init);
 		if (answered) return Promise.resolve(answered);
 		if (url.pathname === "/api/organization") {
 			return json(options.organization ?? organization);
