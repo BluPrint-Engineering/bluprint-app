@@ -1,4 +1,9 @@
-import { ProjectList, ProjectManager, ProjectSummary } from "@bluprint/shared";
+import {
+	ProjectList,
+	ProjectManager,
+	ProjectSummary,
+	ProjectUnitsBalance,
+} from "@bluprint/shared";
 import {
 	Body,
 	Controller,
@@ -18,6 +23,7 @@ import { ProjectListDto } from "./dto/project-list.dto";
 import { ProjectManagersDto } from "./dto/project-managers.dto";
 import { ProjectParamsDto } from "./dto/project-params.dto";
 import { ProjectSummaryDto } from "./dto/project-summary.dto";
+import { ProjectUnitsDto } from "./dto/project-units.dto";
 import { RenameProjectDto } from "./dto/rename-project.dto";
 import { ProjectsService } from "./projects.service";
 
@@ -78,6 +84,25 @@ export class ProjectsController {
 		@Param() params: ProjectParamsDto,
 	): Promise<ProjectSummary> {
 		return this.projects.findVisible(session.user.id, params.id);
+	}
+
+	@Get(":id/units")
+	@ApiOperation({
+		summary: "A project's units",
+		description:
+			"How many units the project reserved (`reserved`), how many exist in its structure (`used`) and how many it can still create (`remaining`, reserved minus used). Anyone linked to the project can read it, and the visibility is the project's: a project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The project's unit balance.",
+		type: ProjectUnitsDto,
+	})
+	@ApiErrorResponses(400, 401, 404)
+	readUnits(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+	): Promise<ProjectUnitsBalance> {
+		return this.projects.readUnits(session.user.id, params.id);
 	}
 
 	@Post()

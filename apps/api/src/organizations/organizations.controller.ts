@@ -33,7 +33,7 @@ export class OrganizationsController {
 	@ApiOperation({
 		summary: "My organization's units",
 		description:
-			"The units the caller's organization has bought (`contracted`, the sum of its licenses), the units held by its projects' reservations (`reserved`), what is left to start a project (`free`, contracted minus reserved) and what the admin can take back from projects in progress (`reclaimable`: reserved and not used; every project reserves its units and uses none until structure arrives, so it equals their reservations for now). Restricted to the organization's `admin`: a manager, an assistant, or a caller with no organization, such as a platform admin, is refused (ADR 0074).",
+			"The units the caller's organization has bought (`contracted`, the sum of its licenses), the units held by its projects' reservations (`reserved`), what is left to start a project (`free`, contracted minus reserved) and what the admin can take back from projects in progress (`reclaimable`: reserved and not yet used). Restricted to the organization's `admin`: a manager, an assistant, or a caller with no organization, such as a platform admin, is refused (ADR 0074).",
 	})
 	@ZodResponse({
 		status: 200,

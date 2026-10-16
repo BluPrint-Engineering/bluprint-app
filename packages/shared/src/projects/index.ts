@@ -7,4 +7,5 @@ export * from "./project-name.js";
 export * from "./project-params.js";
 export * from "./project-status.js";
 export * from "./project-summary.js";
+export * from "./project-units.js";
 export * from "./rename-project.js";

@@ -10,7 +10,7 @@ import {
 	ProjectManager,
 	ProjectStatus,
 	ProjectSummary,
-	ProjectUnits,
+	ProjectUnitsBalance,
 	type RenameProject,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
@@ -20,20 +20,18 @@ import { MembersRepository } from "../members/members.repository";
 import { UnitsService } from "../units/units.service";
 import { type ProjectRow, ProjectsRepository } from "./projects.repository";
 
-// TODO(#165): used becomes the units the project has created or spent
-function unitsOf(reserved: number): ProjectUnits {
-	return { reserved, used: 0 };
-}
-
-function toSummary(row: {
-	id: string;
-	name: string;
-	createdAt: Date;
-	lastActivityAt: Date;
-	effectiveRole: EffectiveRole | null;
-	reservedUnits: number;
-	status: ProjectStatus;
-}): ProjectSummary {
+function toSummary(
+	row: {
+		id: string;
+		name: string;
+		createdAt: Date;
+		lastActivityAt: Date;
+		effectiveRole: EffectiveRole | null;
+		reservedUnits: number;
+		status: ProjectStatus;
+	},
+	used: number,
+): ProjectSummary {
 	return {
 		id: row.id,
 		name: row.name,
@@ -41,7 +39,7 @@ function toSummary(row: {
 		createdAt: row.createdAt.toISOString(),
 		lastActivityAt: row.lastActivityAt.toISOString(),
 		role: row.effectiveRole ?? "admin",
-		units: unitsOf(row.reservedUnits),
+		units: { reserved: row.reservedUnits, used },
 		status: row.status,
 	};
 }
@@ -68,14 +66,35 @@ export class ProjectsService {
 			offset: (page - 1) * pageSize,
 		});
 
-		return { items: items.map(toSummary), total, counts };
+		const used = await this.units.usedByProjects(items.map(({ id }) => id));
+
+		return {
+			items: items.map((row) => toSummary(row, used.get(row.id) ?? 0)),
+			total,
+			counts,
+		};
 	}
 
 	async findVisible(
 		userId: string,
 		projectId: string,
 	): Promise<ProjectSummary> {
-		return toSummary(await this.readVisible(userId, projectId));
+		const found = await this.readVisible(userId, projectId);
+
+		return toSummary(found, await this.usedBy(projectId));
+	}
+
+	async readUnits(
+		userId: string,
+		projectId: string,
+	): Promise<ProjectUnitsBalance> {
+		await this.readVisible(userId, projectId);
+
+		return this.units.readProject(projectId);
+	}
+
+	private async usedBy(projectId: string): Promise<number> {
+		return (await this.units.usedByProjects([projectId])).get(projectId) ?? 0;
 	}
 
 	async rename(
@@ -97,7 +116,10 @@ export class ProjectsService {
 			});
 		}
 
-		return toSummary({ ...found, name: renamed.name });
+		return toSummary(
+			{ ...found, name: renamed.name },
+			await this.usedBy(projectId),
+		);
 	}
 
 	private async readVisible(userId: string, projectId: string) {
@@ -164,13 +186,13 @@ export class ProjectsService {
 			);
 		}
 
-		return toSummary({ ...created, effectiveRole: null });
+		return toSummary({ ...created, effectiveRole: null }, 0);
 	}
 
-	private answerExisting(
+	private async answerExisting(
 		existing: ProjectRow,
 		organizationId: string,
-	): ProjectSummary {
+	): Promise<ProjectSummary> {
 		if (existing.organizationId !== organizationId) {
 			throw new ProblemException({
 				status: 409,
@@ -179,6 +201,9 @@ export class ProjectsService {
 			});
 		}
 
-		return toSummary({ ...existing, effectiveRole: null });
+		return toSummary(
+			{ ...existing, effectiveRole: null },
+			await this.usedBy(existing.id),
+		);
 	}
 }

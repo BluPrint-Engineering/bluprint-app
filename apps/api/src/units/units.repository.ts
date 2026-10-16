@@ -1,10 +1,11 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { license } from "../licenses/license.entity";
 import { organization } from "../organizations/organization.entity";
 import { project } from "../projects/project.entity";
+import { location } from "../structure/location.entity";
 
 @Injectable()
 export class UnitsRepository {
@@ -16,6 +17,42 @@ export class UnitsRepository {
 			.from(organization)
 			.where(eq(organization.id, organizationId))
 			.for("no key update");
+	}
+
+	async lockProject(projectId: string): Promise<number | undefined> {
+		const [locked] = await this.txHost.tx
+			.select({ reserved: project.reservedUnits })
+			.from(project)
+			.where(eq(project.id, projectId))
+			.for("no key update");
+
+		return locked?.reserved;
+	}
+
+	async findReserved(projectId: string): Promise<number | undefined> {
+		const [found] = await this.txHost.tx
+			.select({ reserved: project.reservedUnits })
+			.from(project)
+			.where(eq(project.id, projectId));
+
+		return found?.reserved;
+	}
+
+	async countUsed(projectIds: string[]): Promise<Map<string, number>> {
+		if (projectIds.length === 0) return new Map();
+
+		const rows = await this.txHost.tx
+			.select({
+				projectId: location.projectId,
+				used: sql<number>`count(*)::int`,
+			})
+			.from(location)
+			.where(
+				and(inArray(location.projectId, projectIds), eq(location.type, "unit")),
+			)
+			.groupBy(location.projectId);
+
+		return new Map(rows.map((row) => [row.projectId, row.used]));
 	}
 
 	async sum(organizationId: string): Promise<{
@@ -30,18 +67,30 @@ export class UnitsRepository {
 			.from(license)
 			.where(eq(license.organizationId, organizationId));
 
+		const usedByProject = db
+			.select({
+				projectId: location.projectId,
+				used: sql<number>`count(*)::int`.as("used"),
+			})
+			.from(location)
+			.where(eq(location.type, "unit"))
+			.groupBy(location.projectId)
+			.as("used_by_project");
+
 		const [reserved] = await db
 			.select({
 				total: sql<number>`coalesce(sum(${project.reservedUnits}), 0)::int`,
 				inProgress: sql<number>`coalesce(sum(${project.reservedUnits}) filter (where ${project.status} = 'active'), 0)::int`,
+				inProgressUsed: sql<number>`coalesce(sum(${usedByProject.used}) filter (where ${project.status} = 'active'), 0)::int`,
 			})
 			.from(project)
+			.leftJoin(usedByProject, eq(usedByProject.projectId, project.id))
 			.where(eq(project.organizationId, organizationId));
 
 		return {
 			contracted: contracted!.total,
 			reserved: reserved!.total,
-			reclaimable: reserved!.inProgress,
+			reclaimable: reserved!.inProgress - reserved!.inProgressUsed,
 		};
 	}
 }
