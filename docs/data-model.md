@@ -134,7 +134,6 @@ There is no project-wide default, and the **absence of a row** is what the dashb
 
 ## Still open
 
-- **UUID v7 library in the web app.** The browser's `crypto.randomUUID()` only generates v4. A dependency choice for the pin epic.
 - **The `location` table name.** Our choice; `space` and `place` were the other candidates. `location` won because the pin's field is already called "local" (place) in the product spec.
 - **Rendering plans with pins** and **image handling** remain out of scope ([`ARCHITECTURE.md` §9](ARCHITECTURE.md#9-future-considerations--roadmap)).
 

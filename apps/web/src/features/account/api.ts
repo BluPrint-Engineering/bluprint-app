@@ -1,4 +1,4 @@
-import { organizationSchema } from "@bluprint/shared";
+import { organizationSchema, organizationUnitsSchema } from "@bluprint/shared";
 import { queryOptions } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "@/lib/api";
 
@@ -17,4 +17,10 @@ export const organizationQueryOptions = queryOptions({
 		}
 	},
 	staleTime: 5 * 60 * 1000,
+});
+
+export const organizationUnitsQueryOptions = queryOptions({
+	queryKey: ["organization", "units"],
+	queryFn: () => apiFetch("/organization/units", organizationUnitsSchema),
+	staleTime: 0,
 });

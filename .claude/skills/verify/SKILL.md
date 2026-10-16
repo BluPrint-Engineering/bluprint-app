@@ -10,13 +10,13 @@ BluPrint's surface is the web app: a user signs in at `/login`, lands on `/proje
 This skill runs the same production build `bun run e2e` uses, on the E2E ports and database, so it never collides with the developer's `bun run dev` (:5173/:3000) or with another worktree. Two helpers do the work, both run from the repo root:
 
 - `bun .claude/skills/verify/scripts/instance.ts up|doctor|down|check` starts, checks and stops one instance per checkout; `check` is the whole boot-and-sign-in proof in one call.
-- `bun .claude/skills/verify/scripts/drive.ts <journey.ts> [--device phone|desktop|both] [--as admin|manager|assistant|none] [--out <dir>]` runs a journey in Playwright and records evidence.
+- `bun .claude/skills/verify/scripts/drive.ts <journey.ts> [--device phone|desktop|both] [--as admin|admin-no-units|manager|assistant|none] [--out <dir>]` runs a journey in Playwright and records evidence.
 
 The feature map in [`features/README.md`](features/README.md) is the recipe book: read it, pick the feature your change touches, and drive every entry point it lists.
 
 ## Check
 
-`bun .claude/skills/verify/scripts/instance.ts check [--out <dir>] [--journey <journey.ts>[@admin|manager|assistant|none]]...` runs `up`, `doctor`, `drive.ts journeys/login.ts --as none`, then each `--journey` (signed in as the `@` role, `admin` by default), all on phone and desktop into one evidence dir, and `down`. It refuses to start when this checkout already runs an instance, and once it has started one it always runs `down`, also after a failure or a SIGINT, SIGTERM or SIGHUP (only SIGKILL leaves the instance up; run `down` then). Success prints one `ok` line per phase and the evidence directory; a failure prints the failing phase's full output and exits non-zero. Use it whenever a run ends with `down`: one boot proves sign-in and every journey the change needs. Use the steps below to keep an instance up while you write and iterate on a journey.
+`bun .claude/skills/verify/scripts/instance.ts check [--out <dir>] [--journey <journey.ts>[@admin|admin-no-units|manager|assistant|none]]...` runs `up`, `doctor`, `drive.ts journeys/login.ts --as none`, then each `--journey` (signed in as the `@` role, `admin` by default), all on phone and desktop into one evidence dir, and `down`. It refuses to start when this checkout already runs an instance, and once it has started one it always runs `down`, also after a failure or a SIGINT, SIGTERM or SIGHUP (only SIGKILL leaves the instance up; run `down` then). Success prints one `ok` line per phase and the evidence directory; a failure prints the failing phase's full output and exits non-zero. Use it whenever a run ends with `down`: one boot proves sign-in and every journey the change needs. Use the steps below to keep an instance up while you write and iterate on a journey.
 
 ## Launch
 
@@ -54,9 +54,9 @@ A journey is a `.ts` file whose default export receives `{ page, context, shot, 
 - `note(line)`: appends a line to the device log.
 - `expect`: Playwright's `expect`, web-first assertions included.
 - `query(sql, params)`: rows from the instance database, on a read-only connection, for proving side effects.
-- `accounts`: `ADMIN_EMAIL` (Ana, org admin), `MANAGER_EMAIL`/`MANAGER_NAME` (Carla, manager), `ASSISTANT_EMAIL`/`ASSISTANT_NAME` (Elisa, assistant), `SEED_PASSWORD`, from `apps/e2e/seed-account.ts`.
+- `accounts`: `ADMIN_EMAIL` (Ana, org admin), `NO_UNITS_ADMIN_EMAIL` (Igor, admin of Vértice with 0 free units), `MANAGER_EMAIL`/`MANAGER_NAME` (Carla, manager), `ASSISTANT_EMAIL`/`ASSISTANT_NAME` (Elisa, assistant), `SEED_PASSWORD`, from `apps/e2e/seed-account.ts`.
 
-`--as admin` (default), `--as manager` or `--as assistant` signs in through the real `/login` screen before the journey; `--as none` starts signed out. `--device phone` is WebKit as an iPhone 13 (390×664, the user's real device class), `--device desktop` is Chromium at 1280×720; the default `both` runs phone then desktop, each in a fresh browser.
+`--as admin` (default), `--as admin-no-units` (Igor Pereira of Vértice, an admin whose organization has no free units), `--as manager` or `--as assistant` signs in through the real `/login` screen before the journey; `--as none` starts signed out. `--device phone` is WebKit as an iPhone 13 (390×664, the user's real device class), `--device desktop` is Chromium at 1280×720; the default `both` runs phone then desktop, each in a fresh browser.
 
 Write throwaway journeys outside the repo (the evidence dir or the scratchpad) and import nothing: everything comes from the argument. Select by role and accessible name (`getByRole("button", { name: "Entrar" })`, `getByLabel("E-mail")`), the same handles `apps/e2e/tests/` uses; interface text is pt-BR. Wait on a web-first `expect`, never a fixed sleep. A shipped example that proves `auth-login`:
 
@@ -95,5 +95,5 @@ Proof standards:
 - `up` rebuilds every time; after editing code, `down` then `up`. `doctor` flags a stale instance.
 - `worktree:setup` runs `bun install`, whose `prepare` (`scripts/install-hooks.sh`) skips `lefthook install` when git's hooks dir is read-only, so setup proceeds without installing hooks. Never disable lefthook or change `core.hooksPath` to get past a hook (ADR 0048).
 - Cookies are not port-scoped: a browser shared across two instances mixes their sessions. `drive.ts` gives every run a fresh browser context.
-- Sign-in and sign-up allow 5 attempts per minute per client IP (`apps/api/src/auth/auth.ts`), failed ones included. `drive.ts` gives every browser its own client IP through `x-forwarded-for`, as separate phones would have, so the limit counts per device run: `--as admin|manager|assistant` spends one of its 5, and drives in one instance never exhaust each other's. Past it, `/login` shows `Muitas tentativas seguidas. Aguarde um minuto e tente de novo.`: a journey that hits it on purpose makes all its attempts on one device.
+- Sign-in and sign-up allow 5 attempts per minute per client IP (`apps/api/src/auth/auth.ts`), failed ones included. `drive.ts` gives every browser its own client IP through `x-forwarded-for`, as separate phones would have, so the limit counts per device run: `--as admin|admin-no-units|manager|assistant` spends one of its 5, and drives in one instance never exhaust each other's. Past it, `/login` shows `Muitas tentativas seguidas. Aguarde um minuto e tente de novo.`: a journey that hits it on purpose makes all its attempts on one device.
 - A secret generated by `up` lives only as long as the instance; sessions from an earlier `up` are not valid afterwards.
