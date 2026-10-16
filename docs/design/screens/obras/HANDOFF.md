@@ -6,7 +6,7 @@ Skeleton, Spinner, Toast/Toaster. No primitive or icon was added.
 
 | File | What it is |
 | --- | --- |
-| `Obras.dc.html` | The live screen. Demo props (Tweaks): `theme`, `viewport`, `role`, `state`, `overlay`, `ctaPlacement`, `licensesAvailable`, `signOutResult`, `moreFails` |
+| `Obras.dc.html` | The live screen. Demo props (Tweaks): `theme`, `viewport`, `role`, `state`, `overlay`, `ctaPlacement`, `unitsFree`, `unitsReclaimable`, `signOutResult`, `moreFails`; also read from the URL |
 | `Obras QA.dc.html` | Every state frozen side by side (O1–O17) |
 
 ## Where it lands in `apps/web`
@@ -22,7 +22,8 @@ src/components/ui/                       ← avatar, badge, skeleton, sonner, dr
                                            pagination, toggle-group (bunx shadcn add), per the DS HANDOFF
 ```
 
-A card links to `/projects/$projectId` (not designed yet). "Nova obra" links to the creation form (#46).
+A card links to `/projects/$projectId`. "Nova obra" links to the creation form (#46); the free units line links to
+the Unidades screen, `/units` (`../unidades/`, ticket 2.13).
 
 ## URL
 
@@ -39,12 +40,15 @@ params with `history.replaceState` when opened on its own.
 - **Page size 12**: fills the grid in 3 columns (4 rows) and 2 columns (6 rows). Mobile loads 12 at a time.
 - Desktop toolbar uses 36px controls (`sm`), allowed there by the readme. Mobile controls are 44px, the
   primary action 52px.
-- **"Nova obra" placement** (decided): desktop, right of the title with the license count before it. Mobile, a
+- **"Nova obra" placement** (decided): desktop, right of the title with the free units link before it. Mobile, a
   fixed bottom bar, always visible and in thumb reach; the toast is lifted above it. The `ctaPlacement="title"`
   prop is kept only as a record of the rejected option.
-- **Licenses show only what is free**: "2 licenças disponíveis" / "1 licença disponível". A license is consumed
-  when an obra is created and no obra is ever deleted, so the total bought is not shown. Zero reads "Sem licenças
-  disponíveis. Fale com a BluPrint." and disables the button. Button, count and no-license state ship with #46.
+- **Free units**: "300 unidades livres" / "1 unidade livre", a `--primary` link to `/units` with a 44px
+  hit area, from `GET /api/organization/units` (`{ contracted, reserved, free, reclaimable }`). Zero disables the
+  button. With `reclaimable > 0` (obras em andamento reserve more than they use) it reads "Nenhuma unidade livre.
+  Baixe a reserva de uma obra ou fale com a BluPrint.", with "Baixe a reserva de uma obra" as the same link; with
+  nothing reclaimable (no obra, or all fully used) "Nenhuma unidade livre. Fale com a BluPrint.", no link. A
+  Skeleton holds the line while the count loads; a failed count hides it. Button, link and 0-livres state ship with #46.
 - **Role on the card only when it varies.** An admin has the same role in every obra, so the card does not
   repeat it; "Admin da construtora" appears once, in the user menu under the e-mail. Managers and assistants
   see their role in that obra (Gerente de obra / Assistente de obra) as a muted line under the name.
@@ -56,8 +60,8 @@ params with `history.replaceState` when opened on its own.
 
 ## States (QA ids)
 
-O1 carregando · O2 com obras, admin · O3 com obras, gerente/assistente · O4 admin sem licença · O5 vazio,
-admin · O6 vazio, admin sem licença · O7 vazio, gerente/assistente · O8a nenhuma em andamento ("Ver entregues") · O8 sem resultados · O9 erro ao carregar ·
+O1 carregando · O2 com obras, admin · O3 com obras, gerente/assistente · O4 admin sem unidade livre (link para baixar reserva) · O4b admin sem unidade livre, todas usadas (sem link) · O5 vazio,
+admin · O6 vazio, admin sem unidade livre (sem link) · O7 vazio, gerente/assistente · O8a nenhuma em andamento ("Ver entregues") · O8 sem resultados · O9 erro ao carregar ·
 O10 sem conexão (resumes on the `online` event, no button) · O11 carregando mais (mobile) · O12 erro ao
 carregar mais (mobile) · O13 trocando de página (desktop) · O14 filtros abertos (mobile) · O15 menu do usuário ·
 O16 saindo (spinner on Sair, menu locked) · O17 falha ao sair (toast, user stays signed in).
@@ -70,8 +74,8 @@ The full table, with what the list spec (#94) adds and what waits for #7 and #46
 
 ## Copy (pt-BR, verbatim)
 
-Obras · "N obras" / "1 obra" · Nova obra · "N licenças disponíveis" / "1 licença disponível" · "Sem licenças disponíveis. Fale com
-a BluPrint." · Buscar obra · Filtros · Status: Em andamento, Entregue, Todas · Gerente ·
+Obras · "N obras" / "1 obra" · Nova obra · "300 unidades livres" / "1 unidade livre" · "Nenhuma unidade livre. Baixe a reserva de
+uma obra ou fale com a BluPrint." · "Nenhuma unidade livre. Fale com a BluPrint." · Buscar obra · Filtros · Status: Em andamento, Entregue, Todas · Gerente ·
 Ordenar: Mais recentes, Nome A–Z, Mais pendências abertas, Atividade recente · Limpar filtros ·
 "Ver N obras" · "N pendências abertas" / "1 pendência aberta" / "Nenhuma pendência aberta" ·
 "Atividade há 25 min / 2 h / 3 dias" · Nenhuma obra ainda · "Crie a primeira obra da construtora para

@@ -16,7 +16,7 @@
 <div style="padding:64px; background:var(--secondary); color:var(--foreground); font-family:var(--font-sans); display:grid; gap:72px; width:max-content">
   <header style="display:grid; gap:8px; max-width:760px">
     <h1 style="margin:0; font-size:var(--text-3xl); font-weight:600; letter-spacing:var(--tracking-tight)">Obras (#45) · QA</h1>
-    <p style="margin:0; font-size:var(--text-base); color:var(--muted-foreground); text-wrap:pretty">Cada linha é um estado congelado da tela <a href="Obras.dc.html">Obras</a>, em mobile 390 × 844 e desktop 1280 × 800, claro e escuro. Estados que só existem em um formato aparecem só nele. Os ids (O1, O2…) servem de lista de QA. “Nova obra” no mobile fica numa barra fixa no rodapé; no desktop, ao lado do título.</p>
+    <p style="margin:0; font-size:var(--text-base); color:var(--muted-foreground); text-wrap:pretty">Cada linha é um estado congelado da tela <a href="Obras.dc.html">Obras</a>, em mobile 390 × 844 e desktop 1280 × 800, claro e escuro. Estados que só existem em um formato aparecem só nele. Os ids (O1, O2…) servem de lista de QA. “Nova obra” no mobile fica numa barra fixa no rodapé; no desktop, ao lado do título, com as unidades livres antes dele.</p>
   </header>
 
   <section style="display:grid; gap:48px">
@@ -57,8 +57,9 @@ class Component extends DCLogic {
     let n = 0;
     this.scan = setInterval(() => {
       n++;
-      if (n > 17) return clearInterval(this.scan);
-      this.setState(s => ({ seen: Object.assign({}, s.seen, { ["O" + n]: true }) }));
+      const ids = this.renderVals().rows.map(row => row.id);
+      if (n > ids.length) return clearInterval(this.scan);
+      this.setState(s => ({ seen: Object.assign({}, s.seen, { [ids[n - 1]]: true }) }));
     }, 350);
   }
   componentWillUnmount() { clearInterval(this.scan); }
@@ -70,11 +71,12 @@ class Component extends DCLogic {
     return {
       rows: [
         r("O1", "Carregando", "loading", "admin"),
-        r("O2", "Com obras · admin", "list", "admin", null, null, "Status “Todas” para mostrar os dois status"),
+        r("O2", "Com obras · admin", "list", "admin", null, null, "Status “Todas” para mostrar os dois status; “300 unidades livres” leva a Unidades"),
         r("O3", "Com obras · gerente / assistente", "list", "manager", null, null, "Sem “Nova obra”, sem filtro de gerente"),
-        r("O4", "Com obras · admin sem licença", "list-no-license", "admin"),
-        r("O5", "Vazio · admin", "empty", "admin"),
-        r("O6", "Vazio · admin sem licença", "empty-no-license", "admin"),
+        r("O4", "Com obras · admin sem unidade livre", "list-no-units", "admin", null, null, "“Nova obra” desabilitado; “Baixe a reserva de uma obra” leva a Unidades"),
+        r("O4b", "Com obras · admin sem unidade livre, todas usadas", "list-no-units-used", "admin", null, null, "Toda obra usa a reserva inteira: só “Fale com a BluPrint.”, sem link"),
+        r("O5", "Vazio · admin", "empty", "admin", null, null, "“300 unidades livres” abaixo do botão"),
+        r("O6", "Vazio · admin sem unidade livre", "empty-no-units", "admin", null, null, "Sem obra, nada a baixar: só “Fale com a BluPrint.”"),
         r("O7", "Vazio · gerente / assistente", "empty", "manager"),
         r("O8", "Sem resultados", "no-results", "admin", null, null, "Busca “brisa” em obras em andamento"),
         r("O9", "Erro ao carregar", "error", "admin"),

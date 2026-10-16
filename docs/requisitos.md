@@ -58,26 +58,26 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | --- | --- | --- |
 | RF-101 | Persona **super admin**, restrita à equipe BluPrint, em área separada da aplicação do cliente | M |
 | RF-102 | Cadastro da **organização** feito manualmente pelo super admin, após contato comercial e pagamento — não há cadastro self-service | M |
-| RF-103 | Super admin atribui à organização as **licenças** contratadas; cada licença habilita **uma obra** | M |
-| RF-104 | Painel do super admin lista as organizações cadastradas, licenças contratadas, obras criadas e licenças ainda disponíveis | M |
+| RF-103 | Super admin registra as **licenças** vendidas à organização; cada licença é uma quantidade de **unidades**. As unidades contratadas da organização são a soma das licenças | M |
+| RF-104 | Painel do super admin lista as organizações, as unidades contratadas, reservadas e usadas de cada uma, e as obras criadas | M |
 | RF-105 | Super admin **não acessa o conteúdo interno das obras** (plantas, pins, fotos, relatórios, dados de unidade) — apenas metadados, por LGPD | M |
 | RF-106 | Ao cadastrar a organização, o sistema dispara o convite de acesso do primeiro **admin da construtora** | M |
-| RF-107 | Super admin adiciona novas licenças a uma organização já cadastrada | S |
-| RF-108 | Liberação automática da licença após o pagamento, sem passar pelo super admin | C |
+| RF-107 | Super admin adiciona licenças (mais unidades) a uma organização já cadastrada | S |
+| RF-108 | Liberação automática das unidades após o pagamento, sem passar pelo super admin | C |
 
 ### 1.2 Organização e admin da construtora
 
 | ID | Requisito | Prio |
 | --- | --- | --- |
-| RF-110 | A licença pertence à **organização**, não ao usuário: a saída de um funcionário não afeta a obra nem a licença | M |
-| RF-111 | **Admin da construtora** (o "gerente geral") é o papel de topo da organização e enxerga todas as licenças e obras dela | M |
-| RF-112 | Admin **cria a obra** consumindo uma licença disponível; a obra nasce em branco | M |
+| RF-110 | A licença pertence à **organização**, não ao usuário: a saída de um funcionário não afeta a obra nem a licença (sem mudança de sentido) | M |
+| RF-111 | **Admin da construtora** (o "gerente geral") é o papel de topo da organização e enxerga as unidades e todas as obras dela | M |
+| RF-112 | Admin **cria a obra** reservando para ela parte das unidades livres; a obra nasce em branco | M |
 | RF-113 | Painel de pessoas da organização: quem está cadastrado, o papel padrão de cada um e em quais obras está, com o papel em cada uma | M |
 | RF-114 | Admin acessa o dashboard geral e o dashboard por unidade de qualquer obra da organização | M |
 | RF-115 | Admin exporta qualquer relatório, em qualquer escopo, de qualquer obra da organização | M |
 | RF-116 | Admin **não cria, edita ou exclui pins** e não altera status de pin nem de unidade — o acesso dele ao conteúdo operacional é de leitura e exportação | M |
 | RF-117 | Mais de um admin por organização | S |
-| RF-118 | Visão de consumo para a organização: licenças usadas × disponíveis | C |
+| RF-118 | O admin vê as unidades livres na lista de obras e a reserva de cada obra lado a lado, onde pode ajustá-las | M |
 
 ### 1.3 Papéis, vínculos e convites
 
@@ -111,7 +111,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 
 | ID | Requisito | Prio |
 | --- | --- | --- |
-| RF-201 | Obra criada pelo admin a partir de uma licença disponível, com nome definido por ele (ex.: "Projeto Casa Moinhos") | M |
+| RF-201 | Obra criada pelo admin, com nome e reserva de unidades definidos por ele (ex.: "Projeto Casa Moinhos", 400 unidades) | M |
 | RF-202 | Cadastro da hierarquia física: **torres → andares → unidades → cômodos**, incluindo áreas comuns | M |
 | RF-203 | Definição da nomenclatura/numeração de andares e unidades (901, 901A, etc.) | M |
 | RF-204 | Cadastro dos **cômodos** de cada unidade (lavabo, cozinha, sacada…), usados como "local" do pin | M |
@@ -127,7 +127,9 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-214 | Exclusão definitiva de um item arquivado, restrita a gerente de obra e admin, com confirmação que informa exatamente o que será perdido ("12 pins, 8 fotos, 2 plantas") | S |
 | RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin entrega a obra depois de confirmar, num diálogo, o que acontece. A entrega é definitiva: o app não reabre a obra, e uma obra entregue por engano só é reaberta pelo suporte da BluPrint, a pedido da construtora e com registro | M |
 | RF-216 | Obra **entregue** fica fechada de vez: nada nela muda. Ninguém cria, edita, conclui ou exclui pin, foto, planta, estrutura, equipe, disciplina, empresa executora ou o nome da obra. Relatórios são exportados em qualquer status | M |
-| RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento antes da entrega, para corrigir o nome. Renomear não libera a licença: a obra nunca é apagada, e o que já tem conteúdo é arquivado (RF-210), então uma obra não vira outra obra com a mesma licença | M |
+| RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento antes da entrega, para corrigir o nome | M |
+| RF-218 | Cada **unidade** criada usa uma unidade da reserva da obra. Criar além do que resta é recusado por inteiro, e quem cria vê quantas restam antes. Unidade removida sem nunca ter tido conteúdo devolve a vaga à reserva; unidade que já teve conteúdo, nela ou num local acima, fica usada mesmo arquivada ou excluída de vez | M |
+| RF-219 | Admin ajusta a **reserva** de cada obra, nunca abaixo das unidades usadas nem acima das livres; na entrega, a reserva que sobrou volta às livres | M |
 
 ## 3. Empresas executoras
 

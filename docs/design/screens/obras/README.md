@@ -48,7 +48,7 @@ src/features/projects/
 
 Files follow ADR 0053: everything starts in the page folder and climbs only when a second page or feature
 needs it. `useTheme` climbs out of `features/auth/` now, since the user menu is its second consumer.
-`NewProjectAction` (button + available licenses) ships with #46, not with the list.
+`NewProjectAction` (button + free units link) ships with #46, not with the list.
 
 The login already pushes `redirect ?? "/"` on success (`src/routes/login/route.tsx`), so the redirect in
 `_authenticated/index.tsx` is the only change on the auth side.
@@ -109,7 +109,7 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
   leading 1.15.
 - Count next to it, baseline-aligned, gap 12px: "12 obras" / "1 obra", 16px `--muted-foreground`, tabular
   numbers. It is the count of the current filtered result, not the total.
-- Desktop admin: on the right, "N licenças disponíveis" (14px muted) then the **Nova obra** button
+- Desktop admin: on the right, the free units link (see Nova obra) then the **Nova obra** button
   (`default`, `md` 44px, `plus` icon 20px), gap 16px.
 
 ### Toolbar — desktop (inline, gap 12px, wraps)
@@ -206,17 +206,28 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
 
 ### Nova obra — admin only (managers and assistants never see it)
 
-- **Desktop**: right of the title (see Title row).
+- **Desktop**: right of the title (see Title row), the free units link first, gap 16px.
 - **Mobile**: **fixed bottom bar** (decided). Outside the scroll area, `border-top: 1px solid --border`,
-  background `--background`, padding `12px 16px calc(12px + env(safe-area-inset-bottom))`, gap 8px:
-  centered "N licenças disponíveis" (14px muted) above a full-width `lg` (52px) primary "Nova obra" with `plus`.
-- **Licenses**: only the available count is shown: "2 licenças disponíveis" / "1 licença disponível". A
-  license is consumed when an obra is created and no obra is ever deleted, so the total bought is not shown.
-- The button, the license count and the no-license state ship with #46, together with the form.
-- **No license**: button disabled (50% opacity) and the text becomes "Sem licenças disponíveis. Fale com a
-  BluPrint."
+  background `--background`, padding `12px 16px calc(12px + env(safe-area-inset-bottom))`, gap 12px:
+  the free units line, centered, above a full-width `lg` (52px) primary "Nova obra" with `plus`.
+- **Free units**: what the construtora can still reserve (livres = contratadas − the reservas of every obra),
+  as a link to the Unidades screen (`/units`, `../unidades/`): "300 unidades livres" / "1 unidade livre",
+  14px/500 `--primary`, tabular numbers, underline on hover. Inline, it keeps a 44px hit area (13px of
+  padding-block, cancelled by the same negative margin, so the line height does not change); the 12px gaps
+  around it keep that area off the button.
+- **0 livres**: button disabled (50% opacity) and the line, 14px muted, `text-wrap: balance`, depends on
+  `reclaimable` (the unidades reserved by obras em andamento and not used: Σ reserva − usadas):
+  - `reclaimable > 0`: "Nenhuma unidade livre. Baixe a reserva de uma obra ou fale com a BluPrint.", where
+    "Baixe a reserva de uma obra" is the same link to `/units`, so the admin can lower a reserva and come back.
+  - `reclaimable = 0` (no obra, or every obra uses its whole reserva): "Nenhuma unidade livre. Fale com a
+    BluPrint.", no link: there is nothing to lower.
+  Creating an obra needs at least one free unit for its reserva; the list never shows the total bought.
+- **Loading**: while `GET /api/organization/units` loads, a 128 × 16 Skeleton holds the line. If it fails, the
+  line is hidden and the button stays enabled; the Nova obra page answers the real case (`NO_UNITS_LEFT`).
+- The button, the free units link and the 0-livres state ship with #46, together with the form; the Unidades
+  screen is ticket 2.13.
 - The bar shows while loading, with results, and in no-results. In the admin empty state the action moves
-  into the empty block instead.
+  into the empty block instead, with the free units line under the button (gap 12px).
 
 ### Toast — sign-out failed
 
@@ -236,12 +247,13 @@ centered, gap 16px, padding-block 48px mobile / 64px desktop, icon 24px `--muted
 
 | Id | State | What shows |
 | --- | --- | --- |
-| O1 | Carregando | Real header, title and toolbar. The count is a 64 × 18 skeleton; the list is skeleton cards in the same grid (12 desktop, 6 mobile) shaped like the card, so nothing jumps. |
+| O1 | Carregando | Real header, title and toolbar. The count is a 64 × 18 skeleton (admin: the free units line a 128 × 16 one); the list is skeleton cards in the same grid (12 desktop, 6 mobile) shaped like the card, so nothing jumps. |
 | O2 | Com obras, admin | Mixed statuses, "Nova obra" visible, no role line on cards. |
 | O3 | Com obras, gerente / assistente | Role line on each card, no "Nova obra", no gerente filter. |
-| O4 | Com obras, admin sem licença | Button disabled + "Sem licenças disponíveis. Fale com a BluPrint." |
-| O5 | Vazio, admin | `building` · "Nenhuma obra ainda" · "Crie a primeira obra da construtora para começar a mapear pendências." · `lg` "Nova obra" (full width on mobile) + licenses under it. No toolbar. |
-| O6 | Vazio, admin sem licença | Same, button disabled, no-license text. |
+| O4 | Com obras, admin sem unidade livre | 0 livres, some reclaimable: button disabled + "Nenhuma unidade livre. Baixe a reserva de uma obra ou fale com a BluPrint.", with "Baixe a reserva de uma obra" linking to `/units`. |
+| O4b | Com obras, admin sem unidade livre, todas usadas | 0 livres, nothing reclaimable (every obra uses its whole reserva): button disabled + "Nenhuma unidade livre. Fale com a BluPrint.", no link. |
+| O5 | Vazio, admin | `building` · "Nenhuma obra ainda" · "Crie a primeira obra da construtora para começar a mapear pendências." · `lg` "Nova obra" (full width on mobile) + "300 unidades livres" under it. No toolbar. |
+| O6 | Vazio, admin sem unidade livre | Same, button disabled, "Nenhuma unidade livre. Fale com a BluPrint." under it, no link: with no obra nothing is reclaimable. |
 | O7 | Vazio, gerente / assistente | `building` · "Nenhuma obra por aqui" · "Você verá uma obra aqui quando o admin da construtora te vincular a ela." No action. |
 | O8a | Nenhuma em andamento | With the default filters and no search, the person has obras but none em andamento: `building` · "Nenhuma obra em andamento" · outline "Ver entregues" (sets `status=delivered`). Needs `counts` from the API. |
 | O8 | Sem resultados | `search` · "Nenhuma obra encontrada" · "Nenhum resultado para “brisa” em obras em andamento." (the scope follows status and gerente) · outline "Limpar filtros" (clears search, status, gerente). |
@@ -265,7 +277,10 @@ centered, gap 16px, padding-block 48px mobile / 64px desktop, icon 24px `--muted
 - **Local UI state**: filter sheet open and its draft filters, user menu open, signing out, toast.
 - The organization role comes from `GET /api/organization` → `{ id, name, role }`: `admin` sees the gerente
   filter, Nova obra, the admin empty state and "Admin da construtora" in the user menu; others don't. It
-  only switches UI, the API still authorizes. Available licenses come from `GET /api/organization/licenses`.
+  only switches UI, the API still authorizes. Free units come from `GET /api/organization/units` →
+  `{ contracted, reserved, free, reclaimable }` (admin only, 403 for anyone else); the list reads `free` and,
+  at 0 livres, `reclaimable` = Σ over obras em andamento of reserva − usadas. In ticket 1.20 `reclaimable` is the
+  sum of the reservas of obras em andamento, because usadas stays 0 until 2.11.
 - Theme reuses `useTheme` (localStorage `bp-theme`, applied before first paint by `index.html`).
 - Avatar shows `user.image` when set, otherwise the initials of the first and last name.
 
@@ -284,7 +299,8 @@ issue (#94); until an element lands the UI **hides it** instead of faking it.
 | Gerente filter (admin), `GET /api/projects/managers` | #94 — derived from project membership |
 | Sort `recent`, `name`, `activity`; last activity on the card | #94 — `lastActivityAt`, set at creation |
 | Open pin count, sort `open-pins` | #7 — needs pins |
-| Available license count, no-license state, Nova obra | #46 — `GET /api/organization/licenses` |
+| Free units link, 0-livres state, Nova obra | #46 — `GET /api/organization/units` (`free`, `reclaimable`). Today a `license` row is one obra: signup seeds 3, `POST /api/projects` takes one and answers `NO_FREE_LICENSE`; there is no units count, no reserva and no `/api/organization/licenses` or `/units` route yet |
+| Unidades screen (`/units`), reached from the free units link | Ticket 2.13 — see `../unidades/` |
 | Profile photo in the Avatar | Shown when `user.image` is set; upload is out of scope |
 
 ## Interactions and motion
@@ -356,7 +372,7 @@ No images. Icons are lucide, from `lucide-react`: `search`, `sliders-horizontal`
 
 | Path | What it is |
 | --- | --- |
-| `screens/obras/Obras.dc.html` | The live Obras screen. Tweak props: `theme`, `viewport`, `role`, `state`, `overlay`, `licensesAvailable`, `signOutResult`, `moreFails` |
+| `screens/obras/Obras.dc.html` | The live Obras screen. Tweak props: `theme`, `viewport`, `role`, `state`, `overlay`, `unitsFree`, `unitsReclaimable`, `signOutResult`, `moreFails`; all of them also read from the URL (`?state=list-no-units&theme=dark`) |
 | `screens/obras/Obras QA.dc.html` | O1–O17 frozen side by side |
 | `screens/obras/HANDOFF.md` | Short version of this README |
 | `screens/auth/Entrar.dc.html`, `Criar conta.dc.html` | Recreation of the implemented auth screens (session splash / failure states included) |

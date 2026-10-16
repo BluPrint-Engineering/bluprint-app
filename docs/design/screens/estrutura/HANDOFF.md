@@ -7,8 +7,8 @@ added to the design system with this screen, and carried by `_ds_bundle.js`.
 
 | File | What it is |
 | --- | --- |
-| `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role`, `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`, `createResult`, `removeResult`; also read from the URL |
-| `Estrutura QA.dc.html` | E1–E5, T1–T6, F1–F4, U1–U5, W1–W10, C1–C6, R1–R8 frozen, mobile + desktop, light + dark |
+| `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role`, `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`, `createResult` (success / fail / no-units), `removeResult`, `unitsLeft`; also read from the URL |
+| `Estrutura QA.dc.html` | E1–E5, T1–T6, F1–F5b, U1–U5, W1–W10 (with W4b, W4c, W7b, W9b), C1–C6, R1–R9b frozen, mobile + desktop, light + dark |
 
 | Screen | Route | #6 builds |
 | --- | --- | --- |
@@ -30,9 +30,23 @@ added to the design system with this screen, and carried by `_ds_bundle.js`.
 - **Lists** (floor, rooms, common areas, tipologias): rows of 56px in a ringed card; the row is the link, `ellipsis`
   menu and `chevron-right` at the end; the last row adds inline.
 - **Wizard**: desktop is one page with a sticky Prévia whose button never leaves the screen; mobile is four steps with
-  a sticky bottom bar. The same wizard adds floors to an existing tower.
+  a sticky bottom bar. The same wizard adds floors to an existing tower. The Prévia's mini façade is 22px / 10px mono
+  on desktop and 34px / 13px mono on mobile (labels 13px, area tags 12px), so it reads on a phone; a wide tower
+  scrolls sideways inside its own box with the floor labels sticky, never the page.
 - **Remover** is one menu item; the dialog (or the undo toast) says what will happen: delete, delete with children,
-  or archive with what is kept.
+  or archive with what is kept. Units deleted without content go back to the obra's reserva, and the dialog says so.
+- **Reserva of units**: wherever units are created (wizard Prévia, the add-unit form, the Duplicar dialog) a line says
+  what it uses of the obra's reserva and what is left after ("Usa 88 das 150 unidades que restam nesta obra. Depois de
+  criar, sobram 62."; "restam" is before, "sobram" after), read from `GET /api/projects/:id/units`.
+  A plan that does not fit shows a danger Alert and disables its button; on mobile the wizard's Alert rides in the
+  sticky bottom bar above "Criar estrutura", so it is never scrolled away from the button it blocks. With 0 left the
+  "Adicionar unidade" row stays visible and disabled with the reason. The admin gets "Alterar reserva" on the spot
+  (the obra's dialog, `../obra/` C7); gerente and assistente are told to ask the admin. Every creation of units
+  (wizard, add, duplicate, undo) goes through `POST /api/projects/:id/structure`, which refuses with
+  `409 NO_UNITS_LEFT` (`requested`, `available`); the refusal lands in the same state with the server's numbers.
+- **App header**: the same as `../obra/` (account DropdownMenu: avatar, name and chevron on desktop, avatar on mobile),
+  signed in as the person of the role shown.
+- **Duplicar** (R9): a plain dialog like Renomear, with the next free name prefilled and how many units it creates.
 
 ## Not in #6
 

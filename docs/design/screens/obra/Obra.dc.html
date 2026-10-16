@@ -53,12 +53,6 @@
           <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Card" dc-props="{{ newCardProps }}" hint-size="100%,300px">
             <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardHeader" dc-props="{{ padProps }}" hint-size="100%,60px">
               <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardTitle" dc-props="{{ newTitleProps }}" hint-size="100%,32px">Nova obra</x-import>
-              <sc-if value="{{ licLoading }}" hint-placeholder-val="{{ false }}">
-                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Skeleton" width="{{ 220 }}" height="{{ 16 }}" radius="sm" style="margin-top:2px" hint-size="220px,16px"></x-import>
-              </sc-if>
-              <sc-if value="{{ showLicText }}" hint-placeholder-val="{{ true }}">
-                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardDescription" hint-size="100%,20px">{{ licText }}</x-import>
-              </sc-if>
             </x-import>
             <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.CardContent" dc-props="{{ padProps }}" hint-size="100%,160px">
               <form onSubmit="{{ submitNew }}" noValidate="{{ true }}" style="display:grid; gap:var(--form-gap)">
@@ -67,6 +61,9 @@
                 </sc-if>
                 <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Nome da obra" html-for="project-name" error="{{ newError }}" hint-size="100%,72px">
                   <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="project-name" auto-complete="off" placeholder="Ex.: Casa Moinhos" value="{{ newName }}" onChange="{{ onNewName }}" invalid="{{ newInvalid }}" disabled="{{ fieldDisabled }}" auto-focus="{{ newAutoFocus }}" hint-size="100%,44px"></x-import>
+                </x-import>
+                <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Unidades reservadas" html-for="project-units" hint="{{ unitsHint }}" error="{{ unitsError }}" hint-size="100%,100px">
+                  <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="project-units" input-mode="numeric" auto-complete="off" value="{{ newUnits }}" onChange="{{ onNewUnits }}" invalid="{{ unitsInvalid }}" disabled="{{ fieldDisabled }}" hint-size="100%,44px"></x-import>
                 </x-import>
                 <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="submit" size="lg" block="{{ true }}" loading="{{ sending }}" disabled="{{ newBtnDisabled }}" hint-size="100%,52px">{{ newBtnLabel }}</x-import>
               </form>
@@ -216,6 +213,17 @@
                           </div>
                         </form>
                       </sc-if>
+                      <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--space-3); flex-wrap:wrap; padding-top:var(--space-4); padding-bottom:{{ unitsRowPadEnd }}; border-top:1px solid var(--border)">
+                        <div style="display:grid; gap:2px; min-width:0; flex:1 1 14rem">
+                          <span style="font-size:var(--text-sm); color:var(--muted-foreground)">Unidades</span>
+                          <span style="font-size:var(--text-base); font-weight:500">{{ unitsText }}</span>
+                        </div>
+                        <sc-if value="{{ canReserve }}" hint-placeholder-val="{{ true }}">
+                          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" variant="outline" onClick="{{ openReserve }}" hint-size="170px,44px">
+                            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="sliders-horizontal" size="{{ 18 }}" hint-size="18px,18px"></x-import>Alterar reserva
+                          </x-import>
+                        </sc-if>
+                      </div>
                       <sc-if value="{{ renameLock }}" hint-placeholder-val="{{ false }}">
                         <div style="display:flex; align-items:flex-start; gap:var(--space-2); padding-top:var(--space-4); border-top:1px solid var(--border); font-size:var(--text-sm); color:var(--muted-foreground); text-wrap:pretty">
                           <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Icon" name="lock" size="{{ 16 }}" style="margin-top:2px" hint-size="16px,16px"></x-import>
@@ -325,6 +333,38 @@
     </div>
   </sc-if>
 
+  <sc-if value="{{ reserveSheet }}" hint-placeholder-val="{{ false }}">
+    <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Sheet" open="{{ true }}" contained="{{ true }}" title="Alterar reserva" description="{{ reserveContext }}" footer="{{ reserveFooter }}" onClose="{{ closeReserve }}" hint-size="100%,360px">
+      <form id="reserve-form-sheet" onSubmit="{{ saveReserve }}" noValidate="{{ true }}" style="display:grid; gap:var(--space-4)">
+        <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Unidades reservadas" html-for="reserve-units-sheet" error="{{ reserveError }}" hint-size="100%,72px">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="reserve-units-sheet" input-mode="numeric" auto-complete="off" value="{{ reserveDraft }}" onChange="{{ onReserveDraft }}" onBlur="{{ onReserveBlur }}" onKeyDown="{{ onReserveKey }}" invalid="{{ reserveInvalid }}" disabled="{{ reserveSaving }}" auto-focus="{{ liveFocus }}" hint-size="100%,44px"></x-import>
+        </x-import>
+        {{ reserveTiles }}
+      </form>
+    </x-import>
+  </sc-if>
+  <sc-if value="{{ reserveCentered }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute; inset:0; z-index:70; display:grid; place-items:center; padding:var(--space-4)">
+      <div onClick="{{ closeReserve }}" style="position:absolute; inset:0; background:var(--overlay)"></div>
+      <form role="dialog" aria-modal="true" aria-labelledby="reserve-title" aria-describedby="reserve-context" onSubmit="{{ saveReserve }}" noValidate="{{ true }}" style="position:relative; width:100%; max-width:30rem; display:grid; gap:var(--space-5); padding:var(--space-6); border-radius:var(--radius-xl); background:var(--popover); color:var(--popover-foreground); box-shadow:var(--shadow-lg)">
+        <div style="display:grid; gap:var(--space-1)">
+          <h2 id="reserve-title" style="margin:0; font-size:var(--text-lg); font-weight:600; letter-spacing:var(--tracking-tight); line-height:var(--leading-snug)">Alterar reserva</h2>
+          <p id="reserve-context" style="margin:0; font-size:var(--text-sm); line-height:var(--leading-normal); color:var(--muted-foreground); text-wrap:pretty">{{ reserveContext }}</p>
+        </div>
+        <div style="display:grid; gap:var(--space-4)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Field" label="Unidades reservadas" html-for="reserve-units" error="{{ reserveError }}" hint-size="100%,72px">
+            <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Input" id="reserve-units" input-mode="numeric" auto-complete="off" value="{{ reserveDraft }}" onChange="{{ onReserveDraft }}" onBlur="{{ onReserveBlur }}" onKeyDown="{{ onReserveKey }}" invalid="{{ reserveInvalid }}" disabled="{{ reserveSaving }}" auto-focus="{{ liveFocus }}" hint-size="100%,44px"></x-import>
+          </x-import>
+          {{ reserveTiles }}
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:var(--space-2)">
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="button" variant="outline" disabled="{{ reserveSaving }}" onClick="{{ closeReserve }}" hint-size="110px,44px">Cancelar</x-import>
+          <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Button" type="submit" loading="{{ reserveSaving }}" disabled="{{ reserveBlocked }}" hint-size="110px,44px">{{ reserveSaveLabel }}</x-import>
+        </div>
+      </form>
+    </div>
+  </sc-if>
+
   <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
     <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Toaster" contained="{{ true }}" position="{{ toastPos }}" hint-size="0px,0px">
       <x-import component-from-global-scope="BluPrintDesignSystem_d4fa62.Toast" tone="success" onDismiss="{{ dismissToast }}" hint-size="100%,64px">{{ toast }}</x-import>
@@ -332,7 +372,7 @@
   </sc-if>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;manager&quot;,&quot;assistant&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'manager'|'assistant'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new&quot;,&quot;home&quot;,&quot;configuration&quot;,&quot;not-found&quot;],&quot;default&quot;:&quot;new&quot;,&quot;tsType&quot;:&quot;'new'|'home'|'configuration'|'not-found'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;last-license&quot;,&quot;invalid-empty&quot;,&quot;invalid-long&quot;,&quot;sending&quot;,&quot;no-license-submit&quot;,&quot;no-license-open&quot;,&quot;failed&quot;,&quot;count-loading&quot;,&quot;blank&quot;,&quot;blank-structure&quot;,&quot;delivered&quot;,&quot;loading&quot;,&quot;error&quot;,&quot;offline&quot;,&quot;vision&quot;,&quot;created&quot;,&quot;hub&quot;,&quot;renaming&quot;,&quot;rename-invalid&quot;,&quot;rename-saving&quot;,&quot;rename-failed&quot;,&quot;deliver-confirm&quot;,&quot;deliver-sending&quot;,&quot;deliver-failed&quot;,&quot;route&quot;,&quot;project&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;vision&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;licensesAvailable&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:5,&quot;default&quot;:5,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;submitResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;no-license&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'no-license'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;renameResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;deliverResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;framed&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light'|'dark'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;viewport&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;mobile&quot;,&quot;desktop&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'mobile'|'desktop'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;role&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;admin&quot;,&quot;manager&quot;,&quot;assistant&quot;],&quot;default&quot;:&quot;admin&quot;,&quot;tsType&quot;:&quot;'admin'|'manager'|'assistant'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;screen&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;new&quot;,&quot;home&quot;,&quot;configuration&quot;,&quot;not-found&quot;],&quot;default&quot;:&quot;new&quot;,&quot;tsType&quot;:&quot;'new'|'home'|'configuration'|'not-found'&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;state&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;live&quot;,&quot;invalid-empty&quot;,&quot;invalid-long&quot;,&quot;units-typed&quot;,&quot;units-empty&quot;,&quot;units-range&quot;,&quot;sending&quot;,&quot;no-units-submit&quot;,&quot;no-units-open&quot;,&quot;no-units-none&quot;,&quot;failed&quot;,&quot;units-loading&quot;,&quot;blank&quot;,&quot;blank-structure&quot;,&quot;delivered&quot;,&quot;loading&quot;,&quot;error&quot;,&quot;offline&quot;,&quot;vision&quot;,&quot;created&quot;,&quot;hub&quot;,&quot;renaming&quot;,&quot;rename-invalid&quot;,&quot;rename-saving&quot;,&quot;rename-failed&quot;,&quot;reserve-open&quot;,&quot;reserve-typed&quot;,&quot;reserve-below&quot;,&quot;reserve-above&quot;,&quot;reserve-saving&quot;,&quot;reserve-saved&quot;,&quot;deliver-confirm&quot;,&quot;deliver-sending&quot;,&quot;deliver-failed&quot;,&quot;route&quot;,&quot;project&quot;],&quot;default&quot;:&quot;live&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;vision&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Demo&quot;},&quot;unitsFree&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:1000,&quot;default&quot;:300,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;unitsReclaimable&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;min&quot;:0,&quot;max&quot;:1000,&quot;default&quot;:100,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;submitResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;no-units&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'no-units'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;renameResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;deliverResult&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;success&quot;,&quot;fail&quot;],&quot;default&quot;:&quot;success&quot;,&quot;tsType&quot;:&quot;'success'|'fail'&quot;,&quot;section&quot;:&quot;Simulação&quot;},&quot;framed&quot;:{&quot;editor&quot;:null,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;}}">
 const USERS = {
   admin: { name: "Carla Mendes", email: "carla@construtoraatlas.com.br" },
   manager: { name: "Rafael Souza", email: "rafael.souza@construtoraatlas.com.br" },
@@ -343,7 +383,47 @@ const STATUS_VARIANT = "outline";
 const NAME = "Casa Moinhos";
 const RENAMED = "Casa Moinhos · Torre A";
 const LONG = "Residencial Parque das Águas Claras · Torres A, B e C · Fase 2 · Quadra 7, Lote 14 · Avenida Senador Salgado Filho, 4500 · Moinhos de Vento";
-const NO_LIC = "Sem licenças disponíveis. Fale com a BluPrint.";
+const NO_FREE_UNITS = "Nenhuma unidade livre para uma obra nova. Baixe a reserva de outra obra ou fale com a BluPrint.";
+const NO_FREE_UNITS_NONE = "Nenhuma unidade livre para uma obra nova. Fale com a BluPrint.";
+const RACED_FREE = 120;
+const typedUnits = "200";
+const EXAMPLE_UNITS = { reserved: 400, used: 250, free: 150 };
+const DELIVERED_USED = 380;
+const fmt = n => n.toLocaleString("pt-BR");
+const unidades = n => fmt(n) + (n === 1 ? "\u00A0unidade" : "\u00A0unidades");
+const raced = free => "Agora só " + (free === 1 ? "resta " : "restam ") + unidades(free) + (free === 1 ? " livre" : " livres") + ". Ajuste a reserva e\u00A0tente de novo.";
+const sobra = n => (n === 1 ? "sobra " : "sobram ") + fmt(n);
+const newHelp = (free, v) => {
+  const base = fmt(free) + (free === 1 ? " livre" : " livres") + " na construtora.";
+  const n = v === "" ? null : Number(v);
+  return n != null && n >= 1 && n <= free ? base + " Depois de criar, " + sobra(free - n) + "." : base + " Dá para ajustar depois.";
+};
+const reserveFigures = (v, u) => {
+  const n = v === "" ? null : Number(v);
+  const changed = n == null || n !== u.reserved;
+  return {
+    remaining: n == null || n < u.used ? null : n - u.used,
+    free: n == null || n > u.reserved + u.free ? null : u.free + u.reserved - n,
+    beforeRemaining: changed ? u.reserved - u.used : null,
+    beforeFree: changed ? u.free : null,
+  };
+};
+const reserveContextLine = u => "A obra usa " + unidades(u.used) + ". A construtora tem " + fmt(u.free) + (u.free === 1 ? "\u00A0livre." : "\u00A0livres.");
+const digits = v => v.replace(/\D/g, "").slice(0, 6);
+const validateUnits = (v, free) => {
+  const n = v === "" ? null : Number(v);
+  if (n == null || (free == null && n < 1)) return "Informe quantas unidades reservar.";
+  if (free != null && (n < 1 || n > free)) return "De 1 a " + unidades(free) + ".";
+  return null;
+};
+const validateReserve = (v, u) => {
+  if (v === "") return "Informe quantas unidades reservar.";
+  const n = Number(v);
+  if (n < u.used) return "A obra já usa " + unidades(u.used) + ". A reserva não pode ficar abaixo disso.";
+  if (n > u.reserved + u.free) return "Só há " + unidades(u.free) + (u.free === 1 ? " livre." : " livres.");
+  return null;
+};
+const reserveSaved = (name, n) => "Reserva da " + name + ": " + unidades(n) + ".";
 const ERR_CREATE = "Não foi possível criar a obra. Confira sua conexão e tente de novo.";
 const ERR_DELIVER = "Não foi possível entregar a obra. Confira sua conexão e tente de novo.";
 const DELIVERED_BY = "Entregue em 14/10/2026 por Rafael Souza.";
@@ -360,15 +440,20 @@ class Component extends DCLogic {
   base() {
     const p = this.props || {};
     return {
-      screen: p.screen ?? this.url.get("screen") ?? "new", phase: "ready", name: NAME, delivered: false, visionOn: false, section: "dados-da-obra",
-      newName: "", newError: null, newApi: null, sending: false, licLoading: false, licGone: false,
+      screen: this.prop("screen") ?? "new", phase: "ready", name: NAME, delivered: false, visionOn: false, section: "dados-da-obra",
+      newName: "", newError: null, newUnits: "", unitsError: null, newApi: null, sending: false, freeLoading: false, free: this.freeProp(), reclaimable: this.reclaimableProp(), noUnits: false,
+      units: Object.assign({}, EXAMPLE_UNITS), reserveOpen: false, reserveDraft: "", reserveError: null, reserveSaving: false,
       editing: false, draft: "", renameError: null, renameApi: null, saving: false,
       confirm: null, ack: false, deliverError: null, statusSaving: false, statusShipped: false, structureCta: false, toast: null, menuOpen: false, signingOut: false, notFound: "route",
     };
   }
-  frozen() { return this.props.state != null && this.props.state !== "live"; }
-  role() { return this.props.role ?? this.url.get("role") ?? "admin"; }
-  isDark() { return this.state.dark ?? ((this.props.theme ?? this.url.get("theme")) === "dark"); }
+  prop(k) { const u = this.url && this.url.get(k); if (u != null) return u === "true" ? true : u === "false" ? false : u; return this.props ? this.props[k] : undefined; }
+  stateProp() { return this.prop("state") ?? "live"; }
+  freeProp() { const v = this.prop("unitsFree"); return v == null ? 300 : Math.max(0, Number(v)); }
+  reclaimableProp() { const v = this.prop("unitsReclaimable"); return v == null ? 100 : Math.max(0, Number(v)); }
+  frozen() { return this.stateProp() !== "live"; }
+  role() { return this.prop("role") ?? "admin"; }
+  isDark() { return this.state.dark ?? (this.prop("theme") === "dark"); }
 
   componentDidMount() {
     const el = this.rootRef.current;
@@ -386,8 +471,8 @@ class Component extends DCLogic {
     clearTimeout(this.t);
     const sc = this.scrollRef.current; if (sc) sc.scrollTop = 0;
     if (screen === "new") {
-      this.setState(Object.assign({ screen, licLoading: true }, extra));
-      this.t = setTimeout(() => this.setState({ licLoading: false }), 600);
+      this.setState(Object.assign({ screen, freeLoading: true }, extra));
+      this.t = setTimeout(() => this.setState({ freeLoading: false }), 600);
     } else if (screen === "home" || screen === "configuration") {
       const skip = extra && extra.phase === "ready";
       this.setState(Object.assign({ screen, phase: skip ? "ready" : "loading" }, extra));
@@ -396,29 +481,39 @@ class Component extends DCLogic {
   }
 
   applyFrozen() {
-    const s = this.props.state;
-    const scr = this.props.screen ?? "new";
+    const s = this.stateProp();
+    const scr = this.prop("screen") ?? "new";
     const p = Object.assign(this.base(), { screen: scr });
     const map = {
-      "invalid-empty": { newError: "Informe o nome da obra." },
-      "invalid-long": { newName: LONG, newError: "O nome pode ter no máximo 120 caracteres." },
-      "sending": { newName: NAME, sending: true },
-      "no-license-submit": { newName: NAME, newApi: NO_LIC, licGone: true },
-      "no-license-open": { licGone: true },
-      "failed": { newName: NAME, newApi: ERR_CREATE },
-      "count-loading": { licLoading: true },
-      "delivered": { delivered: true, statusShipped: true },
+      "invalid-empty": { newUnits: typedUnits, newError: "Informe o nome da obra." },
+      "invalid-long": { newName: LONG, newUnits: typedUnits, newError: "O nome pode ter no máximo 120 caracteres." },
+      "units-empty": { newName: NAME, unitsError: "Informe quantas unidades reservar." },
+      "units-range": { newName: NAME, newUnits: "350", unitsError: validateUnits("350", 300) },
+      "sending": { newName: NAME, newUnits: typedUnits, sending: true },
+      "no-units-submit": { newName: NAME, newUnits: typedUnits, free: RACED_FREE, unitsError: raced(RACED_FREE) },
+      "units-typed": { newName: NAME, newUnits: "75" },
+      "no-units-open": { free: 0, reclaimable: 100 },
+      "no-units-none": { free: 0, reclaimable: 0 },
+      "failed": { newName: NAME, newUnits: typedUnits, newApi: ERR_CREATE },
+      "units-loading": { freeLoading: true },
+      "delivered": { delivered: true, statusShipped: true, units: { reserved: DELIVERED_USED, used: DELIVERED_USED, free: 0 } },
       "blank-structure": { structureCta: true },
       "loading": { phase: "loading" },
       "error": { phase: "error" },
       "offline": { phase: "offline" },
       "vision": { visionOn: true },
       "hub": { visionOn: true },
-      "created": { toast: created(NAME) },
+      "created": { toast: created(NAME), units: { reserved: Number(typedUnits), used: 0, free: 300 - Number(typedUnits) } },
       "renaming": { editing: true, draft: NAME },
       "rename-invalid": { editing: true, draft: "", renameError: "Informe o nome da obra." },
       "rename-saving": { editing: true, draft: RENAMED, saving: true },
       "rename-failed": { editing: true, draft: RENAMED, renameApi: ERR_RENAME },
+      "reserve-open": { reserveOpen: true, reserveDraft: String(EXAMPLE_UNITS.reserved) },
+      "reserve-typed": { reserveOpen: true, reserveDraft: "450" },
+      "reserve-below": { reserveOpen: true, reserveDraft: "200", reserveError: validateReserve("200", EXAMPLE_UNITS) },
+      "reserve-above": { reserveOpen: true, reserveDraft: "600", reserveError: validateReserve("600", EXAMPLE_UNITS) },
+      "reserve-saving": { reserveOpen: true, reserveDraft: "450", reserveSaving: true },
+      "reserve-saved": { units: Object.assign({}, EXAMPLE_UNITS, { reserved: 450, free: 100 }), toast: reserveSaved(NAME, 450) },
       "deliver-confirm": { confirm: "deliver", statusShipped: true },
       "deliver-sending": { confirm: "deliver", ack: true, statusSaving: true, statusShipped: true },
       "deliver-failed": { confirm: "deliver", ack: true, deliverError: ERR_DELIVER, statusShipped: true },
@@ -441,17 +536,21 @@ class Component extends DCLogic {
   submitNew = e => {
     this.noop(e);
     const st = this.state;
-    if (st.sending || st.licGone) return;
-    const err = validateName(st.newName);
-    if (err) return this.setState({ newError: err, newApi: null });
-    this.setState({ sending: true, newError: null, newApi: null });
+    const free = st.freeLoading ? null : st.free;
+    if (st.sending || free === 0) return;
+    const nameErr = validateName(st.newName);
+    const unitsErr = validateUnits(st.newUnits, free);
+    if (nameErr || unitsErr) return this.setState({ newError: nameErr, unitsError: unitsErr, newApi: null });
+    this.setState({ sending: true, newError: null, unitsError: null, newApi: null });
     clearTimeout(this.t2);
     this.t2 = setTimeout(() => {
-      const r = this.props.submitResult ?? "success";
+      const r = this.prop("submitResult") ?? "success";
+      const requested = Number(this.state.newUnits);
       if (r === "fail") return this.setState({ sending: false, newApi: ERR_CREATE });
-      if (r === "no-license") return this.setState({ sending: false, newApi: NO_LIC, licGone: true });
+      if (r === "no-units" && requested > RACED_FREE) return this.setState({ sending: false, free: RACED_FREE, unitsError: raced(RACED_FREE) });
       const name = this.state.newName.trim();
-      this.enter("configuration", { phase: "ready", sending: false, name, delivered: false, visionOn: false, toast: created(name) });
+      const left = (r === "no-units" ? RACED_FREE : this.state.free) - requested;
+      this.enter("configuration", { phase: "ready", sending: false, name, delivered: false, visionOn: false, toast: created(name), units: { reserved: requested, used: 0, free: Math.max(0, left) } });
       clearTimeout(this.t4);
       this.t4 = setTimeout(() => this.setState({ toast: null }), 6000);
     }, 1000);
@@ -465,7 +564,7 @@ class Component extends DCLogic {
     this.setState({ saving: true, renameError: null, renameApi: null });
     clearTimeout(this.t2);
     this.t2 = setTimeout(() => {
-      if (this.props.renameResult === "fail" || this.frozen()) return this.setState({ saving: false, renameApi: ERR_RENAME });
+      if (this.prop("renameResult") === "fail" || this.frozen()) return this.setState({ saving: false, renameApi: ERR_RENAME });
       this.setState(s => ({ saving: false, editing: false, name: s.draft.trim() }));
     }, 800);
   };
@@ -476,11 +575,30 @@ class Component extends DCLogic {
     clearTimeout(this.t2);
     this.t2 = setTimeout(() => {
       if (this.frozen()) return this.setState({ statusSaving: false });
-      if (this.props.deliverResult === "fail") return this.setState({ statusSaving: false, deliverError: ERR_DELIVER });
-      this.setState(s => ({ statusSaving: false, confirm: null, delivered: true, editing: false, toast: "Obra \u201C" + s.name + "\u201D entregue." }));
+      if (this.prop("deliverResult") === "fail") return this.setState({ statusSaving: false, deliverError: ERR_DELIVER });
+      this.setState(s => ({ statusSaving: false, confirm: null, delivered: true, editing: false, units: { reserved: s.units.used, used: s.units.used, free: s.units.free + s.units.reserved - s.units.used }, toast: "Obra \u201C" + s.name + "\u201D entregue." }));
       clearTimeout(this.t4);
       this.t4 = setTimeout(() => this.setState({ toast: null }), 6000);
     }, 1000);
+  };
+
+  closeReserve = () => { if (!this.state.reserveSaving) this.setState({ reserveOpen: false, reserveError: null }); };
+
+  saveReserve = e => {
+    this.noop(e);
+    const st = this.state;
+    if (st.reserveSaving) return;
+    const err = validateReserve(st.reserveDraft, st.units);
+    if (err) return this.setState({ reserveError: err });
+    this.setState({ reserveSaving: true, reserveError: null });
+    clearTimeout(this.t2);
+    this.t2 = setTimeout(() => {
+      if (this.frozen()) return this.setState({ reserveSaving: false });
+      const n = Number(this.state.reserveDraft);
+      this.setState(s => ({ reserveSaving: false, reserveOpen: false, units: { reserved: n, used: s.units.used, free: s.units.free + s.units.reserved - n }, toast: reserveSaved(s.name, n) }));
+      clearTimeout(this.t4);
+      this.t4 = setTimeout(() => this.setState({ toast: null }), 6000);
+    }, 800);
   };
 
   signOut = () => {
@@ -505,25 +623,40 @@ class Component extends DCLogic {
     const DS = window.BluPrintDesignSystem_d4fa62 || {};
     const h = React.createElement;
     const st = this.state;
-    const vp = this.props.viewport ?? "auto";
+    const vp = this.prop("viewport") ?? "auto";
     const desk = vp === "desktop" || (vp !== "mobile" && st.w >= 768);
     const dark = this.isDark();
     const role = this.role();
     const admin = role === "admin";
     const canEdit = role !== "assistant";
     const user = USERS[role] || USERS.admin;
-    const ps = this.props.state;
     const live = !this.frozen() && !this.props.framed;
     const scr = st.screen;
     const isNew = scr === "new", isHome = scr === "home", isConfig = scr === "configuration", isNF = scr === "not-found";
     const isProject = isHome || isConfig;
     const phase = st.phase, ready = phase === "ready";
-    const vision = st.visionOn || !!this.props.vision;
+    const vision = st.visionOn || !!this.prop("vision");
 
-    const avail = st.licGone ? 0 : ps === "last-license" ? 1 : (this.props.licensesAvailable ?? 5);
-    const noLic = avail <= 0;
-    const licText = noLic ? NO_LIC : avail === 1 ? "Usa a última licença disponível." : "Usa 1 das " + avail + " licenças disponíveis.";
-    const openedNoLic = noLic && !st.newApi;
+    const noFree = !st.freeLoading && st.free === 0;
+    const newApi = noFree ? (st.reclaimable > 0 ? NO_FREE_UNITS : NO_FREE_UNITS_NONE) : st.newApi;
+    const unitsHint = st.freeLoading
+      ? (DS.Skeleton ? h("span", { "aria-label": "Carregando unidades livres", style: { display: "flex", alignItems: "center", height: "1lh" } }, h(DS.Skeleton, { width: desk ? 300 : "80%", height: 14, radius: "sm" })) : null)
+      : noFree || st.free == null ? null : newHelp(st.free, st.newUnits);
+    const u = st.units;
+    const unitsText = st.delivered ? "Usou " + unidades(u.used) + "." : "Usa " + fmt(u.used) + " de " + fmt(u.reserved) + (u.reserved === 1 ? " reservada" : " reservadas");
+    const reserveOpen = admin && st.reserveOpen && !st.delivered;
+    const fig = reserveFigures(st.reserveDraft, u);
+    const tile = (label, value, before) => DS.Card ? h(DS.Card, { size: "sm", style: { gap: 0, minWidth: 0 } },
+      h(DS.CardContent, { style: { display: "grid", gap: "2px", paddingInline: "var(--space-3)" } },
+        h("span", { style: { fontSize: "var(--text-sm)", color: "var(--muted-foreground)" } }, label),
+        h("span", { style: { fontFamily: "var(--font-mono)", fontVariantNumeric: "tabular-nums", fontWeight: 600, fontSize: "var(--text-lg)", lineHeight: "24px" } }, value == null ? "–" : fmt(value)),
+        h("span", { "aria-hidden": before == null ? "true" : undefined, style: { fontSize: "var(--text-xs)", lineHeight: "16px", color: "var(--muted-foreground)", fontVariantNumeric: "tabular-nums", visibility: before == null ? "hidden" : "visible" } }, "Antes: " + fmt(before ?? 0)))) : null;
+    const reserveTiles = h("div", { role: "group", "aria-label": "Efeito da reserva", "aria-live": "polite", style: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(9.5rem, 1fr))", gap: "var(--space-2)" } },
+      tile("Restam na obra", fig.remaining, fig.beforeRemaining),
+      tile("Livres na construtora", fig.free, fig.beforeFree));
+    const reserveFooter = DS.Button ? h("div", { style: { display: "grid", gap: "var(--space-2)", width: "100%" } },
+      h(DS.Button, { type: "submit", form: "reserve-form-sheet", size: "lg", block: true, loading: st.reserveSaving, disabled: !!validateReserve(st.reserveDraft, st.units) }, st.reserveSaving ? "Salvando…" : "Salvar"),
+      h(DS.Button, { type: "button", size: "lg", block: true, variant: "outline", disabled: st.reserveSaving, onClick: this.closeReserve }, "Cancelar")) : null;
 
     let block = null;
     if (isNF) block = st.notFound === "project"
@@ -603,15 +736,14 @@ class Component extends DCLogic {
       newCardProps: desk ? { style: { gap: "var(--space-5)" } } : { style: { gap: "var(--space-5)", borderRadius: 0, background: "transparent", paddingBlock: 0, boxShadow: "none" } },
       padProps: desk ? {} : { style: { paddingInline: 0 } },
       newTitleProps: { role: "heading", "aria-level": 1, style: { fontSize: "var(--text-2xl)", fontWeight: 600, letterSpacing: "var(--tracking-tight)", lineHeight: "var(--leading-tight)" } },
-      licLoading: st.licLoading,
-      showLicText: !st.licLoading,
-      licText,
-      newApi: st.newApi, newError: st.newError, newName: st.newName, newInvalid: !!st.newError,
-      onNewName: e => this.setState({ newName: e.target.value, newError: null, newApi: st.licGone ? st.newApi : null }),
-      fieldDisabled: openedNoLic || st.sending,
+      newApi, newError: st.newError, newName: st.newName, newInvalid: !!st.newError,
+      onNewName: e => this.setState({ newName: e.target.value, newError: null, newApi: null }),
+      unitsHint, unitsError: st.unitsError ? h("span", { style: { textWrap: "pretty" } }, st.unitsError) : null, newUnits: st.newUnits, unitsInvalid: !!st.unitsError,
+      onNewUnits: e => this.setState({ newUnits: digits(e.target.value), unitsError: null, newApi: null }),
+      fieldDisabled: noFree || st.sending,
       newAutoFocus: desk && live,
       sending: st.sending,
-      newBtnDisabled: noLic,
+      newBtnDisabled: noFree,
       newBtnLabel: st.sending ? "Criando obra…" : "Criar obra",
       submitNew: this.submitNew,
 
@@ -649,7 +781,7 @@ class Component extends DCLogic {
       retry: () => {
         this.setState({ phase: "loading" });
         clearTimeout(this.t);
-        this.t = setTimeout(() => this.setState({ phase: this.frozen() ? this.props.state : "ready" }), 900);
+        this.t = setTimeout(() => this.setState({ phase: this.frozen() ? this.stateProp() : "ready" }), 900);
       },
       homeLoading: isHome && phase === "loading",
 
@@ -664,7 +796,7 @@ class Component extends DCLogic {
       sectionTitleProps: { role: "heading", "aria-level": 3, style: { fontSize: "var(--text-lg)", fontWeight: 600, letterSpacing: "var(--tracking-tight)" } },
       canEdit,
       canRename: canEdit && !st.delivered,
-      renameLock: st.delivered ? "A obra foi entregue: o nome não pode mais ser alterado." : !canEdit ? "Só o gerente de obra ou o admin da construtora renomeia a obra." : null,
+      renameLock: st.delivered ? "A obra foi entregue: o nome e a reserva não podem mais ser alterados." : !canEdit ? "Só o gerente de obra ou o admin da construtora renomeia a obra." : null,
       nameReading: !st.editing || !canEdit || st.delivered,
       nameEditing: st.editing && canEdit && !st.delivered,
       startRename: () => this.setState({ editing: true, draft: st.name, renameError: null, renameApi: null }),
@@ -675,6 +807,23 @@ class Component extends DCLogic {
       saving: st.saving, saveLabel: st.saving ? "Salvando…" : "Salvar",
       liveFocus: live,
       btnProps: { style: { flex: desk ? "none" : "1 1 0" } },
+      unitsText,
+      unitsRowPadEnd: (st.delivered || !canEdit) ? "var(--space-4)" : "0",
+      canReserve: admin && !st.delivered,
+      openReserve: () => this.setState({ reserveOpen: true, reserveDraft: String(st.units.reserved), reserveError: null }),
+      closeReserve: this.closeReserve,
+      saveReserve: this.saveReserve,
+      reserveSheet: reserveOpen && !desk,
+      reserveCentered: reserveOpen && desk,
+      reserveFooter,
+      reserveContext: h("span", { style: { textWrap: "pretty" } }, reserveContextLine(u)),
+      reserveTiles,
+      reserveBlocked: !!validateReserve(st.reserveDraft, u),
+      reserveError: st.reserveError ? h("span", { style: { textWrap: "pretty" } }, st.reserveError) : null, reserveInvalid: !!st.reserveError,
+      reserveDraft: st.reserveDraft, onReserveDraft: e => { const v = digits(e.target.value); this.setState(s => ({ reserveDraft: v, reserveError: s.reserveError && v !== "" ? validateReserve(v, s.units) : null })); },
+      onReserveKey: e => { if (e.key === "Enter" && validateReserve(this.state.reserveDraft, this.state.units)) this.saveReserve(e); },
+      onReserveBlur: () => this.setState(s => ({ reserveError: s.reserveOpen && !s.reserveSaving && s.reserveDraft !== "" ? validateReserve(s.reserveDraft, s.units) : s.reserveError })),
+      reserveSaving: st.reserveSaving, reserveSaveLabel: st.reserveSaving ? "Salvando…" : "Salvar",
       statusDesc: st.delivered ? DELIVERED_BY + " A obra está fechada: nada mais pode ser alterado. Os relatórios continuam disponíveis." : "A equipe registra e resolve pendências. Entregue a obra quando ela for passada ao cliente: depois disso ela fica fechada e não pode ser reaberta.",
       showStatusCard: vision || st.statusShipped,
       showStatusBtn: canEdit && !st.delivered,

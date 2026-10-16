@@ -4,7 +4,9 @@
 
 Three screens close epic #5 and open the obra itself: **Nova obra** (`/projects/new`), the **tela da obra**
 (início `/projects/:id` and configuração `/projects/:id/configuration`) and the **página não encontrada**.
-The tela da obra is drawn as its whole vision; this document marks what #46 builds.
+The tela da obra is drawn as its whole vision; this document marks what #46 builds. Unidades follow the
+reservation model: the construtora buys unidades, and every obra holds a **reserva** of them, set on Nova obra
+and changed later by the admin in Dados da obra.
 
 ## Decided
 
@@ -14,9 +16,12 @@ The tela da obra is drawn as its whole vision; this document marks what #46 buil
 | After creating | Go to `/projects/:id/configuration` of the new obra, toast "Obra “Casa Moinhos” criada." |
 | Two routes for the obra | `/projects/:id` = início (the everyday entry, later the dashboard and the navigation); `/projects/:id/configuration` = configuração. The list card opens the início; the list's "Nova obra" links to `/projects/new`. |
 | Who configures | The admin and everyone on the obra, each within their role (ADR 0067, glossary term *Project configuration*). |
-| Rename | RF-217: gerente de obra or admin rename the obra any time before delivery. The assistente does not. Renaming never frees the license. |
+| Rename | RF-217: gerente de obra or admin rename the obra any time before delivery. The assistente does not. |
+| Reserva on creation | Creating an obra spends nothing; it reserves unidades. "Unidades reservadas" is required on Nova obra, from 1 to the construtora's **livres** (livres = contratadas − the reservas of all obras). With 0 livres the page cannot create (N6). |
+| Changing the reserva | Admin only, in Dados da obra, any time before delivery: from the obra's **usadas** (can be 0) to its reserva + the livres. Gerente and assistente read "Usa 250 de 400 reservadas" and never see the livres (ADR 0067). |
+| On delivery | The unused part of the reserva goes back to the livres in the same transaction: the reserva becomes the usadas, and Dados da obra reads "Usou 380 unidades.". |
 | Deliver (RF-215, RF-216) | Admin or gerente, after a confirmation dialog. Final: no reopen in the app, nothing on a delivered obra changes, its name included; only BluPrint support reopens one delivered by mistake (ADR 0069). Built in a later ticket of the obra screen, not in #46. |
-| No license | Recognized by the API's `NO_FREE_LICENSE` code; the sentence is always "Sem licenças disponíveis. Fale com a BluPrint." |
+| Not enough livres | Recognized by the API's `409 NO_UNITS_LEFT` (`requested`, `available`); the page keeps the name and the number and puts the error on the "Unidades reservadas" field, like any other out-of-range value, with the server's `available` (N5). The admin's way out is "fale com a BluPrint" or lowering another obra's reserva. |
 | Retry is safe | The page generates the obra id when it opens; resending answers the obra already created, never a second one (ADR 0068). |
 | Hidden, not faked | Sections whose epic is not built are **not shown** in the app, never "em breve". The design shows them all; this handoff marks which ship with #46. |
 | Not found | Two cases: a route that does not exist, and an obra that does not exist or the person cannot see (the API answers 404 for both, to reveal nothing). Without a session the route guard sends the person to `/login`; the not-found page is never the answer to "not signed in". |
@@ -60,17 +65,38 @@ Breakpoint **768px**. App header (logo + user menu) exactly as on Obras: 56px mo
   previous search params.
 - **Desktop**: Card (gap 20px). **Mobile**: same content flat (no ring, transparent, no inline padding).
 - Title "Nova obra" as h1, 28px/600, tracking -0.02em, leading 1.15.
-- License line (CardDescription, 14px muted): "Usa 1 das N licenças disponíveis." / "Usa a última licença
-  disponível." / no license: "Sem licenças disponíveis. Fale com a BluPrint.". Loading: Skeleton 220 × 16.
-  Count failed: line hidden.
+- No description under the title: the page carries no cost line.
 - Field "Nome da obra", Input placeholder "Ex.: Casa Moinhos", `autoComplete="off"`, autofocus ≥ 768px only.
-- Validation on the client before sending, same rules as the API (trimmed, 1–120 characters); the error is
-  icon + text under the field, never a red border alone. A repeated name is allowed and gets no warning.
-- Button `lg` 52px, full width, "Criar obra". Sending: spinner + "Criando obra…", field disabled, submit
+- Field "Unidades reservadas" right below it (same form gap, 16px), Input `inputMode="numeric"`,
+  `autoComplete="off"`, no placeholder, full width; non-digits are dropped as they are typed. Help line under it
+  (Field hint, 14px muted), live on every keystroke so the admin never does the math: empty or not yet valid
+  "300 livres na construtora. Dá para ajustar depois." ("1 livre na construtora. …" for one); a valid number
+  (1 to the livres) "300 livres na construtora. Depois de criar, sobram 225." (75 typed; 300 typed gives
+  "sobram 0", 299 "sobra 1"). "Restam" names what is there before, "sobram" what is left after. While `GET /api/organization/units` loads (N8) the help line is a Skeleton 14px tall in the help
+  line's own height (300px desktop, 80% mobile), so nothing moves when it arrives; the form already works. If
+  that request fails the help line disappears and the field has no client-side maximum: the server's
+  `NO_UNITS_LEFT` covers the real case.
+- Validation on the client before sending, both fields at once, same rules as the API. Name: trimmed,
+  1–120 characters. Unidades: empty (or 0 when the livres are unknown) "Informe quantas unidades reservar.";
+  outside 1 to the livres "De 1 a 300 unidades.". The error is icon + text under the field and replaces the
+  help line, never a red border alone. A repeated name is allowed and gets no warning.
+- Button `lg` 52px, full width, "Criar obra". Sending: spinner + "Criando obra…", both fields disabled, submit
   ignored.
-- Alert (danger, no title) at the top of the form for API failures.
-- States: see N1–N8 below. In N5 the field stays enabled with the name kept, the button is disabled. In N6
-  field and button are disabled.
+- Alert (danger, no title) at the top of the form for API failures that are not about a field (N7, N6).
+  Editing either field clears it.
+- **Someone reserved first (N5)**: `409 NO_UNITS_LEFT`. No Alert: the page stays, keeps name and number, and the
+  "Unidades reservadas" field turns invalid with the error under it "Agora só restam 120 unidades livres. Ajuste
+  a reserva e tente de novo." (the server's `available`), consistent with the out-of-range error N3d. The
+  livres and the field's maximum become 120; once the number is edited the error clears and the help line comes
+  back with 120 ("120 livres na construtora. Depois de criar, sobram 20." for 100). Resubmitting a number above
+  120 gets the client error "De 1 a 120 unidades.".
+- **0 livres (N6, N6b)**: both fields and the button disabled, no help line, and an Alert whose way out depends
+  on `reclaimable` (unidades reserved by obras em andamento and not used by them). "Baixe a reserva de outra obra"
+  appears only when there is something to lower: `reclaimable > 0` (N6) "Nenhuma unidade livre para uma obra nova.
+  Baixe a reserva de outra obra ou fale com a BluPrint."; `reclaimable = 0`, no obra yet or every obra using its
+  whole reserva (N6b) "Nenhuma unidade livre para uma obra nova. Fale com a BluPrint.". Normally unreachable,
+  because the list disables "Nova obra" at 0 livres; it covers a direct URL or a stale list.
+- States: see N1–N8 below.
 - Success: `navigate({ to: "/projects/$projectId/configuration" })` + sonner success toast
   "Obra “Casa Moinhos” criada.".
 
@@ -125,9 +151,10 @@ Main: max-width 72rem, padding mobile `20px 16px 32px`, desktop `32px 32px 48px`
   `--accent-foreground`; hover `--muted`. Links jump to the section (`scroll-margin-top: 88px`). With only
   Dados da obra (#46) the nav is not rendered.
 
-#### Dados da obra (#46: name and rename)
+#### Dados da obra (#46: name and rename; 2.12: unidades)
 
-The Card holds the name only; the status lives in its own card (below).
+The Card holds the name and the unidades; the status lives in its own card (below). Rows are separated by a
+1px `--border` line with 16px above and below it.
 
 
 - **Name row**: "Nome da obra" (14px muted) over the name (16px/500); right: outline "Renomear" with
@@ -138,14 +165,51 @@ The Card holds the name only; the status lives in its own card (below).
   (`PATCH /api/projects/:id`): back to read mode, invalidate the project query so the header updates
   without reload. Failure: Alert "Não foi possível salvar o nome. Confira sua conexão e tente de novo.",
   draft kept. Escape or Cancelar discards.
+- **Unidades row** (every role, right under the name row, also in C1 right after creating): "Unidades" (14px
+  muted) over "Usa 250 de 400 reservadas" (16px/500; "Usa 0 de 200 reservadas" on a new obra). Admin only, on
+  an obra em andamento: outline "Alterar reserva" with `sliders-horizontal` 18px on the right, the same
+  treatment as "Renomear" (wraps under the text on narrow screens). Gerente (C4b) and assistente (C4) read it
+  with no button and no lock line: the reserva is the admin's, like the livres it draws from.
+- **Alterar reserva (C7)**: a plain dialog (`role="dialog"`, `aria-modal`), centered on desktop (max-width
+  30rem, padding 24px, gap 20px, `--popover`, radius 14px, `--shadow-lg`, `--overlay` scrim) and the DS Sheet
+  on mobile (footer buttons `lg` full width, primary on top), as the deliver dialog.
+  - Title "Alterar reserva", and right under it (gap 4px; the Sheet's description on mobile) one 14px muted
+    context line in plain words: "A obra usa 250 unidades. A construtora tem 150 livres.". No range sentence.
+  - Field "Unidades reservadas", prefilled with the current reserva (400), `inputMode="numeric"`, autofocus, no
+    hint.
+  - Below the field (16px), two figure tiles side by side, the Unidades screen's figures made smaller
+    (`../unidades/`): Card `sm`, padding 12px, label 14px muted, number Geist Mono 18px/600 tabular, then a 12px
+    muted "Antes: 150" line. Tiles: "Restam na obra" (reserva − usadas) and "Livres na construtora" (livres +
+    reserva atual − reserva nova). They update on every keystroke. The "Antes" line shows only while the typed
+    value differs from the current reserva; its slot is always reserved, so the tiles never change height. Open
+    (C7a): 150 / 150 without "Antes"; 450 typed (C7a2): 200 (Antes: 150) / 100 (Antes: 150). Grid
+    `repeat(auto-fit, minmax(9.5rem, 1fr))`, gap 8px: side by side at 390 and on desktop, stacked only below that.
+    `aria-live="polite"` on the group.
+  - Validation timing as on Nova obra: the error appears under the field only when it loses focus or on Salvar
+    (Enter in the field also validates, even with Salvar disabled): below the usadas "A obra já usa 250 unidades. A reserva não pode ficar abaixo disso." (C7b); above
+    reserva + livres "Só há 150 unidades livres." (C7c). It clears as soon as the value becomes valid (a shown
+    error follows the value while it stays invalid). While an invalid value is being typed nothing flashes: the
+    tile whose value would be impossible shows "–" (never a negative number; Restam below the usadas, Livres
+    above the livres) and Salvar stays disabled. An empty field shows no error, both tiles "–", Salvar disabled. Primary "Salvar" (submit) and
+    outline "Cancelar".
+  - Saving (C7d): "Salvando…" with spinner, field and Cancelar disabled; Escape and the scrim do nothing.
+  - Success (C7e): the dialog closes, the row reads "Usa 250 de 450 reservadas", sonner success toast "Reserva da
+    Casa Moinhos: 450 unidades.". Invalidate the project and the organization units queries.
+  - Server refusals keep the dialog and the typed number and show the same field errors with the server's
+    numbers: `409 RESERVATION_BELOW_USED` (`used`) as C7b, `409 NO_UNITS_LEFT` (`available`) as C7c.
+    `409 PROJECT_DELIVERED` closes the dialog and refetches the obra (it now reads as C6). A network failure
+    follows the rename pattern: danger Alert above the field, number kept (copy to review: "Não foi possível
+    salvar a reserva. Confira sua conexão e tente de novo.").
 - **Assistente (C4)**: no Renomear; footer line with `lock` 16px: "Só o gerente de obra ou o admin da
   construtora renomeia a obra."
-- **Delivered (C6)**: no Renomear for anyone; `lock` line "A obra foi entregue: o nome não pode mais ser alterado."
+- **Delivered (C6)**: no Renomear and no Alterar reserva for anyone; the unidades row reads "Usou 380 unidades."
+  (the reserva became the usadas on delivery); `lock` line "A obra foi entregue: o nome e a reserva não podem
+  mais ser alterados."
 
 #### Status da obra (later ticket of the obra screen; not in #46)
 
-Delivering is final: a delivered obra is closed for good and is never reopened, so the license it holds is
-really spent ([0069](../../../adr/0069-delivering-a-project-is-final.md), RF-215 to RF-217). Its own Card right after Dados da obra, because it changes the whole obra, not a field
+Delivering is final: a delivered obra is closed for good and is never reopened, and the unused part of its
+reserva goes back to the livres ([0069](../../../adr/0069-delivering-a-project-is-final.md), RF-215 to RF-217). Its own Card right after Dados da obra, because it changes the whole obra, not a field
 of it. #46 does not render it: the header badge already shows the status.
 
 - **Body**: status Badge, then 14px muted text. Em andamento: "A equipe registra e resolve pendências. Entregue a
@@ -162,7 +226,8 @@ of it. #46 does not render it: the header badge already shows the status.
   - Title "Entregar “Casa Moinhos”?". Text "A entrega fecha a obra de vez. Depois de confirmar:" then three lines
     with an 18px muted icon: `lock` "Ninguém mais cria, altera ou exclui pins, fotos, plantas, estrutura, equipe,
     disciplinas, empresas executoras ou o nome da obra: nada mais na obra muda." · `x` "A obra não pode ser reaberta." · `circle-check` "Os relatórios continuam
-    disponíveis para exportar." The license is not mentioned: creating the obra already said one is spent.
+    disponíveis para exportar." The reserva is not mentioned: delivery returns its unused part to the livres on
+    its own, and the delivery ticket owns any wording about it.
   - Checkbox "Entendi que a obra não poderá ser reaberta." The primary `circle-check` "Entregar obra" stays
     disabled until it is checked: one deliberate step more than a click, without typing the obra name (names
     run to 120 characters and this happens on phones too).
@@ -208,9 +273,10 @@ width on mobile) → `/projects`.
 | Screen / section | Admin da construtora | Gerente de obra | Assistente de obra |
 | --- | --- | --- | --- |
 | Lista de obras | Every obra of the organization; "Nova obra" | Only the obras they are on | Only the obras they are on |
-| Nova obra | Creates, using one license | Redirected to `/projects` | Redirected to `/projects` |
+| Nova obra | Creates, reserving 1 to the livres | Redirected to `/projects` | Redirected to `/projects` |
 | Início da obra | Any obra, through the organization (ADR 0067); later reads and exports, never records pins (ADR 0024) | Their obras | Their obras |
 | Dados da obra: rename (not on a delivered obra) | Yes | Yes | Reads only (RF-217) |
+| Dados da obra: reserva (not on a delivered obra) | Reads "Usa N de M reservadas"; changes it (2.12) | Reads only | Reads only |
 | Status da obra: deliver, final (later ticket) | Yes | Yes | Reads only |
 | Estrutura (#6) | Creates and edits; restores and deletes archived items | Same as admin | Creates and edits (RF-205); no restore or permanent delete (RF-212, RF-214) |
 | Equipe (#11) | Invites gerentes and assistentes (ADR 0070) | Invites assistentes | Invites nobody (RF-126, ADR 0023) |
@@ -225,35 +291,44 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 
 | Id | Screen | State |
 | --- | --- | --- |
-| N1 | Nova obra | Empty, "Usa 1 das 5 licenças disponíveis." |
-| N2 | Nova obra | "Usa a última licença disponível." |
-| N3a / N3b | Nova obra | "Informe o nome da obra." / "O nome pode ter no máximo 120 caracteres." |
+| N1 | Nova obra | Empty, help "300 livres na construtora. Dá para ajustar depois." |
+| N1b | Nova obra | 75 typed: "300 livres na construtora. Depois de criar, sobram 225." (live) |
+| N3a / N3b | Nova obra | "Informe o nome da obra." / "O nome pode ter no máximo 120 caracteres." (unidades filled) |
+| N3c / N3d | Nova obra | "Informe quantas unidades reservar." / "De 1 a 300 unidades." |
 | N4 | Nova obra | Sending |
-| N5 | Nova obra | No license on submit |
-| N6 | Nova obra | Opened with no free license |
+| N5 | Nova obra | Someone reserved first: `NO_UNITS_LEFT` as a field error, values kept, maximum now 120 |
+| N6 / N6b | Nova obra | 0 livres: fields and button disabled; Alert with "Baixe a reserva de outra obra" only when `reclaimable > 0` (N6), otherwise "Fale com a BluPrint." (N6b) |
 | N7 | Nova obra | Other failure |
-| N8 | Nova obra | License count loading |
+| N8 | Nova obra | Livres loading: help line skeleton |
 | P1 / P1b | Início | Blank obra, admin / gerente (#46: no button) |
 | P1c | Início | Blank obra with the structure editor (vision, #6) |
 | P2 | Início | Delivered |
 | P3 | Início | Loading |
 | P4a / P4b | Início | Error / offline |
 | P5 | Início | Vision |
-| C1 | Configuração | Right after creating (toast); Dados da obra only |
+| C1 | Configuração | Right after creating (toast); Dados da obra only, "Usa 0 de 200 reservadas" |
 | C2 / C2b | Configuração | Full hub, admin / assistente (vision; future sections are frames) |
 | C3a–d | Dados da obra | Editing / validation / saving / failure |
-| C4 | Dados da obra | Assistente: no rename |
+| C4 | Dados da obra | Assistente: no rename, unidades read-only |
+| C4b | Dados da obra | Gerente: renames, unidades read-only |
 | C5a / C5b / C5c | Status da obra | Deliver dialog / sending / failure |
-| C6 | Configuração | Delivered: closed, nothing editable |
+| C6 | Configuração | Delivered: closed, nothing editable, "Usou 380 unidades." |
+| C7a / C7a2 | Dados da obra | Alterar reserva (admin): open with 400, tiles 150 / 150 / 450 typed, tiles 200 / 100 with "Antes: 150" |
+| C7b–e | Dados da obra | Alterar reserva: below the usadas (Restam "–") / above the livres (Livres "–") / saving / saved (toast) |
 | X1 / X2 | Não encontrada | Route / obra |
 
 ## State management
 
-- `useOrganizationLicensesQuery()` → `{ available }` (admin only). `useCreateProjectMutation` sends
-  `{ id, name }` with `id = crypto.randomUUID()` generated once when the page mounts (kept across retries).
-  Branch on `error.problem.code === "NO_FREE_LICENSE"`.
+- `useOrganizationUnitsQuery()` → `{ contracted, reserved, free, reclaimable }` (admin only; Nova obra reads
+  `free`, and `reclaimable` for the N6 / N6b wording; the dialog reads `free`).
+  `useCreateProjectMutation` sends `{ id, name, units }` with `id = crypto.randomUUID()` generated once when the
+  page mounts (kept across retries). On `error.problem.code === "NO_UNITS_LEFT"` set the query's `free` to
+  `problem.available` and the field error (N5). The "sobram" help is derived from `free` and the typed value. Success invalidates the units query and the list.
 - `useProjectQuery(id)` shared by início and configuração; 404 → `notFound()`.
 - `useRenameProjectMutation` → `setQueryData` on the project and invalidate the list.
+- `useChangeReservationMutation` (2.12) sends `{ reserved }`; success → `setQueryData` on the project's `units`,
+  invalidate the organization units query and the list. Branch on `RESERVATION_BELOW_USED`, `NO_UNITS_LEFT` and
+  `PROJECT_DELIVERED`. Local UI state: dialog open + draft + error.
 - `useDeliverProjectMutation` (later ticket) → updates the project and the list. Local UI state: rename editing +
   draft, deliver dialog open + checkbox.
 
@@ -261,8 +336,10 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 
 | Element | Status |
 | --- | --- |
-| `POST /api/projects` `{ name }` → `ProjectSummary`, `409 NO_FREE_LICENSE` | Served; gains the client-generated `id` (ADR 0068) in #46 |
-| Available licenses `GET /api/organization/licenses` → `{ available }`, admin only | #46 |
+| `POST /api/projects` `{ id, name, units }` → `ProjectSummary`; `409 NO_UNITS_LEFT` with `requested` and `available`; `PROJECT_ID_TAKEN` and the idempotent retry (ADR 0068) | Served today as `{ name }` with `409 NO_FREE_LICENSE`; the 1.20 slice replaces it with the reserva (and drops `NO_FREE_LICENSE` everywhere), #151 builds the page |
+| Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | 1.20 |
+| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | 1.20; `used` counts the obra's units once #6 creates them |
+| Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | 2.12 |
 | One obra `GET /api/projects/:id` (same visibility as the list, 404 otherwise) | #46 |
 | Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente; refused on a delivered obra | #46 |
 | Deliver, admin or gerente; final, no reopen route (ADR 0069) | Later ticket of the obra screen |
@@ -276,7 +353,7 @@ today (`status` only).
 ## Components and assets
 
 Alert, Avatar, Badge, Button, Card, DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Skeleton,
-Toast (sonner), Checkbox, Sheet. New in the design system for this screen: **AlertDialog**
+Toast (sonner), Checkbox, Sheet. The unidades row uses the existing `sliders-horizontal` glyph. New in the design system for this screen: **AlertDialog**
 (`components/overlay/AlertDialog.*`, shadcn `alert-dialog`), the `--badge-primary` tokens that lift the
 "Em andamento" badge in dark mode, and six lucide glyphs: `settings`, `pencil`, `layers`, `users`, `wrench`,
 `map-pin-off`. `_ds_bundle.js` carries them; the prototype draws the dialog inline. In the app the glyphs come from

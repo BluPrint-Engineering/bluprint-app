@@ -1,5 +1,7 @@
 # The client names a new project's id, so creating it twice creates it once
 
+Its license reasoning (a create consumes a license) is replaced by [0074](0074-a-license-is-units-and-each-project-reserves-its-own.md); the decision stands.
+
 Creating a project consumes a paid license and a project is never deleted, so a create that runs twice loses a license for good. The page that creates a project generates the project's id (a UUIDv7, like the database default) when it opens and sends it with the name; `POST /api/projects` inserts with that id, and a repeated id in the same organization answers the project already created without consuming another license. A retry after a lost response, which is ordinary on a phone inside a building site, is therefore safe; locking the button only covers the double tap.
 
 Requirements: RF-112, RF-201
