@@ -21,10 +21,10 @@ import { useIsDesktop } from "@/lib/useIsDesktop";
 import { uuidV7 } from "@/lib/uuidV7";
 import { organizationUnitsQueryOptions } from "../../account/api";
 import { availableUnitsOf, useCreateProjectMutation } from "../api";
+import { plural } from "../components/plural";
 import {
 	type NewProjectFormValues,
 	newProjectFormSchema,
-	plural,
 	validUnits,
 } from "./newProjectForm";
 

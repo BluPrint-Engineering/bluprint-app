@@ -224,14 +224,16 @@ padding 4px, 6px below the trigger, enter animation 180ms fade + 4px slide.
   Creating an obra needs at least one free unit for its reserva; the list never shows the total bought.
 - **Loading**: while `GET /api/organization/units` loads, a 128 × 16 Skeleton holds the line. If it fails, the
   line is hidden and the button stays enabled; the Nova obra page answers the real case (`NO_UNITS_LEFT`).
-- The button, the free units link and the 0-livres state ship with #46, together with the form; the Unidades
-  screen is ticket 2.13.
+- The button and the 0-livres state ship with #46, together with the form. Until the Unidades screen (ticket 2.13)
+  exists the free units line, and "Baixe a reserva de uma obra", are text, not links.
 - The bar shows while loading, with results, and in no-results. In the admin empty state the action moves
   into the empty block instead, with the free units line under the button (gap 12px).
 
 ### Toast — sign-out failed
 
-- Toaster bottom-center on mobile (lifted above the bottom bar, offset 105px), bottom-right on desktop.
+- Toaster bottom-center on mobile, bottom-right on desktop. While the bottom bar shows it lifts the toast by the
+  bar's height, published as the CSS variable `--bottom-bar-height` (bar padding and the bottom safe area
+  included), so the toast sits above the bar whatever its height.
 - Toast tone `danger`: `circle-alert` icon, "Não foi possível sair. Confira sua conexão e tente de novo.",
   44px close button. `--popover` bg, radius 10px, `--ring-hairline` + `--shadow-lg`, max width 24rem.
   Auto-dismiss ~6s. In the app: `sonner`.
@@ -286,9 +288,9 @@ centered, gap 16px, padding-block 48px mobile / 64px desktop, icon 24px `--muted
 
 ## What the API serves today vs. what is future
 
-`GET /api/projects` returns today every obra the person can see (an admin sees the whole organization),
-with id, name, createdAt and the person's role, as a bare array. The rest is sliced under the list spec
-issue (#94); until an element lands the UI **hides it** instead of faking it.
+`GET /api/projects` returns every obra the person can see (an admin sees the whole organization) as
+`{ items, total, counts }`, each item with id, name, status, createdAt, lastActivityAt, the person's role and the
+obra's units. Open pins wait for #7; until an element lands the UI **hides it** instead of faking it.
 
 | Element | Status |
 | --- | --- |

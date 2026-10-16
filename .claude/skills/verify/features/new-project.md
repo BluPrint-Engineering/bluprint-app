@@ -14,7 +14,7 @@ From `/projects/new` the organization's admin creates a project: a name and how 
 
 ## How to get to it (user POV)
 
-- Open `/projects/new` directly. The list's `Nova obra` entry arrives in a later ticket.
+- Tap `Nova obra` on `/projects` (see [project-list.md](./project-list.md)), or open `/projects/new` directly.
 
 ## Driving it with drive.ts
 

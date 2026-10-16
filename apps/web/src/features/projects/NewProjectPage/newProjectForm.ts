@@ -3,10 +3,6 @@ import { projectNameFormSchema } from "../components/projectNameForm";
 
 const EMPTY_UNITS = "Informe quantas unidades reservar.";
 
-export function plural(count: number, one: string, many: string) {
-	return count === 1 ? one : many;
-}
-
 export function validUnits(typed: string, free: number | undefined) {
 	const units = Number(typed);
 	return typed !== "" && units >= 1 && (free === undefined || units <= free);

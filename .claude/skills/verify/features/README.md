@@ -32,7 +32,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Sign in](./sign-in.md): the login screen, wrong-password and rate-limit errors, the redirect back to a protected page, a session that survives reload.
 - [Sign up](./sign-up.md): self-signup scaffolding, the terms checkbox, landing signed in.
 - [Account menu and sign out](./account-menu.md): the header account menu, theme choice, signing out.
-- [Project list](./project-list.md): the Obras screen, phone infinite scroll versus desktop pagination.
+- [Project list](./project-list.md): the Obras screen, phone infinite scroll versus desktop pagination, the admin's free units and `Nova obra` entry.
 - [Project home and not found](./project-home.md): a card opens the project's home (name, status, role, blank state), and the not-found pages for unknown addresses and projects the user cannot see.
 - [Project configuration and rename](./project-configuration.md): the configuration page (`Dados da obra`), renaming in place, and why an assistant or a delivered project cannot rename.
 - [New project](./new-project.md): the Nova obra page, its free-units help, validation, creation and the page without free units.

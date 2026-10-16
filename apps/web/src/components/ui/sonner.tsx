@@ -10,6 +10,8 @@ const Toaster = (props: ToasterProps) => {
 			theme="light"
 			position={desktop ? "bottom-right" : "bottom-center"}
 			duration={6000}
+			offset={{ bottom: "calc(var(--bottom-bar-height) + 24px)" }}
+			mobileOffset={{ bottom: "calc(var(--bottom-bar-height) + 16px)" }}
 			closeButton
 			icons={{
 				success: <CircleCheck />,
