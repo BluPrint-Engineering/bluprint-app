@@ -6,6 +6,7 @@ A project card on `/projects` opens the project's home at `/projects/<id>`: a he
 
 - `home-card-link` opens the home from a project card on the list.
 - `home-header` shows the name, the status badge and, for a manager, `Gerente de obra`; an admin sees no role.
+- `home-config-entry` shows `Configuração da obra` in the header, to every role (see [project-configuration.md](./project-configuration.md)).
 - `home-blank` shows `A obra ainda não tem estrutura` with `As pendências aparecem aqui quando a obra tiver estrutura.` and no button; a delivered project shows the same block under the `Entregue` badge.
 - `home-load-states` shows the header skeleton while loading, `Não foi possível carregar a obra` with `Tentar de novo` on a failure and `Sem conexão.` offline. Not reachable on a healthy instance; the web route-tree tests cover them.
 - `notfound-route` shows `Página não encontrada` for an address that matches no route.
@@ -34,7 +35,7 @@ Preconditions:
 
 ## Gotchas
 
-- The configuration entry (`Configuração da obra`) does not exist yet; its absence is correct.
+- The header carries the entry `Configuração da obra`, covered in [project-configuration.md](./project-configuration.md); the `main` block has no link or button.
 - The back link is named `Obras`, and the header logo link is `BluPrint, obras`: select the back link with `{ name: "Obras", exact: true }`.
 - `Entregue` also appears as a filter label on the list; assert it on the project page only.
 - The not-found pages keep the app header, so the account menu is still there.

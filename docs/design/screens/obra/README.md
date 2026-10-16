@@ -39,11 +39,12 @@ Query, Tailwind v4, shadcn radix-nova, `lucide-react`); do not copy the prototyp
 src/routes/_authenticated/$/route.tsx                            ← route 404 (X1), signed-out visitors go to /login first
 src/routes/_authenticated/projects/new.tsx                       ← admin only; others redirect to /projects
 src/routes/_authenticated/projects/$projectId/index.tsx          ← início
-src/routes/_authenticated/projects/$projectId/configuration.tsx  ← configuração
+src/routes/_authenticated/projects/$projectId/configuration/route.tsx  ← configuração
 src/features/projects/
   NewProjectPage/NewProjectPage.tsx
-  ProjectPage/ProjectPage.tsx, ProjectHeader.tsx                 ← ProjectHeader climbs once configuração uses it
-  ProjectConfigurationPage/ProjectConfigurationPage.tsx, ProjectDetailsSection.tsx
+  ProjectPage/ProjectPage.tsx
+  ProjectConfigurationPage/ProjectConfigurationPage.tsx, ProjectDetailsSection.tsx, RenameProjectForm.tsx
+  components/ProjectScreen.tsx, ProjectHeader.tsx                ← shared by início and configuração
   ProjectsPage/NewProjectAction.tsx                              ← link to /projects/new
 src/components/NotFound.tsx                                      ← both cases; route 404 and obra 404
 ```
@@ -341,7 +342,7 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 | The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects`, `GET /api/projects/:id` and the create response; `used` is 0 until #165 |
 | Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | 2.12 |
 | One obra `GET /api/projects/:id` (same visibility as the list, `404 PROJECT_NOT_FOUND` otherwise) | Served |
-| Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente; refused on a delivered obra | #46 |
+| Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente (`403` for the assistente); `409 PROJECT_DELIVERED` on a delivered obra | Served |
 | Deliver, admin or gerente; final, no reopen route (ADR 0069) | Later ticket of the obra screen |
 | Structure, team, disciplines, contractors | Their epics (#6, #11, #8, #9); no table migrated yet |
 | Dashboard, unit map, navigation | #13, #6 |

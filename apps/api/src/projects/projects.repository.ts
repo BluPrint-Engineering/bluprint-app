@@ -186,6 +186,16 @@ export class ProjectsRepository {
 		);
 	}
 
+	async renameActive(projectId: string, name: string) {
+		const [renamed] = await this.txHost.tx
+			.update(project)
+			.set({ name })
+			.where(and(eq(project.id, projectId), eq(project.status, "active")))
+			.returning({ name: project.name });
+
+		return renamed;
+	}
+
 	async insert(values: {
 		organizationId: string;
 		name: string;

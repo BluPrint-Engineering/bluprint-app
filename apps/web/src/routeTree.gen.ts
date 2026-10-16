@@ -16,6 +16,7 @@ import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSplatRouteRouteImport } from './routes/_authenticated/$/route'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects/index'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/index'
+import { Route as AuthenticatedProjectsProjectIdConfigurationRouteRouteImport } from './routes/_authenticated/projects/$projectId/configuration/route'
 
 const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
   id: '/_authenticated',
@@ -53,6 +54,12 @@ const AuthenticatedProjectsProjectIdIndexRoute =
     path: '/projects/$projectId/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProjectsProjectIdConfigurationRouteRoute =
+  AuthenticatedProjectsProjectIdConfigurationRouteRouteImport.update({
+    id: '/projects/$projectId/configuration',
+    path: '/projects/$projectId/configuration',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthenticatedIndexRoute
@@ -60,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRouteRoute
   '/$': typeof AuthenticatedSplatRouteRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
 }
 export interface FileRoutesByTo {
@@ -68,6 +76,7 @@ export interface FileRoutesByTo {
   '/$': typeof AuthenticatedSplatRouteRoute
   '/': typeof AuthenticatedIndexRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
+  '/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
 }
 export interface FileRoutesById {
@@ -78,14 +87,28 @@ export interface FileRoutesById {
   '/_authenticated/$': typeof AuthenticatedSplatRouteRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
+  '/_authenticated/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/login' | '/signup' | '/$' | '/projects/' | '/projects/$projectId/'
+    | '/'
+    | '/login'
+    | '/signup'
+    | '/$'
+    | '/projects/'
+    | '/projects/$projectId/configuration'
+    | '/projects/$projectId/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/signup' | '/$' | '/' | '/projects' | '/projects/$projectId'
+  to:
+    | '/login'
+    | '/signup'
+    | '/$'
+    | '/'
+    | '/projects'
+    | '/projects/$projectId/configuration'
+    | '/projects/$projectId'
   id:
     | '__root__'
     | '/_authenticated'
@@ -94,6 +117,7 @@ export interface FileRouteTypes {
     | '/_authenticated/$'
     | '/_authenticated/'
     | '/_authenticated/projects/'
+    | '/_authenticated/projects/$projectId/configuration'
     | '/_authenticated/projects/$projectId/'
   fileRoutesById: FileRoutesById
 }
@@ -154,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsProjectIdIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/projects/$projectId/configuration': {
+      id: '/_authenticated/projects/$projectId/configuration'
+      path: '/projects/$projectId/configuration'
+      fullPath: '/projects/$projectId/configuration'
+      preLoaderRoute: typeof AuthenticatedProjectsProjectIdConfigurationRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
@@ -161,6 +192,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedSplatRouteRoute: typeof AuthenticatedSplatRouteRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
+  AuthenticatedProjectsProjectIdConfigurationRouteRoute: typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
 }
 
@@ -168,6 +200,8 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSplatRouteRoute: AuthenticatedSplatRouteRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
+  AuthenticatedProjectsProjectIdConfigurationRouteRoute:
+    AuthenticatedProjectsProjectIdConfigurationRouteRoute,
   AuthenticatedProjectsProjectIdIndexRoute:
     AuthenticatedProjectsProjectIdIndexRoute,
 }

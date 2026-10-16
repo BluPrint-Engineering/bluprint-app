@@ -1,4 +1,5 @@
 import {
+	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	PROJECT_PAGE_SIZE,
 	projectListSchema,
@@ -6,7 +7,13 @@ import {
 	projectParamsSchema,
 	projectSummarySchema,
 } from "@bluprint/shared";
-import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
+import {
+	infiniteQueryOptions,
+	type Query,
+	queryOptions,
+	useMutation,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { ApiError, apiFetch } from "@/lib/api";
 import type { ProjectsFilters } from "./filters";
 
@@ -90,5 +97,36 @@ export function projectQueryOptions(id: string) {
 		queryKey: ["projects", "detail", id],
 		queryFn: () => apiFetch(`/projects/${id}`, projectSummarySchema),
 		retry: retryUnlessNotFound,
+	});
+}
+
+export function isProjectDelivered(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === PROJECT_DELIVERED;
+}
+
+const isListQuery = (query: Query) => query.queryKey[1] !== "detail";
+
+export function useRenameProjectMutation(projectId: string) {
+	const queryClient = useQueryClient();
+	const { queryKey } = projectQueryOptions(projectId);
+	return useMutation({
+		mutationFn: (name: string) =>
+			apiFetch(`/projects/${projectId}`, projectSummarySchema, {
+				method: "PATCH",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ name }),
+			}),
+		onSuccess: (renamed) => {
+			queryClient.setQueryData(queryKey, renamed);
+			return queryClient.invalidateQueries({
+				queryKey: ["projects"],
+				predicate: isListQuery,
+			});
+		},
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({ queryKey });
+			}
+		},
 	});
 }

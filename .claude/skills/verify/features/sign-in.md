@@ -33,5 +33,5 @@ Preconditions:
 ## Gotchas
 
 - `getByLabel("Senha")` without `{ exact: true }` also matches the show-password toggle.
-- Sign-in allows 5 attempts per minute per client IP, failed ones included. `drive.ts` gives every device run its own IP, so each device has its own budget of 5: the full journey spends 2 and `--as admin|manager` spends 1 more, and other drives in the instance never exhaust it.
+- Sign-in allows 5 attempts per minute per client IP, failed ones included. `drive.ts` gives every device run its own IP, so each device has its own budget of 5: the full journey spends 2 and `--as admin|manager|assistant` spends 1 more, and other drives in the instance never exhaust it.
 - A journey that hits `Muitas tentativas seguidas. Aguarde um minuto e tente de novo.` on purpose (`auth-rate-limit`) makes all its attempts on one device; it is the limit working, not a broken login.

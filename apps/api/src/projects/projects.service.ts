@@ -2,6 +2,7 @@ import {
 	type CreateProject,
 	EffectiveRole,
 	NO_UNITS_LEFT,
+	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	ProjectList,
 	ProjectListQuery,
@@ -9,6 +10,7 @@ import {
 	ProjectStatus,
 	ProjectSummary,
 	ProjectUnits,
+	type RenameProject,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { ForbiddenException, Injectable } from "@nestjs/common";
@@ -72,6 +74,32 @@ export class ProjectsService {
 		userId: string,
 		projectId: string,
 	): Promise<ProjectSummary> {
+		return toSummary(await this.readVisible(userId, projectId));
+	}
+
+	async rename(
+		userId: string,
+		projectId: string,
+		{ name }: RenameProject,
+	): Promise<ProjectSummary> {
+		const found = await this.readVisible(userId, projectId);
+		if (found.effectiveRole === "assistant") {
+			throw new ForbiddenException();
+		}
+
+		const renamed = await this.projects.renameActive(projectId, name);
+		if (!renamed) {
+			throw new ProblemException({
+				status: 409,
+				code: PROJECT_DELIVERED,
+				detail: "The project was delivered, so its name can no longer change.",
+			});
+		}
+
+		return toSummary({ ...found, name: renamed.name });
+	}
+
+	private async readVisible(userId: string, projectId: string) {
 		const found = await this.projects.findVisible(userId, projectId);
 		if (!found) {
 			throw new ProblemException({
@@ -81,7 +109,7 @@ export class ProjectsService {
 			});
 		}
 
-		return toSummary(found);
+		return found;
 	}
 
 	async listManagers(userId: string): Promise<ProjectManager[]> {

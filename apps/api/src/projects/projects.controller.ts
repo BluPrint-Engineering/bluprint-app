@@ -1,5 +1,13 @@
 import { ProjectList, ProjectManager, ProjectSummary } from "@bluprint/shared";
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import {
+	Body,
+	Controller,
+	Get,
+	Param,
+	Patch,
+	Post,
+	Query,
+} from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
@@ -10,6 +18,7 @@ import { ProjectListDto } from "./dto/project-list.dto";
 import { ProjectManagersDto } from "./dto/project-managers.dto";
 import { ProjectParamsDto } from "./dto/project-params.dto";
 import { ProjectSummaryDto } from "./dto/project-summary.dto";
+import { RenameProjectDto } from "./dto/rename-project.dto";
 import { ProjectsService } from "./projects.service";
 
 @ApiTags("Projects")
@@ -88,5 +97,25 @@ export class ProjectsController {
 		@Body() body: CreateProjectDto,
 	): Promise<ProjectSummary> {
 		return this.projects.create(session.user.id, body);
+	}
+
+	@Patch(":id")
+	@ApiOperation({
+		summary: "Rename a project",
+		description:
+			"Changes the project's name and answers its updated summary. Allowed to the organization's `admin` and to a project's `manager`; an `assistant` gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. A delivered project is closed and answers `409 PROJECT_DELIVERED`. Renaming does not move the last activity.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The project with its new name.",
+		type: ProjectSummaryDto,
+	})
+	@ApiErrorResponses(400, 401, 403, 404, 409)
+	rename(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+		@Body() body: RenameProjectDto,
+	): Promise<ProjectSummary> {
+		return this.projects.rename(session.user.id, params.id, body);
 	}
 }
