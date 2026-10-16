@@ -100,6 +100,13 @@ export function LocationPage({
 						.find((candidate) => candidate.id === location.data.id)
 				: undefined;
 
+		if (
+			(location.data.type === "tower" && !tower) ||
+			(location.data.type === "floor" && !floor)
+		) {
+			return <LocationNotFound projectId={projectId} />;
+		}
+
 		return (
 			<>
 				<PageBand>
@@ -132,13 +139,7 @@ export function LocationPage({
 				</PageBand>
 				<PageMain>
 					{tower && <TowerBody projectId={projectId} tower={tower} />}
-					{location.data.type === "floor" && (
-						<FloorBody
-							projectId={projectId}
-							items={location.data.children}
-							floor={floor}
-						/>
-					)}
+					{floor && <FloorBody projectId={projectId} floor={floor} />}
 					{location.data.type === "unit" && <UnitBody unit={location.data} />}
 					{location.data.type === "common_area" && (
 						<CommonAreaBody area={location.data} />
