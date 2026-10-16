@@ -3,6 +3,7 @@ import {
 	EffectiveRole,
 	NO_UNITS_LEFT,
 	PROJECT_DELIVERED,
+	PROJECT_ID_TAKEN,
 	PROJECT_NOT_FOUND,
 	ProjectList,
 	ProjectListQuery,
@@ -17,7 +18,7 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { MembersRepository } from "../members/members.repository";
 import { UnitsService } from "../units/units.service";
-import { ProjectsRepository } from "./projects.repository";
+import { type ProjectRow, ProjectsRepository } from "./projects.repository";
 
 // TODO(#165): used becomes the units the project has created or spent
 function unitsOf(reserved: number): ProjectUnits {
@@ -124,7 +125,7 @@ export class ProjectsService {
 	@Transactional()
 	async create(
 		userId: string,
-		{ name, units }: CreateProject,
+		{ id, name, units }: CreateProject,
 	): Promise<ProjectSummary> {
 		const membership = await this.members.findByUser(userId);
 		if (membership?.role !== "admin") {
@@ -132,7 +133,14 @@ export class ProjectsService {
 		}
 		const { organizationId } = membership;
 
+		// the lock comes first so a duplicate still in flight waits for the first request to commit, then finds its project
 		const { free } = await this.units.readForReservation(organizationId);
+
+		const existing = await this.projects.findById(id);
+		if (existing) {
+			return this.answerExisting(existing, organizationId);
+		}
+
 		if (units > free) {
 			throw new ProblemException({
 				status: 409,
@@ -144,20 +152,35 @@ export class ProjectsService {
 			});
 		}
 
-		const project = await this.projects.insert({
+		const created = await this.projects.insertIfAbsent({
+			id,
 			organizationId,
 			name,
 			reservedUnits: units,
 		});
+		if (!created) {
+			// another organization's request took the id between the lookup and the insert
+			return this.answerExisting(
+				(await this.projects.findById(id))!,
+				organizationId,
+			);
+		}
 
-		return {
-			id: project.id,
-			name: project.name,
-			createdAt: project.createdAt.toISOString(),
-			lastActivityAt: project.lastActivityAt.toISOString(),
-			role: "admin",
-			units: unitsOf(project.reservedUnits),
-			status: project.status,
-		};
+		return toSummary({ ...created, effectiveRole: null });
+	}
+
+	private answerExisting(
+		existing: ProjectRow,
+		organizationId: string,
+	): ProjectSummary {
+		if (existing.organizationId !== organizationId) {
+			throw new ProblemException({
+				status: 409,
+				code: PROJECT_ID_TAKEN,
+				detail: "The project id is already taken.",
+			});
+		}
+
+		return toSummary({ ...existing, effectiveRole: null });
 	}
 }

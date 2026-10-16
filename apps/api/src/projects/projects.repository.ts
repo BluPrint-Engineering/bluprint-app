@@ -30,6 +30,8 @@ function nameContains(q: string) {
 	return sql`unaccent(${project.name}) ilike unaccent(${pattern})`;
 }
 
+export type ProjectRow = typeof project.$inferSelect;
+
 @Injectable()
 export class ProjectsRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
@@ -196,31 +198,43 @@ export class ProjectsRepository {
 		return renamed;
 	}
 
+	/** Not scoped to an organization: the caller must tell its own project from another organization's. */
+	async findById(projectId: string) {
+		const [found] = await this.txHost.tx
+			.select()
+			.from(project)
+			.where(eq(project.id, projectId));
+
+		return found;
+	}
+
 	async insert(values: {
 		organizationId: string;
 		name: string;
 		reservedUnits: number;
 		status?: ProjectStatus | undefined;
-	}): Promise<{
-		id: string;
-		name: string;
-		createdAt: Date;
-		lastActivityAt: Date;
-		reservedUnits: number;
-		status: ProjectStatus;
-	}> {
+	}): Promise<ProjectRow> {
 		const [created] = await this.txHost.tx
 			.insert(project)
 			.values(values)
-			.returning({
-				id: project.id,
-				name: project.name,
-				createdAt: project.createdAt,
-				status: project.status,
-				lastActivityAt: project.lastActivityAt,
-				reservedUnits: project.reservedUnits,
-			});
+			.returning();
 
 		return created!;
+	}
+
+	/** Undefined when the id already exists, whoever it belongs to. */
+	async insertIfAbsent(values: {
+		id: string;
+		organizationId: string;
+		name: string;
+		reservedUnits: number;
+	}): Promise<ProjectRow | undefined> {
+		const [created] = await this.txHost.tx
+			.insert(project)
+			.values(values)
+			.onConflictDoNothing({ target: project.id })
+			.returning();
+
+		return created;
 	}
 }

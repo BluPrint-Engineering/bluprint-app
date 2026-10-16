@@ -84,11 +84,12 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "Create a project",
 		description:
-			"Creates a blank project with the given name and reserves `units` of the caller's organization's free units for it, in one transaction; a reservation holds units without spending them, and licenses are not consumed. The organization is locked while it reserves, so simultaneous creations never reserve more than the free units. Restricted to the organization's `admin`: the caller gets no project membership on the project it just created, and keeps seeing it through the organization membership, reported as `admin`, the same as any other project of theirs. Answers `NO_UNITS_LEFT`, with `requested` and `available`, when the free units do not cover the request, and creates nothing.",
+			"Creates a blank project with the client's `id` and the given name, and reserves `units` of the caller's organization's free units for it, in one transaction; a reservation holds units without spending them, and licenses are not consumed. The organization is locked while it reserves, so simultaneous creations never reserve more than the free units. Restricted to the organization's `admin`: the caller gets no project membership on the project it just created, and keeps seeing it through the organization membership, reported as `admin`, the same as any other project of theirs. Sending the `id` of a project of the caller's organization again, as a retry after a lost response, answers that project with the same `201`, reserves nothing and ignores the `name` and `units` of the retry, even when the free units have run out since (ADR 0068). An `id` that belongs to another organization answers `409 PROJECT_ID_TAKEN`, revealing nothing about that project. Answers `409 NO_UNITS_LEFT`, with `requested` and `available`, when the free units do not cover the request, and creates nothing.",
 	})
 	@ZodResponse({
 		status: 201,
-		description: "The project that was created.",
+		description:
+			"The project that was created, or the one a repeated `id` already created.",
 		type: ProjectSummaryDto,
 	})
 	@ApiErrorResponses(400, 401, 403, 409)

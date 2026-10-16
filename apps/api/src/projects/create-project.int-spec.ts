@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { Server } from "node:http";
 import {
 	NO_UNITS_LEFT,
+	PROJECT_ID_TAKEN,
 	problemDetailsSchema,
 	projectListSchema,
 	projectSummarySchema,
@@ -26,6 +27,7 @@ let db: Database;
 let creator: { userId: string; agent: ReturnType<typeof request.agent> };
 let exhausted: { userId: string; agent: ReturnType<typeof request.agent> };
 let contended: { userId: string; agent: ReturnType<typeof request.agent> };
+let rival: { userId: string; agent: ReturnType<typeof request.agent> };
 let nonAdmin: { userId: string; agent: ReturnType<typeof request.agent> };
 
 async function signUp(name: string) {
@@ -74,6 +76,7 @@ beforeAll(async () => {
 	creator = await signUp("Admin Criador");
 	exhausted = await signUp("Admin Sem Unidades");
 	contended = await signUp("Admin Disputado");
+	rival = await signUp("Admin Rival");
 	nonAdmin = await signUp("Não Admin");
 
 	await setLicenseUnits(await organizationOf(exhausted.userId), 50);
@@ -86,7 +89,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-	for (const { userId } of [creator, exhausted, contended, nonAdmin]) {
+	for (const { userId } of [creator, exhausted, contended, rival, nonAdmin]) {
 		await db.delete(user).where(eq(user.id, userId));
 	}
 	await app.close();
@@ -96,7 +99,7 @@ describe("POST /api/projects", () => {
 	test("an admin with free units creates the project and sees it as admin", async () => {
 		const res = await creator.agent
 			.post(PROJECTS)
-			.send({ name: "  Casa Moinhos  ", units: 80 });
+			.send({ id: randomUUID(), name: "  Casa Moinhos  ", units: 80 });
 
 		expect(res.status).toBe(201);
 		const created = projectSummarySchema.parse(res.body);
@@ -137,7 +140,7 @@ describe("POST /api/projects", () => {
 	test("counts the creation as the first activity", async () => {
 		const res = await creator.agent
 			.post(PROJECTS)
-			.send({ name: "Bloco C", units: 1 });
+			.send({ id: randomUUID(), name: "Bloco C", units: 1 });
 
 		expect(res.status).toBe(201);
 		const created = projectSummarySchema.parse(res.body);
@@ -154,7 +157,7 @@ describe("POST /api/projects", () => {
 	test("with fewer free units than asked, answers 409 with what was asked and what is available, and creates nothing", async () => {
 		const res = await exhausted.agent
 			.post(PROJECTS)
-			.send({ name: "Torre Ipê", units: 51 });
+			.send({ id: randomUUID(), name: "Torre Ipê", units: 51 });
 
 		expect(res.status).toBe(409);
 		expect(problemDetailsSchema.parse(res.body)).toMatchObject({
@@ -174,12 +177,12 @@ describe("POST /api/projects", () => {
 	test("reserves exactly the free units, then refuses the next unit with none available", async () => {
 		const all = await exhausted.agent
 			.post(PROJECTS)
-			.send({ name: "Torre Ipê", units: 50 });
+			.send({ id: randomUUID(), name: "Torre Ipê", units: 50 });
 		expect(all.status).toBe(201);
 
 		const one = await exhausted.agent
 			.post(PROJECTS)
-			.send({ name: "Torre Ipê 2", units: 1 });
+			.send({ id: randomUUID(), name: "Torre Ipê 2", units: 1 });
 		expect(one.status).toBe(409);
 		expect(problemDetailsSchema.parse(one.body)).toMatchObject({
 			code: NO_UNITS_LEFT,
@@ -191,7 +194,9 @@ describe("POST /api/projects", () => {
 	test("simultaneous creations never reserve more than the free units", async () => {
 		const attempts = await Promise.all(
 			Array.from({ length: 5 }, () =>
-				contended.agent.post(PROJECTS).send({ name: "Galpão Sul", units: 40 }),
+				contended.agent
+					.post(PROJECTS)
+					.send({ id: randomUUID(), name: "Galpão Sul", units: 40 }),
 			),
 		);
 
@@ -209,10 +214,110 @@ describe("POST /api/projects", () => {
 		);
 	});
 
+	test("answers the project already created when the same id is sent again, reserving once", async () => {
+		const id = randomUUID();
+		const body = { id, name: "Casa Moinhos", units: 10 };
+		const first = await creator.agent.post(PROJECTS).send(body);
+		const before = await reservedUnits(await organizationOf(creator.userId));
+
+		const retry = await creator.agent.post(PROJECTS).send(body);
+
+		expect(first.status).toBe(201);
+		expect(retry.status).toBe(201);
+		expect(retry.body).toEqual(first.body);
+		expect(await reservedUnits(await organizationOf(creator.userId))).toEqual(
+			before,
+		);
+	});
+
+	test("answers the original project when the retry changes the name or the units", async () => {
+		const id = randomUUID();
+		const first = await creator.agent
+			.post(PROJECTS)
+			.send({ id, name: "Bloco A", units: 5 });
+		const before = await reservedUnits(await organizationOf(creator.userId));
+
+		const retry = await creator.agent
+			.post(PROJECTS)
+			.send({ id, name: "Outro nome", units: 200 });
+
+		expect(retry.status).toBe(201);
+		expect(retry.body).toEqual(first.body);
+		expect(await reservedUnits(await organizationOf(creator.userId))).toEqual(
+			before,
+		);
+	});
+
+	test("still answers the project on a retry after the free units ran out", async () => {
+		const organizationId = await organizationOf(rival.userId);
+		await setLicenseUnits(organizationId, 30);
+		const id = randomUUID();
+		const first = await rival.agent
+			.post(PROJECTS)
+			.send({ id, name: "Última", units: 30 });
+		expect(first.status).toBe(201);
+
+		const retry = await rival.agent
+			.post(PROJECTS)
+			.send({ id, name: "Última", units: 30 });
+
+		expect(retry.status).toBe(201);
+		expect(retry.body).toEqual(first.body);
+		expect(await reservedUnits(organizationId)).toEqual([30]);
+	});
+
+	test("simultaneous sends of the same id create one project and one reservation", async () => {
+		const id = randomUUID();
+		const attempts = await Promise.all(
+			Array.from({ length: 5 }, () =>
+				creator.agent.post(PROJECTS).send({ id, name: "Torre", units: 7 }),
+			),
+		);
+
+		for (const res of attempts) expect(res.status).toBe(201);
+		expect(new Set(attempts.map((res) => JSON.stringify(res.body))).size).toBe(
+			1,
+		);
+		const rows = await db.query.project.findMany({
+			where: eq(project.id, id),
+		});
+		expect(rows.map((row) => row.reservedUnits)).toEqual([7]);
+	});
+
+	test("refuses an id that belongs to another organization without revealing the project", async () => {
+		const id = randomUUID();
+		const mine = await creator.agent
+			.post(PROJECTS)
+			.send({ id, name: "Segredo", units: 3 });
+		expect(mine.status).toBe(201);
+
+		const res = await contended.agent
+			.post(PROJECTS)
+			.send({ id, name: "Intruso", units: 1 });
+
+		expect(res.status).toBe(409);
+		const problem = problemDetailsSchema.parse(res.body);
+		expect(problem.code).toBe(PROJECT_ID_TAKEN);
+		expect(JSON.stringify(res.body)).not.toContain("Segredo");
+	});
+
+	test("rejects a missing or invalid id", async () => {
+		for (const id of [undefined, "not-a-uuid", 42]) {
+			const res = await creator.agent
+				.post(PROJECTS)
+				.send({ id, name: "Casa Nova", units: 1 });
+
+			expect(res.status).toBe(400);
+			const problem = problemDetailsSchema.parse(res.body);
+			expect(problem.code).toBe("VALIDATION_FAILED");
+			expect(problem.errors?.[0]?.pointer).toBe("/body/id");
+		}
+	});
+
 	test("refuses a caller who is not the organization's admin", async () => {
 		const res = await nonAdmin.agent
 			.post(PROJECTS)
-			.send({ name: "Casa Nova", units: 10 });
+			.send({ id: randomUUID(), name: "Casa Nova", units: 10 });
 
 		expect(res.status).toBe(403);
 		expect(problemDetailsSchema.parse(res.body).code).toBe("FORBIDDEN");
@@ -224,7 +329,7 @@ describe("POST /api/projects", () => {
 	test("rejects a blank name", async () => {
 		const res = await creator.agent
 			.post(PROJECTS)
-			.send({ name: "   ", units: 10 });
+			.send({ id: randomUUID(), name: "   ", units: 10 });
 
 		expect(res.status).toBe(400);
 		const problem = problemDetailsSchema.parse(res.body);
@@ -235,7 +340,7 @@ describe("POST /api/projects", () => {
 	test("rejects a name over 120 characters", async () => {
 		const res = await creator.agent
 			.post(PROJECTS)
-			.send({ name: "a".repeat(121), units: 10 });
+			.send({ id: randomUUID(), name: "a".repeat(121), units: 10 });
 
 		expect(res.status).toBe(400);
 		expect(problemDetailsSchema.parse(res.body).code).toBe("VALIDATION_FAILED");
@@ -250,7 +355,7 @@ describe("POST /api/projects", () => {
 	])("rejects units that are %s", async (_label, units) => {
 		const res = await creator.agent
 			.post(PROJECTS)
-			.send({ name: "Casa Nova", units });
+			.send({ id: randomUUID(), name: "Casa Nova", units });
 
 		expect(res.status).toBe(400);
 		const problem = problemDetailsSchema.parse(res.body);
@@ -261,7 +366,7 @@ describe("POST /api/projects", () => {
 	test("refuses an anonymous caller", async () => {
 		const res = await request(server)
 			.post(PROJECTS)
-			.send({ name: "Casa Nova", units: 10 });
+			.send({ id: randomUUID(), name: "Casa Nova", units: 10 });
 
 		expect(res.status).toBe(401);
 		expect(problemDetailsSchema.parse(res.body).code).toBe("UNAUTHORIZED");
