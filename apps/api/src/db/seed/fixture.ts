@@ -3,6 +3,7 @@ import type {
 	EffectiveRole,
 	ProjectStatus,
 } from "@bluprint/shared";
+import { type SeedStructure, numberedFloors } from "./seed-structure";
 
 export const FIXTURE_PASSWORD = "canteiro-de-obras-azul";
 
@@ -31,6 +32,7 @@ interface SeedProject {
 	reservedUnits: number;
 	status?: ProjectStatus | undefined;
 	members: SeedProjectMember[];
+	structure?: SeedStructure;
 }
 
 export interface SeedOrganization {
@@ -39,6 +41,88 @@ export interface SeedOrganization {
 	members: SeedOrgMember[];
 	projects: SeedProject[];
 }
+
+const casaMoinhos: SeedStructure = {
+	commonAreas: ["Guarita"],
+	towers: [
+		{
+			name: "Torre A",
+			commonAreas: ["Salão de festas"],
+			floors: [
+				{ name: "Subsolo", units: [], commonAreas: ["Garagem"] },
+				{ name: "Térreo", units: [], commonAreas: ["Hall de entrada"] },
+				...numberedFloors({ from: 1, to: 12, unitsPerFloor: 4, hall: true }),
+				{
+					name: "Cobertura",
+					units: ["1301", "1302"],
+					commonAreas: ["Terraço"],
+				},
+			],
+		},
+		{
+			name: "Torre B",
+			floors: numberedFloors({ from: 1, to: 10, unitsPerFloor: 2, hall: true }),
+		},
+	],
+};
+
+const edificioAurora: SeedStructure = {
+	commonAreas: ["Salão de festas e espaço gourmet com churrasqueira coberta"],
+	towers: [
+		{
+			name: "Torre A",
+			floors: [
+				{ name: "Térreo", units: [], commonAreas: ["Hall de entrada"] },
+				...numberedFloors({
+					from: 1,
+					to: 8,
+					unitsPerFloor: 3,
+					numbering: "letters",
+				}),
+			],
+		},
+	],
+};
+
+const parqueDasAguas: SeedStructure = {
+	towers: ["Torre A", "Torre B", "Torre C"].map((name) => ({
+		name,
+		floors: [
+			{ name: "Térreo", units: [], commonAreas: ["Hall de entrada"] },
+			...numberedFloors({ from: 1, to: 21, unitsPerFloor: 8 }),
+		],
+	})),
+};
+
+const condominioPortoBelo: SeedStructure = {
+	towers: [
+		{
+			name: "Torre A",
+			floors: numberedFloors({ from: 1, to: 4, unitsPerFloor: 4 }),
+		},
+		{ name: "Torre B", floors: [], commonAreas: ["Salão de festas"] },
+	],
+};
+
+const vilaNova: SeedStructure = {
+	commonAreas: ["Guarita"],
+	towers: ["Torre A", "Torre B"].map((name) => ({
+		name,
+		floors: [
+			{ name: "Térreo", units: [], commonAreas: ["Hall de entrada"] },
+			...numberedFloors({ from: 1, to: 3, unitsPerFloor: 2 }),
+		],
+	})),
+};
+
+const verticeJardins: SeedStructure = {
+	towers: [
+		{
+			name: "Torre A",
+			floors: numberedFloors({ from: 1, to: 3, unitsPerFloor: 2 }),
+		},
+	],
+};
 
 export const people: SeedPerson[] = [
 	platformAdmin,
@@ -60,7 +144,7 @@ export const people: SeedPerson[] = [
 export const organizations: SeedOrganization[] = [
 	{
 		name: "Construtora Horizonte",
-		licenses: [1000, 200],
+		licenses: [1000, 200, 300],
 		members: [
 			{ email: "ana@horizonte.test", role: "admin" },
 			{ email: "bruno@horizonte.test", role: "admin" },
@@ -76,6 +160,7 @@ export const organizations: SeedOrganization[] = [
 			{
 				name: "Residencial Jardins",
 				reservedUnits: 120,
+				structure: casaMoinhos,
 				members: [
 					{ email: "carla@horizonte.test", role: "manager" },
 					{ email: "diego@horizonte.test", role: "assistant" },
@@ -86,6 +171,7 @@ export const organizations: SeedOrganization[] = [
 			{
 				name: "Edifício Aurora",
 				reservedUnits: 90,
+				structure: edificioAurora,
 				members: [
 					{ email: "carla@horizonte.test", role: "manager" },
 					{ email: "diego@horizonte.test", role: "manager" },
@@ -97,12 +183,18 @@ export const organizations: SeedOrganization[] = [
 			{
 				name: "Condomínio Porto Belo",
 				reservedUnits: 80,
+				structure: condominioPortoBelo,
 				members: [{ email: "diego@horizonte.test", role: "manager" }],
 			},
 			{ name: "Jardim das Acácias · Torre B", reservedUnits: 60, members: [] },
 			{ name: "Residencial Ipê Amarelo", reservedUnits: 50, members: [] },
 			{ name: "Edifício Maré Alta", reservedUnits: 70, members: [] },
-			{ name: "Parque das Águas · Fase 2", reservedUnits: 80, members: [] },
+			{
+				name: "Parque das Águas · Fase 2",
+				reservedUnits: 520,
+				structure: parqueDasAguas,
+				members: [],
+			},
 			{ name: "Villa Toscana", reservedUnits: 40, members: [] },
 			{ name: "Edifício Solar do Campo", reservedUnits: 60, members: [] },
 			{ name: "Residencial Jequitibá", reservedUnits: 50, members: [] },
@@ -111,8 +203,9 @@ export const organizations: SeedOrganization[] = [
 			{ name: "Torre Atlântica", reservedUnits: 80, members: [] },
 			{
 				name: "Residencial Vila Nova",
-				reservedUnits: 0,
+				reservedUnits: 12,
 				status: "delivered",
+				structure: vilaNova,
 				members: [
 					{ email: "carla@horizonte.test", role: "manager" },
 					{ email: "heitor@horizonte.test", role: "assistant" },
@@ -134,7 +227,7 @@ export const organizations: SeedOrganization[] = [
 	},
 	{
 		name: "Vértice Engenharia",
-		licenses: [300],
+		licenses: [126],
 		members: [
 			{ email: "igor@vertice.test", role: "admin" },
 			{ email: "julia@vertice.test", role: "manager" },
@@ -144,7 +237,8 @@ export const organizations: SeedOrganization[] = [
 			{
 				// same name as a Horizonte project, on purpose: proves tenant isolation reads organization_id
 				name: "Residencial Jardins",
-				reservedUnits: 180,
+				reservedUnits: 6,
+				structure: verticeJardins,
 				members: [
 					{ email: "julia@vertice.test", role: "manager" },
 					{ email: "lucas@vertice.test", role: "assistant" },

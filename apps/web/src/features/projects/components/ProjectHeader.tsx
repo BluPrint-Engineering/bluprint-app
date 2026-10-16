@@ -1,6 +1,8 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import { Link } from "@tanstack/react-router";
-import { ChevronLeft, Settings } from "lucide-react";
+import { Settings } from "lucide-react";
+import { LockLine } from "@/components/LockLine";
+import { BackLink, PageBand } from "@/components/PageBand";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsDesktop } from "@/lib/useIsDesktop";
@@ -14,25 +16,19 @@ interface Scope {
 	section: ProjectSection;
 }
 
-const BACK_LINK =
-	"-ml-1.5 flex min-h-(--tap-min) w-fit items-center gap-0.5 rounded-md pr-(--space-2) text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus-visible:shadow-(--shadow-focus) focus-visible:outline-none";
-
-function BackLink({ projectId, section }: Scope) {
+function ProjectBackLink({ projectId, section }: Scope) {
 	return section === "home" ? (
-		<Link to="/projects" activeOptions={{ exact: true }} className={BACK_LINK}>
-			<ChevronLeft className="size-5" aria-hidden="true" />
+		<BackLink to="/projects" activeOptions={{ exact: true }}>
 			Obras
-		</Link>
+		</BackLink>
 	) : (
-		<Link
+		<BackLink
 			to="/projects/$projectId"
 			params={{ projectId }}
 			activeOptions={{ exact: true }}
-			className={BACK_LINK}
 		>
-			<ChevronLeft className="size-5" aria-hidden="true" />
 			Início da obra
-		</Link>
+		</BackLink>
 	);
 }
 
@@ -68,24 +64,24 @@ function Band({
 	children: React.ReactNode;
 }) {
 	return (
-		<div className="border-b border-border">
-			<div className="mx-auto grid max-w-(--content-max-wide) gap-(--space-2) px-(--page-pad) pt-1 pb-(--space-5) md:px-(--page-pad-desktop) md:pt-(--space-4) md:pb-(--space-6)">
-				<div className="flex items-center justify-between gap-(--space-3)">
-					<BackLink {...scope} />
-					{topRight}
-				</div>
-				{children}
+		<PageBand>
+			<div className="flex items-center justify-between gap-(--space-3)">
+				<ProjectBackLink {...scope} />
+				{topRight}
 			</div>
-		</div>
+			{children}
+		</PageBand>
 	);
 }
 
 export function ProjectHeader({
 	project,
 	section,
+	lockLine,
 }: {
 	project: ProjectSummary;
 	section: ProjectSection;
+	lockLine?: string | undefined;
 }) {
 	const desktop = useIsDesktop();
 	const entry =
@@ -110,6 +106,7 @@ export function ProjectHeader({
 							</span>
 						)}
 					</div>
+					{lockLine && <LockLine>{lockLine}</LockLine>}
 				</div>
 				{desktop ? entry : null}
 			</div>

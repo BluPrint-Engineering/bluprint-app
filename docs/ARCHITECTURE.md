@@ -124,7 +124,7 @@ The Zod schemas and types both apps validate against. TypeScript everywhere, str
 
 ### 4.1 PostgreSQL
 
-Primary database, each table a `<name>.entity.ts` in the feature that owns it, listed for Drizzle and `drizzle-kit` by the barrel `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/`. Migrated tables: Better Auth's `user`, `session`, `account`, `verification` ([0013](adr/0013-better-auth-tables-are-generated.md)) plus `organization`, `member`, `license`, `project`, `project_member`. The designed model and its reasoning: [`data-model.md`](data-model.md). Production on Neon, AWS São Paulo, over the direct connection string; local container in development ([0059](adr/0059-first-deploy-neon-fly-pages.md)).
+Primary database, each table a `<name>.entity.ts` in the feature that owns it, listed for Drizzle and `drizzle-kit` by the barrel `apps/api/src/db/schema.ts`; migrations in `apps/api/drizzle/`. Migrated tables: Better Auth's `user`, `session`, `account`, `verification` ([0013](adr/0013-better-auth-tables-are-generated.md)) plus `organization`, `member`, `license`, `project`, `project_member`, `location`. The designed model and its reasoning: [`data-model.md`](data-model.md). Production on Neon, AWS São Paulo, over the direct connection string; local container in development ([0059](adr/0059-first-deploy-neon-fly-pages.md)).
 
 ### 4.2 Object storage
 

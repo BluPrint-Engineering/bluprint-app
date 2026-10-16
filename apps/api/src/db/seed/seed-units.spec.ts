@@ -1,5 +1,12 @@
 import { type SeedOrganization, organizations } from "./fixture";
+import type { SeedStructure } from "./seed-structure";
 import { assertReservationsFit } from "./seed-units";
+
+const twoUnits: SeedStructure = {
+	towers: [
+		{ name: "Torre A", floors: [{ name: "1º andar", units: ["101", "102"] }] },
+	],
+};
 
 const organization: SeedOrganization = {
 	name: "Alfa",
@@ -30,7 +37,7 @@ describe("assertReservationsFit", () => {
 		);
 	});
 
-	test("refuses a delivered project that still reserves units, naming it", () => {
+	test("refuses a delivered project that reserves more than the units it used, naming it", () => {
 		const delivered = {
 			...organization,
 			projects: [
@@ -45,7 +52,37 @@ describe("assertReservationsFit", () => {
 		};
 
 		expect(() => assertReservationsFit(delivered)).toThrow(
-			'"Torre B" is delivered but reserves 50 units',
+			'"Torre B" is delivered but reserves 50 units and uses 0',
+		);
+	});
+
+	test("accepts a delivered project that reserves exactly the units it used", () => {
+		const delivered = {
+			...organization,
+			projects: [
+				{
+					name: "Torre B",
+					reservedUnits: 2,
+					status: "delivered" as const,
+					structure: twoUnits,
+					members: [],
+				},
+			],
+		};
+
+		expect(() => assertReservationsFit(delivered)).not.toThrow();
+	});
+
+	test("refuses a project that reserves fewer units than its structure has, naming it", () => {
+		const short = {
+			...organization,
+			projects: [
+				{ name: "Torre A", reservedUnits: 1, structure: twoUnits, members: [] },
+			],
+		};
+
+		expect(() => assertReservationsFit(short)).toThrow(
+			'"Torre A" seeds 2 units but reserves 1',
 		);
 	});
 

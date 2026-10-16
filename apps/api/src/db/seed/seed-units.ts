@@ -1,4 +1,5 @@
 import type { SeedOrganization } from "./fixture";
+import { countUnits } from "./seed-structure";
 
 export function assertReservationsFit(organization: SeedOrganization): void {
 	const contracted = organization.licenses.reduce(
@@ -16,14 +17,22 @@ export function assertReservationsFit(organization: SeedOrganization): void {
 		);
 	}
 
-	const deliveredWithReservation = organization.projects.find(
-		(seedProject) =>
-			seedProject.status === "delivered" && seedProject.reservedUnits > 0,
-	);
+	for (const seedProject of organization.projects) {
+		const used = countUnits(seedProject.structure);
 
-	if (deliveredWithReservation) {
-		throw new Error(
-			`"${deliveredWithReservation.name}" is delivered but reserves ${deliveredWithReservation.reservedUnits} units; a delivered project keeps only the units it used, and a seeded project has used none.`,
-		);
+		if (seedProject.reservedUnits < used) {
+			throw new Error(
+				`"${seedProject.name}" seeds ${used} units but reserves ${seedProject.reservedUnits}; a reservation never drops below the units its project uses.`,
+			);
+		}
+
+		if (
+			seedProject.status === "delivered" &&
+			seedProject.reservedUnits !== used
+		) {
+			throw new Error(
+				`"${seedProject.name}" is delivered but reserves ${seedProject.reservedUnits} units and uses ${used}; a delivered project keeps only the units it used.`,
+			);
+		}
 	}
 }

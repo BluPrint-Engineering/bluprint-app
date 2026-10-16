@@ -66,6 +66,8 @@ Who may invite whom is validated in the service, not in the schema ([0023](adr/0
 | `position` | Stored order among siblings: floors and units do not sort by name ([0071](adr/0071-structure-is-edited-where-it-is-navigated.md)). |
 | `unit_type_id?` | On a unit, the unit type it follows ([0072](adr/0072-unit-type-is-linked-and-units-keep-their-changes.md)). |
 
+Deviations from this design, settled in migration `0009` (#154); the migration wins: `path` and the archive columns are not there yet (they come with #7); `unit_type_id` comes with the unit types; `(id, project_id)` is unique and `(parent_id, project_id)` references it, so a parent of another project is impossible; where a name is unique within the parent (towers in the project, floors in a tower, common areas in their parent) a partial unique index on the name ignoring case and repeated spaces is the last line of the service's check.
+
 **Valid parent → child pairs**, validated in the service (the database alone would accept `floor` inside `floor`):
 
 | Parent | Allowed children |

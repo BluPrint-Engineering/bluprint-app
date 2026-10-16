@@ -5,3 +5,4 @@ export * from "../members/member.entity";
 export * from "../organizations/organization.entity";
 export * from "../project-members/project-member.entity";
 export * from "../projects/project.entity";
+export * from "../structure/location.entity";

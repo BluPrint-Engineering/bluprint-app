@@ -14,6 +14,7 @@ import { DATABASE, Database, DatabaseAdapter } from "../database.module";
 import { member, organization, projectMember, session, user } from "../schema";
 import { organizations, people, platformAdmin } from "./fixture";
 import { describeAccountRoles } from "./seed-summary";
+import { insertStructure } from "./seed-structure";
 import { assertReservationsFit } from "./seed-units";
 import { resolveSeedTarget } from "./seed-target";
 
@@ -116,6 +117,14 @@ async function main(): Promise<void> {
 							status: seedProject.status,
 							reservedUnits: seedProject.reservedUnits,
 						});
+
+						if (seedProject.structure) {
+							await insertStructure(
+								txHost.tx,
+								createdProject.id,
+								seedProject.structure,
+							);
+						}
 
 						for (const projectMemberSeed of seedProject.members) {
 							await txHost.tx.insert(projectMember).values({
