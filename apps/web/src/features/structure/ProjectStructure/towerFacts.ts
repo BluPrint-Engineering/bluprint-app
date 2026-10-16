@@ -1,7 +1,6 @@
 import type { StructureTower } from "@bluprint/shared";
 import { floorSummary } from "../floorLabel";
 
-/** The most common number of units on the floors that have any; the smaller one wins a tie. */
 function usualUnitsPerFloor(tower: StructureTower): number | undefined {
 	const floorsWith = new Map<number, number>();
 	for (const floor of tower.floors) {

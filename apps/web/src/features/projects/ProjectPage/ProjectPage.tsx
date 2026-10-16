@@ -1,5 +1,8 @@
-import { ProjectStructure, STRUCTURE_LOCKED } from "../../structure";
-import { FacadeSkeleton } from "../../structure/components/Facade";
+import {
+	FacadeSkeleton,
+	ProjectStructure,
+	STRUCTURE_LOCKED,
+} from "../../structure";
 import { ProjectScreen } from "../components/ProjectScreen";
 
 export function ProjectPage({ projectId }: { projectId: string }) {

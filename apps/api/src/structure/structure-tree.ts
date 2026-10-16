@@ -6,10 +6,9 @@ import type {
 } from "@bluprint/shared";
 import type { LocationRow } from "./location-row";
 
-/** `rows` come in stored order; every list in the result keeps it. */
-export function buildStructure(rows: LocationRow[]): Structure {
+export function buildStructure(rowsInStoredOrder: LocationRow[]): Structure {
 	const childrenOf = new Map<string | null, LocationRow[]>();
-	for (const row of rows) {
+	for (const row of rowsInStoredOrder) {
 		const siblings = childrenOf.get(row.parentId);
 		if (siblings) siblings.push(row);
 		else childrenOf.set(row.parentId, [row]);
@@ -42,7 +41,7 @@ export function buildStructure(rows: LocationRow[]): Structure {
 	});
 
 	const count = (type: LocationRow["type"]) =>
-		rows.filter((row) => row.type === type).length;
+		rowsInStoredOrder.filter((row) => row.type === type).length;
 
 	return {
 		towers: childrenOfType(null, "tower").map(towerOf),

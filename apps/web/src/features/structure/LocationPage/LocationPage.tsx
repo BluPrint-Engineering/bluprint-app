@@ -13,7 +13,7 @@ import { firstLoadState } from "@/lib/firstLoadState";
 import { cn } from "@/lib/utils";
 import { isProjectId, projectQueryOptions } from "../../projects/api";
 import {
-	isLocationNotFound,
+	isNotFound,
 	locationQueryOptions,
 	structureQueryOptions,
 } from "../api";
@@ -77,9 +77,7 @@ export function LocationPage({
 	if (!validProject) return <NotFound variant="project" />;
 	if (
 		!validLocation ||
-		[project, location, structure].some((query) =>
-			isLocationNotFound(query.error),
-		)
+		[project, location, structure].some((query) => isNotFound(query.error))
 	) {
 		return <LocationNotFound projectId={projectId} />;
 	}

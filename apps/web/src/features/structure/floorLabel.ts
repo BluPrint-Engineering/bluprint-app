@@ -11,7 +11,6 @@ function numberOf(name: string): number | undefined {
 	return isNumberedFloor(label) ? Number.parseInt(label, 10) : undefined;
 }
 
-/** `["Térreo", "1º andar", "2º andar", "3º andar", "Cobertura"]` reads "Térreo, 1º ao 3º e Cobertura". */
 export function floorSummary(names: string[]): string {
 	const parts: string[] = [];
 	let run: number[] = [];

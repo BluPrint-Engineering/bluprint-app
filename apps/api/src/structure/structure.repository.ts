@@ -16,7 +16,6 @@ const columns = {
 export class StructureRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
-	/** Every location of the project in stored order: siblings by position, the id breaking ties. */
 	listByProject(projectId: string): Promise<LocationRow[]> {
 		return this.txHost.tx
 			.select(columns)
@@ -47,8 +46,7 @@ export class StructureRepository {
 			.orderBy(asc(location.position), asc(location.id));
 	}
 
-	/** From the highest ancestor down to `parentId`. */
-	async listAncestors(
+	async listAncestorsFromTop(
 		projectId: string,
 		parentId: string,
 	): Promise<LocationRow[]> {

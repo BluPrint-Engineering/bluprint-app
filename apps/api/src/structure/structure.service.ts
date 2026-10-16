@@ -43,7 +43,7 @@ export class StructureService {
 
 		const [ancestors, children] = await Promise.all([
 			found.parentId
-				? this.locations.listAncestors(projectId, found.parentId)
+				? this.locations.listAncestorsFromTop(projectId, found.parentId)
 				: [],
 			this.locations.listChildren(found.id),
 		]);

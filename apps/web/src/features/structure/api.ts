@@ -7,7 +7,7 @@ import {
 import { queryOptions } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "@/lib/api";
 
-function isNotFound(error: unknown) {
+export function isNotFound(error: unknown) {
 	return (
 		error instanceof ApiError &&
 		(error.problem?.code === PROJECT_NOT_FOUND ||
@@ -17,10 +17,6 @@ function isNotFound(error: unknown) {
 
 function retryUnlessNotFound(failures: number, error: unknown) {
 	return !isNotFound(error) && failures < 3;
-}
-
-export function isLocationNotFound(error: unknown) {
-	return isNotFound(error);
 }
 
 export function structureQueryOptions(projectId: string) {

@@ -34,7 +34,6 @@ export function floorName(number: number): string {
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
-/** `101, 102` for digits, `1A, 1B` for letters. */
 export function unitNames(
 	floor: number,
 	count: number,

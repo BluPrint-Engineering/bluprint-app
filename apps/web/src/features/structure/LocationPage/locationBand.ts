@@ -1,5 +1,5 @@
 import type { LocationDetail, LocationRef, Structure } from "@bluprint/shared";
-import { plural } from "@/lib/plural";
+import { plural } from "./plural";
 
 export interface LocationBand {
 	parent: { kind: "project" } | { kind: "location"; id: string; name: string };
@@ -20,7 +20,6 @@ function unitsOf(structure: Structure, towerId: string): number {
 	return tower?.floors.reduce((sum, floor) => sum + floor.units.length, 0) ?? 0;
 }
 
-/** A project with a single tower never shows it, so it drops out of the back link and the context line. */
 export function describeLocation(
 	location: LocationDetail,
 	structure: Structure,
