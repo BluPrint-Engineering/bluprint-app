@@ -8,13 +8,16 @@ import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { type FirstLoad, firstLoadState } from "@/lib/firstLoadState";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import { clearAllFilters, isNarrowed, type ProjectsFilters } from "../filters";
+import { NewProjectAction } from "./NewProjectAction";
 import { ListSkeleton } from "./ProjectList";
 import type { ProjectsToolbarProps } from "./ProjectsToolbar";
 
 interface ProjectsMainProps {
 	total: number | undefined;
 	counting: boolean;
+	newProject: boolean;
 	toolbar?: React.ReactNode;
 	children: React.ReactNode;
 }
@@ -22,11 +25,13 @@ interface ProjectsMainProps {
 function ProjectsMain({
 	total,
 	counting,
+	newProject,
 	toolbar,
 	children,
 }: ProjectsMainProps) {
+	const desktop = useIsDesktop();
 	return (
-		<main className="mx-auto flex w-full flex-1 max-w-(--content-max-wide) flex-col gap-(--space-4) px-(--page-pad) pt-(--space-5) pb-(--space-8) md:gap-(--space-5) md:px-(--page-pad-desktop) md:pt-(--space-8) md:pb-(--space-12)">
+		<main className="mx-auto flex w-full flex-1 max-w-(--content-max-wide) flex-col gap-(--space-4) px-(--page-pad) pt-(--space-5) pb-[calc(var(--space-8)+var(--bottom-bar-height))] md:gap-(--space-5) md:px-(--page-pad-desktop) md:pt-(--space-8) md:pb-(--space-12)">
 			<div className="flex min-h-(--tap-min) min-w-0 items-baseline gap-(--space-3)">
 				<h1 className="text-2xl leading-tight font-semibold tracking-tight md:text-3xl">
 					Obras
@@ -39,9 +44,11 @@ function ProjectsMain({
 					total === undefined &&
 					counting && <Skeleton className="h-4.5 w-16 self-center" />
 				)}
+				{newProject && desktop && <NewProjectAction placement="title" />}
 			</div>
 			{toolbar}
 			{children}
+			{newProject && !desktop && <NewProjectAction placement="bar" />}
 		</main>
 	);
 }
@@ -87,7 +94,9 @@ function NoProjects({ admin }: { admin: boolean | undefined }) {
 				icon={Building}
 				title="Nenhuma obra ainda"
 				description="Crie a primeira obra da construtora para começar a mapear pendências."
-			/>
+			>
+				<NewProjectAction placement="empty" />
+			</StateBlock>
 		);
 	}
 	return (
@@ -241,10 +250,22 @@ export function ProjectsListShell({
 		? !nothingToFilter
 		: firstLoadState(query) === "loading";
 
+	const emptyOrganization =
+		loaded !== undefined &&
+		loaded.total === 0 &&
+		!filters.q &&
+		!filters.manager &&
+		!hasProjects(loaded.counts);
+	const newProject =
+		admin === true &&
+		!emptyOrganization &&
+		(loaded !== undefined || firstLoadState(query) === "loading");
+
 	return (
 		<ProjectsMain
 			total={loaded?.total}
 			counting={query.isFetching}
+			newProject={newProject}
 			toolbar={
 				showToolbar && (
 					<Toolbar

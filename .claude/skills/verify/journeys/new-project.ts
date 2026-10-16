@@ -30,9 +30,9 @@ export default async function newProject({ page, shot, expect, query, accounts }
 	await expect(page.getByText(`${free} livres na construtora. Dá para ajustar depois.`)).toBeVisible();
 	await shot("empty");
 
-	await unitsField.fill("7x5");
-	await expect(unitsField).toHaveValue("75");
-	await expect(page.getByText(`${free} livres na construtora. Depois de criar, sobram ${free - 75}.`)).toBeVisible();
+	await unitsField.fill("1x2");
+	await expect(unitsField).toHaveValue("12");
+	await expect(page.getByText(`${free} livres na construtora. Depois de criar, sobram ${free - 12}.`)).toBeVisible();
 	await shot("typed");
 
 	await unitsField.fill(String(free + 1));
@@ -42,7 +42,7 @@ export default async function newProject({ page, shot, expect, query, accounts }
 	await shot("invalid");
 
 	await nameField.fill("Casa Moinhos");
-	await unitsField.fill("75");
+	await unitsField.fill("12");
 	await create.click();
 	await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}\/configuration$/);
 	const projectId = new URL(page.url()).pathname.split("/")[2];
@@ -52,7 +52,7 @@ export default async function newProject({ page, shot, expect, query, accounts }
 	await shot("created");
 
 	const rows = await query("SELECT name, reserved_units, status FROM project WHERE id = $1", [projectId]);
-	expect(rows).toEqual([{ name: "Casa Moinhos", reserved_units: 75, status: "active" }]);
+	expect(rows).toEqual([{ name: "Casa Moinhos", reserved_units: 12, status: "active" }]);
 	const after = await (await page.request.get("/api/organization/units")).json();
-	expect(after.free).toBe(free - 75);
+	expect(after.free).toBe(free - 12);
 }

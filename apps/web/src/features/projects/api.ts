@@ -159,6 +159,17 @@ export function useCreateProjectMutation() {
 				predicate: isListQuery,
 				refetchType: "none",
 			});
+			const { reserved } = created.units;
+			queryClient.setQueryData(
+				organizationUnitsQueryOptions.queryKey,
+				(units) =>
+					units && {
+						...units,
+						reserved: units.reserved + reserved,
+						free: units.free - reserved,
+						reclaimable: units.reclaimable + reserved,
+					},
+			);
 			void queryClient.invalidateQueries({
 				...organizationUnitsQueryOptions,
 				refetchType: "none",
