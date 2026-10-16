@@ -1,6 +1,7 @@
 import { organizations } from "./fixture";
 import {
 	type SeedStructure,
+	type SeedUnitRef,
 	countUnits,
 	numberedFloors,
 	unitNames,
@@ -112,5 +113,151 @@ describe("the seeded structures", () => {
 					structure.towers.some((tower) => tower.floors.length === 0),
 			),
 		).toBe(true);
+	});
+});
+
+function unitsOf(structure: SeedStructure): SeedUnitRef[] {
+	return structure.towers.flatMap((tower) =>
+		tower.floors.flatMap((floor) =>
+			floor.units.map((name, stack) => ({
+				tower: tower.name,
+				floor: floor.name,
+				name,
+				stack,
+			})),
+		),
+	);
+}
+
+function typedStructures() {
+	return seededStructures().filter(([, structure]) => structure.unitTypes);
+}
+
+function jardins(): SeedStructure {
+	const found = seededStructures().find(
+		([project, structure]) =>
+			project === "Residencial Jardins" && structure.unitChanges,
+	);
+	if (!found)
+		throw new Error("Residencial Jardins is not seeded with changes.");
+	return found[1];
+}
+
+describe("the seeded unit types", () => {
+	test.each(typedStructures())(
+		"%s gives every unit a unit type it defines",
+		(_project, structure) => {
+			const defined = new Set(structure.unitTypes?.map((type) => type.name));
+
+			const unknown = unitsOf(structure)
+				.map((unit) => structure.unitTypeOf?.(unit))
+				.filter((name) => name !== undefined && !defined.has(name));
+
+			expect(unknown).toEqual([]);
+		},
+	);
+
+	test.each(typedStructures())(
+		"%s repeats no room name in a unit type or in a common area",
+		(_project, structure) => {
+			for (const type of structure.unitTypes ?? []) {
+				expect(duplicates(type.rooms)).toEqual([]);
+			}
+			for (const rooms of Object.values(structure.commonAreaRooms ?? {})) {
+				expect(duplicates(rooms)).toEqual([]);
+			}
+		},
+	);
+
+	test.each(typedStructures())(
+		"%s keeps every room name within 60 characters",
+		(_project, structure) => {
+			const names = [
+				...(structure.unitTypes ?? []).flatMap((type) => [
+					type.name,
+					...type.rooms,
+				]),
+				...Object.values(structure.commonAreaRooms ?? {}).flat(),
+			];
+
+			expect(
+				names.filter((name) => name.length === 0 || name.length > 60),
+			).toEqual([]);
+		},
+	);
+
+	test("Residencial Jardins has A, B and Cobertura applied, and a type no unit follows", () => {
+		const structure = jardins();
+		const used = new Set(
+			unitsOf(structure).map((unit) => structure.unitTypeOf?.(unit)),
+		);
+
+		expect(
+			["Tipologia A", "Tipologia B", "Cobertura"].every((name) =>
+				used.has(name),
+			),
+		).toBe(true);
+		expect(
+			structure.unitTypes?.filter((type) => !used.has(type.name)),
+		).toHaveLength(1);
+	});
+
+	test("Residencial Jardins applies A and B to odd and even stacks of the same floor", () => {
+		const structure = jardins();
+		const ninth = unitsOf(structure).filter(
+			(unit) => unit.tower === "Torre A" && unit.floor === "9º andar",
+		);
+
+		expect(ninth.map((unit) => structure.unitTypeOf?.(unit))).toEqual([
+			"Tipologia A",
+			"Tipologia B",
+			"Tipologia A",
+			"Tipologia B",
+		]);
+	});
+
+	test("Residencial Jardins has a unit without a unit type", () => {
+		const structure = jardins();
+
+		expect(
+			unitsOf(structure).filter((unit) => !structure.unitTypeOf?.(unit)),
+		).toHaveLength(1);
+	});
+
+	test("Residencial Jardins has a unit with a room added, one dropped and one renamed", () => {
+		const structure = jardins();
+		const changes = structure.unitChanges ?? [];
+
+		expect(changes.some((change) => change.addedRooms?.length)).toBe(true);
+		expect(changes.some((change) => change.droppedRooms?.length)).toBe(true);
+		expect(changes.some((change) => change.renamedRooms)).toBe(true);
+	});
+
+	test("every change names a unit that exists, and the rooms it drops or renames belong to its unit type", () => {
+		for (const [, structure] of seededStructures()) {
+			for (const change of structure.unitChanges ?? []) {
+				const unit = unitsOf(structure).find(
+					(candidate) =>
+						candidate.tower === change.tower && candidate.name === change.unit,
+				);
+				const type = structure.unitTypes?.find(
+					(candidate) => candidate.name === structure.unitTypeOf?.(unit!),
+				);
+
+				expect(unit).toBeDefined();
+				for (const name of [
+					...(change.droppedRooms ?? []),
+					...Object.keys(change.renamedRooms ?? {}),
+				]) {
+					expect(type?.rooms).toContain(name);
+				}
+			}
+		}
+	});
+
+	test("Residencial Jardins gives the Salão de festas rooms", () => {
+		expect(
+			jardins().commonAreaRooms?.["Salão de festas"]?.length,
+		).toBeGreaterThan(0);
 	});
 });

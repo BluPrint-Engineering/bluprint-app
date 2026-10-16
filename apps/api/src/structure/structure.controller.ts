@@ -38,7 +38,7 @@ export class StructureController {
 	@ApiOperation({
 		summary: "One location",
 		description:
-			"A tower, floor, unit or common area with its kind, the locations above it and the locations directly below it. The project's visibility applies first: `404 PROJECT_NOT_FOUND` for a project the caller cannot see. A location that does not exist, or that belongs to another project, answers `404 LOCATION_NOT_FOUND`.",
+			"A tower, floor, unit or common area with its kind, the locations above it and the locations directly below it. A unit and a common area also carry their rooms, and a unit its unit type, its change count and the rooms taken out of it. The project's visibility applies first: `404 PROJECT_NOT_FOUND` for a project the caller cannot see. A location that does not exist, or that belongs to another project, answers `404 LOCATION_NOT_FOUND`.",
 	})
 	@ZodResponse({
 		status: 200,

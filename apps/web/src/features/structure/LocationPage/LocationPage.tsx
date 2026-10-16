@@ -19,9 +19,11 @@ import {
 } from "../api";
 import { FacadeSkeleton } from "../components/Facade";
 import { STRUCTURE_LOCKED } from "../lockedText";
+import { CommonAreaBody } from "./CommonAreaBody";
 import { FloorBody } from "./FloorBody";
 import { describeLocation } from "./locationBand";
 import { TowerBody } from "./TowerBody";
+import { UnitBody } from "./UnitBody";
 
 function isLocationId(id: string) {
 	return locationParamsSchema.shape.locationId.safeParse(id).success;
@@ -91,6 +93,20 @@ export function LocationPage({
 					)
 				: undefined;
 
+		const floor =
+			location.data.type === "floor"
+				? structure.data.towers
+						.flatMap((candidate) => candidate.floors)
+						.find((candidate) => candidate.id === location.data.id)
+				: undefined;
+
+		if (
+			(location.data.type === "tower" && !tower) ||
+			(location.data.type === "floor" && !floor)
+		) {
+			return <LocationNotFound projectId={projectId} />;
+		}
+
 		return (
 			<>
 				<PageBand>
@@ -123,8 +139,10 @@ export function LocationPage({
 				</PageBand>
 				<PageMain>
 					{tower && <TowerBody projectId={projectId} tower={tower} />}
-					{location.data.type === "floor" && (
-						<FloorBody projectId={projectId} items={location.data.children} />
+					{floor && <FloorBody projectId={projectId} floor={floor} />}
+					{location.data.type === "unit" && <UnitBody unit={location.data} />}
+					{location.data.type === "common_area" && (
+						<CommonAreaBody area={location.data} />
 					)}
 				</PageMain>
 			</>

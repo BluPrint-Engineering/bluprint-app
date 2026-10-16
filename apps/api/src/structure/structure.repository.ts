@@ -1,9 +1,13 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
+import type { DroppedRoom, Room } from "@bluprint/shared";
 import { and, asc, eq, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
-import type { LocationRow } from "./location-row";
+import type { LocationRow, StructureRow } from "./location-row";
+import { droppedRoom, room } from "./room.entity";
+import { type UnitChangesRow, unitChangesQuery } from "./unit-changes";
+import { unitType, unitTypeRoom } from "./unit-type.entity";
 
 const columns = {
 	id: location.id,
@@ -12,30 +16,98 @@ const columns = {
 	name: location.name,
 };
 
+const structureColumns = {
+	...columns,
+	unitTypeId: unitType.id,
+	unitTypeName: unitType.name,
+};
+
+function toStructureRow({
+	unitTypeId,
+	unitTypeName,
+	...row
+}: LocationRow & {
+	unitTypeId: string | null;
+	unitTypeName: string | null;
+}): StructureRow {
+	return {
+		...row,
+		unitType:
+			unitTypeId === null || unitTypeName === null
+				? null
+				: { id: unitTypeId, name: unitTypeName },
+	};
+}
+
 @Injectable()
 export class StructureRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
-	listByProject(projectId: string): Promise<LocationRow[]> {
-		return this.txHost.tx
-			.select(columns)
+	async listByProject(projectId: string): Promise<StructureRow[]> {
+		const rows = await this.txHost.tx
+			.select(structureColumns)
 			.from(location)
+			.leftJoin(unitType, eq(unitType.id, location.unitTypeId))
 			.where(eq(location.projectId, projectId))
 			.orderBy(asc(location.position), asc(location.id));
+
+		return rows.map(toStructureRow);
 	}
 
 	async find(
 		projectId: string,
 		locationId: string,
-	): Promise<LocationRow | undefined> {
+	): Promise<StructureRow | undefined> {
 		const [found] = await this.txHost.tx
-			.select(columns)
+			.select(structureColumns)
 			.from(location)
+			.leftJoin(unitType, eq(unitType.id, location.unitTypeId))
 			.where(
 				and(eq(location.projectId, projectId), eq(location.id, locationId)),
 			);
 
-		return found;
+		return found && toStructureRow(found);
+	}
+
+	async countUnitChanges(
+		projectId: string,
+		unitId?: string,
+	): Promise<ReadonlyMap<string, number>> {
+		const { rows } = await this.txHost.tx.execute<UnitChangesRow>(
+			unitChangesQuery(projectId, unitId),
+		);
+
+		return new Map(rows.map((row) => [row.unit_id, row.n]));
+	}
+
+	listRooms(locationId: string): Promise<Room[]> {
+		return this.txHost.tx
+			.select({
+				id: room.id,
+				name: room.name,
+				unitTypeRoomId: room.unitTypeRoomId,
+				renamed: room.renamed,
+			})
+			.from(room)
+			.leftJoin(unitTypeRoom, eq(unitTypeRoom.id, room.unitTypeRoomId))
+			.where(eq(room.locationId, locationId))
+			.orderBy(
+				sql`(${room.unitTypeRoomId} is null)`,
+				sql`coalesce(${unitTypeRoom.position}, ${room.position})`,
+				asc(room.id),
+			);
+	}
+
+	listDroppedRooms(locationId: string): Promise<DroppedRoom[]> {
+		return this.txHost.tx
+			.select({
+				unitTypeRoomId: droppedRoom.unitTypeRoomId,
+				name: unitTypeRoom.name,
+			})
+			.from(droppedRoom)
+			.innerJoin(unitTypeRoom, eq(unitTypeRoom.id, droppedRoom.unitTypeRoomId))
+			.where(eq(droppedRoom.locationId, locationId))
+			.orderBy(asc(unitTypeRoom.position), asc(unitTypeRoom.id));
 	}
 
 	listChildren(parentId: string): Promise<LocationRow[]> {

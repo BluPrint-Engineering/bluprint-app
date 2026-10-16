@@ -6,6 +6,7 @@ import {
 	locationDetailSchema,
 	problemDetailsSchema,
 	structureSchema,
+	unitTypeListSchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -22,6 +23,8 @@ import {
 	user,
 } from "../db/schema";
 import { location } from "./location.entity";
+import { droppedRoom, room } from "./room.entity";
+import { unitType, unitTypeRoom } from "./unit-type.entity";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const PASSWORD = "senha-de-obra-123";
@@ -50,6 +53,11 @@ let towerB: string;
 let ground: string;
 let ninth: string;
 let unit901: string;
+let unit902: string;
+let unit1001: string;
+let typeA: string;
+let typeB: string;
+let otherProjectType: string;
 let guarita: string;
 let salao: string;
 let hall: string;
@@ -59,6 +67,7 @@ let bigProjectId: string;
 const structurePath = (id: string) => `/api/projects/${id}/structure`;
 const locationPath = (id: string, locationId: string) =>
 	`/api/projects/${id}/locations/${locationId}`;
+const unitTypesPath = (id: string) => `/api/projects/${id}/unit-types`;
 
 async function signUp(name: string): Promise<Person> {
 	const agent = request.agent(server);
@@ -171,9 +180,17 @@ beforeAll(async () => {
 			name: "9º andar",
 			position: 1,
 		},
+		{
+			projectId,
+			parentId: towerA,
+			type: "floor",
+			name: "10º andar",
+			position: 2,
+		},
 	]);
 	ground = floors[0]!.id;
 	ninth = floors[1]!.id;
+	const tenth = floors[2]!.id;
 
 	const inside = await insert([
 		{
@@ -191,6 +208,7 @@ beforeAll(async () => {
 			position: 0,
 		},
 		{ projectId, parentId: ninth, type: "unit", name: "902", position: 1 },
+		{ projectId, parentId: tenth, type: "unit", name: "1001", position: 0 },
 		{ projectId, parentId: ninth, type: "unit", name: "901", position: 0 },
 		{
 			projectId,
@@ -201,8 +219,76 @@ beforeAll(async () => {
 		},
 	]);
 	salao = inside[0]!.id;
-	hall = inside[4]!.id;
-	unit901 = inside[3]!.id;
+	unit902 = inside[2]!.id;
+	unit1001 = inside[3]!.id;
+	unit901 = inside[4]!.id;
+	hall = inside[5]!.id;
+
+	const types = await db
+		.insert(unitType)
+		.values([
+			{ projectId, name: "Tipologia A" },
+			{ projectId, name: "Tipologia B" },
+			{ projectId: otherProjectId, name: "Tipologia A" },
+		])
+		.returning({ id: unitType.id });
+	typeA = types[0]!.id;
+	typeB = types[1]!.id;
+	otherProjectType = types[2]!.id;
+
+	const typeARooms = await db
+		.insert(unitTypeRoom)
+		.values([
+			{ unitTypeId: typeA, name: "Sala", position: 0 },
+			{ unitTypeId: typeA, name: "Cozinha", position: 1 },
+			{ unitTypeId: typeA, name: "Sacada", position: 2 },
+		])
+		.returning({ id: unitTypeRoom.id });
+	await db.insert(unitTypeRoom).values([
+		{ unitTypeId: typeB, name: "Sala", position: 0 },
+		{ unitTypeId: typeB, name: "Suíte", position: 1 },
+		{ unitTypeId: otherProjectType, name: "Sala", position: 0 },
+	]);
+	const [sala, cozinha, sacada] = typeARooms.map((typeRoom) => typeRoom.id);
+
+	await db
+		.update(location)
+		.set({ unitTypeId: typeA })
+		.where(eq(location.id, unit901));
+	await db
+		.update(location)
+		.set({ unitTypeId: typeA })
+		.where(eq(location.id, unit902));
+	await db.insert(room).values([
+		{ locationId: unit901, name: "Home office", position: 0 },
+		{
+			locationId: unit901,
+			name: "Copa",
+			position: 7,
+			unitTypeRoomId: cozinha!,
+			renamed: true,
+		},
+		{ locationId: unit901, name: "Sala", position: 9, unitTypeRoomId: sala! },
+		{ locationId: unit902, name: "Sala", position: 0, unitTypeRoomId: sala! },
+		{
+			locationId: unit902,
+			name: "Cozinha",
+			position: 1,
+			unitTypeRoomId: cozinha!,
+		},
+		{
+			locationId: unit902,
+			name: "Sacada",
+			position: 2,
+			unitTypeRoomId: sacada!,
+		},
+		{ locationId: unit1001, name: "Quarto", position: 0 },
+		{ locationId: salao, name: "Cozinha", position: 0 },
+		{ locationId: salao, name: "Banheiro", position: 1 },
+	]);
+	await db
+		.insert(droppedRoom)
+		.values({ locationId: unit901, unitTypeRoomId: sacada! });
 
 	const [other] = await insert([
 		{ projectId: otherProjectId, type: "tower", name: "Torre A", position: 0 },
@@ -266,10 +352,28 @@ describe("GET /api/projects/:id/structure", () => {
 							id: ninth,
 							name: "9º andar",
 							units: [
-								{ id: unit901, name: "901" },
-								{ id: anyId, name: "902" },
+								{
+									id: unit901,
+									name: "901",
+									unitType: { id: typeA, name: "Tipologia A" },
+									changes: 3,
+								},
+								{
+									id: unit902,
+									name: "902",
+									unitType: { id: typeA, name: "Tipologia A" },
+									changes: 0,
+								},
 							],
 							commonAreas: [{ id: hall, name: "Hall" }],
+						},
+						{
+							id: anyId,
+							name: "10º andar",
+							units: [
+								{ id: unit1001, name: "1001", unitType: null, changes: 0 },
+							],
+							commonAreas: [],
 						},
 					],
 					commonAreas: [{ id: salao, name: "Salão de festas" }],
@@ -277,7 +381,7 @@ describe("GET /api/projects/:id/structure", () => {
 				{ id: towerB, name: "Torre B", floors: [], commonAreas: [] },
 			],
 			commonAreas: [{ id: guarita, name: "Guarita" }],
-			counts: { towers: 2, floors: 2, units: 2, commonAreas: 4 },
+			counts: { towers: 2, floors: 3, units: 3, commonAreas: 4 },
 		});
 	});
 
@@ -351,22 +455,86 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 				{ id: anyId, type: "unit", name: "902" },
 				{ id: hall, type: "common_area", name: "Hall" },
 			],
+			unitType: null,
+			changes: 0,
+			rooms: [],
+			droppedRooms: [],
 		});
 	});
 
 	test("a unit lists its floor and tower from the highest down, and has no children", async () => {
-		const res = await assistant.agent.get(locationPath(projectId, unit901));
+		const res = await assistant.agent.get(locationPath(projectId, unit902));
 
 		expect(res.status).toBe(200);
-		expect(locationDetailSchema.parse(res.body)).toEqual({
-			id: unit901,
+		expect(locationDetailSchema.parse(res.body)).toMatchObject({
+			id: unit902,
 			type: "unit",
-			name: "901",
+			name: "902",
 			ancestors: [
 				{ id: towerA, type: "tower", name: "Torre A" },
 				{ id: ninth, type: "floor", name: "9º andar" },
 			],
 			children: [],
+		});
+	});
+
+	test("a unit on its unit type lists the rooms of the type in the type's order and no changes", async () => {
+		const res = await manager.agent.get(locationPath(projectId, unit902));
+
+		expect(res.status).toBe(200);
+		expect(locationDetailSchema.parse(res.body)).toMatchObject({
+			unitType: { id: typeA, name: "Tipologia A" },
+			changes: 0,
+			rooms: [
+				{ id: anyId, name: "Sala", unitTypeRoomId: anyId, renamed: false },
+				{ id: anyId, name: "Cozinha", unitTypeRoomId: anyId, renamed: false },
+				{ id: anyId, name: "Sacada", unitTypeRoomId: anyId, renamed: false },
+			],
+			droppedRooms: [],
+		});
+	});
+
+	test("a unit with changes counts each recorded one: a room only it has, a dropped room and a renamed room", async () => {
+		const res = await admin.agent.get(locationPath(projectId, unit901));
+
+		expect(res.status).toBe(200);
+		expect(locationDetailSchema.parse(res.body)).toMatchObject({
+			unitType: { id: typeA, name: "Tipologia A" },
+			changes: 3,
+			rooms: [
+				{ name: "Sala", unitTypeRoomId: anyId, renamed: false },
+				{ name: "Copa", unitTypeRoomId: anyId, renamed: true },
+				{ name: "Home office", unitTypeRoomId: null, renamed: false },
+			],
+			droppedRooms: [{ unitTypeRoomId: anyId, name: "Sacada" }],
+		});
+	});
+
+	test("a unit without a unit type lists its rooms as its own and has no changes", async () => {
+		const res = await admin.agent.get(locationPath(projectId, unit1001));
+
+		expect(res.status).toBe(200);
+		expect(locationDetailSchema.parse(res.body)).toMatchObject({
+			unitType: null,
+			changes: 0,
+			rooms: [{ name: "Quarto", unitTypeRoomId: null, renamed: false }],
+			droppedRooms: [],
+		});
+	});
+
+	test("a common area lists its rooms and has no unit type", async () => {
+		const res = await manager.agent.get(locationPath(projectId, salao));
+
+		expect(res.status).toBe(200);
+		expect(locationDetailSchema.parse(res.body)).toMatchObject({
+			type: "common_area",
+			unitType: null,
+			changes: 0,
+			rooms: [
+				{ name: "Cozinha", unitTypeRoomId: null },
+				{ name: "Banheiro", unitTypeRoomId: null },
+			],
+			droppedRooms: [],
 		});
 	});
 
@@ -380,6 +548,7 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 			children: [
 				{ id: ground, type: "floor", name: "Térreo" },
 				{ id: ninth, type: "floor", name: "9º andar" },
+				{ id: anyId, type: "floor", name: "10º andar" },
 				{ id: salao, type: "common_area", name: "Salão de festas" },
 			],
 		});
@@ -427,5 +596,107 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 		const res = await admin.agent.get(locationPath(projectId, "not-a-uuid"));
 
 		expect(res.status).toBe(400);
+	});
+});
+
+describe("GET /api/projects/:id/unit-types", () => {
+	test.each([
+		["the admin", () => admin],
+		["a manager of the project", () => manager],
+		["an assistant of the project", () => assistant],
+	])("%s reads the unit types with their rooms and units", async (_, who) => {
+		const res = await who().agent.get(unitTypesPath(projectId));
+
+		expect(res.status).toBe(200);
+		expect(unitTypeListSchema.parse(res.body)).toEqual({
+			unitTypes: [
+				{
+					id: typeA,
+					name: "Tipologia A",
+					rooms: [
+						{ id: anyId, name: "Sala" },
+						{ id: anyId, name: "Cozinha" },
+						{ id: anyId, name: "Sacada" },
+					],
+					unitCount: 2,
+					changedUnitCount: 1,
+				},
+				{
+					id: typeB,
+					name: "Tipologia B",
+					rooms: [
+						{ id: anyId, name: "Sala" },
+						{ id: anyId, name: "Suíte" },
+					],
+					unitCount: 0,
+					changedUnitCount: 0,
+				},
+			],
+		});
+	});
+
+	test("never lists the unit types of another project", async () => {
+		const res = await manager.agent.get(unitTypesPath(otherProjectId));
+
+		expect(res.status).toBe(200);
+		expect(unitTypeListSchema.parse(res.body).unitTypes).toEqual([
+			{
+				id: otherProjectType,
+				name: "Tipologia A",
+				rooms: [{ id: anyId, name: "Sala" }],
+				unitCount: 0,
+				changedUnitCount: 0,
+			},
+		]);
+	});
+
+	test("a project without unit types answers an empty list", async () => {
+		const res = await admin.agent.get(unitTypesPath(emptyProjectId));
+
+		expect(res.status).toBe(200);
+		expect(unitTypeListSchema.parse(res.body)).toEqual({ unitTypes: [] });
+	});
+
+	test.each([
+		["a manager without a membership on it", () => unlinked, () => projectId],
+		["a person from another organization", () => outsider, () => projectId],
+		["a project of another organization", () => admin, () => outsiderProjectId],
+	])("answers PROJECT_NOT_FOUND to %s", async (_, who, id) => {
+		const res = await who().agent.get(unitTypesPath(id()));
+
+		expect(res.status).toBe(404);
+		expect(problemDetailsSchema.parse(res.body).code).toBe(PROJECT_NOT_FOUND);
+	});
+
+	test("refuses an id that is not a UUID", async () => {
+		const res = await admin.agent.get(unitTypesPath("not-a-uuid"));
+
+		expect(res.status).toBe(400);
+	});
+
+	test("requires a session", async () => {
+		const res = await request(server).get(unitTypesPath(projectId));
+
+		expect(res.status).toBe(401);
+	});
+});
+
+describe("unit types in the database", () => {
+	test("refuses a unit of one project following the unit type of another", async () => {
+		await expect(
+			db
+				.update(location)
+				.set({ unitTypeId: otherProjectType })
+				.where(eq(location.id, unit1001)),
+		).rejects.toThrow();
+	});
+
+	test("refuses a unit type on anything but a unit", async () => {
+		await expect(
+			db
+				.update(location)
+				.set({ unitTypeId: typeA })
+				.where(eq(location.id, ninth)),
+		).rejects.toThrow();
 	});
 });

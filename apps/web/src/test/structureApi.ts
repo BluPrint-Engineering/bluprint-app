@@ -1,10 +1,13 @@
 import {
+	type DroppedRoom,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	type LocationRef,
+	type Room,
 	type Structure,
 	type StructureFloor,
 	type StructureTower,
+	type StructureUnit,
 } from "@bluprint/shared";
 import { type ApiHandler, json } from "@/test/renderApp";
 
@@ -14,15 +17,62 @@ const nextId = () =>
 
 const named = (name: string) => ({ id: nextId(), name });
 
+const unitTypeIds = new Map<string, string>();
+
+function unitTypeId(name: string): string {
+	let id = unitTypeIds.get(name);
+	if (!id) {
+		id = nextId();
+		unitTypeIds.set(name, id);
+	}
+	return id;
+}
+
+export interface UnitSpec {
+	name: string;
+	unitType?: string;
+	changes?: number;
+}
+
+function unitOf(spec: string | UnitSpec): StructureUnit {
+	const {
+		name,
+		unitType,
+		changes = 0,
+	} = typeof spec === "string" ? { name: spec } : spec;
+	return {
+		id: nextId(),
+		name,
+		unitType: unitType ? { id: unitTypeId(unitType), name: unitType } : null,
+		changes,
+	};
+}
+
+export function room(
+	name: string,
+	options: { fromType?: boolean; renamed?: boolean } = {},
+): Room {
+	return {
+		id: nextId(),
+		name,
+		unitTypeRoomId: options.fromType ? nextId() : null,
+		renamed: options.renamed ?? false,
+	};
+}
+
+export function droppedRoom(name: string): DroppedRoom {
+	return { unitTypeRoomId: nextId(), name };
+}
+
 export function floor(
 	name: string,
-	units: string[] = [],
+	units: (string | UnitSpec)[] = [],
 	commonAreas: string[] = [],
 ): StructureFloor {
 	return {
 		id: nextId(),
 		name,
-		units: units.map(named),
+		units: units.map(unitOf),
 		commonAreas: commonAreas.map(named),
 	};
 }
@@ -91,13 +141,25 @@ const ref = (
 export function locationIn(
 	structure: Structure,
 	locationId: string,
+	details: Record<string, Partial<LocationDetail>> = {},
 ): LocationDetail | undefined {
 	const at = (
 		type: LocationRef["type"],
 		node: { id: string; name: string },
 		ancestors: LocationRef[],
 		children: LocationRef[],
-	): LocationDetail => ({ ...ref(type, node), ancestors, children });
+		own: Partial<LocationDetail> = {},
+	): LocationDetail => ({
+		...ref(type, node),
+		ancestors,
+		children,
+		unitType: null,
+		changes: 0,
+		rooms: [],
+		droppedRooms: [],
+		...own,
+		...details[node.id],
+	});
 
 	for (const area of structure.commonAreas) {
 		if (area.id === locationId) return at("common_area", area, [], []);
@@ -132,7 +194,12 @@ export function locationIn(
 				);
 			}
 			for (const u of f.units) {
-				if (u.id === locationId) return at("unit", u, [towerRef, floorRef], []);
+				if (u.id === locationId) {
+					return at("unit", u, [towerRef, floorRef], [], {
+						unitType: u.unitType,
+						changes: u.changes,
+					});
+				}
 			}
 			for (const a of f.commonAreas) {
 				if (a.id === locationId) {
@@ -147,13 +214,14 @@ export function locationIn(
 export function structureApi(
 	projectId: string,
 	structure: Structure,
+	details: Record<string, Partial<LocationDetail>> = {},
 ): ApiHandler {
 	return (url) => {
 		const base = `/api/projects/${projectId}`;
 		if (url.pathname === `${base}/structure`) return json(structure);
 		const match = new RegExp(`^${base}/locations/([^/]+)$`).exec(url.pathname);
 		if (!match) return undefined;
-		const found = locationIn(structure, match[1] ?? "");
+		const found = locationIn(structure, match[1] ?? "", details);
 		return found
 			? json(found)
 			: json(

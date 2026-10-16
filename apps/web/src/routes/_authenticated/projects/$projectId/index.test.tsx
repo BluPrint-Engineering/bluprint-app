@@ -182,6 +182,34 @@ describe("project home", () => {
 		expect(screen.queryByText(LOCKED)).not.toBeInTheDocument();
 	});
 
+	test("lists the unit types each tower uses on its card, or says it has none (E2)", async () => {
+		const structure = structureOf([
+			tower("Torre A", [
+				floor("1º andar", [
+					{ name: "101", unitType: "Tipologia A" },
+					{ name: "102", unitType: "Tipologia B" },
+				]),
+				floor("2º andar", [
+					{ name: "201", unitType: "Tipologia A" },
+					{ name: "202", unitType: "Tipologia B" },
+				]),
+				floor("Cobertura", [{ name: "1301", unitType: "Cobertura" }]),
+			]),
+			tower("Torre B", numberedFloors(1, 2, 2)),
+		]);
+		stubApi(signedIn, { api: projectApi(OBRA, structure) });
+
+		renderAt(OBRA_PATH);
+
+		const [towerA, towerB] = await screen.findAllByRole("link", {
+			name: /^Torre /,
+		});
+		expect(towerA).toHaveTextContent(
+			"TipologiasTipologia A, Tipologia B, Cobertura",
+		);
+		expect(towerB).toHaveTextContent("TipologiasSem tipologia");
+	});
+
 	test("opens a tower from its card (E2)", async () => {
 		const structure = casaMoinhos();
 		stubApi(signedIn, { api: projectApi(OBRA, structure) });

@@ -3,7 +3,11 @@ import type {
 	EffectiveRole,
 	ProjectStatus,
 } from "@bluprint/shared";
-import { type SeedStructure, numberedFloors } from "./seed-structure";
+import {
+	type SeedStructure,
+	numberedFloors,
+	sameUnitType,
+} from "./seed-structure";
 
 export const FIXTURE_PASSWORD = "canteiro-de-obras-azul";
 
@@ -42,8 +46,68 @@ export interface SeedOrganization {
 	projects: SeedProject[];
 }
 
+const apartmentRooms = [
+	"Sala",
+	"Cozinha",
+	"Área de serviço",
+	"Banheiro",
+	"Dormitório 1",
+	"Dormitório 2",
+	"Sacada",
+];
+
 const casaMoinhos: SeedStructure = {
 	commonAreas: ["Guarita"],
+	commonAreaRooms: { "Salão de festas": ["Cozinha", "Banheiro"] },
+	unitTypes: [
+		{ name: "Tipologia A", rooms: apartmentRooms },
+		{
+			name: "Tipologia B",
+			rooms: [
+				"Sala",
+				"Cozinha",
+				"Lavanderia",
+				"Banheiro social",
+				"Suíte",
+				"Dormitório",
+				"Varanda",
+			],
+		},
+		{
+			name: "Cobertura",
+			rooms: [
+				"Sala de estar",
+				"Sala de jantar",
+				"Cozinha",
+				"Lavanderia",
+				"Lavabo",
+				"Suíte master",
+				"Suíte 2",
+				"Terraço",
+			],
+		},
+		{ name: "Duplex", rooms: ["Sala", "Quarto", "Banheiro"] },
+	],
+	unitTypeOf: ({ tower, floor, name, stack }) => {
+		if (floor === "Cobertura") return "Cobertura";
+		if (tower === "Torre A" && name === "1204") return undefined;
+		return stack % 2 === 0 ? "Tipologia A" : "Tipologia B";
+	},
+	unitChanges: [
+		{
+			tower: "Torre A",
+			unit: "903",
+			addedRooms: ["Home office"],
+			droppedRooms: ["Sacada"],
+			renamedRooms: { "Área de serviço": "Lavanderia" },
+		},
+		{ tower: "Torre A", unit: "902", droppedRooms: ["Varanda"] },
+		{
+			tower: "Torre A",
+			unit: "1204",
+			addedRooms: ["Sala", "Quarto", "Banheiro"],
+		},
+	],
 	towers: [
 		{
 			name: "Torre A",
@@ -67,6 +131,13 @@ const casaMoinhos: SeedStructure = {
 };
 
 const edificioAurora: SeedStructure = {
+	...sameUnitType("Apartamento", [
+		"Sala",
+		"Cozinha",
+		"Banheiro",
+		"Quarto",
+		"Varanda",
+	]),
 	commonAreas: ["Salão de festas e espaço gourmet com churrasqueira coberta"],
 	towers: [
 		{
@@ -85,6 +156,7 @@ const edificioAurora: SeedStructure = {
 };
 
 const parqueDasAguas: SeedStructure = {
+	...sameUnitType("Padrão", apartmentRooms),
 	towers: ["Torre A", "Torre B", "Torre C"].map((name) => ({
 		name,
 		floors: [
@@ -105,6 +177,7 @@ const condominioPortoBelo: SeedStructure = {
 };
 
 const vilaNova: SeedStructure = {
+	...sameUnitType("Tipologia A", apartmentRooms),
 	commonAreas: ["Guarita"],
 	towers: ["Torre A", "Torre B"].map((name) => ({
 		name,
@@ -116,6 +189,7 @@ const vilaNova: SeedStructure = {
 };
 
 const verticeJardins: SeedStructure = {
+	...sameUnitType("Tipologia A", apartmentRooms),
 	towers: [
 		{
 			name: "Torre A",

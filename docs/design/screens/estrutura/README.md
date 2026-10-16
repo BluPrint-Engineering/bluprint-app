@@ -159,13 +159,13 @@ and a **list card** (radius 14px, hairline ring, rows separated by 1px `--border
 Desktop grid `320px minmax(0,1fr)`, gap 32px; mobile stacked.
 
 - **Tipologia** card (padding 16px): name 16px/600 + outline Badge "2 alterações" when the unit differs from its type;
-  14px muted text "Os cômodos acompanham a Tipologia A. O que foi mudado só nesta unidade continua assim quando a
+  14px muted text "Os cômodos acompanham a tipologia Tipologia A. O que foi mudado só nesta unidade continua assim quando a
   tipologia muda." (without type: "Os cômodos desta unidade são só dela."). Actions: outline "Trocar tipologia"
   (`layout-grid`) and, with changes, ghost "Voltar à tipologia" (`undo-2`), which drops the unit's own changes.
 - **Cômodos** (h2 + count "7 cômodos" muted on the right): list card. Rooms of the type first, then the unit's own
   with an outline Badge "Só desta unidade". Row menu: Renomear, separator, "Remover desta unidade" (room of the type:
   recorded as dropped) / "Remover cômodo" (own). Add row "Adicionar cômodo" with the same inline form (U3).
-- **Tirados desta unidade**: 14px/600 muted label, then a list card of the dropped rooms, meta "Da Tipologia A",
+- **Tirados desta unidade**: 14px/600 muted label, then a list card of the dropped rooms, meta "Da tipologia Tipologia A",
   ghost `sm` "Devolver" (`undo-2`).
 - **U4 change type**: dialog (below) titled "Trocar a tipologia da 903": "Os cômodos passam a ser os da tipologia
   escolhida. Cômodo com pins continua na unidade." and a radio list (one 44px row per tipologia with its room count,

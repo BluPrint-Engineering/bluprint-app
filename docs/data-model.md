@@ -66,7 +66,7 @@ Who may invite whom is validated in the service, not in the schema ([0023](adr/0
 | `position` | Stored order among siblings: floors and units do not sort by name ([0071](adr/0071-structure-is-edited-where-it-is-navigated.md)). |
 | `unit_type_id?` | On a unit, the unit type it follows ([0072](adr/0072-unit-type-is-linked-and-units-keep-their-changes.md)). |
 
-Deviations from this design, settled in migration `0009` (#154); the migration wins: `path` and the archive columns are not there yet (they come with #7); `unit_type_id` comes with the unit types; `(id, project_id)` is unique and `(parent_id, project_id)` references it, so a parent of another project is impossible; where a name is unique within the parent (towers in the project, floors in a tower, common areas in their parent) a partial unique index on the name ignoring case and repeated spaces is the last line of the service's check.
+Deviations from this design, settled in migration `0009` (#154); the migration wins: `path` and the archive columns are not there yet (they come with #7); `unit_type_id` is there since `0010`, on a composite foreign key with `project_id` so a unit never follows the type of another project, and only a unit may carry it; `(id, project_id)` is unique and `(parent_id, project_id)` references it, so a parent of another project is impossible; where a name is unique within the parent (towers in the project, floors in a tower, common areas in their parent) a partial unique index on the name ignoring case and repeated spaces is the last line of the service's check.
 
 **Valid parent → child pairs**, validated in the service (the database alone would accept `floor` inside `floor`):
 
@@ -90,7 +90,7 @@ Status history is **out of the MVP**. When it comes, it is a generic `activity_l
 
 Hangs on a **unit or common area**, outside the `location` tree ([0041](adr/0041-room-hangs-outside-the-location-tree.md)). Towers and floors have no rooms, so a pin on their plans has `room_id` null.
 
-A room created from the unit's type carries `unit_type_room_id`, so renaming the type's room renames it everywhere; a room the unit dropped from its type is recorded so the type cannot add it back ([0072](adr/0072-unit-type-is-linked-and-units-keep-their-changes.md)).
+A room created from the unit's type carries `unit_type_room_id`, so renaming the type's room renames it everywhere; a room the unit dropped from its type is recorded so the type cannot add it back ([0072](adr/0072-unit-type-is-linked-and-units-keep-their-changes.md)). Settled in migration `0010` (#155): `room.renamed` marks a type room renamed in this unit, and the dropped ones are rows of `dropped_room (location_id, unit_type_room_id)`; removing a room from the type sets `room.unit_type_room_id` to null, so the rooms that were renamed stay as the unit's own.
 
 ### `unit_type` and `unit_type_room`
 
