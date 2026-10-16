@@ -34,27 +34,13 @@ function nameContains(q: string) {
 export class ProjectsRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
-	/** `offset` counts projects, not pages. */
-	async listVisible(
+	/** The one rule of who sees a project: listing and reading both go through it, so they never disagree. */
+	private visibleProjects(
 		userId: string,
-		{
-			q,
-			status,
-			sort,
-			limit,
-			offset,
-			managerId,
-		}: {
-			q: string;
-			status: ProjectStatusFilter;
-			sort: ProjectSort;
-			limit: number;
-			offset: number;
-			managerId?: string | undefined;
-		},
+		{ q = "", managerId }: { q?: string; managerId?: string | undefined } = {},
 	) {
 		const managerOf = alias(projectMember, "manager_of");
-		const visible = this.txHost.tx.$with("visible").as(
+		return this.txHost.tx.$with("visible").as(
 			this.txHost.tx
 				.select({
 					id: project.id,
@@ -102,6 +88,39 @@ export class ProjectsRepository {
 					),
 				),
 		);
+	}
+
+	async findVisible(userId: string, projectId: string) {
+		const visible = this.visibleProjects(userId);
+		const [found] = await this.txHost.tx
+			.with(visible)
+			.select()
+			.from(visible)
+			.where(eq(visible.id, projectId));
+
+		return found;
+	}
+
+	/** `offset` counts projects, not pages. */
+	async listVisible(
+		userId: string,
+		{
+			q,
+			status,
+			sort,
+			limit,
+			offset,
+			managerId,
+		}: {
+			q: string;
+			status: ProjectStatusFilter;
+			sort: ProjectSort;
+			limit: number;
+			offset: number;
+			managerId?: string | undefined;
+		},
+	) {
+		const visible = this.visibleProjects(userId, { q, managerId });
 
 		// the id tiebreak keeps pages stable: rows created in one transaction share created_at, and names repeat
 		const order = {

@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { Server } from "node:http";
 import {
+	PROJECT_NOT_FOUND,
 	problemDetailsSchema,
 	projectListSchema,
 	projectManagersSchema,
+	projectSummarySchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -287,6 +289,106 @@ describe("GET /api/projects", () => {
 				].sort(),
 			);
 		}
+	});
+});
+
+describe("GET /api/projects/:id", () => {
+	const read = (id: string) => `${PROJECTS}/${id}`;
+
+	test("the organization admin reads any project of the organization, reported as admin", async () => {
+		const res = await admin.agent.get(read(projectThree));
+
+		expect(res.status).toBe(200);
+		expect(projectSummarySchema.parse(res.body)).toMatchObject({
+			id: projectThree,
+			name: "Galpão Sul",
+			role: "admin",
+			status: "active",
+		});
+	});
+
+	test("the effective role wins over admin when the admin is also a project_member", async () => {
+		const res = await admin.agent.get(read(projectOne));
+
+		expect(projectSummarySchema.parse(res.body).role).toBe("manager");
+	});
+
+	test("a manager reads their project", async () => {
+		const res = await linked.agent.get(read(projectOne));
+
+		expect(res.status).toBe(200);
+		expect(projectSummarySchema.parse(res.body)).toMatchObject({
+			id: projectOne,
+			role: "manager",
+		});
+	});
+
+	test("an assistant reads their project", async () => {
+		const res = await linked.agent.get(read(projectTwo));
+
+		expect(res.status).toBe(200);
+		expect(projectSummarySchema.parse(res.body)).toMatchObject({
+			id: projectTwo,
+			role: "assistant",
+		});
+	});
+
+	test("answers the very summary the list gives", async () => {
+		const listed = projectListSchema
+			.parse((await linked.agent.get(PROJECTS)).body)
+			.items.find((p) => p.id === projectOne);
+
+		const res = await linked.agent.get(read(projectOne));
+
+		expect(projectSummarySchema.parse(res.body)).toEqual(listed);
+	});
+
+	test("answers 404 PROJECT_NOT_FOUND to a member with no membership on the project", async () => {
+		const res = await linked.agent.get(read(projectThree));
+
+		expect(res.status).toBe(404);
+		expect(problemDetailsSchema.parse(res.body).code).toBe(PROJECT_NOT_FOUND);
+	});
+
+	test("answers 404 PROJECT_NOT_FOUND to an organization member linked to no project", async () => {
+		const res = await unlinked.agent.get(read(projectOne));
+
+		expect(res.status).toBe(404);
+		expect(problemDetailsSchema.parse(res.body).code).toBe(PROJECT_NOT_FOUND);
+	});
+
+	test("answers 404 PROJECT_NOT_FOUND for another organization's project", async () => {
+		const res = await outsider.agent.get(read(projectOne));
+
+		expect(res.status).toBe(404);
+		expect(problemDetailsSchema.parse(res.body).code).toBe(PROJECT_NOT_FOUND);
+	});
+
+	test("answers the same 404 to a project that does not exist, revealing nothing", async () => {
+		const missing = await admin.agent.get(read(randomUUID()));
+		const foreign = await outsider.agent.get(read(projectOne));
+
+		expect(missing.status).toBe(404);
+		expect(foreign.status).toBe(404);
+		const { instance: _missing, ...missingProblem } =
+			problemDetailsSchema.parse(missing.body);
+		const { instance: _foreign, ...foreignProblem } =
+			problemDetailsSchema.parse(foreign.body);
+		expect(missingProblem).toEqual(foreignProblem);
+	});
+
+	test("rejects an id that is not a UUID with a validation failure", async () => {
+		const res = await admin.agent.get(read("not-a-uuid"));
+
+		expect(res.status).toBe(400);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("VALIDATION_FAILED");
+	});
+
+	test("refuses an anonymous caller", async () => {
+		const res = await request(server).get(read(projectOne));
+
+		expect(res.status).toBe(401);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("UNAUTHORIZED");
 	});
 });
 

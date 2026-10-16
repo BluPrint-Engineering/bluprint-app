@@ -3,7 +3,12 @@ import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { projectsApi, requestedPages, stubProjects } from "@/test/projectsApi";
+import {
+	project,
+	projectsApi,
+	requestedPages,
+	stubProjects,
+} from "@/test/projectsApi";
 import { json, renderAt } from "@/test/renderApp";
 import { setViewport } from "@/test/viewport";
 import { projectsQueryOptions } from "../api";
@@ -53,6 +58,33 @@ describe("projects page", () => {
 		expect(screen.getByText("Mostrando 1–12 de 26")).toBeInTheDocument();
 	});
 
+	test("opens the project's home from its card", async () => {
+		const serve = projectsApi(2);
+		stubProjects((url) =>
+			url.pathname === `/api/projects/${project(1).id}`
+				? json(project(1))
+				: serve(url),
+		);
+
+		const { router } = renderAt("/projects");
+		const card = await screen.findByRole("link", { name: /Obra 1/ });
+		expect(card).toHaveAttribute(
+			"href",
+			"/projects/0190a000-0000-7000-8000-000000000001",
+		);
+
+		await userEvent.click(card);
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe(
+				"/projects/0190a000-0000-7000-8000-000000000001",
+			);
+		});
+		expect(
+			await screen.findByRole("heading", { level: 1, name: "Obra 1" }),
+		).toBeInTheDocument();
+	});
+
 	test("counts a single project in the singular, without pages", async () => {
 		stubProjects(projectsApi(1));
 
@@ -78,15 +110,6 @@ describe("projects page", () => {
 			"Obra 2Assistente de obraEm andamento",
 			"Obra 3Em andamento",
 		]);
-	});
-
-	test("the card is not a link until the project screen exists", async () => {
-		stubProjects(projectsApi(1));
-
-		renderAt("/projects");
-
-		const list = await screen.findByRole("list", { name: "Obras" });
-		expect(within(list).queryByRole("link")).not.toBeInTheDocument();
 	});
 
 	test("explains an empty list to someone with no project (O7)", async () => {

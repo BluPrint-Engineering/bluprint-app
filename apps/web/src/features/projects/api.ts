@@ -1,10 +1,13 @@
 import {
+	PROJECT_NOT_FOUND,
 	PROJECT_PAGE_SIZE,
 	projectListSchema,
 	projectManagersSchema,
+	projectParamsSchema,
+	projectSummarySchema,
 } from "@bluprint/shared";
 import { infiniteQueryOptions, queryOptions } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { ApiError, apiFetch } from "@/lib/api";
 import type { ProjectsFilters } from "./filters";
 
 function fetchProjectsPage(
@@ -67,5 +70,22 @@ export function projectManagersQueryOptions(enabled: boolean) {
 		queryFn: () => apiFetch("/projects/managers", projectManagersSchema),
 		enabled,
 		staleTime: 60 * 1000,
+	});
+}
+
+export function isProjectId(id: string) {
+	return projectParamsSchema.safeParse({ id }).success;
+}
+
+export function isProjectNotFound(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === PROJECT_NOT_FOUND;
+}
+
+export function projectQueryOptions(id: string) {
+	return queryOptions({
+		queryKey: ["projects", "detail", id],
+		queryFn: () => apiFetch(`/projects/${id}`, projectSummarySchema),
+		// a missing project stays missing: retrying only delays the not-found page
+		retry: (failures, error) => !isProjectNotFound(error) && failures < 3,
 	});
 }
