@@ -37,7 +37,7 @@ Query, Tailwind v4, shadcn radix-nova, `lucide-react`); do not copy the prototyp
 
 ```
 src/routes/_authenticated/$/route.tsx                            ← route 404 (X1), signed-out visitors go to /login first
-src/routes/_authenticated/projects/new.tsx                       ← admin only; others redirect to /projects
+src/routes/_authenticated/projects/new/route.tsx                 ← admin only; others redirect to /projects
 src/routes/_authenticated/projects/$projectId/index.tsx          ← início
 src/routes/_authenticated/projects/$projectId/configuration/route.tsx  ← configuração
 src/features/projects/
