@@ -28,7 +28,7 @@ Preconditions:
 - **Entry.** `page.goto("/projects?q=Jardins")`, click the card, `page.getByRole("link", { name: "Configuração da obra" })` is visible; clicking it lands on `/projects/<uuid>/configuration`.
 - **Page.** `page.getByRole("heading", { level: 2, name: "Configuração" })` and `page.getByRole("region", { name: "Dados da obra" })` are visible, `page.getByText("Status da obra")` and `page.getByRole("navigation")` have no match.
 - **Rename.** In the card, `getByRole("button", { name: "Renomear" }).click()`; `getByRole("textbox", { name: "Nome da obra" })` is focused. `fill("")` then `Salvar` shows `Informe o nome da obra.`; 121 characters show the length message; `Escape` closes the field. Rename to `Residencial Jardins II`, `Salvar`: the `h1` and the card show it. `Início da obra`, then `Obras`, then `page.getByPlaceholder("Buscar obra").fill("Jardins II")` finds the card. Rename it back.
-- **Last activity.** `SELECT last_activity_at FROM project WHERE name LIKE 'Residencial Jardins%'` through `query` is the same before and after the rename.
+- **Last activity.** `SELECT last_activity_at FROM project WHERE id = $1` through `query`, with the id from the `/projects/<uuid>/configuration` URL, is the same before and after the rename.
 - **Assistant.** With `--as assistant` the card has no `Renomear` and shows the lock line.
 - **Delivered.** `page.goto("/projects?status=delivered&q=Vila Nova")`, open the card, `Configuração da obra`: the card has no `Renomear` and shows the delivered lock line (admin and manager only; Elisa is not on that project).
 
