@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { unitChangesSchema, unitTypeRefSchema } from "./unit-type-ref.js";
 
 const locationName = z.string().meta({
 	description: "The location's name, free text of 1 to 60 characters.",
@@ -8,6 +9,10 @@ const locationName = z.string().meta({
 export const structureUnitSchema = z.object({
 	id: z.uuid(),
 	name: locationName,
+	unitType: unitTypeRefSchema.nullable().meta({
+		description: "The unit type the unit follows, or null when it has none.",
+	}),
+	changes: unitChangesSchema,
 });
 
 export const structureCommonAreaSchema = z.object({

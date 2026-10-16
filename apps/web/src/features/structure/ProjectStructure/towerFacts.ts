@@ -21,6 +21,16 @@ function usualUnitsPerFloor(tower: StructureTower): number | undefined {
 	return usual?.units;
 }
 
+function unitTypeNames(tower: StructureTower): string[] {
+	const names = new Set<string>();
+	for (const floor of tower.floors) {
+		for (const unit of floor.units) {
+			if (unit.unitType) names.add(unit.unitType.name);
+		}
+	}
+	return [...names];
+}
+
 export function towerFacts(
 	tower: StructureTower,
 ): [label: string, value: string][] {
@@ -40,5 +50,6 @@ export function towerFacts(
 			usual === undefined ? String(units) : `${units} · ${usual} por andar`,
 		],
 		["Áreas comuns", String(commonAreas)],
+		["Tipologias", unitTypeNames(tower).join(", ") || "Sem tipologia"],
 	];
 }

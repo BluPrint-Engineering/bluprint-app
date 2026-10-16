@@ -16,6 +16,8 @@ const tower = (
 					units: Array.from({ length: units }, (_, i) => ({
 						id: `${id}-u${i}`,
 						name: `10${i + 1}`,
+						unitType: null,
+						changes: 0,
 					})),
 					commonAreas: [],
 				},
@@ -51,7 +53,17 @@ const detail = (
 	ancestors: LocationRef[],
 	children: LocationRef[] = [],
 	id = "x",
-): LocationDetail => ({ id, type, name, ancestors, children });
+): LocationDetail => ({
+	id,
+	type,
+	name,
+	ancestors,
+	children,
+	unitType: null,
+	changes: 0,
+	rooms: [],
+	droppedRooms: [],
+});
 
 describe("describeLocation", () => {
 	test("a tower goes back to the project and counts its floors and units", () => {

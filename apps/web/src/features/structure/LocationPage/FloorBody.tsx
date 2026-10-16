@@ -1,14 +1,26 @@
-import type { LocationRef } from "@bluprint/shared";
-import { LocationList } from "../components/LocationList";
+import type { LocationRef, StructureFloor } from "@bluprint/shared";
+import {
+	LocationList,
+	type LocationListItem,
+} from "../components/LocationList";
+import { unitTypeLine } from "./unitTypeLine";
 
 export function FloorBody({
 	projectId,
 	items,
+	floor,
 }: {
 	projectId: string;
 	items: LocationRef[];
+	floor: StructureFloor | undefined;
 }) {
-	const units = items.filter((child) => child.type === "unit");
+	const units: LocationListItem[] = floor
+		? floor.units.map((unit) => ({
+				id: unit.id,
+				name: unit.name,
+				meta: unitTypeLine(unit),
+			}))
+		: items.filter((child) => child.type === "unit");
 	const commonAreas = items.filter((child) => child.type === "common_area");
 
 	return (

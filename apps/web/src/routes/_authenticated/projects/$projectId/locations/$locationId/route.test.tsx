@@ -1,5 +1,6 @@
 import {
 	LOCATION_NOT_FOUND,
+	type LocationDetail,
 	PROJECT_NOT_FOUND,
 	type ProjectSummary,
 	type Structure,
@@ -19,8 +20,10 @@ import {
 } from "@/test/renderApp";
 import {
 	combine,
+	droppedRoom,
 	floor,
 	numberedFloors,
+	room,
 	structureApi,
 	structureOf,
 	tower,
@@ -49,13 +52,17 @@ function pathOf(id: string) {
 	return `/projects/${OBRA.id}/locations/${id}`;
 }
 
-function api(structure: Structure, summary: ProjectSummary = OBRA): ApiHandler {
+function api(
+	structure: Structure,
+	summary: ProjectSummary = OBRA,
+	details: Record<string, Partial<LocationDetail>> = {},
+): ApiHandler {
 	return combine(
 		(url) =>
 			url.pathname === `/api/projects/${summary.id}`
 				? json(summary)
 				: undefined,
-		structureApi(summary.id, structure),
+		structureApi(summary.id, structure, details),
 	);
 }
 
@@ -429,7 +436,12 @@ describe("floor page", () => {
 			within(units)
 				.getAllByRole("link")
 				.map((link) => link.textContent),
-		).toEqual(["901", "902", "903", "904"]);
+		).toEqual([
+			"901Sem tipologia",
+			"902Sem tipologia",
+			"903Sem tipologia",
+			"904Sem tipologia",
+		]);
 		expect(
 			within(sectionOf("Áreas comuns do andar"))
 				.getAllByRole("link")
@@ -439,7 +451,7 @@ describe("floor page", () => {
 			within(screen.getByRole("main")).queryByRole("button"),
 		).not.toBeInTheDocument();
 
-		await userEvent.click(within(units).getByRole("link", { name: "902" }));
+		await userEvent.click(within(units).getByRole("link", { name: /^902/ }));
 		await waitFor(() => {
 			expect(router.state.location.pathname).toBe(
 				pathOf(nth(ninth.units, 1).id),
@@ -538,6 +550,209 @@ describe("unit and common area pages", () => {
 
 		expect(
 			await screen.findByText("Área comum · Torre A · Térreo"),
+		).toBeInTheDocument();
+	});
+});
+
+const typed = floor("5º andar", [
+	{ name: "501", unitType: "Tipologia A", changes: 2 },
+	{ name: "502", unitType: "Tipologia B", changes: 1 },
+	{ name: "503", unitType: "Tipologia A" },
+	"504",
+]);
+const typedTower = tower("Torre T", [typed], ["Salão de festas"]);
+const typedStructure = structureOf([typedTower, towerB], ["Guarita"]);
+const unit501 = nth(typed.units, 0);
+const unit502 = nth(typed.units, 1);
+const unit503 = nth(typed.units, 2);
+const unit504 = nth(typed.units, 3);
+const salao = nth(typedTower.commonAreas, 0);
+
+const typeARooms = [
+	room("Sala", { fromType: true }),
+	room("Copa", { fromType: true, renamed: true }),
+	room("Home office"),
+];
+
+describe("floor page with unit types", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("shows under each unit its unit type, with the changes when it has some", async () => {
+		stubApi(signedIn, { api: api(typedStructure) });
+
+		renderAt(pathOf(typed.id));
+
+		await screen.findByRole("heading", { level: 1, name: "5º andar" });
+		const links = within(sectionOf("Unidades")).getAllByRole("link");
+		expect(links.map((link) => link.textContent)).toEqual([
+			"501Tipologia A · 2 alterações",
+			"502Tipologia B · 1 alteração",
+			"503Tipologia A",
+			"504Sem tipologia",
+		]);
+	});
+});
+
+describe("unit page", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("shows a unit on its unit type with no changes (U1)", async () => {
+		stubApi(signedIn, {
+			api: api(typedStructure, OBRA, {
+				[unit503.id]: {
+					rooms: [
+						room("Sala", { fromType: true }),
+						room("Cozinha", { fromType: true }),
+					],
+				},
+			}),
+		});
+
+		renderAt(pathOf(unit503.id));
+
+		expect(
+			await screen.findByRole("heading", { level: 1, name: "503" }),
+		).toBeInTheDocument();
+		const unitType = sectionOf("Tipologia");
+		expect(unitType).toHaveTextContent("Tipologia A");
+		expect(unitType).toHaveTextContent(
+			"Os cômodos acompanham a Tipologia A. O que foi mudado só nesta unidade continua assim quando a tipologia muda.",
+		);
+		expect(within(unitType).queryByText(/alteraç/)).not.toBeInTheDocument();
+		expect(
+			within(sectionOf("Cômodos"))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Sala", "Cozinha"]);
+		expect(screen.getByText("2 cômodos")).toBeInTheDocument();
+		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
+		expect(screen.queryByText("Tirados desta unidade")).not.toBeInTheDocument();
+	});
+
+	test("shows the changes of a unit: its own rooms, the ones taken out and the count (U2)", async () => {
+		stubApi(signedIn, {
+			api: api(typedStructure, OBRA, {
+				[unit501.id]: {
+					rooms: typeARooms,
+					droppedRooms: [droppedRoom("Sacada")],
+				},
+			}),
+		});
+
+		renderAt(pathOf(unit501.id));
+
+		await screen.findByRole("heading", { level: 1, name: "501" });
+		expect(
+			within(sectionOf("Tipologia")).getByText("2 alterações"),
+		).toBeInTheDocument();
+		const rooms = within(screen.getByRole("list", { name: "Cômodos" }));
+		expect(
+			rooms.getAllByRole("listitem").map((item) => item.textContent),
+		).toEqual(["Sala", "Copa", "Home officeSó desta unidade"]);
+		expect(screen.getByText("3 cômodos")).toBeInTheDocument();
+		const dropped = within(
+			screen.getByRole("list", { name: "Tirados desta unidade" }),
+		);
+		expect(
+			dropped.getAllByRole("listitem").map((item) => item.textContent),
+		).toEqual(["SacadaDa Tipologia A"]);
+	});
+
+	test("says the rooms of a unit without a unit type are only its own, with no badge on them", async () => {
+		stubApi(signedIn, {
+			api: api(typedStructure, OBRA, {
+				[unit504.id]: { rooms: [room("Quarto"), room("Banheiro")] },
+			}),
+		});
+
+		renderAt(pathOf(unit504.id));
+
+		await screen.findByRole("heading", { level: 1, name: "504" });
+		const unitType = sectionOf("Tipologia");
+		expect(unitType).toHaveTextContent("Sem tipologia");
+		expect(unitType).toHaveTextContent("Os cômodos desta unidade são só dela.");
+		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
+		expect(
+			within(sectionOf("Cômodos"))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Quarto", "Banheiro"]);
+	});
+
+	test("says a unit has no rooms yet", async () => {
+		stubApi(signedIn, { api: api(typedStructure) });
+
+		renderAt(pathOf(unit504.id));
+
+		expect(
+			await screen.findByText("Nenhum cômodo cadastrado."),
+		).toBeInTheDocument();
+		expect(screen.getByText("0 cômodos")).toBeInTheDocument();
+	});
+
+	test("offers no button or menu yet, and shows the lock line on a delivered project", async () => {
+		stubApi(signedIn, {
+			api: api(
+				typedStructure,
+				{ ...OBRA, status: "delivered" },
+				{
+					[unit502.id]: { rooms: typeARooms },
+				},
+			),
+		});
+
+		renderAt(pathOf(unit502.id));
+
+		expect(await screen.findByText(LOCKED)).toBeInTheDocument();
+		expect(
+			within(screen.getByRole("main")).queryByRole("button"),
+		).not.toBeInTheDocument();
+		expect(
+			within(screen.getByRole("main")).queryByRole("link"),
+		).not.toBeInTheDocument();
+	});
+});
+
+describe("common area page", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("shows only the rooms card, with no unit type (U5)", async () => {
+		stubApi(signedIn, {
+			api: api(typedStructure, OBRA, {
+				[salao.id]: { rooms: [room("Cozinha"), room("Banheiro")] },
+			}),
+		});
+
+		renderAt(pathOf(salao.id));
+
+		expect(
+			await screen.findByRole("heading", { level: 1, name: "Salão de festas" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("heading", { level: 2, name: "Tipologia" }),
+		).not.toBeInTheDocument();
+		expect(
+			within(sectionOf("Cômodos"))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Cozinha", "Banheiro"]);
+		expect(screen.getByText("2 cômodos")).toBeInTheDocument();
+		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
+	});
+
+	test("says a common area has no rooms yet", async () => {
+		stubApi(signedIn, { api: api(typedStructure) });
+
+		renderAt(pathOf(nth(typedStructure.commonAreas, 0).id));
+
+		expect(
+			await screen.findByText("Nenhum cômodo cadastrado."),
 		).toBeInTheDocument();
 	});
 });

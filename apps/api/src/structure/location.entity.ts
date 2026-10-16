@@ -14,6 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { project } from "../projects/project.entity";
+import { unitType } from "./unit-type.entity";
 
 export const locationType = pgEnum("location_type", locationTypes);
 
@@ -26,6 +27,7 @@ export const location = pgTable(
 			.references(() => project.id, { onDelete: "cascade" }),
 		parentId: uuid(),
 		type: locationType().notNull(),
+		unitTypeId: uuid(),
 		name: text().notNull(),
 		position: integer().notNull(),
 		createdAt: createdAt(),
@@ -40,6 +42,11 @@ export const location = pgTable(
 				columns: [table.parentId, table.projectId],
 				foreignColumns: [table.id, table.projectId],
 			}).onDelete("cascade"),
+			foreignKey({
+				name: "location_unit_type_fk",
+				columns: [table.unitTypeId, table.projectId],
+				foreignColumns: [unitType.id, unitType.projectId],
+			}),
 			index("location_project_id_idx").on(table.projectId),
 			index("location_parent_id_idx").on(table.parentId),
 			uniqueIndex("location_root_name_unique")
@@ -51,6 +58,10 @@ export const location = pgTable(
 			check(
 				"location_name_length",
 				sql`char_length(btrim(${table.name})) between 1 and 60`,
+			),
+			check(
+				"location_unit_type_on_unit",
+				sql`${table.unitTypeId} is null or ${table.type} = 'unit'`,
 			),
 			check("location_position_non_negative", sql`${table.position} >= 0`),
 			check(

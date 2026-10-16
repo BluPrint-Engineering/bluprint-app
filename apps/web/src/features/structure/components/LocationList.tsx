@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 export interface LocationListItem {
 	id: string;
 	name: string;
+	meta?: string | undefined;
 }
 
 export function LocationList({
@@ -37,13 +38,20 @@ export function LocationList({
 								params={{ projectId, locationId: item.id }}
 								className="flex min-h-14 items-center gap-(--space-2) py-(--space-2) pr-(--space-4) pl-(--space-4) outline-none hover:bg-muted focus-visible:shadow-[inset_0_0_0_2px_var(--ring)]"
 							>
-								<span
-									className={cn(
-										"min-w-0 flex-1 text-base font-medium [overflow-wrap:anywhere]",
-										mono && "font-mono",
+								<span className="grid min-w-0 flex-1">
+									<span
+										className={cn(
+											"text-base font-medium [overflow-wrap:anywhere]",
+											mono && "font-mono",
+										)}
+									>
+										{item.name}
+									</span>
+									{item.meta && (
+										<span className="text-sm text-muted-foreground">
+											{item.meta}
+										</span>
 									)}
-								>
-									{item.name}
 								</span>
 								<ChevronRight
 									className="size-5 shrink-0 text-muted-foreground"

@@ -22,7 +22,12 @@ export class StructureService {
 	async readStructure(userId: string, projectId: string): Promise<Structure> {
 		await this.projects.findVisible(userId, projectId);
 
-		return buildStructure(await this.locations.listByProject(projectId));
+		const [rows, changes] = await Promise.all([
+			this.locations.listByProject(projectId),
+			this.locations.countUnitChanges(projectId),
+		]);
+
+		return buildStructure(rows, changes);
 	}
 
 	async readLocation(
@@ -41,17 +46,28 @@ export class StructureService {
 			});
 		}
 
-		const [ancestors, children] = await Promise.all([
-			found.parentId
-				? this.locations.listAncestorsFromTop(projectId, found.parentId)
-				: [],
-			this.locations.listChildren(found.id),
-		]);
+		const holdsRooms = found.type === "unit" || found.type === "common_area";
+		const [ancestors, children, rooms, droppedRooms, changes] =
+			await Promise.all([
+				found.parentId
+					? this.locations.listAncestorsFromTop(projectId, found.parentId)
+					: [],
+				this.locations.listChildren(found.id),
+				holdsRooms ? this.locations.listRooms(found.id) : [],
+				found.unitType ? this.locations.listDroppedRooms(found.id) : [],
+				found.unitType
+					? this.locations.countUnitChanges(projectId, found.id)
+					: new Map<string, number>(),
+			]);
 
 		return {
 			...toRef(found),
 			ancestors: ancestors.map(toRef),
 			children: children.map(toRef),
+			unitType: found.unitType,
+			changes: changes.get(found.id) ?? 0,
+			rooms,
+			droppedRooms,
 		};
 	}
 }
