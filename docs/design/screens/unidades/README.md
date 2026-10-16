@@ -178,7 +178,7 @@ Centered blocks follow the Obras pattern: max-width 26rem, gap 16px, padding-blo
 | --- | --- |
 | Organization role (`GET /api/organization`) | Served |
 | Licences as purchases of N unidades, contratadas | Served: a `license` row is a purchase of `units`; signup seeds one license of 500 |
-| Reserva per obra, usadas, `units: { reserved, used }` on the obra summary | Served; `used` is 0 until #165 |
+| Reserva per obra, usadas, `units: { reserved, used }` on the obra summary | Served; `used` counts the units in the obra's structure |
 | `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }` | Served, admin only |
 | `PATCH /api/organization/units/reservations`, `RESERVATION_BELOW_USED`, `PROJECT_DELIVERED` | Not served |
 | `NO_UNITS_LEFT` with `requested` and `available` | Served by `POST /api/projects` |

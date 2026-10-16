@@ -338,8 +338,8 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 | Element | Status |
 | --- | --- |
 | `POST /api/projects` `{ id, name, units }` → `ProjectSummary`; `409 NO_UNITS_LEFT` with `requested` and `available`; `PROJECT_ID_TAKEN` and the idempotent retry (ADR 0068) | Served, including `id`, `PROJECT_ID_TAKEN` and the idempotent retry; the page is built (#151) |
-| Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | Served; `reclaimable` equals the reservas until #165 |
-| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects`, `GET /api/projects/:id` and the create response; `used` is 0 until #165 |
+| Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | Served |
+| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects`, `GET /api/projects/:id` and the create response; `used` counts the units in the obra's structure |
 | Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | 2.12 |
 | One obra `GET /api/projects/:id` (same visibility as the list, `404 PROJECT_NOT_FOUND` otherwise) | Served |
 | Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente (`403` for the assistente); `409 PROJECT_DELIVERED` on a delivered obra | Served |
