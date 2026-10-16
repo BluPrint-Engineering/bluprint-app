@@ -28,7 +28,6 @@ interface SeedProjectMember {
 
 interface SeedProject {
 	name: string;
-	// a delivered project holds only the units it used, and a seeded project has used none (ADR 0074)
 	reservedUnits: number;
 	status?: ProjectStatus | undefined;
 	members: SeedProjectMember[];
@@ -36,7 +35,6 @@ interface SeedProject {
 
 export interface SeedOrganization {
 	name: string;
-	// one license per entry; the organization's contracted units are their sum
 	licenses: number[];
 	members: SeedOrgMember[];
 	projects: SeedProject[];

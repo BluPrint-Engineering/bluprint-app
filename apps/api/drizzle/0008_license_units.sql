@@ -1,4 +1,3 @@
--- a license was one project's; there is no paying customer to convert, and production can be re-seeded (ADR 0074)
 DELETE FROM "license";--> statement-breakpoint
 ALTER TABLE "license" DROP CONSTRAINT "license_project_id_project_id_fk";
 --> statement-breakpoint

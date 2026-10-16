@@ -15,4 +15,15 @@ export function assertReservationsFit(organization: SeedOrganization): void {
 			`"${organization.name}" reserves ${reserved} units but contracts ${contracted}, raise its licenses in fixture.ts.`,
 		);
 	}
+
+	const deliveredWithReservation = organization.projects.find(
+		(seedProject) =>
+			seedProject.status === "delivered" && seedProject.reservedUnits > 0,
+	);
+
+	if (deliveredWithReservation) {
+		throw new Error(
+			`"${deliveredWithReservation.name}" is delivered but reserves ${deliveredWithReservation.reservedUnits} units; a delivered project keeps only the units it used, and a seeded project has used none.`,
+		);
+	}
 }

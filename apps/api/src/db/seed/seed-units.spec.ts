@@ -30,6 +30,25 @@ describe("assertReservationsFit", () => {
 		);
 	});
 
+	test("refuses a delivered project that still reserves units, naming it", () => {
+		const delivered = {
+			...organization,
+			projects: [
+				{ name: "Torre A", reservedUnits: 100, members: [] },
+				{
+					name: "Torre B",
+					reservedUnits: 50,
+					status: "delivered" as const,
+					members: [],
+				},
+			],
+		};
+
+		expect(() => assertReservationsFit(delivered)).toThrow(
+			'"Torre B" is delivered but reserves 50 units',
+		);
+	});
+
 	test.each(organizations.map((org) => [org.name, org] as const))(
 		"the seeded organization %s fits its licenses",
 		(_name, org) => {
