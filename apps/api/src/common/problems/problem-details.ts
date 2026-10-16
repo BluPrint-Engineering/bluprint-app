@@ -9,6 +9,8 @@ export interface ProblemInit {
 	detail?: string | undefined;
 	instance?: string | undefined;
 	errors?: FieldError[] | undefined;
+	requested?: number | undefined;
+	available?: number | undefined;
 }
 
 export function codeForStatus(status: number): string {
@@ -23,6 +25,8 @@ export function problemDetails({
 	detail,
 	instance,
 	errors,
+	requested,
+	available,
 }: ProblemInit): ProblemDetails {
 	return {
 		type: "about:blank",
@@ -32,6 +36,8 @@ export function problemDetails({
 		...(detail !== undefined && { detail }),
 		...(instance !== undefined && { instance }),
 		...(errors !== undefined && { errors }),
+		...(requested !== undefined && { requested }),
+		...(available !== undefined && { available }),
 	};
 }
 

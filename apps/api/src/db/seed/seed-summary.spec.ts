@@ -9,7 +9,7 @@ const orphan: SeedPerson = { name: "Zed", email: "zed@x.test" };
 const organizations: SeedOrganization[] = [
 	{
 		name: "Alfa",
-		licenses: 1,
+		licenses: [1],
 		members: [
 			{ email: ana.email, role: "admin" },
 			{ email: bia.email, role: "manager" },
@@ -18,7 +18,7 @@ const organizations: SeedOrganization[] = [
 	},
 	{
 		name: "Beta",
-		licenses: 1,
+		licenses: [1],
 		members: [{ email: bia.email, role: "assistant" }],
 		projects: [],
 	},

@@ -130,10 +130,10 @@ describe("member", () => {
 });
 
 describe("license", () => {
-	test("writes and reads back a license belonging to the organization", async () => {
+	test("writes and reads back a license of units belonging to the organization", async () => {
 		const [created] = await db
 			.insert(license)
-			.values({ organizationId })
+			.values({ organizationId, units: 500 })
 			.returning({ id: license.id });
 
 		const found = await db.query.license.findFirst({
@@ -141,19 +141,33 @@ describe("license", () => {
 		});
 
 		expect(found?.organizationId).toBe(organizationId);
+		expect(found?.units).toBe(500);
 		expect(found?.id).toMatch(UUID_V7);
+
+		await db.delete(license).where(eq(license.id, created!.id));
 	});
 
-	test("two free licenses (null project_id) coexist in the same organization", async () => {
+	test("two licenses coexist in the same organization", async () => {
 		const created = await db
 			.insert(license)
-			.values([{ organizationId }, { organizationId }])
+			.values([
+				{ organizationId, units: 100 },
+				{ organizationId, units: 50 },
+			])
 			.returning({ id: license.id });
 
 		expect(created).toHaveLength(2);
 
 		await db.delete(license).where(eq(license.id, created[0]!.id));
 		await db.delete(license).where(eq(license.id, created[1]!.id));
+	});
+
+	test.each([0, -1])("rejects a license of %i units", async (units) => {
+		await expect(
+			db.insert(license).values({ organizationId, units }),
+		).rejects.toMatchObject({
+			cause: { code: "23514", constraint: "license_units_positive" },
+		});
 	});
 });
 
@@ -173,6 +187,27 @@ describe("project", () => {
 		expect(found?.organizationId).toBe(organizationId);
 		expect(found?.id).toMatch(UUID_V7);
 	});
+
+	test("holds a reservation of units, none by default", async () => {
+		const found = await db.query.project.findFirst({
+			where: eq(project.id, projectId),
+		});
+
+		expect(found?.reservedUnits).toBe(0);
+	});
+
+	test("rejects a negative reservation", async () => {
+		await expect(
+			db
+				.insert(project)
+				.values({ organizationId, name: "Sem Saldo", reservedUnits: -1 }),
+		).rejects.toMatchObject({
+			cause: {
+				code: "23514",
+				constraint: "project_reserved_units_non_negative",
+			},
+		});
+	});
 });
 
 describe("project_member", () => {
@@ -188,35 +223,5 @@ describe("project_member", () => {
 		expect(found?.role).toBe("manager");
 		expect(found?.userId).toBe(userId);
 		expect(found?.projectId).toBe(projectId);
-	});
-});
-
-describe("license.projectId", () => {
-	test("writes and reads back a license consumed by a project", async () => {
-		const [created] = await db
-			.insert(license)
-			.values({ organizationId, projectId })
-			.returning({ id: license.id });
-
-		const found = await db.query.license.findFirst({
-			where: eq(license.id, created!.id),
-		});
-
-		expect(found?.projectId).toBe(projectId);
-
-		await db.delete(license).where(eq(license.id, created!.id));
-	});
-
-	test("rejects a second license pointing at the same project (#40's SKIP LOCKED guard)", async () => {
-		const [first] = await db
-			.insert(license)
-			.values({ organizationId, projectId })
-			.returning({ id: license.id });
-
-		await expect(
-			db.insert(license).values({ organizationId, projectId }),
-		).rejects.toThrow();
-
-		await db.delete(license).where(eq(license.id, first!.id));
 	});
 });

@@ -97,7 +97,7 @@ export const authPaths: PathsObject = {
 			summary: "Sign up (email and password)",
 			description:
 				"Creates the account and returns the session in the same response — there is no email verification step. It is the only way an account is created today; the finished product creates accounts from invitations (#11).\n\n" +
-				"**The same request creates the whole tenant.** Along with the user come that person's organization, a membership with default role `admin`, and three free licenses, seeded server-side in the same request — no second client call does this.",
+				"**The same request creates the whole tenant.** Along with the user come that person's organization, a membership with default role `admin`, and one license of 500 units, seeded server-side in the same request — no second client call does this.",
 			security: [],
 			requestBody: {
 				required: true,

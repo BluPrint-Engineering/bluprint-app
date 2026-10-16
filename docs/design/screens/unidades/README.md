@@ -177,11 +177,12 @@ Centered blocks follow the Obras pattern: max-width 26rem, gap 16px, padding-blo
 | Element | Status |
 | --- | --- |
 | Organization role (`GET /api/organization`) | Served |
-| Licences as purchases of N unidades, contratadas | Ticket 2.13 refinement. Today a `license` row is one obra (`project_id` null when free); signup seeds 3 and `POST /api/projects` takes one (`NO_FREE_LICENSE`) |
-| Reserva per obra, usadas, `units: { reserved, used }` on the obra summary | Not migrated; no column holds it |
-| `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }` | Not served |
-| `PATCH /api/organization/units/reservations`, `RESERVATION_BELOW_USED`, `NO_UNITS_LEFT`, `PROJECT_DELIVERED` | Not served |
-| `GET /api/organization/licenses` | Never served; it leaves the specs with `NO_FREE_LICENSE` |
+| Licences as purchases of N unidades, contratadas | Served: a `license` row is a purchase of `units`; signup seeds one license of 500 |
+| Reserva per obra, usadas, `units: { reserved, used }` on the obra summary | Served; `used` is 0 until #165 |
+| `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }` | Served, admin only |
+| `PATCH /api/organization/units/reservations`, `RESERVATION_BELOW_USED`, `PROJECT_DELIVERED` | Not served |
+| `NO_UNITS_LEFT` with `requested` and `available` | Served by `POST /api/projects` |
+| `GET /api/organization/licenses` | Never served; `NO_FREE_LICENSE` is dropped |
 
 ## Interactions and motion
 

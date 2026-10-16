@@ -99,7 +99,7 @@ beforeAll(async () => {
 	const created = await db
 		.insert(project)
 		.values([
-			{ organizationId, name: "Casa Moinhos" },
+			{ organizationId, name: "Casa Moinhos", reservedUnits: 40 },
 			{ organizationId, name: "Torre Ipê" },
 			{ organizationId, name: "Galpão Sul" },
 		])
@@ -200,6 +200,20 @@ describe("GET /api/projects", () => {
 		expect(total).toBe(2);
 	});
 
+	test("reports each project's reserved units, none used yet", async () => {
+		const res = await linked.agent.get(PROJECTS);
+
+		const { items } = projectListSchema.parse(res.body);
+		expect(items.find((p) => p.id === projectOne)?.units).toEqual({
+			reserved: 40,
+			used: 0,
+		});
+		expect(items.find((p) => p.id === projectTwo)?.units).toEqual({
+			reserved: 0,
+			used: 0,
+		});
+	});
+
 	test("an organization member with no project membership sees nothing", async () => {
 		const res = await unlinked.agent.get(PROJECTS);
 
@@ -262,7 +276,15 @@ describe("GET /api/projects", () => {
 		expect(Object.keys(body).sort()).toEqual(["counts", "items", "total"]);
 		for (const row of body.items) {
 			expect(Object.keys(row).sort()).toEqual(
-				["createdAt", "id", "lastActivityAt", "name", "role", "status"].sort(),
+				[
+					"createdAt",
+					"id",
+					"lastActivityAt",
+					"name",
+					"role",
+					"status",
+					"units",
+				].sort(),
 			);
 		}
 	});

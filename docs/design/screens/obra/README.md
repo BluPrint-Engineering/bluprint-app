@@ -336,9 +336,9 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 
 | Element | Status |
 | --- | --- |
-| `POST /api/projects` `{ id, name, units }` → `ProjectSummary`; `409 NO_UNITS_LEFT` with `requested` and `available`; `PROJECT_ID_TAKEN` and the idempotent retry (ADR 0068) | Served today as `{ name }` with `409 NO_FREE_LICENSE`; the 1.20 slice replaces it with the reserva (and drops `NO_FREE_LICENSE` everywhere), #151 builds the page |
-| Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | 1.20 |
-| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | 1.20; `used` counts the obra's units once #6 creates them |
+| `POST /api/projects` `{ id, name, units }` → `ProjectSummary`; `409 NO_UNITS_LEFT` with `requested` and `available`; `PROJECT_ID_TAKEN` and the idempotent retry (ADR 0068) | Served today as `{ name, units }` with `409 NO_UNITS_LEFT` (`requested`, `available`); `id`, `PROJECT_ID_TAKEN` and the idempotent retry are not served yet; #151 builds the page |
+| Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | Served; `reclaimable` equals the reservas until #165 |
+| The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects` and the create response; `used` is 0 until #165 |
 | Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | 2.12 |
 | One obra `GET /api/projects/:id` (same visibility as the list, 404 otherwise) | #46 |
 | Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente; refused on a delivered obra | #46 |

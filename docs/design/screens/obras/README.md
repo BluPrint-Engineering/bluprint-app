@@ -299,7 +299,7 @@ issue (#94); until an element lands the UI **hides it** instead of faking it.
 | Gerente filter (admin), `GET /api/projects/managers` | #94 — derived from project membership |
 | Sort `recent`, `name`, `activity`; last activity on the card | #94 — `lastActivityAt`, set at creation |
 | Open pin count, sort `open-pins` | #7 — needs pins |
-| Free units link, 0-livres state, Nova obra | #46 — `GET /api/organization/units` (`free`, `reclaimable`). Today a `license` row is one obra: signup seeds 3, `POST /api/projects` takes one and answers `NO_FREE_LICENSE`; there is no units count, no reserva and no `/api/organization/licenses` or `/units` route yet |
+| Free units link, 0-livres state, Nova obra | #46 — `GET /api/organization/units` (`free`, `reclaimable`) is served; a `license` row is a purchase of units (signup seeds one of 500) and `POST /api/projects` takes `{ name, units }`, answering `409 NO_UNITS_LEFT` with `requested` and `available` |
 | Unidades screen (`/units`), reached from the free units link | Ticket 2.13 — see `../unidades/` |
 | Profile photo in the Avatar | Shown when `user.image` is set; upload is out of scope |
 

@@ -1,22 +1,30 @@
 import {
+	type CreateProject,
+	NO_UNITS_LEFT,
 	ProjectList,
 	ProjectListQuery,
 	ProjectManager,
 	ProjectSummary,
+	ProjectUnits,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
-import { LicensesRepository } from "../licenses/licenses.repository";
 import { MembersRepository } from "../members/members.repository";
+import { UnitsService } from "../units/units.service";
 import { ProjectsRepository } from "./projects.repository";
+
+// TODO(#165): used becomes the units the project has created or spent
+function unitsOf(reserved: number): ProjectUnits {
+	return { reserved, used: 0 };
+}
 
 @Injectable()
 export class ProjectsService {
 	constructor(
 		private readonly projects: ProjectsRepository,
 		private readonly members: MembersRepository,
-		private readonly licenses: LicensesRepository,
+		private readonly units: UnitsService,
 	) {}
 
 	async listVisible(
@@ -41,6 +49,7 @@ export class ProjectsService {
 				createdAt: row.createdAt.toISOString(),
 				lastActivityAt: row.lastActivityAt.toISOString(),
 				role: row.effectiveRole ?? "admin",
+				units: unitsOf(row.reservedUnits),
 				status: row.status,
 			})),
 			total,
@@ -58,23 +67,33 @@ export class ProjectsService {
 	}
 
 	@Transactional()
-	async create(userId: string, name: string): Promise<ProjectSummary> {
+	async create(
+		userId: string,
+		{ name, units }: CreateProject,
+	): Promise<ProjectSummary> {
 		const membership = await this.members.findByUser(userId);
 		if (membership?.role !== "admin") {
 			throw new ForbiddenException();
 		}
 		const { organizationId } = membership;
 
-		const project = await this.projects.insert({ organizationId, name });
-
-		const license = await this.licenses.consumeFree(organizationId, project.id);
-		if (!license) {
+		const { free } = await this.units.readForReservation(organizationId);
+		if (units > free) {
 			throw new ProblemException({
 				status: 409,
-				code: "NO_FREE_LICENSE",
-				detail: "The organization has no free license.",
+				code: NO_UNITS_LEFT,
+				detail:
+					"The organization has fewer free units than the project asked to reserve.",
+				requested: units,
+				available: free,
 			});
 		}
+
+		const project = await this.projects.insert({
+			organizationId,
+			name,
+			reservedUnits: units,
+		});
 
 		return {
 			id: project.id,
@@ -82,6 +101,7 @@ export class ProjectsService {
 			createdAt: project.createdAt.toISOString(),
 			lastActivityAt: project.lastActivityAt.toISOString(),
 			role: "admin",
+			units: unitsOf(project.reservedUnits),
 			status: project.status,
 		};
 	}

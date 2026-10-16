@@ -55,7 +55,7 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "Create a project",
 		description:
-			"Creates a blank project with the given name and consumes exactly one free license of the caller's organization, in one transaction. Restricted to the organization's `admin`: the caller gets no project membership on the project it just created, and keeps seeing it through the organization membership, reported as `admin`, the same as any other project of theirs. Answers `NO_FREE_LICENSE` when the organization has none left.",
+			"Creates a blank project with the given name and reserves `units` of the caller's organization's free units for it, in one transaction; a reservation holds units without spending them, and licenses are not consumed. The organization is locked while it reserves, so simultaneous creations never reserve more than the free units. Restricted to the organization's `admin`: the caller gets no project membership on the project it just created, and keeps seeing it through the organization membership, reported as `admin`, the same as any other project of theirs. Answers `NO_UNITS_LEFT`, with `requested` and `available`, when the free units do not cover the request, and creates nothing.",
 	})
 	@ZodResponse({
 		status: 201,
@@ -67,6 +67,6 @@ export class ProjectsController {
 		@Session() session: UserSession,
 		@Body() body: CreateProjectDto,
 	): Promise<ProjectSummary> {
-		return this.projects.create(session.user.id, body.name);
+		return this.projects.create(session.user.id, body);
 	}
 }

@@ -14,6 +14,7 @@ export function project(
 		createdAt: "2026-01-01T00:00:00.000Z",
 		lastActivityAt: "2026-01-01T00:00:00.000Z",
 		role,
+		units: { reserved: 0, used: 0 },
 		status,
 	};
 }
