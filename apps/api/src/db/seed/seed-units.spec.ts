@@ -1,5 +1,6 @@
 import { type SeedOrganization, organizations } from "./fixture";
 import type { SeedStructure } from "./seed-structure";
+import { countUnits } from "./seed-structure";
 import { assertReservationsFit } from "./seed-units";
 
 const twoUnits: SeedStructure = {
@@ -92,4 +93,27 @@ describe("assertReservationsFit", () => {
 			expect(() => assertReservationsFit(org)).not.toThrow();
 		},
 	);
+});
+
+describe("the seeded Vértice organization", () => {
+	const vertice = organizations.find(
+		({ name }) => name === "Vértice Engenharia",
+	)!;
+	const jardins = vertice.projects.find(
+		({ name }) => name === "Residencial Jardins",
+	)!;
+
+	test("reserves exactly the units Residencial Jardins seeds, so it has none left", () => {
+		expect(jardins.reservedUnits).toBe(countUnits(jardins.structure));
+	});
+
+	test("has no free units: its projects reserve every contracted unit", () => {
+		const contracted = vertice.licenses.reduce((sum, units) => sum + units, 0);
+		const reserved = vertice.projects.reduce(
+			(sum, { reservedUnits }) => sum + reservedUnits,
+			0,
+		);
+
+		expect(reserved).toBe(contracted);
+	});
 });

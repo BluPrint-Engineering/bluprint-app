@@ -1,10 +1,11 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { license } from "../licenses/license.entity";
 import { organization } from "../organizations/organization.entity";
 import { project } from "../projects/project.entity";
+import { location } from "../structure/location.entity";
 
 @Injectable()
 export class UnitsRepository {
@@ -16,6 +17,33 @@ export class UnitsRepository {
 			.from(organization)
 			.where(eq(organization.id, organizationId))
 			.for("no key update");
+	}
+
+	async lockProject(projectId: string): Promise<number | undefined> {
+		const [locked] = await this.txHost.tx
+			.select({ reserved: project.reservedUnits })
+			.from(project)
+			.where(eq(project.id, projectId))
+			.for("no key update");
+
+		return locked?.reserved;
+	}
+
+	async countUsed(projectIds: string[]): Promise<Map<string, number>> {
+		if (projectIds.length === 0) return new Map();
+
+		const rows = await this.txHost.tx
+			.select({
+				projectId: location.projectId,
+				used: sql<number>`count(*)::int`,
+			})
+			.from(location)
+			.where(
+				and(inArray(location.projectId, projectIds), eq(location.type, "unit")),
+			)
+			.groupBy(location.projectId);
+
+		return new Map(rows.map((row) => [row.projectId, row.used]));
 	}
 
 	async sum(organizationId: string): Promise<{
@@ -38,10 +66,22 @@ export class UnitsRepository {
 			.from(project)
 			.where(eq(project.organizationId, organizationId));
 
+		const [inProgressUsed] = await db
+			.select({ total: sql<number>`count(*)::int` })
+			.from(location)
+			.innerJoin(project, eq(project.id, location.projectId))
+			.where(
+				and(
+					eq(project.organizationId, organizationId),
+					eq(project.status, "active"),
+					eq(location.type, "unit"),
+				),
+			);
+
 		return {
 			contracted: contracted!.total,
 			reserved: reserved!.total,
-			reclaimable: reserved!.inProgress,
+			reclaimable: reserved!.inProgress - inProgressUsed!.total,
 		};
 	}
 }
