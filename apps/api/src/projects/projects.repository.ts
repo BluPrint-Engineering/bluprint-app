@@ -34,7 +34,6 @@ function nameContains(q: string) {
 export class ProjectsRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
-	/** The one rule of who sees a project: listing and reading both go through it, so they never disagree. */
 	private visibleProjects(
 		userId: string,
 		{ q = "", managerId }: { q?: string; managerId?: string | undefined } = {},

@@ -81,11 +81,14 @@ export function isProjectNotFound(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === PROJECT_NOT_FOUND;
 }
 
+function retryUnlessNotFound(failures: number, error: unknown) {
+	return !isProjectNotFound(error) && failures < 3;
+}
+
 export function projectQueryOptions(id: string) {
 	return queryOptions({
 		queryKey: ["projects", "detail", id],
 		queryFn: () => apiFetch(`/projects/${id}`, projectSummarySchema),
-		// a missing project stays missing: retrying only delays the not-found page
-		retry: (failures, error) => !isProjectNotFound(error) && failures < 3,
+		retry: retryUnlessNotFound,
 	});
 }
