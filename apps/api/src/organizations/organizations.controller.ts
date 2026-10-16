@@ -1,10 +1,11 @@
-import { Organization } from "@bluprint/shared";
+import { Organization, OrganizationUnits } from "@bluprint/shared";
 import { Controller, Get } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
 import { OrganizationDto } from "./dto/organization.dto";
+import { OrganizationUnitsDto } from "./dto/organization-units.dto";
 import { OrganizationsService } from "./organizations.service";
 
 @ApiTags("Organization")
@@ -26,5 +27,21 @@ export class OrganizationsController {
 	@ApiErrorResponses(401, 404)
 	findMine(@Session() session: UserSession): Promise<Organization> {
 		return this.organizations.findMine(session.user.id);
+	}
+
+	@Get("units")
+	@ApiOperation({
+		summary: "My organization's units",
+		description:
+			"The units the caller's organization has bought (`contracted`, the sum of its licenses), the units held by its projects' reservations (`reserved`), what is left to start a project (`free`, contracted minus reserved) and what the admin can take back from projects in progress (`reclaimable`: reserved and not used; every project reserves its units and uses none until structure arrives, so it equals their reservations for now). Restricted to the organization's `admin`: a manager, an assistant, or a caller with no organization, such as a platform admin, is refused (ADR 0074).",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The organization's units.",
+		type: OrganizationUnitsDto,
+	})
+	@ApiErrorResponses(401, 403)
+	findMyUnits(@Session() session: UserSession): Promise<OrganizationUnits> {
+		return this.organizations.findMyUnits(session.user.id);
 	}
 }

@@ -6,7 +6,7 @@ import { MembersRepository } from "../../members/members.repository";
 import { OrganizationsRepository } from "../../organizations/organizations.repository";
 import { UsersRepository } from "../users.repository";
 
-const FREE_LICENSES = 3;
+const SIGNUP_LICENSE_UNITS = 500;
 
 @Injectable()
 export class SignupProvisioning {
@@ -37,6 +37,6 @@ export class SignupProvisioning {
 			userId,
 			role: "admin",
 		});
-		await this.licenses.insertMany(organization.id, FREE_LICENSES);
+		await this.licenses.insert(organization.id, SIGNUP_LICENSE_UNITS);
 	}
 }

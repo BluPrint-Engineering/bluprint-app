@@ -1,6 +1,9 @@
 import { projectStatuses } from "@bluprint/shared";
+import { sql } from "drizzle-orm";
 import {
+	check,
 	index,
+	integer,
 	pgEnum,
 	pgTable,
 	text,
@@ -21,9 +24,16 @@ export const project = pgTable(
 			.references(() => organization.id, { onDelete: "cascade" }),
 		name: text().notNull(),
 		status: projectStatus().notNull().default("active"),
+		reservedUnits: integer().notNull().default(0),
 		createdAt: createdAt(),
 		// starts at creation; a write to operational content must bump it, a rename or status change must not
 		lastActivityAt: timestamp({ withTimezone: true }).defaultNow().notNull(),
 	},
-	(table) => [index("project_organization_id_idx").on(table.organizationId)],
+	(table) => [
+		index("project_organization_id_idx").on(table.organizationId),
+		check(
+			"project_reserved_units_non_negative",
+			sql`${table.reservedUnits} >= 0`,
+		),
+	],
 );

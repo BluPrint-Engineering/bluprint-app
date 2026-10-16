@@ -32,6 +32,15 @@ export const problemDetailsSchema = z.object({
 	errors: z.array(fieldErrorSchema).optional().meta({
 		description: "One entry per invalid input, present on `VALIDATION_FAILED`.",
 	}),
+	requested: z.int().optional().meta({
+		description: "Units the request asked for, present on `NO_UNITS_LEFT`.",
+		example: 80,
+	}),
+	available: z.int().optional().meta({
+		description:
+			"Units that were free when the request was refused, present on `NO_UNITS_LEFT`.",
+		example: 30,
+	}),
 });
 
 export type FieldError = z.infer<typeof fieldErrorSchema>;

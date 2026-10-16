@@ -62,6 +62,7 @@ export class ProjectsRepository {
 					createdAt: project.createdAt,
 					status: project.status,
 					lastActivityAt: project.lastActivityAt,
+					reservedUnits: project.reservedUnits,
 					effectiveRole: projectMember.role,
 				})
 				.from(project)
@@ -170,12 +171,14 @@ export class ProjectsRepository {
 	async insert(values: {
 		organizationId: string;
 		name: string;
+		reservedUnits: number;
 		status?: ProjectStatus | undefined;
 	}): Promise<{
 		id: string;
 		name: string;
 		createdAt: Date;
 		lastActivityAt: Date;
+		reservedUnits: number;
 		status: ProjectStatus;
 	}> {
 		const [created] = await this.txHost.tx
@@ -187,6 +190,7 @@ export class ProjectsRepository {
 				createdAt: project.createdAt,
 				status: project.status,
 				lastActivityAt: project.lastActivityAt,
+				reservedUnits: project.reservedUnits,
 			});
 
 		return created!;

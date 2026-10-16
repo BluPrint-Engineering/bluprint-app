@@ -67,10 +67,11 @@ describe("signing up", () => {
 		expect(links[0]?.role).toBe("admin");
 	});
 
-	test("creates three free licenses for that organization", async () => {
+	test("creates one license of 500 units for that organization", async () => {
 		const { licenses } = await tenantOf(account.userId);
 
-		expect(licenses).toHaveLength(3);
+		expect(licenses).toHaveLength(1);
+		expect(licenses[0]?.units).toBe(500);
 	});
 
 	test("leaves the organization with that one member and nobody else", async () => {
@@ -93,7 +94,7 @@ describe("signing in again", () => {
 		const { links, licenses } = await tenantOf(account.userId);
 
 		expect(links).toHaveLength(1);
-		expect(licenses).toHaveLength(3);
+		expect(licenses).toHaveLength(1);
 	});
 });
 

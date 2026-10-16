@@ -3,6 +3,7 @@ import { Server } from "node:http";
 import {
 	type DefaultRole,
 	organizationSchema,
+	organizationUnitsSchema,
 	problemDetailsSchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
@@ -13,6 +14,7 @@ import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
 import { DATABASE, Database } from "../db/database.module";
 import {
+	license,
 	member,
 	organization,
 	project,
@@ -23,6 +25,7 @@ import {
 const SIGN_UP = "/api/auth/sign-up/email";
 const PASSWORD = "senha-de-obra-123";
 const ORGANIZATION = "/api/organization";
+const UNITS = "/api/organization/units";
 
 let app: INestApplication;
 let server: Server;
@@ -156,6 +159,81 @@ describe("GET /api/organization", () => {
 
 		expect(Object.keys(res.body as object).sort()).toEqual(
 			["id", "name", "role"].sort(),
+		);
+	});
+});
+
+describe("GET /api/organization/units", () => {
+	test("tells the admin what is contracted, reserved, free and reclaimable", async () => {
+		await db.delete(license).where(eq(license.organizationId, organizationId));
+		await db.insert(license).values([
+			{ organizationId, units: 400 },
+			{ organizationId, units: 100 },
+		]);
+		await db.insert(project).values([
+			{ organizationId, name: "Em Obra A", reservedUnits: 120 },
+			{ organizationId, name: "Em Obra B", reservedUnits: 80 },
+			{
+				organizationId,
+				name: "Entregue",
+				reservedUnits: 50,
+				status: "delivered",
+			},
+		]);
+
+		const res = await admin.agent.get(UNITS);
+
+		expect(res.status).toBe(200);
+		expect(organizationUnitsSchema.parse(res.body)).toEqual({
+			contracted: 500,
+			reserved: 250,
+			free: 250,
+			reclaimable: 200,
+		});
+	});
+
+	test("counts only the caller's own organization", async () => {
+		const other = await signUp("Admin de Outra Construtora");
+		try {
+			const res = await other.agent.get(UNITS);
+
+			expect(organizationUnitsSchema.parse(res.body)).toEqual({
+				contracted: 500,
+				reserved: 0,
+				free: 500,
+				reclaimable: 0,
+			});
+		} finally {
+			await db
+				.delete(organization)
+				.where(eq(organization.id, await organizationOf(other.userId)));
+			await db.delete(user).where(eq(user.id, other.userId));
+		}
+	});
+
+	test.each([
+		["manager", () => manager],
+		["assistant", () => assistant],
+		["a caller with no organization", () => orphan],
+	] as const)("refuses %s", async (_who, caller) => {
+		const res = await caller().agent.get(UNITS);
+
+		expect(res.status).toBe(403);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("FORBIDDEN");
+	});
+
+	test("refuses an anonymous caller", async () => {
+		const res = await request(server).get(UNITS);
+
+		expect(res.status).toBe(401);
+		expect(problemDetailsSchema.parse(res.body).code).toBe("UNAUTHORIZED");
+	});
+
+	test("never leaks a field outside the shared response schema", async () => {
+		const res = await admin.agent.get(UNITS);
+
+		expect(Object.keys(res.body as object).sort()).toEqual(
+			["contracted", "free", "reclaimable", "reserved"].sort(),
 		);
 	});
 });

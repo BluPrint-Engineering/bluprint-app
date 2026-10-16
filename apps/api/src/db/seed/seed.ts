@@ -14,6 +14,7 @@ import { DATABASE, Database, DatabaseAdapter } from "../database.module";
 import { member, organization, projectMember, session, user } from "../schema";
 import { organizations, people, platformAdmin } from "./fixture";
 import { describeAccountRoles } from "./seed-summary";
+import { assertReservationsFit } from "./seed-units";
 import { resolveSeedTarget } from "./seed-target";
 
 // relative to apps/api, the cwd every api script runs from
@@ -49,6 +50,7 @@ async function signUpAndDiscardScaffolding(
 
 async function main(): Promise<void> {
 	const target = resolveSeedTarget(env.DATABASE_URL, process.env, people);
+	organizations.forEach(assertReservationsFit);
 
 	// signUpAndDiscardScaffolding needs self-signup on; dynamic import: ConfigModule.forRoot snapshots process.env when app.module loads
 	process.env.ALLOW_SELF_SIGNUP = "true";
@@ -94,10 +96,9 @@ async function main(): Promise<void> {
 						name: org.name,
 					});
 
-					await licensesRepository.insertMany(
-						createdOrganization.id,
-						org.licenses,
-					);
+					for (const units of org.licenses) {
+						await licensesRepository.insert(createdOrganization.id, units);
+					}
 
 					for (const orgMember of org.members) {
 						// not MembersRepository.insert: its role is narrowed to "admin" for SignupProvisioning
@@ -113,17 +114,8 @@ async function main(): Promise<void> {
 							organizationId: createdOrganization.id,
 							name: seedProject.name,
 							status: seedProject.status,
+							reservedUnits: seedProject.reservedUnits,
 						});
-
-						const license = await licensesRepository.consumeFree(
-							createdOrganization.id,
-							createdProject.id,
-						);
-						if (!license) {
-							throw new Error(
-								`No free license left for "${seedProject.name}" in "${org.name}" — add one to fixture.ts.`,
-							);
-						}
 
 						for (const projectMemberSeed of seedProject.members) {
 							await txHost.tx.insert(projectMember).values({
