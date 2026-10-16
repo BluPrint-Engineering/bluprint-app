@@ -620,7 +620,7 @@ describe("unit page", () => {
 		const unitType = sectionOf("Tipologia");
 		expect(unitType).toHaveTextContent("Tipologia A");
 		expect(unitType).toHaveTextContent(
-			"Os cômodos acompanham a Tipologia A. O que foi mudado só nesta unidade continua assim quando a tipologia muda.",
+			"Os cômodos acompanham a tipologia Tipologia A. O que foi mudado só nesta unidade continua assim quando a tipologia muda.",
 		);
 		expect(within(unitType).queryByText(/alteraç/)).not.toBeInTheDocument();
 		expect(
@@ -659,7 +659,7 @@ describe("unit page", () => {
 		);
 		expect(
 			dropped.getAllByRole("listitem").map((item) => item.textContent),
-		).toEqual(["SacadaDa Tipologia A"]);
+		).toEqual(["SacadaDa tipologia Tipologia A"]);
 	});
 
 	test("says the rooms of a unit without a unit type are only its own, with no badge on them", async () => {

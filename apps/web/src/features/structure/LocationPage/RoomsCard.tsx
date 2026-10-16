@@ -87,7 +87,7 @@ export function RoomsCard({
 							<RoomRow
 								key={dropped.unitTypeRoomId}
 								name={dropped.name}
-								meta={`Da ${unitType.name}`}
+								meta={`Da tipologia ${unitType.name}`}
 							/>
 						))}
 					</RoomList>

@@ -21,7 +21,7 @@ export function UnitBody({ unit }: { unit: LocationDetail }) {
 					</div>
 					<p className="text-sm text-pretty text-muted-foreground">
 						{unitType
-							? `Os cômodos acompanham a ${unitType.name}. O que foi mudado só nesta unidade continua assim quando a tipologia muda.`
+							? `Os cômodos acompanham a tipologia ${unitType.name}. O que foi mudado só nesta unidade continua assim quando a tipologia muda.`
 							: "Os cômodos desta unidade são só dela."}
 					</p>
 				</div>

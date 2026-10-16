@@ -62,7 +62,7 @@ export default async function structure({ page, shot, expect, query }) {
 	await shot("unit-changes");
 	await page.getByRole("link", { name: "9º andar" }).click();
 	await page.getByRole("link", { name: /^901/ }).click();
-	await expect(page.getByText("Os cômodos acompanham a Tipologia A.")).toBeVisible();
+	await expect(page.getByText("Os cômodos acompanham a tipologia Tipologia A.")).toBeVisible();
 	await expect(page.getByText("Só desta unidade")).toHaveCount(0);
 	await shot("unit-on-type");
 	await page.getByRole("link", { name: "9º andar" }).click();
