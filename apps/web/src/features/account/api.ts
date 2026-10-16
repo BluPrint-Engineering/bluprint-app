@@ -19,7 +19,6 @@ export const organizationQueryOptions = queryOptions({
 	staleTime: 5 * 60 * 1000,
 });
 
-/** Only the admin may ask. Always stale: a second admin reserving changes it. */
 export const organizationUnitsQueryOptions = queryOptions({
 	queryKey: ["organization", "units"],
 	queryFn: () => apiFetch("/organization/units", organizationUnitsSchema),

@@ -134,7 +134,6 @@ export function useRenameProjectMutation(projectId: string) {
 	});
 }
 
-/** The units the server reported free when it refused, or undefined for any other failure. */
 export function availableUnitsOf(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === NO_UNITS_LEFT
 		? error.problem.available
@@ -155,7 +154,6 @@ export function useCreateProjectMutation() {
 				projectQueryOptions(created.id).queryKey,
 				created,
 			);
-			// not awaited, and nothing refetched on a page we are leaving: both go stale and load on their next visit
 			void queryClient.invalidateQueries({
 				queryKey: ["projects"],
 				predicate: isListQuery,

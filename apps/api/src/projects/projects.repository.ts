@@ -198,8 +198,7 @@ export class ProjectsRepository {
 		return renamed;
 	}
 
-	/** Not scoped to an organization: the caller must tell its own project from another organization's. */
-	async findById(projectId: string) {
+	async findByIdInAnyOrganization(projectId: string) {
 		const [found] = await this.txHost.tx
 			.select()
 			.from(project)
@@ -222,7 +221,6 @@ export class ProjectsRepository {
 		return created!;
 	}
 
-	/** Undefined when the id already exists, whoever it belongs to. */
 	async insertIfAbsent(values: {
 		id: string;
 		organizationId: string;

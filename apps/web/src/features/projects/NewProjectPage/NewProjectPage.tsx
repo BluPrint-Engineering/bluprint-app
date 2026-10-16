@@ -82,11 +82,10 @@ export function NewProjectPage() {
 	const queryClient = useQueryClient();
 	const units = useQuery(organizationUnitsQueryOptions);
 	const create = useCreateProjectMutation();
-	const projectId = useRef(uuidV7());
+	const [projectId] = useState(uuidV7);
 	const sending = useRef(false);
-	const [reportedFree, setReportedFree] = useState<number>();
 
-	const free = reportedFree ?? units.data?.free;
+	const free = units.data?.free;
 	const exhausted = free === 0;
 
 	const {
@@ -107,7 +106,7 @@ export function NewProjectPage() {
 		if (sending.current) return;
 		sending.current = true;
 		create.mutate(
-			{ id: projectId.current, name, units: Number(reserved) },
+			{ id: projectId, name, units: Number(reserved) },
 			{
 				onSuccess: (created) => {
 					toast.success(`Obra “${created.name}” criada.`);
@@ -119,9 +118,14 @@ export function NewProjectPage() {
 				onError: (error) => {
 					const available = availableUnitsOf(error);
 					if (available === undefined) return;
-					setReportedFree(available);
+					queryClient.setQueryData(
+						organizationUnitsQueryOptions.queryKey,
+						(old) => old && { ...old, free: available },
+					);
 					void queryClient.invalidateQueries(organizationUnitsQueryOptions);
-					setError("units", { message: availableMessage(available) });
+					if (available > 0) {
+						setError("units", { message: availableMessage(available) });
+					}
 				},
 				onSettled: () => {
 					sending.current = false;

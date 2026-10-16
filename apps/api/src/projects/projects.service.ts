@@ -133,10 +133,9 @@ export class ProjectsService {
 		}
 		const { organizationId } = membership;
 
-		// the lock comes first so a duplicate still in flight waits for the first request to commit, then finds its project
 		const { free } = await this.units.readForReservation(organizationId);
 
-		const existing = await this.projects.findById(id);
+		const existing = await this.projects.findByIdInAnyOrganization(id);
 		if (existing) {
 			return this.answerExisting(existing, organizationId);
 		}
@@ -159,9 +158,8 @@ export class ProjectsService {
 			reservedUnits: units,
 		});
 		if (!created) {
-			// another organization's request took the id between the lookup and the insert
 			return this.answerExisting(
-				(await this.projects.findById(id))!,
+				(await this.projects.findByIdInAnyOrganization(id))!,
 				organizationId,
 			);
 		}

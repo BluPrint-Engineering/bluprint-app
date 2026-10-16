@@ -292,9 +292,13 @@ describe("new project page", () => {
 	});
 
 	test("keeps the values and puts the server's free units on the field when someone reserved first (N5)", async () => {
+		let free = UNITS.free;
 		const { handler, sent } = newProjectApi({
-			create: () =>
-				problem(409, NO_UNITS_LEFT, { requested: 200, available: 120 }),
+			units: () => json({ ...UNITS, free }),
+			create: () => {
+				free = 120;
+				return problem(409, NO_UNITS_LEFT, { requested: 200, available: 120 });
+			},
 		});
 		openAsAdmin(handler);
 		await screen.findByText(/300 livres/);
@@ -329,6 +333,72 @@ describe("new project page", () => {
 		expect(await screen.findByText("De 1 a 120 unidades.")).toBeInTheDocument();
 		expect(sent).toHaveLength(1);
 	});
+
+	test("follows the refetched free units once they outgrow the ones the refusal reported", async () => {
+		const { handler, sent } = newProjectApi({
+			units: () => json(sent.length === 0 ? UNITS : { ...UNITS, free: 170 }),
+			create: () =>
+				problem(409, NO_UNITS_LEFT, { requested: 200, available: 120 }),
+		});
+		openAsAdmin(handler);
+		await screen.findByText(/300 livres/);
+		await fill("Casa Moinhos", "200");
+		await submit();
+		await screen.findByText(
+			"Agora só restam 120 unidades livres. Ajuste a reserva e tente de novo.",
+		);
+
+		await fill("Casa Moinhos", "150");
+
+		expect(
+			await screen.findByText(
+				"170 livres na construtora. Depois de criar, sobram 20.",
+			),
+		).toBeInTheDocument();
+	});
+
+	test.each([
+		{
+			state: "N6",
+			reclaimable: 100,
+			alert:
+				"Nenhuma unidade livre para uma obra nova. Baixe a reserva de outra obra ou fale com a BluPrint.",
+		},
+		{
+			state: "N6b",
+			reclaimable: 0,
+			alert: "Nenhuma unidade livre para uma obra nova. Fale com a BluPrint.",
+		},
+	])(
+		"turns a refusal with nothing left into the disabled page alone, keeping the values ($state)",
+		async ({ reclaimable, alert }) => {
+			const exhausted = { ...UNITS, reserved: 400, free: 0, reclaimable };
+			const { handler, sent } = newProjectApi({
+				units: () => json(sent.length === 0 ? UNITS : exhausted),
+				create: () =>
+					problem(409, NO_UNITS_LEFT, { requested: 200, available: 0 }),
+			});
+			openAsAdmin(handler);
+			await screen.findByText(/300 livres/);
+			await fill("Casa Moinhos", "200");
+			await submit();
+
+			expect(await screen.findByText(alert)).toBeInTheDocument();
+			expect(
+				screen.queryByText(/Ajuste a reserva e tente de novo/),
+			).not.toBeInTheDocument();
+			expect(screen.queryByText(CREATED_FAILED)).not.toBeInTheDocument();
+			const nameField = screen.getByRole("textbox", { name: "Nome da obra" });
+			const unitsField = screen.getByRole("textbox", {
+				name: "Unidades reservadas",
+			});
+			expect(nameField).toBeDisabled();
+			expect(nameField).toHaveValue("Casa Moinhos");
+			expect(unitsField).toBeDisabled();
+			expect(unitsField).toHaveValue("200");
+			expect(screen.getByRole("button", { name: "Criar obra" })).toBeDisabled();
+		},
+	);
 
 	test("disables the page and suggests lowering another reservation when nothing is free but some is unused (N6)", async () => {
 		const { handler } = newProjectApi({
