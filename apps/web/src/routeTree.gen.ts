@@ -15,6 +15,7 @@ import { Route as SignupRouteRouteImport } from './routes/signup/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSplatRouteRouteImport } from './routes/_authenticated/$/route'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects/index'
+import { Route as AuthenticatedProjectsNewRouteRouteImport } from './routes/_authenticated/projects/new/route'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/index'
 import { Route as AuthenticatedProjectsProjectIdConfigurationRouteRouteImport } from './routes/_authenticated/projects/$projectId/configuration/route'
 
@@ -48,6 +49,12 @@ const AuthenticatedProjectsIndexRoute =
     path: '/projects/',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedProjectsNewRouteRoute =
+  AuthenticatedProjectsNewRouteRouteImport.update({
+    id: '/projects/new',
+    path: '/projects/new',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedProjectsProjectIdIndexRoute =
   AuthenticatedProjectsProjectIdIndexRouteImport.update({
     id: '/projects/$projectId/',
@@ -66,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRouteRoute
   '/signup': typeof SignupRouteRoute
   '/$': typeof AuthenticatedSplatRouteRoute
+  '/projects/new': typeof AuthenticatedProjectsNewRouteRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   '/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -75,6 +83,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRouteRoute
   '/$': typeof AuthenticatedSplatRouteRoute
   '/': typeof AuthenticatedIndexRoute
+  '/projects/new': typeof AuthenticatedProjectsNewRouteRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   '/projects/$projectId': typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -86,6 +95,7 @@ export interface FileRoutesById {
   '/signup': typeof SignupRouteRoute
   '/_authenticated/$': typeof AuthenticatedSplatRouteRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
+  '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRouteRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
   '/_authenticated/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   '/_authenticated/projects/$projectId/': typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/$'
+    | '/projects/new'
     | '/projects/'
     | '/projects/$projectId/configuration'
     | '/projects/$projectId/'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/$'
     | '/'
+    | '/projects/new'
     | '/projects'
     | '/projects/$projectId/configuration'
     | '/projects/$projectId'
@@ -116,6 +128,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_authenticated/$'
     | '/_authenticated/'
+    | '/_authenticated/projects/new'
     | '/_authenticated/projects/'
     | '/_authenticated/projects/$projectId/configuration'
     | '/_authenticated/projects/$projectId/'
@@ -171,6 +184,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProjectsIndexRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/projects/new': {
+      id: '/_authenticated/projects/new'
+      path: '/projects/new'
+      fullPath: '/projects/new'
+      preLoaderRoute: typeof AuthenticatedProjectsNewRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projects/$projectId/': {
       id: '/_authenticated/projects/$projectId/'
       path: '/projects/$projectId'
@@ -191,6 +211,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSplatRouteRoute: typeof AuthenticatedSplatRouteRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
+  AuthenticatedProjectsNewRouteRoute: typeof AuthenticatedProjectsNewRouteRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
   AuthenticatedProjectsProjectIdConfigurationRouteRoute: typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
   AuthenticatedProjectsProjectIdIndexRoute: typeof AuthenticatedProjectsProjectIdIndexRoute
@@ -199,6 +220,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSplatRouteRoute: AuthenticatedSplatRouteRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
+  AuthenticatedProjectsNewRouteRoute: AuthenticatedProjectsNewRouteRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,
   AuthenticatedProjectsProjectIdConfigurationRouteRoute:
     AuthenticatedProjectsProjectIdConfigurationRouteRoute,

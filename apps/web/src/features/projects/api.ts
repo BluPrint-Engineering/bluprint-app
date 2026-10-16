@@ -1,4 +1,6 @@
 import {
+	type CreateProject,
+	NO_UNITS_LEFT,
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	PROJECT_PAGE_SIZE,
@@ -15,6 +17,7 @@ import {
 	useQueryClient,
 } from "@tanstack/react-query";
 import { ApiError, apiFetch } from "@/lib/api";
+import { organizationUnitsQueryOptions } from "../account/api";
 import type { ProjectsFilters } from "./filters";
 
 function fetchProjectsPage(
@@ -127,6 +130,41 @@ export function useRenameProjectMutation(projectId: string) {
 			if (isProjectDelivered(error)) {
 				return queryClient.invalidateQueries({ queryKey });
 			}
+		},
+	});
+}
+
+/** The units the server reported free when it refused, or undefined for any other failure. */
+export function availableUnitsOf(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === NO_UNITS_LEFT
+		? error.problem.available
+		: undefined;
+}
+
+export function useCreateProjectMutation() {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (project: CreateProject) =>
+			apiFetch("/projects", projectSummarySchema, {
+				method: "POST",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify(project),
+			}),
+		onSuccess: (created) => {
+			queryClient.setQueryData(
+				projectQueryOptions(created.id).queryKey,
+				created,
+			);
+			// not awaited, and nothing refetched on a page we are leaving: both go stale and load on their next visit
+			void queryClient.invalidateQueries({
+				queryKey: ["projects"],
+				predicate: isListQuery,
+				refetchType: "none",
+			});
+			void queryClient.invalidateQueries({
+				...organizationUnitsQueryOptions,
+				refetchType: "none",
+			});
 		},
 	});
 }
