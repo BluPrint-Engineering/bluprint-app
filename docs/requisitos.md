@@ -129,7 +129,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-216 | Obra **entregue** fica fechada de vez: nada nela muda. Ninguém cria, edita, conclui ou exclui pin, foto, planta, estrutura, equipe, disciplina, empresa executora ou o nome da obra. Relatórios são exportados em qualquer status | M |
 | RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento antes da entrega, para corrigir o nome | M |
 | RF-218 | Cada **unidade** criada usa uma unidade da reserva da obra. Criar além do que resta é recusado por inteiro, e quem cria vê quantas restam antes. Unidade removida sem nunca ter tido conteúdo devolve a vaga à reserva; unidade que já teve conteúdo, nela ou num local acima, fica usada mesmo arquivada ou excluída de vez | M |
-| RF-219 | Admin ajusta a **reserva** de cada obra, nunca abaixo das unidades usadas nem acima das livres; na entrega, a reserva que sobrou volta às livres | M |
+| RF-219 | Admin ajusta a **reserva** de cada obra, nunca abaixo das unidades usadas nem acima da reserva atual somada às livres; na entrega, a reserva que sobrou volta às livres | M |
 
 ## 3. Empresas executoras
 
