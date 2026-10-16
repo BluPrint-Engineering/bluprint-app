@@ -25,7 +25,7 @@ export function Facade({
 		<ul
 			aria-label={label}
 			style={{ "--units": widest } as React.CSSProperties}
-			className="grid gap-1.5 md:max-w-[calc(88px+var(--units)*138px+126px)]"
+			className="grid gap-1.5 overflow-x-auto md:max-w-[calc(88px+var(--units)*138px+126px)]"
 		>
 			{floors.map((floor) => {
 				const short = floorLabel(floor.name);
@@ -47,7 +47,7 @@ export function Facade({
 				return (
 					<li
 						key={floor.id}
-						className="grid grid-cols-[52px_repeat(var(--units),minmax(0,1fr))_64px] items-start gap-x-1.5 md:grid-cols-[88px_repeat(var(--units),minmax(0,132px))_120px]"
+						className="grid grid-cols-[52px_repeat(var(--units),minmax(46px,1fr))_64px] items-start gap-x-1.5 md:grid-cols-[88px_repeat(var(--units),minmax(0,132px))_120px]"
 					>
 						<Link
 							to="/projects/$projectId/locations/$locationId"
@@ -55,7 +55,7 @@ export function Facade({
 							aria-label={floor.name}
 							className={cn(
 								CHIP,
-								"justify-start font-semibold text-muted-foreground hover:bg-muted hover:text-foreground",
+								"sticky left-0 z-10 justify-start bg-card font-semibold text-muted-foreground hover:bg-muted hover:text-foreground md:static",
 								isNumberedFloor(short) && "font-mono",
 							)}
 						>
@@ -69,7 +69,7 @@ export function Facade({
 								aria-label={`Unidade ${unit.name}`}
 								className={cn(
 									CHIP,
-									"border border-input bg-card font-mono font-medium hover:bg-muted",
+									"border border-input bg-card px-1 font-mono font-medium hover:bg-muted md:px-(--space-2)",
 								)}
 							>
 								<span className="truncate">{unit.name}</span>
@@ -94,7 +94,7 @@ export function Facade({
 
 export function FacadeCard({ children }: { children: React.ReactNode }) {
 	return (
-		<div className="rounded-xl bg-card p-(--space-3) shadow-(--ring-hairline) md:p-(--space-5)">
+		<div className="min-w-0 rounded-xl bg-card p-(--space-3) shadow-(--ring-hairline) md:p-(--space-5)">
 			{children}
 		</div>
 	);

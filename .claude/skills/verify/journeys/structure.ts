@@ -2,6 +2,10 @@ export default async function structure({ page, shot, expect, query }) {
 	const session = await (await page.request.get("/api/auth/get-session")).json();
 	const admin = session?.user.email === "ana@horizonte.test";
 	const missing = "0190b000-0000-7000-8000-999999999999";
+	const clippedUnits = (facade) =>
+		facade.getByRole("link", { name: /^Unidade / }).evaluateAll((links) =>
+			links.filter((link) => link.firstElementChild.scrollWidth > link.firstElementChild.clientWidth).map((link) => link.textContent),
+		);
 	const delivered = "A obra foi entregue: a estrutura não pode mais ser alterada.";
 
 	const projectId = async (name) =>
@@ -36,6 +40,7 @@ export default async function structure({ page, shot, expect, query }) {
 	await expect(page.getByText("Torre · 15 andares · 50 unidades")).toBeVisible();
 	const facade = page.getByRole("list", { name: "Fachada da Torre A" });
 	await expect(facade.getByRole("listitem").first()).toContainText("Cobertura");
+	expect(await clippedUnits(facade)).toEqual([]);
 	await shot("tower-facade");
 
 	await page.getByRole("link", { name: "9º andar" }).click();
@@ -79,6 +84,9 @@ export default async function structure({ page, shot, expect, query }) {
 	await page.goto(`/projects/${big}`);
 	await expect(page.getByRole("heading", { level: 2, name: "Torres" })).toBeVisible();
 	await page.getByRole("link", { name: /^Torre B/ }).click();
-	await expect(page.getByRole("list", { name: "Fachada da Torre B" }).getByRole("listitem")).toHaveCount(22);
+	const bigFacade = page.getByRole("list", { name: "Fachada da Torre B" });
+	await expect(bigFacade.getByRole("listitem")).toHaveCount(22);
+	expect(await clippedUnits(bigFacade)).toEqual([]);
+	expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 	await shot("big-tower");
 }

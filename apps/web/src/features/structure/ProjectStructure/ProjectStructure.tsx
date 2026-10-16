@@ -33,7 +33,7 @@ function SingleTower({
 					: "grid gap-(--space-6)"
 			}
 		>
-			<section className="grid content-start gap-(--space-3)">
+			<section className="grid min-w-0 content-start gap-(--space-3)">
 				<h2 className="text-lg font-semibold tracking-tight">Fachada</h2>
 				{tower.floors.length > 0 ? (
 					<FacadeCard>

@@ -40,7 +40,7 @@ export function TowerBody({
 					: "grid gap-(--space-6)"
 			}
 		>
-			<section aria-label="Fachada">
+			<section aria-label="Fachada" className="min-w-0">
 				<FacadeCard>
 					<Facade
 						projectId={projectId}
