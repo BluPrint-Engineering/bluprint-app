@@ -18,7 +18,7 @@ export const projectUnitsSchema = z.object({
 	}),
 	used: z.int().nonnegative().meta({
 		description:
-			"Units the project has used, always within `reserved`. Zero while projects have no structure.",
+			"Units the project has used, always within `reserved`: the units that exist in its structure.",
 		example: 0,
 	}),
 });
