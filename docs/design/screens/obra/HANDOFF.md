@@ -8,20 +8,32 @@ Card, Checkbox, DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Sheet,
 
 | File | What it is |
 | --- | --- |
-| `Obra.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `screen` (new / home / configuration / not-found), `state`, `vision`, `licensesAvailable`, `submitResult`, `renameResult`, `deliverResult` |
-| `Obra QA.dc.html` | N1–N8, P1–P5 (with P1c), C1–C6, X1–X2 frozen, mobile + desktop, light + dark |
+| `Obra.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `screen` (new / home / configuration / not-found), `state`, `vision`, `unitsFree` (livres on Nova obra, default 300), `submitResult` (success / no-units / fail), `renameResult`, `deliverResult`. Every prop also reads from the URL (`?screen=configuration&state=reserve-open`) |
+| `Obra QA.dc.html` | N1–N8, P1–P5 (with P1c), C1–C7, X1–X2 frozen, mobile + desktop, light + dark |
 
 | Screen | Route | #46 builds |
 | --- | --- | --- |
 | Nova obra | `/projects/new`, admin only | The whole page |
 | Início da obra | `/projects/:id` | Obra header + blank-obra empty state, no button |
-| Configuração da obra | `/projects/:id/configuration` | Dados da obra: name and rename (status card comes with its ticket) |
+| Configuração da obra | `/projects/:id/configuration` | Dados da obra: name and rename (status card comes with its ticket); the unidades row and "Alterar reserva" come with 2.12 |
 | Página não encontrada | unknown route; obra 404 | Both cases |
 
 ## Layout decisions (designer's calls)
 
-- **Nova obra**: back link "Obras" above the form; Card on desktop, flat on mobile; title 28px/600; license
-  line as the card description; button `lg` full width on both.
+- **Nova obra**: back link "Obras" above the form; Card on desktop, flat on mobile; title 28px/600 with no
+  description; "Nome da obra" then "Unidades reservadas" (numeric, full width, help "300 livres na construtora.
+  Dá para ajustar depois." as the Field hint, turning into "… Depois de criar, sobram 225." live once a valid
+  number is typed; a skeleton while the livres load); button `lg` full width on both. Not enough livres on submit
+  keeps both values and puts the server's number on the field as its error (like N3d); 0 livres disables the
+  form with an Alert.
+- **Dados da obra, unidades**: a second row under the name, separated by a hairline: "Unidades" over "Usa 250 de
+  400 reservadas". The admin gets outline "Alterar reserva" with `sliders-horizontal`, presented like
+  "Renomear"; gerente and assistente only read. Delivered: "Usou 380 unidades." under the card's lock line.
+- **Alterar reserva**: plain dialog (Sheet on mobile, centered 30rem on desktop, as the deliver dialog) with one
+  muted context line "A obra usa 250 unidades. A construtora tem 150 livres.", one field prefilled with the
+  reserva, then two small figure tiles ("Restam na obra", "Livres na construtora", Geist Mono) that update live,
+  with "Antes: 150" once the value changes and "–" for an impossible value; live errors under the field disable
+  Salvar; success closes it, updates the row and toasts.
 - **Obra header** (band under the app header, bottom border): back link, h1 name (28 / 36px, wraps), then
   status Badge + role in muted text for gerente / assistente (nothing for the admin, as on the card).
   Way into the configuração: outline "Configuração da obra" with `settings` on desktop; 44px outline icon
@@ -47,10 +59,11 @@ Card, Checkbox, DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Sheet,
 
 ## States (QA ids)
 
-N1 vazio com licenças · N2 última licença · N3a/b validação · N4 enviando · N5 sem licença no envio · N6 aberta
-sem licença · N7 falha · N8 contagem carregando · P1 obra em branco (P1b gerente, P1c visão #6) · P2 entregue · P3 carregando ·
+N1 vazio com livres · N1b número digitado (sobram) · N3a/b validação do nome · N3c/d validação das unidades · N4 enviando · N5 outro reservou
+antes · N6 nenhuma unidade livre, dá para baixar outra reserva · N6b nenhuma unidade livre, nada para baixar · N7 falha · N8 livres carregando · P1 obra em branco (P1b gerente, P1c visão #6) · P2 entregue · P3 carregando ·
 P4a erro · P4b sem conexão · P5 visão · C1 logo após criar · C2 configuração completa (C2b assistente) ·
-C3a–d renomeando / validação / salvando / falha · C4 assistente · C5a entregar (diálogo) · C5b enviando · C5c falha · C6 entregue ·
+C3a–d renomeando / validação / salvando / falha · C4 assistente · C4b gerente (reserva só leitura) · C5a entregar (diálogo) · C5b enviando · C5c falha · C6 entregue ·
+C7a–e alterar reserva: aberto (C7a2 número digitado, com "Antes") / abaixo das usadas / acima das livres / salvando / salvo ·
 X1 página não encontrada · X2 obra não encontrada.
 
 ## Copy written in this session (review)
@@ -60,7 +73,8 @@ Configuração da obra · vision P1c: "Cadastre torres, andares e unidades para 
 Cadastrar estrutura · Entregue (badge `success` with `circle-check`) · Não foi possível carregar a obra.
 Configuração: Início da obra · Configuração · Dados da obra · Nome da obra · Renomear · Salvar / Salvando… ·
 Cancelar · "Não foi possível salvar o nome. Confira sua conexão e tente de novo." · "A obra foi entregue: o nome
-não pode mais ser alterado." · Status da obra · "A equipe registra e resolve pendências. Entregue a obra quando
+e a reserva não podem mais ser alterados." (extended from "… o nome não pode mais ser alterado." now that the card
+holds the reserva too) · Status da obra · "A equipe registra e resolve pendências. Entregue a obra quando
 ela for passada ao cliente: depois disso ela fica fechada e não pode ser reaberta." · Entregar obra · Entregando
 obra… · "Entregar “Casa Moinhos”?" · "A entrega fecha a obra de vez. Depois de confirmar:" · "Ninguém mais cria,
 altera ou exclui pins, fotos, plantas, estrutura, equipe, disciplinas, empresas executoras ou o nome da
@@ -69,3 +83,13 @@ obra: nada mais na obra muda." · "A obra não pode ser reaberta." ·
 e tente de novo." · "Obra “Casa Moinhos” entregue." · "Entregue em 14/10/2026 por Rafael Souza. A obra está
 fechada: nada mais pode ser alterado. Os relatórios continuam disponíveis."
 Vision sections: see README.
+
+Unidades (approved verbatim in the re-refinement, T1): Unidades reservadas · "300 livres na construtora. Dá para
+ajustar depois." · "Informe quantas unidades reservar." · "De 1 a 300 unidades." · "Agora só restam 120 unidades
+livres. Ajuste a reserva e tente de novo." (field error) · "300 livres na construtora. Depois de criar, sobram 225." · "Nenhuma unidade livre para uma obra nova. Baixe a reserva de outra
+obra ou fale com a BluPrint." (only with reclaimable units) · "Nenhuma unidade livre para uma obra nova. Fale com a
+BluPrint." · Unidades · "Usa 250 de 400 reservadas" · Alterar reserva · "Usou 380 unidades." ·
+"A obra usa 250 unidades. A construtora tem 150 livres." · Restam na obra · Livres na construtora · "Antes: 150" · "A obra já usa 250 unidades. A reserva não pode ficar abaixo
+disso." · "Só há 150 unidades livres." · "Reserva da Casa Moinhos: 450 unidades.". Written here, to review: the
+dialog title "Alterar reserva" (the button's label) and the network failure "Não foi possível salvar a reserva.
+Confira sua conexão e tente de novo." (README only, not drawn).

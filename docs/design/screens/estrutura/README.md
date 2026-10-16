@@ -26,8 +26,8 @@ and open `docs/design/screens/estrutura/Estrutura.dc.html`; demo props also read
 
 | File | What it is |
 | --- | --- |
-| `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`, `createResult`, `removeResult` |
-| `Estrutura QA.dc.html` | The 44 states below frozen, mobile 390 × 844 and desktop 1280 × 800, light and dark |
+| `Estrutura.dc.html` | Live screens. Demo props: `theme`, `viewport`, `role` (admin / manager / assistant), `structure` (multi / single / empty), `screen` (home / tower / floor / unit / area / wizard / configuration), `state`, `delivered`. Simulation: `createResult` (success / fail / no-units: every creation of units, the wizard, "Adicionar unidade", Duplicar and Desfazer, answers `409 NO_UNITS_LEFT`; fail only applies to the wizard), `removeResult`, `unitsLeft` (what remains of the obra's reserva; empty means 150 for an obra without structure, 12 otherwise) |
+| `Estrutura QA.dc.html` | The 53 states below frozen, mobile 390 × 844 and desktop 1280 × 800, light and dark |
 
 ## Routes and files in `apps/web`
 
@@ -41,7 +41,7 @@ src/features/structure/
   LocationPage/LocationPage.tsx, TowerBody.tsx, FloorBody.tsx, UnitBody.tsx, RoomList.tsx
   StructureWizard/StructureWizard.tsx, TowersStep.tsx, CommonAreasStep.tsx, UnitTypesStep.tsx, Preview.tsx
   configuration/StructureSection.tsx, UnitTypesSection.tsx, ArchivedSection.tsx
-  RemoveLocationDialog.tsx, RenameDialog.tsx, ChangeUnitTypeDialog.tsx
+  RemoveLocationDialog.tsx, RenameDialog.tsx, DuplicateDialog.tsx, ChangeUnitTypeDialog.tsx
 ```
 
 One route for every location kind: the API answers the location with its kind, ancestors and children, and the page
@@ -77,7 +77,7 @@ back link, h1 28 / 36px, meta row). Main column max-width 72rem, padding mobile 
 | Adicionar andares (`list-plus`) | yes | | | |
 | Adicionar área comum (`plus`) | yes | | | |
 | Mover para cima / baixo (`arrow-up`, `arrow-down`) | | yes | yes | |
-| Duplicar (`copy`) | Duplicar torre | Duplicar andar | Duplicar unidade | |
+| Duplicar (`copy`, dialog R9) | Duplicar torre | Duplicar andar | Duplicar unidade | |
 | separator, then Remover (`trash-2`, text `--destructive`) | Remover torre | Remover andar | Remover unidade | Remover área comum |
 
 A destructive menu item is the DropdownMenuItem `destructive` variant.
@@ -140,8 +140,19 @@ and a **list card** (radius 14px, hairline ring, rows separated by 1px `--border
 - **F3 adding**: the add row turns into a form inside the card: Field "Adicionar unidade" with the next number
   prefilled ("905", Geist Mono), autofocus; primary "Adicionar" and outline "Cancelar" (each `flex: 1` on mobile).
   Enter submits, Escape cancels. A new unit takes the tipologia of nothing; it is set on the unit.
+  The Field's hint says what the new unit uses of the obra's reserva (`GET /api/projects/:id/units`, `remaining`):
+  "Usa 1 das 12 unidades que restam nesta obra." ("Usa 1 da única unidade que resta nesta obra." with one). Only on
+  units. Copy pattern everywhere units are created: "restam" is the count before, "sobram" the count after.
 - **F4 name taken** (Q5): Field error "Já existe a unidade 903 na Torre A." Unit names are unique in the tower; floor
-  names in the tower; common-area names in their parent; ignoring case and spaces; archived ones do not count.
+  names in the tower; common-area names in their parent; ignoring case and spaces; archived ones do not count. The
+  error takes the hint's place.
+- **F5 reserva over** (0 restam, gerente or assistente): the "Adicionar unidade" row stays where it is, disabled (the
+  Button's disabled look), and under it, aligned with its icon, 14px muted "A reserva da obra acabou. Fale com o admin
+  da construtora." (the button's `aria-describedby`). Row padding `6px 16px 12px 8px`. **F5b** (admin): "A reserva da
+  obra acabou." and the link "Alterar reserva" (`--primary`, 500, underlined, 44px tall tap area), which opens the
+  obra's Alterar reserva dialog (`../obra/` C7) over this page; on save the units query refetches and the row comes back.
+  "Adicionar área comum", towers and floors are never limited. When `POST /structure` answers `409 NO_UNITS_LEFT`
+  (someone used the last place first), the form closes into F5.
 
 ### Unidade - `/projects/:id/locations/:unitId`
 
@@ -201,11 +212,21 @@ com 4 unidades por andar."
    starts with one tipologia applied to every stack and floor;
    the prototype shows an obra already filled in.
 4. **Prévia**: "2 torres · 24 andares · 88 unidades" 16px/600, then "30 áreas comuns · Tipologia A: 62 · Tipologia B:
-   22 · Cobertura: 4" 14px muted. Info Alert when units are left without a tipologia ("4 unidades ficam sem
+   22 · Cobertura: 4" 14px muted, then, 4px lower, 14px `--foreground` "Usa 88 das 150 unidades que restam nesta obra.
+   Depois de criar, sobram 62." (`remaining` of `GET /api/projects/:id/units`; "Usa 1 da única unidade que resta
+   nesta obra.", "sobra 1", "sobram 0" when it fits exactly). When the plan exceeds the reserva nothing would be
+   created, so the line reads only the state before, "Restam 40 unidades nesta obra." (with 0, "A reserva da obra
+   acabou."), and the Alert below says the rest. The same line is in the desktop Prévia of every wizard state. While the units query loads the line is a 14px Skeleton; if it
+   fails the line is left out and nothing is checked on the client (the server's `409 NO_UNITS_LEFT` still answers). Info Alert when units are left without a tipologia ("4 unidades ficam sem
    tipologia. Os cômodos delas se cadastram em cada uma."). Primary `lg` full width "Criar estrutura" (`check`); then
-   "Nada é salvo antes de criar. Depois, tudo se ajusta na fachada." Then one small façade per tower (22px blocks,
-   10px mono, the same aligned columns as T1; new floors in W9 with a dashed `--primary` border). On desktop the
-   towers scroll inside the card (`max-height: calc(100dvh - 520px)`) so the button never leaves the screen.
+   "Nada é salvo antes de criar. Depois, tudo se ajusta na fachada." Then one small façade per tower, the same aligned
+   columns as T1, new floors in W9 with a dashed `--primary` border. Desktop: 22px blocks, 10px mono, 3px gaps,
+   columns `40px repeat(n, minmax(0,1fr)) 48px`. Mobile, where it is read at arm's length: 34px blocks with 13px/500
+   Geist Mono numbers, radius 8px, 4px gaps; floor labels 13px muted (Geist Mono, "Térreo" in Geist); common-area tags
+   34px, 12px muted on `--muted`; columns `44px repeat(n, minmax(48px,1fr)) 72px`. A tower wider than the screen
+   scrolls sideways inside its own container (never the page), with the floor-label column sticky on the left. On desktop the
+   towers scroll inside the card (`max-height: max(180px, calc(100dvh - 520px))`, top aligned) so the button never leaves
+   the screen.
 
 - **W5 validation**: on "Continuar" (mobile) or "Criar estrutura": "Informe o nome da torre.", "Informe o primeiro
   andar.", "Informe o último andar.", "O último andar precisa ser igual ou maior que o primeiro." (only with both
@@ -215,6 +236,23 @@ com 4 unidades por andar."
 - **W7 failure**: danger Alert in the Prévia, above the button: "Não foi possível criar a estrutura. Confira sua
   conexão e tente de novo. Nada foi salvo." Values kept. The request carries client-generated ids, so a retry never
   duplicates (ADR 0071).
+- **W4b over the reserva** (gerente, assistente): the plan's new units are more than what remains. Danger Alert:
+  "Esta estrutura tem 88 unidades e a obra tem 40. Tire 48 unidades ou peça mais reserva ao admin da construtora."
+  and "Criar estrutura" disabled (`aria-describedby` the Alert). Desktop: the Alert sits in the Prévia above the
+  button, where W7's error goes. **Mobile: the Alert moves into the sticky bottom bar, above "Voltar" / "Criar
+  estrutura"** (gap 12px), on the Prévia step, so it is always next to the disabled button whatever the scroll; the
+  Prévia content does not repeat it. Steps 1 to 3 keep "Continuar" enabled: the count is fixed by going back. With 0
+  restam: "Esta estrutura tem 88 unidades e a reserva da obra acabou. Peça mais reserva ao admin da construtora."
+- **W4c** (admin): "… Tire 48 unidades ou aumente a reserva." and the link "Alterar reserva" after the sentence, in the
+  Alert's color, underlined, 44px tap area; it opens the obra's Alterar reserva dialog (`../obra/` C7) over the wizard,
+  so the draft stays; on save the units query refetches and the Alert recomputes. With 0: "… e a reserva da obra
+  acabou. Aumente a reserva." and the link.
+- **W7b refused** (`409 NO_UNITS_LEFT`, `requested`, `available`): someone spent units between the preview and the
+  request. The same Alert with the server's numbers ("… e a obra tem 60. Tire 28 unidades …"), the line takes
+  `available` ("Restam 60 unidades nesta obra."), "Criar estrutura" stays disabled until the plan fits; values kept, nothing saved.
+- **W9b**: the same for "Adicionar andares": "Esta estrutura tem 8 unidades e a obra tem 6. Tire 2 unidades ou peça
+  mais reserva ao admin da construtora." and "Adicionar 2 andares" disabled. The W9 Prévia reads "Usa 8 das 12 unidades
+  que restam nesta obra. Depois de adicionar, sobram 4." under its counts (the verb follows the button).
 - **W10 success**: back to the início (or to the tower for W9) and a success toast "Estrutura criada: 2 torres e 88
   unidades." / "2 andares adicionados à Torre B.".
 
@@ -224,6 +262,10 @@ The hub of `../obra/` with the Estrutura frame replaced by three sections (Q1, Q
 obra, Status da obra, Estrutura (`layers`), Tipologias (`layout-grid`), Arquivados (`archive`), then the frames of
 the other epics. Sections are cards (padding 20px, radius 14px), h3 18px/600.
 
+- **Dados da obra** is the obra's card as drawn in `../obra/` (C1, C6, C7): "Nome da obra" with "Renomear", then the
+  "Unidades" row ("Usa 388 de 400 reservadas"; the admin's outline "Alterar reserva" with `sliders-horizontal`;
+  delivered "Usou 380 unidades." and the lock "A obra foi entregue: o nome e a reserva não podem mais ser
+  alterados."). The prototype derives usadas from `unitsLeft` so it agrees with the lines that create units.
 - **Estrutura**: "2 torres · 24 andares · 88 unidades · 30 áreas comuns" 16px/500; outline "Abrir estrutura"
   (`chevron-right` at the end) → início; ghost "Assistente" (`list-plus`); 14px muted "A estrutura se edita onde se
   navega: torre, andar e unidade têm "Adicionar" e um menu em cada item." Without structure (C5): "A obra ainda não
@@ -252,15 +294,21 @@ the other epics. Sections are cards (padding 20px, radius 14px), h3 18px/600.
 ### Remover, renomear e restaurar (Q9, Q10)
 
 Dialogs use the design system's **AlertDialog** (`components/overlay/AlertDialog`: centered on desktop, max-width 30rem;
-a bottom panel on mobile with full-width `lg` buttons, action on top). Destructive actions need its new `actionVariant`. Rename, restore and change type are
-plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
+a bottom panel on mobile with full-width `lg` buttons, action on top). Destructive actions need its new `actionVariant`. Rename, duplicate, restore and change type
+are plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
 
 - **R1 empty leaf**: deleted at once, toast "Unidade 904 excluída." with outline `sm` "Desfazer" (`undo-2`), 6s.
-  Undo recreates it with the same id.
+  Undo recreates it with the same id. A unit removed without content gives its place back to the obra's reserva (not to
+  the construtora's livres); undo spends it again.
+- **R1b undo refused** (`409 NO_UNITS_LEFT`: the place was used before the undo): danger toast "Não foi possível trazer
+  a unidade 904 de volta: a reserva da obra acabou." with no action. A floor or tower undone with some units still
+  left: "Não foi possível trazer o 9º andar de volta: restam só 2 unidades na obra." Undo is all or nothing.
 - **R2 empty with children**: "Excluir o 9º andar?" · "O 9º andar não tem pins, plantas nem dados. As 4 unidades e a
-  área comum dele também são excluídas." · Cancelar / destructive "Excluir" (`trash-2`). A tower counts its floors,
-  their units and its own common areas: "A Torre B não tem pins, plantas nem dados. Os 10 andares, as 20 unidades e a
-  área comum dela também são excluídos." Each count is singular or plural as it falls, and a zero count is left out.
+  área comum dele também são excluídas." then a second paragraph "As 4 unidades voltam para a reserva da obra." ·
+  Cancelar / destructive "Excluir" (`trash-2`). A tower counts its floors, their units and its own common areas: "A
+  Torre B não tem pins, plantas nem dados. Os 10 andares, as 20 unidades e a área comum dela também são excluídos." ·
+  "As 20 unidades voltam para a reserva da obra." Each count is singular or plural as it falls ("A unidade volta para
+  a reserva da obra."), and a zero count is left out, the reserva paragraph too.
 - **R3 with content** (built with #7): "Arquivar o 9º andar?" · "O 9º andar tem conteúdo registrado em campo, então
   ele não é excluído:" then `archive` "Guarda 12 pins, 2 plantas e os dados de 3 unidades, com as 4 unidades e o
   hall." · `eye-off` "Sai da fachada, das contagens e dos relatórios." · `archive-restore` "O gerente de obra ou o
@@ -277,6 +325,18 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
 - **R6 / R7 rename**: "Renomear a unidade" · Field "Nome" (Geist Mono for units, hint "Único na torre.") · Salvar;
   conflict "Já existe a unidade 904 na Torre A.".
 - **R8 failure**: danger toast "Não foi possível remover a unidade 904. Confira sua conexão e tente de novo."
+- **R9a duplicar** (RF-208): plain dialog like R6, titled "Duplicar o 9º andar" / "Duplicar a Torre A" / "Duplicar a
+  unidade 903". Field "Nome" prefilled with the next free name: the floor above the top one ("13º andar"), the next
+  letter ("Torre C"), the next number on the floor ("905", Geist Mono, hint "Único na torre."). Under it, 14px muted
+  "Cria 4 unidades das 12 que restam nesta obra. Depois, sobram 8." ("Cria 1 unidade, a única que resta nesta obra.
+  Depois, sobram 0." with one; left out when the copy has no unit). Action primary "Duplicar" (`copy`).
+  The copy takes the units with their tipologia and their own room changes, renumbered for a new floor (1301 to
+  1304), and the common areas with their rooms; pins, plans and unit data are never copied. A duplicated floor goes
+  on top of the tower. Name taken: Field error as in R7 ("Já existe o 12º andar na Torre A."). Success toast "13º andar
+  criado." / "Torre C criada." / "Unidade 905 criada."
+- **R9b over the reserva**: the count line becomes a danger Alert "Duplicar o 9º andar cria 4 unidades e restam 2."
+  ("… e a reserva da obra acabou." with 0) and "Duplicar" is disabled. The admin also gets the link "Alterar reserva"
+  after the sentence. A `409 NO_UNITS_LEFT` on "Duplicar" lands in the same state with the server's `available`.
 
 ---
 
@@ -287,6 +347,8 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
 | Navigate the structure | Any obra (ADR 0067) | Their obras | Their obras |
 | Montar estrutura, add, rename, reorder, duplicate, remove (delete or archive), rooms, tipologias | Yes | Yes | Yes (RF-205) |
 | Restore an archived location, delete it for good | Yes | Yes | No (RF-212, RF-214) |
+| Create units (wizard, add, duplicate, undo) | Up to what remains of the obra's reserva | Same | Same |
+| Change the obra's reserva ("Alterar reserva" in F5b, W4c, R9b) | Yes (ADR 0067) | No: "Fale com o admin da construtora." | No |
 | Delivered obra | Reads only | Reads only | Reads only |
 
 ## States
@@ -295,11 +357,11 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
 | --- | --- | --- |
 | E1–E5 | Início | No structure · several towers · single tower · loading · delivered |
 | T1–T6 | Torre | Façade · menu · no floors · error · not found · delivered |
-| F1–F4 | Andar | Floor (assistente) · unit menu · adding · name taken |
+| F1–F5b | Andar | Floor (assistente) · unit menu · adding (what it uses) · name taken · reserva over · reserva over, admin |
 | U1–U5 | Unidade / área comum | On its type · with changes · adding a room · change type · common area |
-| W1–W10 | Assistente | Towers · common areas · tipologias · preview · validation · sending · failure · single tower · add floors · created |
+| W1–W10 | Assistente | Towers · common areas · tipologias · preview (uses / sobram) · over the reserva (W4b), admin (W4c) · validation · sending · failure · refused `NO_UNITS_LEFT` (W7b) · single tower · add floors · add floors over the reserva (W9b) · created |
 | C1–C6 | Configuração | Sections · editing a tipologia · archived · archived as assistente · no structure · delivered |
-| R1–R8 | Remover etc. | Deleted with undo · delete with children · archive · purge · restore with a taken name · rename · rename taken · failure |
+| R1–R9b | Remover etc. | Deleted with undo · undo refused (R1b) · delete with children (units back to the reserva) · archive · purge · restore with a taken name · rename · rename taken · failure · duplicate (R9a) · duplicate over the reserva (R9b) |
 
 ## State management
 
@@ -307,7 +369,11 @@ plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
   plus obra-level common areas. The façade and the tower cards read it; ~500 units is one request.
 - `useLocationQuery(projectId, locationId)`: the location, its ancestors and children; 404 → T5.
 - `useUnitTypesQuery(projectId)` for the wizard, the unit and the configuração.
-- Mutations: create structure (one request with every client-generated id), add, rename, reorder, remove (answers
+- `useProjectUnitsQuery(projectId)`: `GET /api/projects/:id/units` → `{ reserved, used, remaining }`. The wizard
+  Prévia, the add-unit form and the Duplicar dialog read `remaining`; every structure mutation invalidates it, and a
+  `409 NO_UNITS_LEFT` writes its `available` into it (`setQueryData`) before refetching.
+- Mutations: create structure (one request with every client-generated id; also add unit, add floors, duplicate and
+  undo, so every creation of units goes through it), add, rename, reorder, remove (answers
   `deleted` or `archived`), restore, purge, change unit type, unit room changes, edit unit type. Each invalidates the
   structure query and the location query; rename and reorder can `setQueryData`.
 - Local UI state: open menu, inline add form + draft, dialog + its fields, wizard draft (towers, numbering, areas,
@@ -319,8 +385,14 @@ Nothing of the structure exists: no `location`, `room`, `unit_detail`, `unit_typ
 (`docs/data-model.md` §3) and:
 
 - `GET /api/projects/:id/structure`, `GET /api/projects/:id/locations/:locationId`;
-- `POST /api/projects/:id/structure` (the wizard, idempotent by ids), `POST` / `PATCH` / `DELETE` on locations and
-  rooms, `PATCH` for order, unit types CRUD;
+- `POST /api/projects/:id/structure` (the wizard, idempotent by ids) carries **every creation of units**: the wizard,
+  "Adicionar unidade", "Adicionar andares", Duplicar and Desfazer. When the obra's reserva does not cover the new units
+  it answers `409 NO_UNITS_LEFT` with `requested` (new units in the request) and `available` (what remains in the
+  obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist;
+- `GET /api/projects/:id/units` → `{ reserved, used, remaining }`, for anyone linked to the obra (the admin's
+  `PATCH /api/projects/:id/units` lives in `../obra/`);
+- `POST` / `PATCH` / `DELETE` on locations and rooms, `PATCH` for order, unit types CRUD. A `DELETE` that deletes (no
+  content) gives the units of the subtree back to the obra's reserva; one that archives keeps them spent;
 - every write refuses a delivered obra with `409 PROJECT_DELIVERED` and moves `last_activity_at`;
 - `DELETE` answers whether it deleted or archived; until plans exist (#7) it always deletes (ADR 0073).
 
@@ -338,7 +410,5 @@ with the `bp-alert-dialog` classes because its role and footer vary by action.
 
 ## Open points
 
-1. Duplicar torre / andar / unidade (RF-208) has its menu item; its dialog (new name, what is copied) is a small
-   follow-up decided in the ticket.
-2. Condomínio de casas (a house over two floors) does not fit the model and is out of #6.
-3. Pasting a spreadsheet of units is a possible future feature, only if a customer asks (Q4).
+1. Condomínio de casas (a house over two floors) does not fit the model and is out of #6.
+2. Pasting a spreadsheet of units is a possible future feature, only if a customer asks (Q4).

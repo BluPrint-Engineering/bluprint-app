@@ -11,10 +11,24 @@ The construction company that buys licenses. Ex.: Melnick.
 _Avoid_: company, builder, tenant
 
 **License** (pt-BR: *licença*):
-The right to create one project, owned by the organization and never by a person.
+A purchase of a number of units by the organization, owned by the organization and never by a person.
+
+**Contracted units** (pt-BR: *unidades contratadas*):
+The sum of the organization's licenses.
+
+**Reservation** (pt-BR: *reserva*):
+The units one project may create, set by the admin. Reservations together never exceed the contracted units.
+_Avoid_: limit, quota, ceiling
+
+**Free units** (pt-BR: *unidades livres*):
+Contracted units not reserved by any project; what the admin has to start a new project.
+_Avoid_: balance, credits
+
+**Used units** (pt-BR: *unidades usadas*):
+A project's existing units plus those that held content and were removed.
 
 **Project** (pt-BR: *obra*, *projeto*):
-One construction development, enabled by one license. Ex.: Casa Moinhos.
+One construction development. It is created with a reservation of units. Ex.: Casa Moinhos.
 _Avoid_: site, work, construction
 
 **Project status** (pt-BR: *status da obra*):

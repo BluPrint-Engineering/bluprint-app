@@ -1,6 +1,6 @@
 # The admin configures any project through the organization membership
 
-Supersedes [0025](0025-project-structure-editable-by-all-members.md). Its consequence that a delivered project still accepts rename and reopen is superseded by [0069](0069-delivering-a-project-is-final.md); the rest stands.
+Supersedes [0025](0025-project-structure-editable-by-all-members.md). Its consequence that a delivered project still accepts rename and reopen is superseded by [0069](0069-delivering-a-project-is-final.md); the rest stands. Its license reasoning (a rename never frees the license) is replaced by [0074](0074-a-license-is-units-and-each-project-reserves-its-own.md).
 
 A project's configuration (name, status, structure, project memberships, disciplines, contractors) is edited by everyone on the project and by the organization's admin, who reaches every project through the organization membership and never holds a project membership ([0024](0024-admin-is-read-and-export-only.md)). The admin creates the project and lands on it to set it up, so a project does not sit idle until a manager is invited; a manager or an assistant invited later edits the same configuration. 0025 said "every person with a membership, admin included", which never applied to the admin.
 

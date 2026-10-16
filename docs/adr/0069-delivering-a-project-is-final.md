@@ -1,5 +1,7 @@
 # Delivering a project is final
 
+Its license reasoning is replaced by [0074](0074-a-license-is-units-and-each-project-reserves-its-own.md); the decision stands.
+
 Supersedes the reopening in [0056](0056-delivered-project-is-frozen-until-reopened.md) and the rename and reopen of a delivered project in [0067](0067-admin-configures-any-project-through-the-organization.md).
 
 Delivering a project is final. A delivered project accepts no write at all, its name included, and the app offers no way to reopen it. A license is spent per project and a project is never deleted, but a project that could be reopened could also be emptied and renamed into a different site on the same license; with no way back, the license is really spent. Because the step has no way back, a manager or the admin delivers through a confirmation dialog that states what happens and asks them to tick that the project cannot be reopened before the action unlocks. A project delivered by mistake is reopened only by BluPrint support, outside the app, at the organization's request, and the reopening is logged.
