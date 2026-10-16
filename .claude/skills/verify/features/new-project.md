@@ -21,11 +21,11 @@ From `/projects/new` the organization's admin creates a project: a name and how 
 Preconditions:
 
 - `instance.ts doctor` prints no `FAIL`.
-- Run `.claude/skills/verify/journeys/new-project.ts` with `--as admin` (Ana, creates `Casa Moinhos` reserving 75), `--as admin-no-units` (Igor of Vértice, proves `new-project-no-units`) and `--as manager` (proves `new-project-admin-only`), each on `--device both`. The admin run creates a project per device; the next `up` reseeds.
+- Run `.claude/skills/verify/journeys/new-project.ts` with `--as admin` (Ana, creates `Casa Moinhos` reserving 12, so both devices fit in the seed's free units), `--as admin-no-units` (Igor of Vértice, proves `new-project-no-units`) and `--as manager` (proves `new-project-admin-only`), each on `--device both`. The admin run creates a project per device; the next `up` reseeds.
 
-- **Help.** `page.getByText("<free> livres na construtora. Dá para ajustar depois.")`; after `getByRole("textbox", { name: "Unidades reservadas" }).fill("7x5")` the field reads `75` and the help reads `Depois de criar, sobram <free - 75>.`.
+- **Help.** `page.getByText("<free> livres na construtora. Dá para ajustar depois.")`; after `getByRole("textbox", { name: "Unidades reservadas" }).fill("1x2")` the field reads `12` and the help reads `Depois de criar, sobram <free - 12>.`.
 - **Validation.** `fill` a number above the free units with an empty name, click `Criar obra`: both messages show.
-- **Create.** Fill `Nome da obra` and `Unidades reservadas`, click `Criar obra`; `toHaveURL(/\/projects\/[0-9a-f-]{36}\/configuration$/)` and the toast is visible. `SELECT name, reserved_units FROM project WHERE id = $1` through `query` returns the typed name and 75, and `/api/organization/units` reports `free` lower by 75.
+- **Create.** Fill `Nome da obra` and `Unidades reservadas`, click `Criar obra`; `toHaveURL(/\/projects\/[0-9a-f-]{36}\/configuration$/)` and the toast is visible. `SELECT name, reserved_units FROM project WHERE id = $1` through `query` returns the typed name and 12, and `/api/organization/units` reports `free` lower by 12.
 - **No free units.** With `--as admin-no-units`, the fields and `Criar obra` are disabled and no help line shows.
 
 ## Gotchas
