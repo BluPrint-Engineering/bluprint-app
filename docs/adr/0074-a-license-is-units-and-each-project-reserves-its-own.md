@@ -17,6 +17,7 @@ Requirements: RF-103, RF-104, RF-107, RF-111, RF-112, RF-118, RF-201, RF-217, RF
 - **Who sees what.** The admin sees the free units on the project list and every reservation on the Unidades screen; managers and assistants see how many remain in their project where they create units, and read the project's reservation.
 - **A project is still never deleted.** The license no longer motivates it; the record does. Lowering an unused project's reservation to its used units returns everything else.
 - **Delivery stays final** (0069) to keep what was handed over unchanged; it also releases the unused reservation.
+- **Sign-up seeds one license of 500 units** ([0012](0012-signup-seeding-as-compensated-saga.md)), in place of three licenses of one project each.
 - **The platform admin registers each license with its unit count** and sees contracted, reserved and used units per organization, all metadata ([0021](0021-platform-admin-sees-only-metadata.md)).
 
 ## Considered Options

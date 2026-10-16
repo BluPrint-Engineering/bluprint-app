@@ -69,7 +69,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 
 | ID | Requisito | Prio |
 | --- | --- | --- |
-| RF-110 | A licença pertence à **organização**, não ao usuário: a saída de um funcionário não afeta a obra nem a licença (sem mudança de sentido) | M |
+| RF-110 | A licença pertence à **organização**, não ao usuário: a saída de um funcionário não afeta a obra nem a licença | M |
 | RF-111 | **Admin da construtora** (o "gerente geral") é o papel de topo da organização e enxerga as unidades e todas as obras dela | M |
 | RF-112 | Admin **cria a obra** reservando para ela parte das unidades livres; a obra nasce em branco | M |
 | RF-113 | Painel de pessoas da organização: quem está cadastrado, o papel padrão de cada um e em quais obras está, com o papel em cada uma | M |
