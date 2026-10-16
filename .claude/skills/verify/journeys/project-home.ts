@@ -15,8 +15,10 @@ export default async function projectHome({ page, shot, expect, query, accounts 
 	}
 
 	await page.goto("/projects?q=Jardins");
+	const card = page.getByRole("link", { name: /Residencial Jardins/ });
+	await expect(card).toHaveAttribute("href", /^\/projects\/[0-9a-f-]{36}$/);
 	await shot("list-before");
-	await page.getByRole("link", { name: /Residencial Jardins/ }).click();
+	await card.click();
 	await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
 	await expect(page.getByRole("heading", { level: 1, name: "Residencial Jardins" })).toBeVisible();
 	await expect(page.getByText("Em andamento")).toBeVisible();
