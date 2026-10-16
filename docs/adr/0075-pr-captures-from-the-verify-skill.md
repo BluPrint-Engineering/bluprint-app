@@ -8,7 +8,7 @@ An interface change is still reviewed from the images in its PR body, a mobile a
 
 ## Consequences
 
-- **Captures are `shot(name)` calls in a throwaway journey** run with `drive.ts --device both --out <dir>`; a changed interaction is one `shot` per step, in order.
+- **Captures are `shot(name)` calls in a throwaway journey** run with `drive.ts --device both --out <dir>` against an instance started with `instance.ts up`; a changed interaction is one `shot` per step, in order.
 - **The skill also records video and a trace**; the PR body still carries screenshots only.
 - **Captures live outside the repo**, in the `--out` directory, so nothing needs git-ignoring; the directory is deleted once the PR body shows the uploaded URLs, and the instance is stopped with `instance.ts down`.
 - **Phone is WebKit as an iPhone 13**, closer to the user's device than the viewport-only resize 0058 used.
