@@ -35,4 +35,5 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Project list](./project-list.md): the Obras screen, phone infinite scroll versus desktop pagination.
 - [Project home and not found](./project-home.md): a card opens the project's home (name, status, role, blank state), and the not-found pages for unknown addresses and projects the user cannot see.
 - [Project configuration and rename](./project-configuration.md): the configuration page (`Dados da obra`), renaming in place, and why an assistant or a delivered project cannot rename.
+- [New project](./new-project.md): the Nova obra page, its free-units help, validation, creation and the page without free units.
 - [Project filters, search and sort](./project-filters.md): status, manager, name search and sort, from the desktop toolbar and the phone sheet.
