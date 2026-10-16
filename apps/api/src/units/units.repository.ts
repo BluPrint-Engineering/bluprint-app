@@ -29,15 +29,6 @@ export class UnitsRepository {
 		return locked?.reserved;
 	}
 
-	async findReserved(projectId: string): Promise<number | undefined> {
-		const [found] = await this.txHost.tx
-			.select({ reserved: project.reservedUnits })
-			.from(project)
-			.where(eq(project.id, projectId));
-
-		return found?.reserved;
-	}
-
 	async countUsed(projectIds: string[]): Promise<Map<string, number>> {
 		if (projectIds.length === 0) return new Map();
 
@@ -67,30 +58,30 @@ export class UnitsRepository {
 			.from(license)
 			.where(eq(license.organizationId, organizationId));
 
-		const usedByProject = db
-			.select({
-				projectId: location.projectId,
-				used: sql<number>`count(*)::int`.as("used"),
-			})
-			.from(location)
-			.where(eq(location.type, "unit"))
-			.groupBy(location.projectId)
-			.as("used_by_project");
-
 		const [reserved] = await db
 			.select({
 				total: sql<number>`coalesce(sum(${project.reservedUnits}), 0)::int`,
 				inProgress: sql<number>`coalesce(sum(${project.reservedUnits}) filter (where ${project.status} = 'active'), 0)::int`,
-				inProgressUsed: sql<number>`coalesce(sum(${usedByProject.used}) filter (where ${project.status} = 'active'), 0)::int`,
 			})
 			.from(project)
-			.leftJoin(usedByProject, eq(usedByProject.projectId, project.id))
 			.where(eq(project.organizationId, organizationId));
+
+		const [inProgressUsed] = await db
+			.select({ total: sql<number>`count(*)::int` })
+			.from(location)
+			.innerJoin(project, eq(project.id, location.projectId))
+			.where(
+				and(
+					eq(project.organizationId, organizationId),
+					eq(project.status, "active"),
+					eq(location.type, "unit"),
+				),
+			);
 
 		return {
 			contracted: contracted!.total,
 			reserved: reserved!.total,
-			reclaimable: reserved!.inProgress - reserved!.inProgressUsed,
+			reclaimable: reserved!.inProgress - inProgressUsed!.total,
 		};
 	}
 }

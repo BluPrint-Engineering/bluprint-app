@@ -81,20 +81,16 @@ export class ProjectsService {
 	): Promise<ProjectSummary> {
 		const found = await this.readVisible(userId, projectId);
 
-		return toSummary(found, await this.usedBy(projectId));
+		return toSummary(found, await this.units.usedBy(projectId));
 	}
 
 	async readUnits(
 		userId: string,
 		projectId: string,
 	): Promise<ProjectUnitsBalance> {
-		await this.readVisible(userId, projectId);
+		const { reservedUnits } = await this.readVisible(userId, projectId);
 
-		return this.units.readProject(projectId);
-	}
-
-	private async usedBy(projectId: string): Promise<number> {
-		return (await this.units.usedByProjects([projectId])).get(projectId) ?? 0;
+		return this.units.balanceOf(projectId, reservedUnits);
 	}
 
 	async rename(
@@ -118,7 +114,7 @@ export class ProjectsService {
 
 		return toSummary(
 			{ ...found, name: renamed.name },
-			await this.usedBy(projectId),
+			await this.units.usedBy(projectId),
 		);
 	}
 
@@ -203,7 +199,7 @@ export class ProjectsService {
 
 		return toSummary(
 			{ ...existing, effectiveRole: null },
-			await this.usedBy(existing.id),
+			await this.units.usedBy(existing.id),
 		);
 	}
 }

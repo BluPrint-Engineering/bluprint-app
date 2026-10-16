@@ -30,11 +30,8 @@ export class UnitsService {
 		return this.units.countUsed(projectIds);
 	}
 
-	async readProject(projectId: string): Promise<ProjectUnitsBalance> {
-		const reserved = await this.units.findReserved(projectId);
-		if (reserved === undefined) throw projectNotFound();
-
-		return this.balanceOf(projectId, reserved);
+	async usedBy(projectId: string): Promise<number> {
+		return (await this.units.countUsed([projectId])).get(projectId) ?? 0;
 	}
 
 	@Transactional(Propagation.Mandatory)
@@ -54,11 +51,11 @@ export class UnitsService {
 		}
 	}
 
-	private async balanceOf(
+	async balanceOf(
 		projectId: string,
 		reserved: number,
 	): Promise<ProjectUnitsBalance> {
-		const used = (await this.units.countUsed([projectId])).get(projectId) ?? 0;
+		const used = await this.usedBy(projectId);
 
 		return { reserved, used, remaining: reserved - used };
 	}
