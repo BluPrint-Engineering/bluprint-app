@@ -9,6 +9,7 @@ import { HealthModule } from "./health/health.module";
 import { envSchema } from "./lib/env";
 import { OrganizationsModule } from "./organizations/organizations.module";
 import { ProjectsModule } from "./projects/projects.module";
+import { StructureModule } from "./structure/structure.module";
 
 @Module({
 	imports: [
@@ -35,6 +36,7 @@ import { ProjectsModule } from "./projects/projects.module";
 		HealthModule,
 		OrganizationsModule,
 		ProjectsModule,
+		StructureModule,
 	],
 })
 export class AppModule {}

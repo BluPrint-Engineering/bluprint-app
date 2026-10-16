@@ -1,0 +1,84 @@
+export default async function structure({ page, shot, expect, query }) {
+	const session = await (await page.request.get("/api/auth/get-session")).json();
+	const admin = session?.user.email === "ana@horizonte.test";
+	const missing = "0190b000-0000-7000-8000-999999999999";
+	const delivered = "A obra foi entregue: a estrutura não pode mais ser alterada.";
+
+	const projectId = async (name) =>
+		(await query("SELECT p.id FROM project p JOIN organization o ON o.id = p.organization_id WHERE p.name = $1 AND o.name = 'Construtora Horizonte'", [name]))[0].id;
+	const locationId = async (project, type, name) =>
+		(await query("SELECT l.id FROM location l JOIN project p ON p.id = l.project_id JOIN organization o ON o.id = p.organization_id WHERE p.name = $1 AND o.name = 'Construtora Horizonte' AND l.type = $2 AND l.name = $3", [project, type, name]))[0].id;
+
+	if (!admin) {
+		const jardins = await projectId("Residencial Jardins");
+		await page.goto(`/projects/${jardins}`);
+		await expect(page.getByRole("heading", { level: 2, name: "Torres" })).toBeVisible();
+		await shot("manager-towers");
+		const galpao = await projectId("Galpão Logístico Sul");
+		await page.goto(`/projects/${galpao}`);
+		await expect(page.getByRole("heading", { level: 1, name: "Obra não encontrada" })).toBeVisible();
+		return;
+	}
+
+	await page.goto(`/projects/${await projectId("Galpão Logístico Sul")}`);
+	await expect(page.getByRole("heading", { name: "A obra ainda não tem estrutura" })).toBeVisible();
+	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+	await shot("home-empty");
+
+	const jardins = await projectId("Residencial Jardins");
+	await page.goto(`/projects/${jardins}`);
+	await expect(page.getByRole("heading", { level: 2, name: "Torres" })).toBeVisible();
+	await expect(page.getByRole("link", { name: /^Torre B/ })).toContainText("1º ao 10º");
+	await shot("home-towers");
+
+	await page.getByRole("link", { name: /^Torre A/ }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "Torre A" })).toBeVisible();
+	await expect(page.getByText("Torre · 15 andares · 50 unidades")).toBeVisible();
+	const facade = page.getByRole("list", { name: "Fachada da Torre A" });
+	await expect(facade.getByRole("listitem").first()).toContainText("Cobertura");
+	await shot("tower-facade");
+
+	await page.getByRole("link", { name: "9º andar" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "9º andar" })).toBeVisible();
+	await expect(page.getByText("Andar · Torre A · 4 unidades")).toBeVisible();
+	await shot("floor-lists");
+
+	await page.getByRole("link", { name: "903" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "903" })).toBeVisible();
+	await expect(page.getByText("Unidade · Torre A · 9º andar")).toBeVisible();
+	await shot("unit-band");
+	await page.getByRole("link", { name: "9º andar" }).click();
+	await page.getByRole("link", { name: "Torre A" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "Torre A" })).toBeVisible();
+
+	await page.goto(`/projects/${await projectId("Edifício Aurora")}`);
+	await expect(page.getByRole("heading", { level: 2, name: "Fachada" })).toBeVisible();
+	await expect(page.getByText("Torre A")).toHaveCount(0);
+	await shot("home-single-tower");
+
+	await page.goto(`/projects/${await projectId("Condomínio Porto Belo")}/locations/${await locationId("Condomínio Porto Belo", "tower", "Torre B")}`);
+	await expect(page.getByRole("heading", { name: "A Torre B ainda não tem andares" })).toBeVisible();
+	await shot("tower-no-floors");
+
+	await page.goto(`/projects/${await projectId("Residencial Vila Nova")}`);
+	await expect(page.getByText(delivered)).toBeVisible();
+	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+	await shot("home-delivered");
+
+	await page.goto(`/projects/${await projectId("Condomínio Bela Vista")}`);
+	await expect(page.getByText(delivered)).toBeVisible();
+	await expect(page.getByRole("heading", { name: "A obra ainda não tem estrutura" })).toBeVisible();
+
+	await page.goto(`/projects/${jardins}/locations/${missing}`);
+	await expect(page.getByRole("heading", { name: "Local não encontrado" })).toBeVisible();
+	await shot("location-not-found");
+	await page.getByRole("link", { name: "Voltar para a obra" }).click();
+	await expect(page).toHaveURL(`/projects/${jardins}`);
+
+	const big = await projectId("Parque das Águas · Fase 2");
+	await page.goto(`/projects/${big}`);
+	await expect(page.getByRole("heading", { level: 2, name: "Torres" })).toBeVisible();
+	await page.getByRole("link", { name: /^Torre B/ }).click();
+	await expect(page.getByRole("list", { name: "Fachada da Torre B" }).getByRole("listitem")).toHaveCount(22);
+	await shot("big-tower");
+}

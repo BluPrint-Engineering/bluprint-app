@@ -5,7 +5,7 @@ The maintained source for verifying BluPrint's user-facing behaviour. Read this 
 ## Baseline preconditions
 
 - An instance started by this run with `bun .claude/skills/verify/scripts/instance.ts up`, and `instance.ts doctor` printing no `FAIL`.
-- The seed from `apps/api/src/db/seed/fixture.ts`, freshly applied by `up`. Construtora Horizonte has 14 projects in progress and 3 delivered; Ana Ribeiro (`ana@horizonte.test`, admin) sees all of them, Carla Mendes (`carla@horizonte.test`, manager) only those she belongs to; Elisa Rocha (`elisa@horizonte.test`, assistant) is on `Residencial Jardins` and `Edifício Aurora`. Every seeded password is `canteiro-de-obras-azul`.
+- The seed from `apps/api/src/db/seed/fixture.ts`, freshly applied by `up`. Construtora Horizonte has 14 projects in progress and 3 delivered, five of them with structure (see [Project structure](./structure.md)); Ana Ribeiro (`ana@horizonte.test`, admin) sees all of them, Carla Mendes (`carla@horizonte.test`, manager) only those she belongs to; Elisa Rocha (`elisa@horizonte.test`, assistant) is on `Residencial Jardins` and `Edifício Aurora`. Every seeded password is `canteiro-de-obras-azul`.
 - Never drive an instance this run did not start.
 
 ## Driving conventions
@@ -36,4 +36,5 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Project home and not found](./project-home.md): a card opens the project's home (name, status, role, blank state), and the not-found pages for unknown addresses and projects the user cannot see.
 - [Project configuration and rename](./project-configuration.md): the configuration page (`Dados da obra`), renaming in place, and why an assistant or a delivered project cannot rename.
 - [New project](./new-project.md): the Nova obra page, its free-units help, validation, creation and the page without free units.
+- [Project structure](./structure.md): a project's home with its towers or façade, the tower façade, the floor lists, the unit and common-area bands, and where the seed holds each edge case.
 - [Project filters, search and sort](./project-filters.md): status, manager, name search and sort, from the desktop toolbar and the phone sheet.

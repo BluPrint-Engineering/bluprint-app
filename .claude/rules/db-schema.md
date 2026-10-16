@@ -7,7 +7,7 @@ paths:
 
 # DB schema conventions
 
-The designed model is `docs/data-model.md`; where it disagrees with a migration, the migration wins. Migrated so far: Better Auth's four tables plus `organization`, `member`, `license`, `project` and `project_member`. Everything below `project` in the model is designed but not migrated.
+The designed model is `docs/data-model.md`; where it disagrees with a migration, the migration wins. Migrated so far: Better Auth's four tables plus `organization`, `member`, `license`, `project`, `project_member` and `location`. Everything below `location` in the model is designed but not migrated.
 
 - **A table is `<name>.entity.ts` in the feature that owns it, and one line in `src/db/schema.ts`.** That barrel is the only list `createDatabase` and `drizzle-kit` read: an entity left out gets no migration and no `db.query`; `db/schema.spec.ts` fails it.
 - **`src/auth/auth.entity.ts` is generated.** Change the Better Auth options in `apps/api/auth.config.ts`, run `bun run --filter @bluprint/api auth:generate`, then `db:generate` ([0013](../../docs/adr/0013-better-auth-tables-are-generated.md)).

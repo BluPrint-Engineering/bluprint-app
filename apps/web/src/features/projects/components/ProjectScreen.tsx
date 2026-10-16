@@ -1,30 +1,22 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { CircleAlert, WifiOff } from "lucide-react";
+import { LoadFailure } from "@/components/LoadFailure";
 import { NotFound } from "@/components/NotFound";
-import { Button } from "@/components/ui/button";
+import { PageMain } from "@/components/PageBand";
+import { firstLoadState } from "@/lib/firstLoadState";
 import { isProjectId, isProjectNotFound, projectQueryOptions } from "../api";
-import { firstLoadState } from "./firstLoadState";
 import {
 	ProjectHeader,
 	ProjectHeaderBackOnly,
 	ProjectHeaderSkeleton,
 	type ProjectSection,
 } from "./ProjectHeader";
-import { StateBlock } from "./StateBlock";
-
-export function ProjectMain({ children }: { children: React.ReactNode }) {
-	return (
-		<main className="mx-auto w-full max-w-(--content-max-wide) flex-1 px-(--page-pad) pt-(--space-5) pb-(--space-8) md:px-(--page-pad-desktop) md:pt-(--space-8) md:pb-(--space-12)">
-			{children}
-		</main>
-	);
-}
 
 interface ProjectScreenProps {
 	projectId: string;
 	section: ProjectSection;
 	loading: React.ReactNode;
+	lockLine?: (project: ProjectSummary) => string | undefined;
 	children: (project: ProjectSummary) => React.ReactNode;
 }
 
@@ -32,6 +24,7 @@ export function ProjectScreen({
 	projectId,
 	section,
 	loading,
+	lockLine,
 	children,
 }: ProjectScreenProps) {
 	const valid = isProjectId(projectId);
@@ -45,8 +38,12 @@ export function ProjectScreen({
 	if (query.data) {
 		return (
 			<>
-				<ProjectHeader project={query.data} section={section} />
-				<ProjectMain>{children(query.data)}</ProjectMain>
+				<ProjectHeader
+					project={query.data}
+					section={section}
+					lockLine={lockLine?.(query.data)}
+				/>
+				<PageMain>{children(query.data)}</PageMain>
 			</>
 		);
 	}
@@ -56,7 +53,7 @@ export function ProjectScreen({
 		return (
 			<>
 				<ProjectHeaderSkeleton {...scope} />
-				<ProjectMain>{loading}</ProjectMain>
+				<PageMain>{loading}</PageMain>
 			</>
 		);
 	}
@@ -64,26 +61,13 @@ export function ProjectScreen({
 	return (
 		<>
 			<ProjectHeaderBackOnly {...scope} />
-			<ProjectMain>
-				{state === "failed" ? (
-					<StateBlock
-						role="alert"
-						icon={CircleAlert}
-						title="Não foi possível carregar a obra"
-						description="Confira sua conexão e tente de novo."
-					>
-						<Button size="lg" onClick={() => query.refetch()}>
-							Tentar de novo
-						</Button>
-					</StateBlock>
-				) : (
-					<StateBlock
-						icon={WifiOff}
-						title="Sem conexão."
-						description="Continuamos assim que a internet voltar."
-					/>
-				)}
-			</ProjectMain>
+			<PageMain>
+				<LoadFailure
+					state={state}
+					title="Não foi possível carregar a obra"
+					onRetry={() => query.refetch()}
+				/>
+			</PageMain>
 		</>
 	);
 }

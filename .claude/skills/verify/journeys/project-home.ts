@@ -22,11 +22,18 @@ export default async function projectHome({ page, shot, expect, query, accounts 
 	await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}$/);
 	await expect(page.getByRole("heading", { level: 1, name: "Residencial Jardins" })).toBeVisible();
 	await expect(page.getByText("Em andamento")).toBeVisible();
-	await expect(page.getByRole("heading", { name: "A obra ainda não tem estrutura" })).toBeVisible();
+	await expect(page.getByRole("heading", { level: 2, name: "Torres" })).toBeVisible();
 	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
 	if (manager) await expect(page.getByText("Gerente de obra")).toBeVisible();
 	else await expect(page.getByText("Gerente de obra")).toHaveCount(0);
 	await shot("home-active");
+
+	if (!manager) {
+		await page.goto("/projects?q=Galpão");
+		await page.getByRole("link", { name: /Galpão Logístico Sul/ }).click();
+		await expect(page.getByRole("heading", { name: "A obra ainda não tem estrutura" })).toBeVisible();
+		await shot("home-blank");
+	}
 
 	await page.getByRole("link", { name: "Obras", exact: true }).click();
 	await expect(page).toHaveURL(/\/projects/);
@@ -34,7 +41,7 @@ export default async function projectHome({ page, shot, expect, query, accounts 
 	await page.goto("/projects?status=delivered&q=Vila Nova");
 	await page.getByRole("link", { name: /Residencial Vila Nova/ }).click();
 	await expect(page.getByRole("heading", { level: 1, name: "Residencial Vila Nova" })).toBeVisible();
-	await expect(page.getByText("Entregue")).toBeVisible();
+	await expect(page.getByText("Entregue", { exact: true })).toBeVisible();
 	await expect(page.getByText("Em andamento")).toHaveCount(0);
 	await shot("home-delivered");
 

@@ -4,10 +4,10 @@ import type {
 } from "@bluprint/shared";
 import { Building, CircleAlert, Search, WifiOff } from "lucide-react";
 import type * as React from "react";
+import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { type FirstLoad, firstLoadState } from "../components/firstLoadState";
-import { StateBlock } from "../components/StateBlock";
+import { type FirstLoad, firstLoadState } from "@/lib/firstLoadState";
 import { clearAllFilters, isNarrowed, type ProjectsFilters } from "../filters";
 import { ListSkeleton } from "./ProjectList";
 import type { ProjectsToolbarProps } from "./ProjectsToolbar";

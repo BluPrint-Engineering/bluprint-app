@@ -1,0 +1,1 @@
+export const LOCATION_NOT_FOUND = "LOCATION_NOT_FOUND";
