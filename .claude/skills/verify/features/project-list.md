@@ -8,7 +8,7 @@
 - `projects-phone-scroll` shows 12 cards in one column on the phone and loads the rest on scroll, with no pager; a `Carregar mais` fallback button sits below the list until everything is loaded.
 - `projects-desktop-pages` shows `Mostrando 1–12 de 14` and pages with `Página 2`, putting `?page=2` in the address.
 - `projects-role-scope` shows an admin every project of the organization and a manager only theirs.
-- `projects-empty` shows `Nenhuma obra por aqui` to a user linked to no project.
+- `projects-empty` shows an admin whose organization has no project `Nenhuma obra ainda`, and any other user linked to no project `Nenhuma obra por aqui`.
 
 ## How to get to it (user POV)
 
@@ -26,7 +26,7 @@ Preconditions:
 - **Phone scroll** (`device === "phone"`). `cards.last().scrollIntoViewIfNeeded()`. The list grows to 14 and `Residencial Jardins` is visible; `page.getByRole("navigation", { name: "Páginas de obras" })` and `page.getByRole("button", { name: "Carregar mais" })` are hidden.
 - **Desktop pages** (`device === "desktop"`). `page.getByText("Mostrando 1–12 de 14")` is visible. `page.getByRole("button", { name: "Página 2" }).click()`; the URL becomes `/projects?page=2`, the list has 2 items, and `Mostrando 13–14 de 14` is visible.
 - **Manager scope.** With `--as manager`, the list holds only Carla's projects and no `Gerente:` button exists.
-- **Empty.** Sign up a new account (see [sign-up.md](./sign-up.md)); its `/projects` shows `Nenhuma obra por aqui`.
+- **Empty.** Sign up a new account (see [sign-up.md](./sign-up.md)); it is its organization's admin, so its `/projects` shows `Nenhuma obra ainda`.
 
 ## Gotchas
 
