@@ -301,7 +301,7 @@ obra's units. Open pins wait for #7; until an element lands the UI **hides it** 
 | Gerente filter (admin), `GET /api/projects/managers` | #94 — derived from project membership |
 | Sort `recent`, `name`, `activity`; last activity on the card | #94 — `lastActivityAt`, set at creation |
 | Open pin count, sort `open-pins` | #7 — needs pins |
-| Free units link, 0-livres state, Nova obra | #46 — `GET /api/organization/units` (`free`, `reclaimable`) is served; a `license` row is a purchase of units (signup seeds one of 500) and `POST /api/projects` is served (contract in `../obra/README.md`, What the API serves today) |
+| Free units line, 0-livres state, Nova obra | Served (#46), the line as text until the Unidades screen — `GET /api/organization/units` (`free`, `reclaimable`) is served; a `license` row is a purchase of units (signup seeds one of 500) and `POST /api/projects` is served (contract in `../obra/README.md`, What the API serves today) |
 | Unidades screen (`/units`), reached from the free units link | Ticket 2.13 — see `../unidades/` |
 | Profile photo in the Avatar | Shown when `user.image` is set; upload is out of scope |
 
