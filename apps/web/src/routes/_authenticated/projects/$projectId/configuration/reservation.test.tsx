@@ -684,6 +684,7 @@ describe("the link to Alterar reserva", () => {
 			).not.toBeInTheDocument();
 		});
 		expect(router.state.location.search).toEqual({});
+		expect(router.history.canGoBack()).toBe(false);
 	});
 
 	test("opening it from the button puts it in the address", async () => {
@@ -694,6 +695,25 @@ describe("the link to Alterar reserva", () => {
 		await openDialog();
 
 		expect(router.state.location.search).toEqual({ reserva: "alterar" });
+	});
+
+	test("closing it after opening it from the button leaves nothing for Back to reopen", async () => {
+		const { handler } = reservationApi(OBRA);
+		stubApi(signedIn, { api: handler });
+		const { router } = renderAt(CONFIG_PATH);
+		const dialog = await openDialog();
+
+		await userEvent.click(
+			within(dialog).getByRole("button", { name: "Cancelar" }),
+		);
+
+		await waitFor(() => {
+			expect(router.state.location.search).toEqual({});
+		});
+		expect(router.history.canGoBack()).toBe(false);
+		expect(
+			screen.queryByRole("dialog", { name: "Alterar reserva" }),
+		).not.toBeInTheDocument();
 	});
 
 	test("does nothing for a manager who follows it", async () => {

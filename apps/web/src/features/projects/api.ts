@@ -148,6 +148,14 @@ export function usedUnitsOf(error: unknown) {
 		: undefined;
 }
 
+export function isReservationRefusal(error: unknown) {
+	return (
+		isProjectDelivered(error) ||
+		usedUnitsOf(error) !== undefined ||
+		availableUnitsOf(error) !== undefined
+	);
+}
+
 export function useChangeReservationMutation(projectId: string) {
 	const queryClient = useQueryClient();
 	const { queryKey } = projectQueryOptions(projectId);
@@ -167,11 +175,7 @@ export function useChangeReservationMutation(projectId: string) {
 			});
 		},
 		onError: (error) => {
-			if (
-				isProjectDelivered(error) ||
-				usedUnitsOf(error) !== undefined ||
-				availableUnitsOf(error) !== undefined
-			) {
+			if (isReservationRefusal(error)) {
 				void queryClient.invalidateQueries(organizationUnitsQueryOptions);
 				return queryClient.invalidateQueries({ queryKey });
 			}

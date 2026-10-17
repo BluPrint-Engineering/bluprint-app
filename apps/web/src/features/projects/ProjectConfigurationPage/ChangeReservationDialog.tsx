@@ -31,6 +31,7 @@ import { organizationUnitsQueryOptions } from "../../account/api";
 import {
 	availableUnitsOf,
 	isProjectDelivered,
+	isReservationRefusal,
 	useChangeReservationMutation,
 	usedUnitsOf,
 } from "../api";
@@ -111,10 +112,6 @@ export function ChangeReservationDialog({
 	const blocked = wanted === undefined || free === undefined || !!invalid;
 	const error = refused ?? (touched ? invalid : undefined);
 	const changed = wanted !== undefined && wanted !== reserved;
-	const knownRefusal =
-		isProjectDelivered(change.error) ||
-		usedUnitsOf(change.error) !== undefined ||
-		availableUnitsOf(change.error) !== undefined;
 
 	function focusOpener(event: Event) {
 		event.preventDefault();
@@ -174,7 +171,7 @@ export function ChangeReservationDialog({
 					</Button>
 				</Alert>
 			)}
-			{change.isError && !knownRefusal && (
+			{change.isError && !isReservationRefusal(change.error) && (
 				<Alert variant="destructive">
 					<AlertDescription>{SAVE_FAILED}</AlertDescription>
 				</Alert>
