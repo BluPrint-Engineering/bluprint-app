@@ -111,7 +111,7 @@ A destructive menu item is the DropdownMenuItem `destructive` variant.
 ### Torre - `/projects/:id/locations/:towerId`
 
 - **T1 façade** (Q2): a card (padding 20px desktop / 12px mobile, radius 14px, hairline ring). One row per floor, top
-  floor first, gap 6px. Each row is a grid: floor label column (88px desktop / 52px mobile), then one column per unit
+  floor first, gap 6px. Each row is a grid: floor label column (88px desktop / 56px mobile, 4px right padding), then one column per unit
   up to the tower's widest floor (`minmax(0, 132px)` desktop, `1fr` mobile), then a common-area column (120px / 64px).
   Columns line up across floors, so a floor with fewer units shows the gap where the missing units would be.
   - Floor label: button, 44px tall, 14px/600 muted (Geist Mono for "9º", Geist for "Térreo"), hover `--muted`

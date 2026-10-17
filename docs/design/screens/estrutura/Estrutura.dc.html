@@ -695,7 +695,7 @@ class Component extends DCLogic {
     const rows = [...tower.floors].reverse();
     if (!rows.length) return null;
     const maxUnits = Math.max(1, ...rows.map(f => f.units.length));
-    const labelW = desk ? "88px" : "52px", areaW = desk ? "120px" : "64px";
+    const labelW = desk ? "88px" : "56px", areaW = desk ? "120px" : "64px";
     const unitCol = desk ? "minmax(0, 132px)" : "minmax(0, 1fr)";
     const cols = labelW + " repeat(" + maxUnits + ", " + unitCol + ") " + areaW;
     const areaChip = a => h("button", { key: a.id, type: "button", className: "es-chip es-chip--area", onClick: this.go("area", a.id), title: a.name, style: { width: "100%", flex: "none" } }, a.name);
