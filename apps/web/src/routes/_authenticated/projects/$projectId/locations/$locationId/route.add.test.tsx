@@ -360,7 +360,8 @@ describe("adding a unit on a floor", () => {
 		const row = await screen.findByRole("button", {
 			name: "Adicionar unidade",
 		});
-		expect(row).toBeDisabled();
+		expect(row).toHaveAttribute("aria-disabled", "true");
+		await waitFor(() => expect(row).toHaveFocus());
 		expect(
 			screen.getByText("A reserva da obra acabou.", { exact: false }),
 		).toBeInTheDocument();
@@ -385,7 +386,7 @@ describe("the reserva is over", () => {
 			const row = await screen.findByRole("button", {
 				name: "Adicionar unidade",
 			});
-			await waitFor(() => expect(row).toBeDisabled());
+			await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
 			expect(row).toHaveAccessibleDescription(
 				"A reserva da obra acabou. Fale com o admin da construtora.",
 			);
@@ -403,7 +404,7 @@ describe("the reserva is over", () => {
 		await waitFor(() =>
 			expect(
 				screen.getByRole("button", { name: "Adicionar unidade" }),
-			).toBeDisabled(),
+			).toHaveAttribute("aria-disabled", "true"),
 		);
 
 		await user.click(
@@ -436,7 +437,7 @@ describe("the reserva is over", () => {
 		const row = await screen.findByRole("button", {
 			name: "Adicionar unidade",
 		});
-		await waitFor(() => expect(row).toBeDisabled());
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
 		expect(row).toHaveAccessibleDescription(
 			"A reserva da obra acabou. Alterar reserva",
 		);

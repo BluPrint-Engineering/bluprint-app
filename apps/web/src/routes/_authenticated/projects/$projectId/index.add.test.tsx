@@ -1,10 +1,10 @@
-import type { ProjectAccessRole } from "@bluprint/shared";
+import { PROJECT_DELIVERED, type ProjectAccessRole } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
-import { renderAt, signedIn, stubApi } from "@/test/renderApp";
+import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
 import {
 	numberedFloors,
 	structureOf,
@@ -294,6 +294,39 @@ describe("several towers (E2)", () => {
 		expect(within(dialog).getByRole("textbox", { name: "Nome" })).toHaveValue(
 			"Guarita",
 		);
+	});
+
+	test("turns read-only and drops the tower form when a write answers PROJECT_DELIVERED", async () => {
+		const api = writableApi(obra(), severalTowers(), {
+			create: () => {
+				api.state.summary = obra("manager", true);
+				return json(
+					{
+						type: "about:blank",
+						title: "Conflict",
+						status: 409,
+						code: PROJECT_DELIVERED,
+					},
+					409,
+				);
+			},
+		});
+		stubApi(signedIn, { api: api.handler });
+		renderAt(OBRA_PATH);
+		await openAddMenu();
+		await user.click(await screen.findByRole("menuitem", { name: "Torre" }));
+		await screen.findByRole("textbox", { name: "Nome da torre" });
+
+		await user.keyboard("{Enter}");
+
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("textbox", { name: "Nome da torre" }),
+			).not.toBeInTheDocument(),
+		);
+		expect(
+			within(screen.getByRole("main")).queryByRole("button"),
+		).not.toBeInTheDocument();
 	});
 
 	test("shows a delivered obra with no add menu and no row menus (E5)", async () => {

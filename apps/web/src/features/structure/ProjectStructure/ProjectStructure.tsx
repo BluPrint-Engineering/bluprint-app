@@ -212,7 +212,7 @@ function SingleTower({
 						/>
 					)}
 				</div>
-				{adding.is("tower") && (
+				{canEdit && adding.is("tower") && (
 					<TowerForm
 						projectId={projectId}
 						structure={structure}
@@ -278,7 +278,7 @@ function SeveralTowers({
 					{structure.towers.length > 0 && (
 						<TowerCards projectId={projectId} towers={structure.towers} />
 					)}
-					{adding.is("tower") && (
+					{canEdit && adding.is("tower") && (
 						<TowerForm
 							projectId={projectId}
 							structure={structure}

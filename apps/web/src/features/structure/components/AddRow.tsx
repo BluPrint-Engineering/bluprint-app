@@ -172,9 +172,9 @@ export function AddRow(props: AddRowProps) {
 				<Button
 					ref={button}
 					variant="ghost"
-					disabled
+					aria-disabled
 					aria-describedby={noteId}
-					className="text-primary"
+					className="text-primary aria-disabled:pointer-events-none aria-disabled:opacity-50"
 				>
 					<Plus className="size-4.5" aria-hidden="true" />
 					{label}
