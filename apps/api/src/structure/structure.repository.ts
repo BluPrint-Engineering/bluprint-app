@@ -93,6 +93,13 @@ export class StructureRepository {
 		}
 	}
 
+	async rename(locationId: string, name: string): Promise<void> {
+		await this.txHost.tx
+			.update(location)
+			.set({ name })
+			.where(eq(location.id, locationId));
+	}
+
 	async find(
 		projectId: string,
 		locationId: string,

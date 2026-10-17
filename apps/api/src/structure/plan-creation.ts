@@ -1,5 +1,4 @@
 import {
-	comparableLocationName,
 	LOCATION_ID_TAKEN,
 	LOCATION_NAME_TAKEN,
 	LOCATION_PARENT_INVALID,
@@ -11,6 +10,7 @@ import {
 	UNIT_TYPE_NOT_FOUND,
 } from "@bluprint/shared";
 import { ProblemException } from "../common/problems/problem.exception";
+import { nameKey } from "./location-names";
 import { canHoldChild } from "./location-pairs";
 import type { LocationRow } from "./location-row";
 
@@ -148,24 +148,13 @@ export function planCreation(
 		known.set(entry.id, entry);
 	}
 
-	const scopeOf = ({
-		type,
-		parentId,
-	}: Pick<LocationRow, "type" | "parentId">) => {
-		if (type === "unit") {
-			const floor = parentId === null ? undefined : known.get(parentId);
-			return `unit|${floor?.parentId}`;
-		}
-		return `${type}|${type === "tower" ? "" : parentId}`;
-	};
-	const nameKey = (row: Pick<LocationRow, "type" | "parentId">, name: string) =>
-		`${scopeOf(row)}|${comparableLocationName(name)}`;
-
 	const fresh = requested.filter((entry) => !stored.has(entry.id));
-	const claimed = new Set(inProject.map((row) => nameKey(row, row.name)));
+	const claimed = new Set(
+		inProject.map((row) => nameKey(row, row.name, known)),
+	);
 	const clashes = new Set<string>();
 	for (const entry of fresh) {
-		const key = nameKey(entry, entry.name);
+		const key = nameKey(entry, entry.name, known);
 		if (claimed.has(key)) clashes.add(entry.name);
 		claimed.add(key);
 	}

@@ -26,7 +26,7 @@ Preconditions:
 - `instance.ts doctor` prints no `FAIL`.
 - Run `.claude/skills/verify/journeys/project-home.ts` with `--as admin` and again with `--as manager` (Carla is the manager of `Residencial Jardins` and of the delivered `Residencial Vila Nova`); `--as none` for `notfound-signed-out`.
 
-- **Open from the list.** `page.goto("/projects?q=Jardins")`, then `page.getByRole("link", { name: /Residencial Jardins/ }).click()`. The URL matches `/projects/<uuid>`, `page.getByRole("heading", { level: 1, name: "Residencial Jardins" })` and `page.getByText("Em andamento")` are visible, `page.getByRole("heading", { level: 2, name: "Torres" })` is visible and `page.getByRole("main").getByRole("button")` has no match (the blank state's `Montar estrutura` is a link). As admin, `Galpão Logístico Sul` (no structure) shows `A obra ainda não tem estrutura`. As a manager `page.getByText("Gerente de obra")` is visible; as an admin it is not.
+- **Open from the list.** `page.goto("/projects?q=Jardins")`, then `page.getByRole("link", { name: /Residencial Jardins/ }).click()`. The URL matches `/projects/<uuid>`, `page.getByRole("heading", { level: 1, name: "Residencial Jardins" })` and `page.getByText("Em andamento")` are visible, `page.getByRole("heading", { level: 2, name: "Torres" })` is visible and `page.getByRole("button", { name: "Adicionar", exact: true })` is visible (the in-progress home adds towers and common areas in place; the blank state's `Montar estrutura` is a link). As admin, `Galpão Logístico Sul` (no structure) shows `A obra ainda não tem estrutura`. As a manager `page.getByText("Gerente de obra")` is visible; as an admin it is not.
 - **Back.** `page.getByRole("link", { name: "Obras", exact: true }).click()` returns to `/projects`.
 - **Delivered.** `page.goto("/projects?status=delivered&q=Vila Nova")`, click the card; `page.getByText("Entregue", { exact: true })` is visible and `Em andamento` is not.
 - **Not found.** `page.goto("/projects/not-a-uuid")` and `page.goto("/projects/0190a000-0000-7000-8000-000000000000")` show `page.getByRole("heading", { level: 1, name: "Obra não encontrada" })`; `page.goto("/nao-existe")` shows `Página não encontrada`. `page.getByRole("link", { name: "Voltar para obras" }).click()` lands on `/projects`.
@@ -35,7 +35,7 @@ Preconditions:
 
 ## Gotchas
 
-- The header carries the entry `Configuração da obra`, covered in [project-configuration.md](./project-configuration.md); the `main` block has no button, only the structure links of [structure.md](./structure.md).
+- The header carries the entry `Configuração da obra`, covered in [project-configuration.md](./project-configuration.md); the `main` block carries the add menus and row menus of [structure.md](./structure.md) on an in-progress project and no button on a delivered one.
 - The back link is named `Obras`, and the header logo link is `BluPrint, obras`: select the back link with `{ name: "Obras", exact: true }`.
 - `Entregue` also appears as a filter label on the list; assert it on the project page only.
 - The not-found pages keep the app header, so the account menu is still there.

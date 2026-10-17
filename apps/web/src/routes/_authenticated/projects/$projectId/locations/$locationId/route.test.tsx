@@ -200,7 +200,7 @@ describe("tower page", () => {
 		});
 	});
 
-	test("says the tower has no floors yet, keeping its common areas, with no button (T3)", async () => {
+	test("says the tower has no floors yet, keeping its common areas (T3)", async () => {
 		stubApi(signedIn, { api: api(several) });
 
 		renderAt(pathOf(emptyTower.id));
@@ -218,9 +218,6 @@ describe("tower page", () => {
 		expect(
 			screen.getByRole("link", { name: "Churrasqueira" }),
 		).toBeInTheDocument();
-		expect(
-			within(screen.getByRole("main")).queryByRole("button"),
-		).not.toBeInTheDocument();
 		expect(
 			screen.getByText("Torre · 0 andares · 0 unidades"),
 		).toBeInTheDocument();
@@ -447,9 +444,6 @@ describe("floor page", () => {
 				.getAllByRole("link")
 				.map((link) => link.textContent),
 		).toEqual(["Hall"]);
-		expect(
-			within(screen.getByRole("main")).queryByRole("button"),
-		).not.toBeInTheDocument();
 
 		await userEvent.click(within(units).getByRole("link", { name: /^902/ }));
 		await waitFor(() => {
@@ -471,7 +465,7 @@ describe("floor page", () => {
 	});
 
 	test("says a floor without units has none, and still lists its common areas", async () => {
-		stubApi(signedIn, { api: api(several) });
+		stubApi(signedIn, { api: api(several, { ...OBRA, status: "delivered" }) });
 
 		renderAt(pathOf(basement.id));
 

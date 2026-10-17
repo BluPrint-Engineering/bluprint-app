@@ -1,8 +1,11 @@
 import {
+	type CreateStructure,
 	type DroppedRoom,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	type LocationRef,
+	type OrganizationUnits,
+	type ProjectSummary,
 	type Room,
 	type Structure,
 	type StructureFloor,
@@ -244,4 +247,168 @@ export function combine(...handlers: ApiHandler[]): ApiHandler {
 		}
 		return undefined;
 	};
+}
+
+type Reply = Promise<Response> | Response;
+
+type Named = { id: string; name: string };
+
+function everyNode(
+	structure: Structure,
+): (Named & { type: LocationRef["type"] })[] {
+	return [
+		...structure.commonAreas.map((a) => ({
+			...a,
+			type: "common_area" as const,
+		})),
+		...structure.towers.flatMap((t) => [
+			{ ...t, type: "tower" as const },
+			...t.commonAreas.map((a) => ({ ...a, type: "common_area" as const })),
+			...t.floors.flatMap((f) => [
+				{ ...f, type: "floor" as const },
+				...f.commonAreas.map((a) => ({ ...a, type: "common_area" as const })),
+				...f.units.map((u) => ({ ...u, type: "unit" as const })),
+			]),
+		]),
+	];
+}
+
+function recount(structure: Structure) {
+	const floors = structure.towers.flatMap((t) => t.floors);
+	structure.counts = {
+		towers: structure.towers.length,
+		floors: floors.length,
+		units: floors.reduce((sum, f) => sum + f.units.length, 0),
+		commonAreas: everyNode(structure).filter((n) => n.type === "common_area")
+			.length,
+	};
+}
+
+function applyCreation(structure: Structure, body: CreateStructure) {
+	for (const entry of body.locations) {
+		const { id, name, parentId } = entry;
+		if (entry.type === "tower") {
+			structure.towers.push({ id, name, floors: [], commonAreas: [] });
+		} else if (entry.type === "floor") {
+			structure.towers
+				.find((t) => t.id === parentId)
+				?.floors.push({ id, name, units: [], commonAreas: [] });
+		} else if (entry.type === "unit") {
+			structure.towers
+				.flatMap((t) => t.floors)
+				.find((f) => f.id === parentId)
+				?.units.push({ id, name, unitType: null, changes: 0 });
+		} else if (parentId === null) {
+			structure.commonAreas.push({ id, name });
+		} else {
+			const parent =
+				structure.towers.find((t) => t.id === parentId) ??
+				structure.towers
+					.flatMap((t) => t.floors)
+					.find((f) => f.id === parentId);
+			parent?.commonAreas.push({ id, name });
+		}
+	}
+	recount(structure);
+}
+
+export interface WritableApiOptions {
+	remaining?: number;
+	organization?: OrganizationUnits;
+	create?: (body: CreateStructure, attempt: number) => Reply | undefined;
+	rename?: (
+		locationId: string,
+		name: string,
+		attempt: number,
+	) => Reply | undefined;
+}
+
+export function writableApi(
+	initial: ProjectSummary,
+	structure: Structure,
+	options: WritableApiOptions = {},
+) {
+	const state = {
+		summary: initial,
+		units: {
+			reserved: initial.units.reserved,
+			remaining: options.remaining ?? 100,
+		},
+	};
+	const created: CreateStructure[] = [];
+	const renamed: { locationId: string; name: string }[] = [];
+	const base = `/api/projects/${initial.id}`;
+	const balance = () => ({
+		reserved: state.units.reserved,
+		used: state.units.reserved - state.units.remaining,
+		remaining: state.units.remaining,
+	});
+
+	const handler: ApiHandler = combine(
+		(url, init) => {
+			if (url.pathname === "/api/organization/units") {
+				return json(
+					options.organization ?? {
+						contracted: 500,
+						reserved: 300,
+						free: 200,
+						reclaimable: 0,
+					},
+				);
+			}
+			if (url.pathname === base) return json(state.summary);
+			if (url.pathname === `${base}/units`) {
+				if (init?.method !== "PATCH") return json(balance());
+				const { reserved } = JSON.parse(String(init.body)) as {
+					reserved: number;
+				};
+				state.units = {
+					reserved,
+					remaining: state.units.remaining + reserved - state.units.reserved,
+				};
+				state.summary = {
+					...state.summary,
+					units: { reserved, used: reserved - state.units.remaining },
+				};
+				return json(state.summary);
+			}
+			if (url.pathname === `${base}/structure` && init?.method === "POST") {
+				const body = JSON.parse(String(init.body)) as CreateStructure;
+				created.push(body);
+				const answered = options.create?.(body, created.length);
+				if (answered) return answered;
+				applyCreation(structure, body);
+				state.units.remaining -= body.locations.filter(
+					(entry) => entry.type === "unit",
+				).length;
+				return json({ counts: structure.counts }, 201);
+			}
+			const target = new RegExp(`^${base}/locations/([^/]+)$`).exec(
+				url.pathname,
+			);
+			if (target && init?.method === "PATCH") {
+				const locationId = target[1] ?? "";
+				const { name } = JSON.parse(String(init.body)) as { name: string };
+				renamed.push({ locationId, name });
+				const answered = options.rename?.(locationId, name, renamed.length);
+				if (answered) return answered;
+				const node = everyNode(structure).find((n) => n.id === locationId);
+				if (!node) return undefined;
+				const live = [
+					...structure.commonAreas,
+					...structure.towers,
+					...structure.towers.flatMap((t) => [...t.commonAreas, ...t.floors]),
+					...structure.towers.flatMap((t) =>
+						t.floors.flatMap((f) => [...f.commonAreas, ...f.units]),
+					),
+				].find((n) => n.id === locationId);
+				if (live) live.name = name;
+				return json({ id: locationId, type: node.type, name });
+			}
+			return undefined;
+		},
+		structureApi(initial.id, structure),
+	);
+
+	return { handler, state, created, renamed };
 }

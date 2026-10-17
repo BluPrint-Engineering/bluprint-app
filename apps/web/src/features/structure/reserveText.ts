@@ -1,4 +1,4 @@
-import { plural } from "../plural";
+import { plural } from "./plural";
 
 const NBSP = " ";
 
@@ -24,6 +24,12 @@ export function planLine(
 			? "Usa 1 da única unidade que resta nesta obra."
 			: `Usa ${units} das ${remaining} unidades que restam nesta obra.`;
 	return `${uses} Depois de ${verb}, ${sobram(remaining - units)}.`;
+}
+
+export function addUnitLine(remaining: number): string {
+	return remaining === 1
+		? "Usa 1 da única unidade que resta nesta obra."
+		: `Usa 1 das ${remaining} unidades que restam nesta obra.`;
 }
 
 export function overReserveText(

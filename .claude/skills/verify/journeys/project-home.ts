@@ -23,7 +23,7 @@ export default async function projectHome({ page, shot, expect, query, accounts 
 	await expect(page.getByRole("heading", { level: 1, name: "Residencial Jardins" })).toBeVisible();
 	await expect(page.getByText("Em andamento")).toBeVisible();
 	await expect(page.getByRole("heading", { level: 2, name: "Torres" })).toBeVisible();
-	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+	await expect(page.getByRole("button", { name: "Adicionar", exact: true })).toBeVisible();
 	if (manager) await expect(page.getByText("Gerente de obra")).toBeVisible();
 	else await expect(page.getByText("Gerente de obra")).toHaveCount(0);
 	await shot("home-active");

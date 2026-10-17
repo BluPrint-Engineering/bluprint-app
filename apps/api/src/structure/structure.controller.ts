@@ -1,9 +1,10 @@
 import type {
 	CreateStructureResult,
 	LocationDetail,
+	LocationRef,
 	Structure,
 } from "@bluprint/shared";
-import { Body, Controller, Get, Param, Post } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
@@ -13,6 +14,8 @@ import { CreateStructureResultDto } from "./dto/create-structure-result.dto";
 import { CreateStructureDto } from "./dto/create-structure.dto";
 import { LocationDetailDto } from "./dto/location-detail.dto";
 import { LocationParamsDto } from "./dto/location-params.dto";
+import { LocationRefDto } from "./dto/location-ref.dto";
+import { RenameLocationDto } from "./dto/rename-location.dto";
 import { StructureDto } from "./dto/structure.dto";
 import { StructureService } from "./structure.service";
 
@@ -80,6 +83,31 @@ export class StructureController {
 			session.user.id,
 			params.id,
 			params.locationId,
+		);
+	}
+
+	@Patch("locations/:locationId")
+	@ApiOperation({
+		summary: "Rename a location",
+		description:
+			"Changes the name of a tower, floor, unit or common area and answers the location's id, kind and new name. The name is unique where the location sits, as when it is created: a tower in the project, a floor and a unit in their tower, a common area under its parent, ignoring case and repeated spaces; accents count. A name already in use there answers `409 LOCATION_NAME_TAKEN` with the clashing `names`; the location's own name, even in another case, is never a clash. Anyone linked to the project may write, and the admin of its organization; a project that cannot be seen answers `404 PROJECT_NOT_FOUND`, a location that does not exist or belongs to another project `404 LOCATION_NOT_FOUND`, and a delivered project `409 PROJECT_DELIVERED`. One structure write at a time runs per project, and it moves the project's last activity.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The renamed location.",
+		type: LocationRefDto,
+	})
+	@ApiErrorResponses(400, 401, 404, 409)
+	renameLocation(
+		@Session() session: UserSession,
+		@Param() params: LocationParamsDto,
+		@Body() body: RenameLocationDto,
+	): Promise<LocationRef> {
+		return this.structure.rename(
+			session.user.id,
+			params.id,
+			params.locationId,
+			body,
 		);
 	}
 }

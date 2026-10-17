@@ -1,0 +1,70 @@
+import type { ProjectSummary } from "@bluprint/shared";
+import { useQuery } from "@tanstack/react-query";
+import { useRef, useState } from "react";
+import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
+import { projectUnitsQueryOptions } from "../api";
+import { addUnitLine } from "../reserveText";
+import { AddRow, type AddRowProps } from "./AddRow";
+
+type AddUnitRowProps = Omit<
+	AddRowProps,
+	| "projectId"
+	| "type"
+	| "kind"
+	| "label"
+	| "hint"
+	| "hintLoading"
+	| "blocked"
+	| "scope"
+> & { project: ProjectSummary };
+
+export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
+	const units = useQuery(projectUnitsQueryOptions(project.id));
+	const admin = project.role === "admin";
+	const [reserving, setReserving] = useState(false);
+	const alterReservation = useRef<HTMLButtonElement>(null);
+	const remaining = units.data?.remaining;
+
+	return (
+		<>
+			<AddRow
+				{...row}
+				projectId={project.id}
+				kind="floor-unit"
+				type="unit"
+				scope="tower"
+				label="Adicionar unidade"
+				hint={remaining === undefined ? undefined : addUnitLine(remaining)}
+				hintLoading={units.isPending}
+				blocked={
+					remaining !== undefined && remaining <= 0 ? (
+						<>
+							A reserva da obra acabou.{" "}
+							{admin ? (
+								<button
+									ref={alterReservation}
+									type="button"
+									className="relative font-medium text-primary underline underline-offset-3 after:absolute after:-inset-y-3 after:inset-x-0"
+									onClick={() => setReserving(true)}
+								>
+									Alterar reserva
+								</button>
+							) : (
+								"Fale com o admin da construtora."
+							)}
+						</>
+					) : undefined
+				}
+			/>
+			{admin && (
+				<ChangeReservationDialog
+					project={project}
+					open={reserving}
+					onOpenChange={setReserving}
+					returnFocus={alterReservation}
+					onSaved={() => void units.refetch()}
+				/>
+			)}
+		</>
+	);
+}

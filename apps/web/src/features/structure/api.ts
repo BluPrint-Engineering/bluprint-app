@@ -6,6 +6,7 @@ import {
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	locationDetailSchema,
+	locationRefSchema,
 	PROJECT_NOT_FOUND,
 	projectUnitsBalanceSchema,
 	ROOM_NAME_TAKEN,
@@ -102,11 +103,11 @@ export function useCreateStructureMutation(projectId: string) {
 				},
 			),
 		onSuccess: () => {
-			void queryClient.invalidateQueries({
-				queryKey: ["structure", projectId],
-			});
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
 			void queryClient.invalidateQueries(organizationUnitsQueryOptions);
+			return queryClient.invalidateQueries({
+				queryKey: ["structure", projectId],
+			});
 		},
 		onError: (error) => {
 			const available = availableUnitsOf(error);
@@ -123,6 +124,35 @@ export function useCreateStructureMutation(projectId: string) {
 				);
 				return queryClient.invalidateQueries({ queryKey });
 			}
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+		},
+	});
+}
+
+export function useRenameLocationMutation(projectId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({ locationId, name }: { locationId: string; name: string }) =>
+			apiFetch(
+				`/projects/${projectId}/locations/${locationId}`,
+				locationRefSchema,
+				{
+					method: "PATCH",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ name }),
+				},
+			),
+		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: ["projects"] });
+			return queryClient.invalidateQueries({
+				queryKey: ["structure", projectId],
+			});
+		},
+		onError: (error) => {
 			if (isProjectDelivered(error)) {
 				return queryClient.invalidateQueries({
 					queryKey: projectQueryOptions(projectId).queryKey,

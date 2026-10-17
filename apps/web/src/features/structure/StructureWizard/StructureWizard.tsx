@@ -22,6 +22,13 @@ import {
 	unitTypeNamesTakenOf,
 	useCreateStructureMutation,
 } from "../api";
+import {
+	createdToast,
+	nameTakenText,
+	overReserveText,
+	planLine,
+	unitTypeNameTakenText,
+} from "../reserveText";
 import { buildPlan } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
 import {
@@ -30,13 +37,6 @@ import {
 	type UnitsLine,
 	UntypedAlert,
 } from "./Preview";
-import {
-	createdToast,
-	nameTakenText,
-	overReserveText,
-	planLine,
-	unitTypeNameTakenText,
-} from "./reserveText";
 import { TowersStep } from "./TowersStep";
 import { UnitTypesStep } from "./UnitTypesStep";
 import {
