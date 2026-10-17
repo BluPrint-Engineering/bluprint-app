@@ -1,0 +1,710 @@
+import { randomUUID } from "node:crypto";
+import { Server } from "node:http";
+import {
+	LOCATION_ID_TAKEN,
+	LOCATION_NAME_TAKEN,
+	LOCATION_PARENT_INVALID,
+	NO_UNITS_LEFT,
+	type NewLocation,
+	PROJECT_DELIVERED,
+	PROJECT_NOT_FOUND,
+	problemDetailsSchema,
+	structureSchema,
+} from "@bluprint/shared";
+import { INestApplication } from "@nestjs/common";
+import { Test } from "@nestjs/testing";
+import { eq } from "drizzle-orm";
+import request from "supertest";
+import { configureApp, nestApplicationOptions } from "../app";
+import { AppModule } from "../app.module";
+import { DATABASE, Database } from "../db/database.module";
+import {
+	member,
+	organization,
+	project,
+	projectMember,
+	user,
+} from "../db/schema";
+import { location } from "./location.entity";
+
+const SIGN_UP = "/api/auth/sign-up/email";
+const PASSWORD = "senha-de-obra-123";
+
+type Person = { userId: string; agent: ReturnType<typeof request.agent> };
+
+let app: INestApplication;
+let server: Server;
+let db: Database;
+
+let admin: Person;
+let manager: Person;
+let assistant: Person;
+let unlinked: Person;
+let outsider: Person;
+let organizationId: string;
+
+const structurePath = (projectId: string) =>
+	`/api/projects/${projectId}/structure`;
+
+async function signUp(name: string): Promise<Person> {
+	const agent = request.agent(server);
+	const res = await agent
+		.post(SIGN_UP)
+		.send({ email: `${randomUUID()}@example.com`, password: PASSWORD, name });
+	return { userId: (res.body as { user: { id: string } }).user.id, agent };
+}
+
+async function organizationOf(userId: string): Promise<string> {
+	const found = await db.query.member.findFirst({
+		where: eq(member.userId, userId),
+	});
+	return found!.organizationId;
+}
+
+async function joinOrganization(
+	person: Person,
+	orgId: string,
+	role: "manager" | "assistant",
+) {
+	await db
+		.delete(organization)
+		.where(eq(organization.id, await organizationOf(person.userId)));
+	await db
+		.insert(member)
+		.values({ organizationId: orgId, userId: person.userId, role });
+}
+
+async function newProject(
+	reservedUnits: number,
+	status: "active" | "delivered" = "active",
+): Promise<string> {
+	const [created] = await db
+		.insert(project)
+		.values({ organizationId, name: "Casa Moinhos", reservedUnits, status })
+		.returning({ id: project.id });
+	await db.insert(projectMember).values([
+		{ projectId: created!.id, userId: manager.userId, role: "manager" },
+		{ projectId: created!.id, userId: assistant.userId, role: "assistant" },
+	]);
+	return created!.id;
+}
+
+const entry = (
+	parentId: string | null,
+	type: NewLocation["type"],
+	name: string,
+	position = 0,
+): NewLocation => ({ id: randomUUID(), parentId, type, name, position });
+
+function building({
+	towerName = "Torre A",
+	floors = 2,
+	unitsPerFloor = 2,
+}: { towerName?: string; floors?: number; unitsPerFloor?: number } = {}) {
+	const tower = entry(null, "tower", towerName);
+	const locations: NewLocation[] = [tower];
+	for (let f = 1; f <= floors; f++) {
+		const floor = entry(tower.id, "floor", `${f}º andar`, f - 1);
+		locations.push(floor);
+		for (let u = 1; u <= unitsPerFloor; u++) {
+			locations.push(
+				entry(floor.id, "unit", `${f}${String(u).padStart(2, "0")}`, u - 1),
+			);
+		}
+	}
+	return { tower, locations };
+}
+
+async function create(
+	person: Person,
+	projectId: string,
+	locations: NewLocation[],
+) {
+	return person.agent.post(structurePath(projectId)).send({ locations });
+}
+
+async function readStructure(projectId: string) {
+	const res = await admin.agent.get(structurePath(projectId));
+	return structureSchema.parse(res.body);
+}
+
+async function countLocations(projectId: string) {
+	return (
+		await db.select().from(location).where(eq(location.projectId, projectId))
+	).length;
+}
+
+function problemOf(body: unknown) {
+	return problemDetailsSchema.parse(body);
+}
+
+beforeAll(async () => {
+	const moduleRef = await Test.createTestingModule({
+		imports: [AppModule],
+	}).compile();
+
+	app = moduleRef.createNestApplication(nestApplicationOptions);
+	configureApp(app);
+	await app.init();
+
+	server = app.getHttpServer() as Server;
+	db = app.get<Database>(DATABASE);
+
+	admin = await signUp("Admin da Construtora");
+	manager = await signUp("Gerente Vinculada");
+	assistant = await signUp("Assistente Vinculado");
+	unlinked = await signUp("Gerente Sem Vínculo");
+	outsider = await signUp("Pessoa de Outra Construtora");
+
+	organizationId = await organizationOf(admin.userId);
+	await joinOrganization(manager, organizationId, "manager");
+	await joinOrganization(assistant, organizationId, "assistant");
+	await joinOrganization(unlinked, organizationId, "manager");
+});
+
+afterAll(async () => {
+	for (const { userId } of [admin, manager, assistant, unlinked, outsider]) {
+		await db.delete(user).where(eq(user.id, userId));
+	}
+	await app.close();
+});
+
+describe("POST /api/projects/:id/structure", () => {
+	it("creates every location of the request and answers what it describes", async () => {
+		const projectId = await newProject(100);
+		const { tower, locations } = building({ floors: 3, unitsPerFloor: 4 });
+		const hall = entry(tower.id, "common_area", "Salão de festas", 3);
+		const guarita = entry(null, "common_area", "Guarita", 1);
+
+		const res = await create(manager, projectId, [...locations, hall, guarita]);
+
+		expect(res.status).toBe(201);
+		expect(res.body).toEqual({
+			counts: { towers: 1, floors: 3, units: 12, commonAreas: 2 },
+		});
+		const structure = await readStructure(projectId);
+		expect(structure.counts).toEqual({
+			towers: 1,
+			floors: 3,
+			units: 12,
+			commonAreas: 2,
+		});
+		expect(structure.towers[0]!.name).toBe("Torre A");
+		expect(structure.towers[0]!.floors.map((floor) => floor.name)).toEqual([
+			"1º andar",
+			"2º andar",
+			"3º andar",
+		]);
+		expect(
+			structure.towers[0]!.floors[1]!.units.map((unit) => unit.name),
+		).toEqual(["201", "202", "203", "204"]);
+		expect(structure.towers[0]!.commonAreas.map((area) => area.name)).toEqual([
+			"Salão de festas",
+		]);
+		expect(structure.commonAreas.map((area) => area.name)).toEqual(["Guarita"]);
+	});
+
+	it("stores trimmed names and no unit type", async () => {
+		const projectId = await newProject(10);
+		const tower = entry(null, "tower", "  Torre   A  ");
+		const floor = entry(tower.id, "floor", "1º andar");
+		const unit = entry(floor.id, "unit", "101");
+
+		const res = await create(manager, projectId, [tower, floor, unit]);
+
+		expect(res.status).toBe(201);
+		const rows = await db
+			.select()
+			.from(location)
+			.where(eq(location.projectId, projectId));
+		expect(rows.find((row) => row.type === "tower")!.name).toBe("Torre   A");
+		expect(rows.find((row) => row.type === "unit")!.unitTypeId).toBeNull();
+	});
+
+	it("answers the same and creates nothing when the request is sent again", async () => {
+		const projectId = await newProject(100);
+		const { locations } = building({ floors: 2, unitsPerFloor: 3 });
+
+		const first = await create(manager, projectId, locations);
+		const second = await create(manager, projectId, locations);
+
+		expect(first.status).toBe(201);
+		expect(second.status).toBe(201);
+		expect(second.body).toEqual(first.body);
+		expect(await countLocations(projectId)).toBe(locations.length);
+	});
+
+	it("adds only the new locations when a resend carries more", async () => {
+		const projectId = await newProject(100);
+		const { tower, locations } = building({ floors: 1, unitsPerFloor: 2 });
+		await create(manager, projectId, locations);
+		const extra = entry(tower.id, "floor", "2º andar", 1);
+
+		const res = await create(manager, projectId, [...locations, extra]);
+
+		expect(res.status).toBe(201);
+		expect(await countLocations(projectId)).toBe(locations.length + 1);
+	});
+
+	it("answers a resend after the last unit is spent with the same 201", async () => {
+		const projectId = await newProject(4);
+		const { locations } = building({ floors: 2, unitsPerFloor: 2 });
+
+		const first = await create(manager, projectId, locations);
+		const again = await create(manager, projectId, locations);
+
+		expect(first.status).toBe(201);
+		expect(again.status).toBe(201);
+		expect(again.body).toEqual(first.body);
+	});
+
+	it("refuses an id that belongs to another project", async () => {
+		const projectId = await newProject(100);
+		const otherId = await newProject(100);
+		const { locations } = building();
+		await create(manager, otherId, locations);
+		const taken = locations[2]!;
+		const request = [
+			entry(null, "tower", "Torre Nova"),
+			{ ...taken, parentId: null, type: "tower" as const, name: "Outra" },
+		];
+
+		const res = await create(manager, projectId, request);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).code).toBe(LOCATION_ID_TAKEN);
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("refuses an id of this project reused as another kind or under another parent", async () => {
+		const projectId = await newProject(100);
+		const { tower, locations } = building({ floors: 2, unitsPerFloor: 1 });
+		await create(manager, projectId, locations);
+		const floor = locations[1]!;
+		const otherFloor = locations[3]!;
+
+		const asOtherKind = await create(manager, projectId, [
+			{ ...floor, type: "common_area" },
+		]);
+		const underOtherParent = await create(manager, projectId, [
+			tower,
+			otherFloor,
+			{ ...locations[2]!, parentId: otherFloor.id },
+		]);
+
+		expect(asOtherKind.status).toBe(409);
+		expect(problemOf(asOtherKind.body).code).toBe(LOCATION_ID_TAKEN);
+		expect(underOtherParent.status).toBe(409);
+		expect(problemOf(underOtherParent.body).code).toBe(LOCATION_ID_TAKEN);
+	});
+
+	it.each([
+		["case", "torre a"],
+		["repeated spaces", "Torre    A"],
+		["the ends", "  Torre A "],
+	])("refuses a tower name that differs only by %s", async (_label, name) => {
+		const projectId = await newProject(100);
+		await create(manager, projectId, [entry(null, "tower", "Torre A")]);
+
+		const res = await create(manager, projectId, [entry(null, "tower", name)]);
+
+		expect(res.status).toBe(409);
+		const problem = problemOf(res.body);
+		expect(problem.code).toBe(LOCATION_NAME_TAKEN);
+		expect(problem.names).toEqual([name.trim()]);
+		expect(await countLocations(projectId)).toBe(1);
+	});
+
+	it("lets a name that differs by an accent through", async () => {
+		const projectId = await newProject(100);
+		const tower = entry(null, "tower", "Torre A");
+		await create(manager, projectId, [
+			tower,
+			entry(tower.id, "floor", "Térreo"),
+		]);
+
+		const res = await create(manager, projectId, [
+			entry(tower.id, "floor", "Terreo", 1),
+		]);
+
+		expect(res.status).toBe(201);
+	});
+
+	it("refuses two units of one tower with the same name even on different floors", async () => {
+		const projectId = await newProject(100);
+		const tower = entry(null, "tower", "Torre A");
+		const first = entry(tower.id, "floor", "1º andar");
+		const second = entry(tower.id, "floor", "2º andar", 1);
+
+		const res = await create(manager, projectId, [
+			tower,
+			first,
+			second,
+			entry(first.id, "unit", "101"),
+			entry(second.id, "unit", "101"),
+		]);
+
+		expect(res.status).toBe(409);
+		const problem = problemOf(res.body);
+		expect(problem.code).toBe(LOCATION_NAME_TAKEN);
+		expect(problem.names).toEqual(["101"]);
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("lets two towers each have their own 101 and their own floors", async () => {
+		const projectId = await newProject(100);
+		const a = building({ towerName: "Torre A", floors: 1, unitsPerFloor: 1 });
+		const b = building({ towerName: "Torre B", floors: 1, unitsPerFloor: 1 });
+
+		const res = await create(manager, projectId, [
+			...a.locations,
+			...b.locations,
+		]);
+
+		expect(res.status).toBe(201);
+		expect(res.body).toEqual({
+			counts: { towers: 2, floors: 2, units: 2, commonAreas: 0 },
+		});
+	});
+
+	it("refuses a unit name already used in the tower by an earlier request", async () => {
+		const projectId = await newProject(100);
+		const { tower, locations } = building({ floors: 1, unitsPerFloor: 1 });
+		await create(manager, projectId, locations);
+		const second = entry(tower.id, "floor", "2º andar", 1);
+
+		const res = await create(manager, projectId, [
+			second,
+			entry(second.id, "unit", " 101 "),
+		]);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).names).toEqual(["101"]);
+	});
+
+	it("refuses two common areas with one name under the same parent", async () => {
+		const projectId = await newProject(100);
+
+		const res = await create(manager, projectId, [
+			entry(null, "common_area", "Guarita"),
+			entry(null, "common_area", "guarita", 1),
+		]);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).code).toBe(LOCATION_NAME_TAKEN);
+	});
+
+	it("lets a tower and a common area of the project share a name", async () => {
+		const projectId = await newProject(100);
+
+		const res = await create(manager, projectId, [
+			entry(null, "tower", "Bloco"),
+			entry(null, "common_area", "Bloco"),
+		]);
+
+		expect(res.status).toBe(201);
+	});
+
+	it.each([
+		["a unit straight under a tower", "tower", "unit"],
+		["a floor under a floor", "floor", "floor"],
+		["a tower under a tower", "tower", "tower"],
+	] as const)("refuses %s", async (_label, parentType, type) => {
+		const projectId = await newProject(100);
+		const tower = entry(null, "tower", "Torre A");
+		const floor = entry(tower.id, "floor", "1º andar");
+		const parent = parentType === "tower" ? tower : floor;
+
+		const res = await create(manager, projectId, [
+			tower,
+			floor,
+			entry(parent.id, type, "X"),
+		]);
+
+		expect(res.status).toBe(400);
+		expect(problemOf(res.body).code).toBe(LOCATION_PARENT_INVALID);
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("refuses a parent that does not exist, that comes later or that is another project's", async () => {
+		const projectId = await newProject(100);
+		const otherId = await newProject(100);
+		const foreign = entry(null, "tower", "Torre A");
+		await create(manager, otherId, [foreign]);
+		const tower = entry(null, "tower", "Torre B");
+		const floor = entry(tower.id, "floor", "1º andar");
+
+		const unknown = await create(manager, projectId, [
+			entry(randomUUID(), "floor", "1º andar"),
+		]);
+		const later = await create(manager, projectId, [floor, tower]);
+		const another = await create(manager, projectId, [
+			entry(foreign.id, "floor", "1º andar"),
+		]);
+
+		for (const res of [unknown, later, another]) {
+			expect(res.status).toBe(400);
+			expect(problemOf(res.body).code).toBe(LOCATION_PARENT_INVALID);
+		}
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("refuses a floor with more than 30 units, a repeated id and an empty request", async () => {
+		const projectId = await newProject(100);
+		const tower = entry(null, "tower", "Torre A");
+		const floor = entry(tower.id, "floor", "1º andar");
+		const units = Array.from({ length: 31 }, (_, i) =>
+			entry(floor.id, "unit", `1${String(i + 1).padStart(2, "0")}`, i),
+		);
+
+		const crowded = await create(manager, projectId, [tower, floor, ...units]);
+		const repeated = await create(manager, projectId, [tower, tower]);
+		const empty = await create(manager, projectId, []);
+
+		for (const res of [crowded, repeated, empty]) {
+			expect(res.status).toBe(400);
+			expect(problemOf(res.body).code).toBe("VALIDATION_FAILED");
+		}
+	});
+
+	it("takes 30 units on a floor and refuses more than 5000 locations", async () => {
+		const projectId = await newProject(100);
+		const tower = entry(null, "tower", "Torre A");
+		const floor = entry(tower.id, "floor", "1º andar");
+		const units = Array.from({ length: 30 }, (_, i) =>
+			entry(floor.id, "unit", `1${String(i + 1).padStart(2, "0")}`, i),
+		);
+		const tooMany = Array.from({ length: 5001 }, (_, i) =>
+			entry(null, "common_area", `Área ${i}`, i),
+		);
+
+		const full = await create(manager, projectId, [tower, floor, ...units]);
+		const over = await create(manager, projectId, tooMany);
+
+		expect(full.status).toBe(201);
+		expect(over.status).toBe(400);
+		expect(problemOf(over.body).code).toBe("VALIDATION_FAILED");
+	});
+
+	it("takes a request of 5000 locations", async () => {
+		const projectId = await newProject(0);
+		const areas = Array.from({ length: 5000 }, (_, i) =>
+			entry(null, "common_area", `Área ${i}`, i),
+		);
+
+		const res = await create(manager, projectId, areas);
+
+		expect(res.status).toBe(201);
+		expect(await countLocations(projectId)).toBe(5000);
+	}, 30_000);
+
+	describe("the project's reservation", () => {
+		it("refuses units beyond what remains and creates nothing", async () => {
+			const projectId = await newProject(3);
+			const { locations } = building({ floors: 2, unitsPerFloor: 2 });
+
+			const res = await create(manager, projectId, locations);
+
+			expect(res.status).toBe(409);
+			expect(res.body).toMatchObject({
+				code: NO_UNITS_LEFT,
+				requested: 4,
+				available: 3,
+			});
+			expect(await countLocations(projectId)).toBe(0);
+		});
+
+		it("counts the units already in the project", async () => {
+			const projectId = await newProject(5);
+			await create(
+				manager,
+				projectId,
+				building({ floors: 1, unitsPerFloor: 3 }).locations,
+			);
+
+			const res = await create(
+				manager,
+				projectId,
+				building({ towerName: "Torre B", floors: 1, unitsPerFloor: 3 })
+					.locations,
+			);
+
+			expect(res.status).toBe(409);
+			expect(res.body).toMatchObject({ requested: 3, available: 2 });
+		});
+
+		it("takes exactly what remains and then refuses one more", async () => {
+			const projectId = await newProject(3);
+			const { tower, locations } = building({ floors: 1, unitsPerFloor: 3 });
+			const floor = locations[1]!;
+
+			const fits = await create(manager, projectId, locations);
+			const one = await create(manager, projectId, [
+				entry(floor.id, "unit", "199", 9),
+			]);
+
+			expect(fits.status).toBe(201);
+			expect(one.status).toBe(409);
+			expect(one.body).toMatchObject({ requested: 1, available: 0 });
+			expect(tower.id).toBeDefined();
+		});
+
+		it("does not charge for towers, floors or common areas", async () => {
+			const projectId = await newProject(0);
+			const tower = entry(null, "tower", "Torre A");
+
+			const res = await create(manager, projectId, [
+				tower,
+				entry(tower.id, "floor", "1º andar"),
+				entry(null, "common_area", "Guarita"),
+			]);
+
+			expect(res.status).toBe(201);
+		});
+
+		it("never lets simultaneous requests pass the reservation", async () => {
+			const projectId = await newProject(5);
+			const requests = Array.from({ length: 4 }, (_, i) =>
+				create(
+					manager,
+					projectId,
+					building({ towerName: `Torre ${i}`, floors: 1, unitsPerFloor: 2 })
+						.locations,
+				),
+			);
+
+			const answers = await Promise.all(requests);
+
+			const created = answers.filter((res) => res.status === 201);
+			const refused = answers.filter((res) => res.status === 409);
+			expect(created).toHaveLength(2);
+			expect(refused).toHaveLength(2);
+			expect((await readStructure(projectId)).counts.units).toBe(4);
+		});
+
+		it("never lets simultaneous requests repeat a name", async () => {
+			const projectId = await newProject(50);
+
+			const answers = await Promise.all(
+				Array.from({ length: 4 }, () =>
+					create(
+						manager,
+						projectId,
+						building({ floors: 1, unitsPerFloor: 1 }).locations,
+					),
+				),
+			);
+
+			expect(answers.filter((res) => res.status === 201)).toHaveLength(1);
+			const refused = answers.filter((res) => res.status === 409);
+			expect(refused).toHaveLength(3);
+			for (const res of refused) {
+				expect(problemOf(res.body).code).toBe(LOCATION_NAME_TAKEN);
+			}
+			expect((await readStructure(projectId)).counts.towers).toBe(1);
+		});
+
+		it("answers simultaneous copies of one request with the same 201", async () => {
+			const projectId = await newProject(6);
+			const { locations } = building({ floors: 1, unitsPerFloor: 3 });
+
+			const answers = await Promise.all(
+				Array.from({ length: 3 }, () => create(manager, projectId, locations)),
+			);
+
+			for (const res of answers) expect(res.status).toBe(201);
+			expect(await countLocations(projectId)).toBe(locations.length);
+		});
+	});
+
+	describe("who may write", () => {
+		it.each([
+			["the admin of the organization", () => admin],
+			["a manager of the project", () => manager],
+			["an assistant of the project", () => assistant],
+		])("lets %s create", async (_label, who) => {
+			const projectId = await newProject(10);
+
+			const res = await create(who(), projectId, building().locations);
+
+			expect(res.status).toBe(201);
+		});
+
+		it("answers 404 PROJECT_NOT_FOUND to someone without a membership on the project", async () => {
+			const projectId = await newProject(10);
+
+			const res = await create(unlinked, projectId, building().locations);
+
+			expect(res.status).toBe(404);
+			expect(problemOf(res.body).code).toBe(PROJECT_NOT_FOUND);
+			expect(await countLocations(projectId)).toBe(0);
+		});
+
+		it("answers 404 PROJECT_NOT_FOUND to another organization and to a project that does not exist", async () => {
+			const projectId = await newProject(10);
+
+			const other = await create(outsider, projectId, building().locations);
+			const missing = await create(admin, randomUUID(), building().locations);
+
+			for (const res of [other, missing]) {
+				expect(res.status).toBe(404);
+				expect(problemOf(res.body).code).toBe(PROJECT_NOT_FOUND);
+			}
+		});
+
+		it("answers 401 without a session", async () => {
+			const projectId = await newProject(10);
+
+			const res = await request(server)
+				.post(structurePath(projectId))
+				.send({ locations: building().locations });
+
+			expect(res.status).toBe(401);
+		});
+
+		it("answers 409 PROJECT_DELIVERED for a delivered project, whoever asks", async () => {
+			const projectId = await newProject(10, "delivered");
+
+			for (const who of [admin, manager, assistant]) {
+				const res = await create(who, projectId, building().locations);
+				expect(res.status).toBe(409);
+				expect(problemOf(res.body).code).toBe(PROJECT_DELIVERED);
+			}
+			expect(await countLocations(projectId)).toBe(0);
+		});
+	});
+
+	it("moves the project's last activity", async () => {
+		const projectId = await newProject(10);
+		const before = new Date("2026-01-01T00:00:00Z");
+		await db
+			.update(project)
+			.set({ lastActivityAt: before })
+			.where(eq(project.id, projectId));
+
+		await create(manager, projectId, building().locations);
+
+		const [after] = await db
+			.select({ lastActivityAt: project.lastActivityAt })
+			.from(project)
+			.where(eq(project.id, projectId));
+		expect(after!.lastActivityAt.getTime()).toBeGreaterThan(before.getTime());
+	});
+
+	it("leaves the last activity alone when the request is refused", async () => {
+		const projectId = await newProject(1);
+		const before = new Date("2026-01-01T00:00:00Z");
+		await db
+			.update(project)
+			.set({ lastActivityAt: before })
+			.where(eq(project.id, projectId));
+
+		await create(manager, projectId, building().locations);
+
+		const [after] = await db
+			.select({ lastActivityAt: project.lastActivityAt })
+			.from(project)
+			.where(eq(project.id, projectId));
+		expect(after!.lastActivityAt.getTime()).toBe(before.getTime());
+	});
+});

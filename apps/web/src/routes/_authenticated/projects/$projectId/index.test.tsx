@@ -87,7 +87,7 @@ describe("project home", () => {
 		onlineManager.setOnline(true);
 	});
 
-	test("shows the name and status of a project without structure to the admin, without role or button (E1)", async () => {
+	test("shows the name and status of a project without structure to the admin, without a role, and offers Montar estrutura (E1)", async () => {
 		stubApi(signedIn, { api: projectApi({ ...OBRA, name: "Casa Moinhos" }) });
 
 		renderAt(OBRA_PATH);
@@ -105,17 +105,34 @@ describe("project home", () => {
 		).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"A estrutura aparece aqui quando alguém da equipe montar a obra.",
+				"Monte torres, andares, unidades e áreas comuns de uma vez. Depois, tudo se ajusta na fachada.",
 			),
 		).toBeInTheDocument();
 		expect(
-			within(screen.getByRole("main")).queryByRole("button"),
-		).not.toBeInTheDocument();
+			within(screen.getByRole("main")).getByRole("link", {
+				name: "Montar estrutura",
+			}),
+		).toHaveAttribute("href", `${OBRA_PATH}/structure/new`);
 		expect(
-			within(screen.getByRole("main")).queryByRole("link"),
+			within(screen.getByRole("main")).queryByRole("link", {
+				name: "Adicionar uma torre por vez",
+			}),
 		).not.toBeInTheDocument();
 		expect(screen.queryByText(LOCKED)).not.toBeInTheDocument();
 	});
+
+	test.each(["manager", "assistant"] as const)(
+		"offers Montar estrutura to the %s too (E1)",
+		async (role) => {
+			stubApi(signedIn, { api: projectApi({ ...OBRA, role }) });
+
+			renderAt(OBRA_PATH);
+
+			expect(
+				await screen.findByRole("link", { name: "Montar estrutura" }),
+			).toBeInTheDocument();
+		},
+	);
 
 	test.each([
 		["manager", "Gerente de obra"],
@@ -144,9 +161,17 @@ describe("project home", () => {
 				name: "A obra ainda não tem estrutura",
 			}),
 		).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				"A estrutura aparece aqui quando alguém da equipe montar a obra.",
+			),
+		).toBeInTheDocument();
 		expect(screen.getByText(LOCKED)).toBeInTheDocument();
 		expect(
 			within(screen.getByRole("main")).queryByRole("button"),
+		).not.toBeInTheDocument();
+		expect(
+			within(screen.getByRole("main")).queryByRole("link"),
 		).not.toBeInTheDocument();
 	});
 

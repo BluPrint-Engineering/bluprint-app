@@ -194,7 +194,7 @@ The Card holds the name and the unidades; the status lives in its own card (belo
     above the livres) and Salvar stays disabled. An empty field shows no error, both tiles "–", Salvar disabled. Primary "Salvar" (submit) and
     outline "Cancelar".
   - Saving (C7d): "Salvando…" with spinner, field and Cancelar disabled; Escape and the scrim do nothing.
-  - Success (C7e): the dialog closes, the row reads "Usa 250 de 450 reservadas", sonner success toast "Reserva da
+  - Success (C7e): the dialog closes, the row reads "Usa 250 de 450 reservadas", sonner success toast "Reserva de
     Casa Moinhos: 450 unidades.". Invalidate the project and the organization units queries.
   - Server refusals keep the dialog and the typed number and show the same field errors with the server's
     numbers: `409 RESERVATION_BELOW_USED` (`used`) as C7b, `409 NO_UNITS_LEFT` (`available`) as C7c.

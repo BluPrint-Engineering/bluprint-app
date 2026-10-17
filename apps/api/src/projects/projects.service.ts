@@ -15,7 +15,7 @@ import {
 	RESERVATION_BELOW_USED,
 	type RenameProject,
 } from "@bluprint/shared";
-import { Transactional } from "@nestjs-cls/transactional";
+import { Propagation, Transactional } from "@nestjs-cls/transactional";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { MembersRepository } from "../members/members.repository";
@@ -178,6 +178,12 @@ export class ProjectsService {
 		await this.projects.setReservedUnits(projectId, reserved);
 
 		return toSummary({ ...found, reservedUnits: reserved }, used);
+	}
+
+	@Transactional(Propagation.Mandatory)
+	async beginStructureWrite(userId: string, projectId: string): Promise<void> {
+		await this.readVisible(userId, projectId);
+		await this.projects.touch(projectId);
 	}
 
 	@Transactional()

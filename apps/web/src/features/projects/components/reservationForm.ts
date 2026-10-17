@@ -1,4 +1,4 @@
-import { plural } from "../components/plural";
+import { plural } from "./plural";
 
 export interface ReservationFigures {
 	used: number;

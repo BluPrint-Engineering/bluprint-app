@@ -50,15 +50,16 @@ export function Facade({
 				return (
 					<li
 						key={floor.id}
-						className="grid grid-cols-[52px_repeat(var(--units),minmax(46px,1fr))_64px] items-start gap-x-1.5 md:grid-cols-[88px_repeat(var(--units),minmax(0,132px))_120px]"
+						className="grid grid-cols-[56px_repeat(var(--units),minmax(46px,1fr))_64px] items-start gap-x-1.5 md:grid-cols-[88px_repeat(var(--units),minmax(0,132px))_120px]"
 					>
 						<Link
 							to="/projects/$projectId/locations/$locationId"
 							params={{ projectId, locationId: floor.id }}
 							aria-label={floor.name}
+							title={floor.name}
 							className={cn(
 								CHIP,
-								"sticky left-0 z-10 justify-start bg-card font-semibold text-muted-foreground hover:bg-muted hover:text-foreground md:static",
+								"sticky left-0 z-10 justify-start bg-card pr-1 font-semibold text-muted-foreground hover:bg-muted hover:text-foreground md:static md:pr-(--space-2)",
 								isNumberedFloor(short) && "font-mono",
 							)}
 						>

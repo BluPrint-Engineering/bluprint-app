@@ -63,6 +63,14 @@ export const problemDetailsSchema = z.object({
 			description:
 				"One entry per refused project, present on `RESERVATION_BELOW_USED` from `PATCH /organization/units/reservations`: `used` is the least that project's reservation can be.",
 		}),
+	names: z
+		.array(z.string())
+		.optional()
+		.meta({
+			description:
+				"The names that clashed, as the request sent them, present on `LOCATION_NAME_TAKEN`.",
+			example: ["Torre A", "901"],
+		}),
 });
 
 export type FieldError = z.infer<typeof fieldErrorSchema>;

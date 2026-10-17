@@ -1,6 +1,6 @@
 import type { LocationDetail, LocationRef, Structure } from "@bluprint/shared";
+import { plural } from "../plural";
 import { PROJECT_ORIGIN } from "./origin";
-import { plural } from "./plural";
 
 export interface LocationBand {
 	parent: { kind: "project" } | { kind: "location"; id: string; name: string };

@@ -105,7 +105,7 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 		await shot("reservation-above-free");
 		await units.fill(String(reserved + 1));
 		await dialog.getByRole("button", { name: "Salvar" }).click();
-		await expect(page.getByText(`Reserva da Residencial Jardins: ${reserved + 1} unidades.`)).toBeVisible();
+		await expect(page.getByText(`Reserva de Residencial Jardins: ${reserved + 1} unidades.`)).toBeVisible();
 		await expect(card.getByText(`Usa ${used} de ${reserved + 1} reservadas`)).toBeVisible();
 		await expect(dialog).toHaveCount(0);
 		expect((await query("SELECT reserved_units AS n FROM project WHERE id = $1", [projectId]))[0].n).toBe(reserved + 1);
@@ -117,6 +117,8 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	}
 
 	await expect(page.getByRole("dialog")).toHaveCount(0);
+	await page.mouse.move(0, 0);
+	await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 15_000 });
 	await status.getByRole("button", { name: "Entregar obra" }).click();
 	const confirm = page.getByRole("alertdialog");
 	await expect(confirm).toHaveAccessibleName("Entregar “Residencial Jardins”?");

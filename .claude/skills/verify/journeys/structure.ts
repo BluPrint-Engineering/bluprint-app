@@ -27,6 +27,7 @@ export default async function structure({ page, shot, expect, query }) {
 	await page.goto(`/projects/${await projectId("Galpão Logístico Sul")}`);
 	await expect(page.getByRole("heading", { name: "A obra ainda não tem estrutura" })).toBeVisible();
 	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+	await expect(page.getByRole("link", { name: "Montar estrutura" })).toBeVisible();
 	await shot("home-empty");
 
 	const jardins = await projectId("Residencial Jardins");

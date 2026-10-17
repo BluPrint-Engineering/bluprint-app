@@ -415,7 +415,7 @@ describe("Alterar reserva", () => {
 		answer(json({}));
 
 		expect(
-			await screen.findByText("Reserva da Casa Moinhos: 450 unidades."),
+			await screen.findByText("Reserva de Casa Moinhos: 450 unidades."),
 		).toBeInTheDocument();
 		const card = screen.getByRole("region", { name: "Dados da obra" });
 		expect(
@@ -467,7 +467,7 @@ describe("Alterar reserva", () => {
 			await within(card).findByText("Usa 250 de 450 reservadas"),
 		).toBeInTheDocument();
 		expect(
-			await screen.findByText("Reserva da Casa Moinhos: 450 unidades."),
+			await screen.findByText("Reserva de Casa Moinhos: 450 unidades."),
 		).toBeInTheDocument();
 		const [[input, init]] = reservationRequests(fetchMock) as [
 			[RequestInfo, RequestInit],
@@ -495,7 +495,7 @@ describe("Alterar reserva", () => {
 		await userEvent.click(
 			within(dialog).getByRole("button", { name: "Salvar" }),
 		);
-		await screen.findByText("Reserva da Casa Moinhos: 450 unidades.");
+		await screen.findByText("Reserva de Casa Moinhos: 450 unidades.");
 		await userEvent.click(
 			screen.getByRole("button", { name: "Alterar reserva" }),
 		);
@@ -730,7 +730,7 @@ describe("Alterar reserva on a phone", () => {
 		);
 
 		expect(
-			await screen.findByText("Reserva da Casa Moinhos: 450 unidades."),
+			await screen.findByText("Reserva de Casa Moinhos: 450 unidades."),
 		).toBeInTheDocument();
 	});
 });

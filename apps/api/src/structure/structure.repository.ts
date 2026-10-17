@@ -1,13 +1,15 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import type { DroppedRoom, Room } from "@bluprint/shared";
-import { and, asc, eq, sql } from "drizzle-orm";
+import type { DroppedRoom, NewLocation, Room } from "@bluprint/shared";
+import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import type { LocationRow, StructureRow } from "./location-row";
 import { droppedRoom, room } from "./room.entity";
 import { type UnitChangesRow, unitChangesQuery } from "./unit-changes";
 import { unitType, unitTypeRoom } from "./unit-type.entity";
+
+const INSERT_CHUNK = 1000;
 
 const columns = {
 	id: location.id,
@@ -52,6 +54,42 @@ export class StructureRepository {
 			.orderBy(asc(location.position), asc(location.id));
 
 		return rows.map(toStructureRow);
+	}
+
+	listForNaming(projectId: string): Promise<LocationRow[]> {
+		return this.txHost.tx
+			.select(columns)
+			.from(location)
+			.where(eq(location.projectId, projectId));
+	}
+
+	async findIdsInOtherProjects(
+		projectId: string,
+		ids: string[],
+	): Promise<Set<string>> {
+		const rows = await this.txHost.tx
+			.select({ id: location.id })
+			.from(location)
+			.where(and(inArray(location.id, ids), ne(location.projectId, projectId)));
+
+		return new Set(rows.map((row) => row.id));
+	}
+
+	async insertAll(projectId: string, locations: NewLocation[]): Promise<void> {
+		for (let start = 0; start < locations.length; start += INSERT_CHUNK) {
+			await this.txHost.tx.insert(location).values(
+				locations
+					.slice(start, start + INSERT_CHUNK)
+					.map(({ id, parentId, type, name, position }) => ({
+						id,
+						projectId,
+						parentId,
+						type,
+						name,
+						position,
+					})),
+			);
+		}
 	}
 
 	async find(

@@ -4,10 +4,10 @@ import { Plus } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useBottomBarHeight } from "@/lib/useBottomBarHeight";
 import { cn } from "@/lib/utils";
 import { organizationUnitsQueryOptions } from "../../account/api";
 import { plural } from "../components/plural";
-import { useBottomBarHeight } from "./useBottomBarHeight";
 
 export type NewProjectPlacement = "title" | "bar" | "empty";
 

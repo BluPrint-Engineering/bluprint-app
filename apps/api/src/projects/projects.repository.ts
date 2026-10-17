@@ -228,6 +228,13 @@ export class ProjectsRepository {
 			.where(eq(project.id, projectId));
 	}
 
+	async touch(projectId: string): Promise<void> {
+		await this.txHost.tx
+			.update(project)
+			.set({ lastActivityAt: sql`now()` })
+			.where(eq(project.id, projectId));
+	}
+
 	async findByIdInAnyOrganization(projectId: string) {
 		const [found] = await this.txHost.tx
 			.select({ ...getTableColumns(project), deliveredByName: deliverer.name })

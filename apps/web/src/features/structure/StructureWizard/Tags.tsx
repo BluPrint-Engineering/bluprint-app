@@ -1,0 +1,91 @@
+import { sameLocationName, tidyLocationName } from "@bluprint/shared";
+import { X } from "lucide-react";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+export function Tags({
+	items,
+	onRemove,
+}: {
+	items: string[];
+	onRemove: (index: number) => void;
+}) {
+	if (items.length === 0) return null;
+	return (
+		<ul className="flex flex-wrap gap-(--space-2)">
+			{items.map((name, index) => (
+				<li
+					key={name}
+					className="inline-flex min-h-8 items-center gap-1 rounded-full bg-muted pl-3 text-sm"
+				>
+					<span className="[overflow-wrap:anywhere]">{name}</span>
+					<button
+						type="button"
+						aria-label={`Tirar ${name}`}
+						onClick={() => onRemove(index)}
+						className="relative grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 hover:text-foreground focus-visible:shadow-(--shadow-focus)"
+					>
+						<X className="size-4" aria-hidden="true" />
+					</button>
+				</li>
+			))}
+		</ul>
+	);
+}
+
+export function AddTag({
+	label,
+	placeholder,
+	existing,
+	onAdd,
+}: {
+	label: string;
+	placeholder: string;
+	existing: string[];
+	onAdd: (name: string) => boolean;
+}) {
+	const [typed, setTyped] = useState("");
+	const [error, setError] = useState<string>();
+
+	function submit(event: React.FormEvent) {
+		event.preventDefault();
+		const name = tidyLocationName(typed);
+		if (name === "") return;
+		if (existing.some((other) => sameLocationName(other, name))) {
+			setError("Essa área comum já está na lista.");
+			return;
+		}
+		if (!onAdd(name)) return;
+		setTyped("");
+		setError(undefined);
+	}
+
+	return (
+		<form onSubmit={submit} className="grid gap-(--space-1)">
+			<div className="flex gap-(--space-2)">
+				<Input
+					aria-label={label}
+					placeholder={placeholder}
+					autoComplete="off"
+					enterKeyHint="done"
+					maxLength={60}
+					aria-invalid={error !== undefined}
+					value={typed}
+					onChange={(event) => {
+						setTyped(event.target.value);
+						setError(undefined);
+					}}
+				/>
+				<Button type="submit" variant="outline">
+					Adicionar
+				</Button>
+			</div>
+			{error && (
+				<p role="alert" className="text-sm text-destructive">
+					{error}
+				</p>
+			)}
+		</form>
+	);
+}

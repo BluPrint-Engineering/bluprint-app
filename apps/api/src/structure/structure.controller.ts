@@ -1,10 +1,16 @@
-import type { LocationDetail, Structure } from "@bluprint/shared";
-import { Controller, Get, Param } from "@nestjs/common";
+import type {
+	CreateStructureResult,
+	LocationDetail,
+	Structure,
+} from "@bluprint/shared";
+import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
 import { ProjectParamsDto } from "../projects/dto/project-params.dto";
+import { CreateStructureResultDto } from "./dto/create-structure-result.dto";
+import { CreateStructureDto } from "./dto/create-structure.dto";
 import { LocationDetailDto } from "./dto/location-detail.dto";
 import { LocationParamsDto } from "./dto/location-params.dto";
 import { StructureDto } from "./dto/structure.dto";
@@ -32,6 +38,26 @@ export class StructureController {
 		@Param() params: ProjectParamsDto,
 	): Promise<Structure> {
 		return this.structure.readStructure(session.user.id, params.id);
+	}
+
+	@Post("structure")
+	@ApiOperation({
+		summary: "Create structure",
+		description:
+			"Creates the locations of the request, towers, floors, units and common areas, in one transaction: all of them or none. This is the one route every creation of units goes through. Each location carries the id the client chose, its parent (one that exists in the project or one listed earlier in the request), its kind, name and position. Sending the same request again answers the same `201` and creates nothing: a location whose id already belongs to this project, as the same kind under the same parent, is skipped. An id that belongs to another project, or to another kind or parent, answers `409 LOCATION_ID_TAKEN`. A name already in use where it would go, ignoring case and repeated spaces, answers `409 LOCATION_NAME_TAKEN` with the clashing `names`: a tower is unique in the project, a floor and a unit in their tower, a common area under its parent. A parent that does not exist or cannot hold the kind answers `400 LOCATION_PARENT_INVALID`; at most 5,000 locations and 30 units under one floor in one request. Units the request creates beyond what the project's reservation still holds answer `409 NO_UNITS_LEFT` with `requested` and `available`, and nothing is created; only new units count, so the repeated request is never refused for that. Anyone linked to the project may write, and the admin of its organization; a project that cannot be seen answers `404 PROJECT_NOT_FOUND`, and a delivered one `409 PROJECT_DELIVERED`. One structure write at a time runs per project, and it moves the project's last activity.",
+	})
+	@ZodResponse({
+		status: 201,
+		description: "The counts of what the request describes.",
+		type: CreateStructureResultDto,
+	})
+	@ApiErrorResponses(400, 401, 404, 409)
+	create(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+		@Body() body: CreateStructureDto,
+	): Promise<CreateStructureResult> {
+		return this.structure.create(session.user.id, params.id, body);
 	}
 
 	@Get("locations/:locationId")
