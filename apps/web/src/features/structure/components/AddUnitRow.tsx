@@ -27,14 +27,15 @@ export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
 	const addButton = useRef<HTMLButtonElement>(null);
 	const remaining = units.data?.remaining;
 	const exhausted = remaining !== undefined && remaining <= 0;
-	const wasExhausted = useRef(exhausted);
+	const savedAt = useRef<number>(undefined);
+	const updatedAt = units.dataUpdatedAt;
 	useEffect(() => {
-		const unblocked = wasExhausted.current && !exhausted;
-		wasExhausted.current = exhausted;
-		if (unblocked && document.activeElement === document.body) {
+		if (savedAt.current === undefined || updatedAt < savedAt.current) return;
+		savedAt.current = undefined;
+		if (!exhausted && document.activeElement === document.body) {
 			addButton.current?.focus();
 		}
-	}, [exhausted]);
+	}, [exhausted, updatedAt]);
 
 	return (
 		<>
@@ -74,7 +75,10 @@ export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
 					open={reserving}
 					onOpenChange={setReserving}
 					returnFocus={exhausted ? alterReservation : addButton}
-					onSaved={() => void units.refetch()}
+					onSaved={() => {
+						savedAt.current = Date.now();
+						void units.refetch();
+					}}
 				/>
 			)}
 		</>

@@ -428,6 +428,29 @@ describe("the reserva is over", () => {
 		).toBeInTheDocument();
 	});
 
+	test("brings the row back on a background refetch without moving focus to it", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra("admin"), several, { remaining: 0 });
+		stubApi(signedIn, { api: api.handler });
+		const { queryClient } = renderAt(pathOf(ninth.id));
+		const row = await screen.findByRole("button", {
+			name: "Adicionar unidade",
+		});
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
+
+		api.state.units.remaining = 5;
+		await queryClient.refetchQueries({
+			queryKey: ["structure", obra().id, "units"],
+		});
+
+		const restored = await screen.findByRole("button", {
+			name: "Adicionar unidade",
+		});
+		await waitFor(() => expect(restored).not.toHaveAttribute("aria-disabled"));
+		expect(restored).not.toHaveFocus();
+		expect(document.body).toHaveFocus();
+	});
+
 	test("gives the admin the link to change the reserva, and brings the row back once it grows (F5b)", async () => {
 		const { ninth, several } = build();
 		stubApi(signedIn, {
