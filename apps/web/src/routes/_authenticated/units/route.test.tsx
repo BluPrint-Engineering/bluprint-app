@@ -284,6 +284,37 @@ describe("units screen", () => {
 			expect(field("Residencial Jardins")).toHaveValue("300");
 		});
 
+		test("drops the leading zero when a digit follows a saved 0", async () => {
+			openUnits({
+				reservations: () =>
+					json({
+						...RESERVATIONS,
+						items: [
+							{
+								projectId: AURORA,
+								name: "Edifício Aurora",
+								reserved: 0,
+								used: 0,
+							},
+						],
+					}),
+			});
+			await ready();
+			await userEvent.type(field("Edifício Aurora"), "5");
+
+			expect(field("Edifício Aurora")).toHaveValue("5");
+		});
+
+		test("treats leading zeros over a saved value as no change", async () => {
+			openUnits();
+			await ready();
+			await type("Edifício Aurora", "0300");
+
+			expect(field("Edifício Aurora")).toHaveValue("300");
+			expect(screen.queryByText(/reserva alterada/)).not.toBeInTheDocument();
+			expect(screen.queryByText("Antes: 300")).not.toBeInTheDocument();
+		});
+
 		test("drops back to saved when the typed value matches it", async () => {
 			openUnits();
 			await ready();

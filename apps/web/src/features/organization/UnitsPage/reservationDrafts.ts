@@ -28,7 +28,10 @@ export interface UnitsTotals {
 }
 
 export function digitsOnly(typed: string) {
-	return typed.replace(/\D/g, "").slice(0, RESERVATION_MAX_DIGITS);
+	return typed
+		.replace(/\D/g, "")
+		.replace(/^0+(?=\d)/, "")
+		.slice(0, RESERVATION_MAX_DIGITS);
 }
 
 export function belowUsedMessage(used: number) {
