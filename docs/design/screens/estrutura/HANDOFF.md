@@ -25,8 +25,9 @@ added to the design system with this screen, and carried by `_ds_bundle.js`.
 - **Tower cards** on the início carry their facts (floors, units per floor, common areas, tipologias), so towers that
   differ are told apart at a glance.
 - **Single tower** (Q7): the início is the façade; the tower name drops out of every back link and meta line.
-- **Band**: back link to the parent, h1 the location (units in mono), a meta line with kind, place and counts; the
-  page menu is a 44px `ellipsis` button (top right on mobile, after "Adicionar andares" on desktop).
+- **Band**: back link to the parent (or the façade it was opened from), h1 the location (units in mono), a meta line
+  with kind, place and counts; the page menu is a 44px `ellipsis` button (top right on mobile, after "Adicionar
+  andares" on desktop).
 - **Lists** (floor, rooms, common areas, tipologias): rows of 56px in a ringed card; the row is the link, `ellipsis`
   menu and `chevron-right` at the end; the last row adds inline.
 - **Wizard**: desktop is one page with a sticky Prévia whose button never leaves the screen; mobile is four steps with
