@@ -1,6 +1,12 @@
 import type { LocationType } from "@bluprint/shared";
 import { Plus } from "lucide-react";
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import {
+	type ReactNode,
+	type RefObject,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Field,
@@ -38,6 +44,7 @@ export interface AddRowProps {
 	hint?: string | undefined;
 	hintLoading?: boolean;
 	blocked?: ReactNode;
+	buttonRef?: RefObject<HTMLButtonElement | null>;
 }
 
 function AddForm({
@@ -159,9 +166,9 @@ function AddForm({
 }
 
 export function AddRow(props: AddRowProps) {
-	const { adding, kind, label, blocked } = props;
+	const { adding, kind, label, blocked, buttonRef } = props;
 	const open = adding.is(kind);
-	const button = useFocusOnClose<HTMLButtonElement>(open);
+	const button = useFocusOnClose(open, buttonRef);
 
 	if (open) return <AddForm {...props} />;
 

@@ -81,7 +81,7 @@ describe("adding a unit on a floor", () => {
 			within(sectionOf("Unidades")).getByRole("button", {
 				name: "Adicionar unidade",
 			}),
-		).toBeEnabled();
+		).not.toHaveAttribute("aria-disabled");
 		expect(
 			within(sectionOf("Áreas comuns do andar")).getByRole("button", {
 				name: "Adicionar área comum",
@@ -460,12 +460,20 @@ describe("the reserva is over", () => {
 
 		await waitFor(() =>
 			expect(
-				screen.getByRole("button", { name: "Adicionar unidade" }),
-			).toBeEnabled(),
+				screen.queryByRole("dialog", { name: "Alterar reserva" }),
+			).not.toBeInTheDocument(),
+		);
+		const restored = await screen.findByRole("button", {
+			name: "Adicionar unidade",
+		});
+		await waitFor(() => expect(restored).not.toHaveAttribute("aria-disabled"));
+		expect(restored).not.toHaveAccessibleDescription(
+			expect.stringContaining(EXHAUSTED),
 		);
 		expect(
 			screen.queryByRole("button", { name: "Alterar reserva" }),
 		).not.toBeInTheDocument();
+		await waitFor(() => expect(restored).toHaveFocus());
 	});
 });
 
