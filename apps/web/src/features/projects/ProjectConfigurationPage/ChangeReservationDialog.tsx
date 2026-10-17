@@ -25,6 +25,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { firstLoadState } from "@/lib/firstLoadState";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { organizationUnitsQueryOptions } from "../../account/api";
 import {
@@ -45,6 +46,8 @@ import {
 
 const SAVE_FAILED =
 	"Não foi possível salvar a reserva. Confira sua conexão e tente de novo.";
+const UNITS_FAILED =
+	"Não foi possível carregar as unidades livres. Confira sua conexão e tente de novo.";
 
 interface ChangeReservationDialogProps {
 	project: ProjectSummary;
@@ -86,6 +89,7 @@ export function ChangeReservationDialog({
 	const change = useChangeReservationMutation(project.id);
 	const { used, reserved } = project.units;
 	const free = units.data?.free;
+	const unitsFailed = free === undefined && firstLoadState(units) === "failed";
 	const figures = { used, reserved, free };
 	const saving = change.isPending;
 	const formId = useId();
@@ -143,11 +147,9 @@ export function ChangeReservationDialog({
 	}
 
 	const context =
-		free === undefined ? (
-			<Skeleton aria-hidden className="h-4 w-4/5" />
-		) : (
-			`A obra usa ${used} ${plural(used, "unidade", "unidades")}. A construtora tem ${free} ${plural(free, "livre", "livres")}.`
-		);
+		free === undefined
+			? !unitsFailed && <Skeleton aria-hidden className="h-4 w-4/5" />
+			: `A obra usa ${used} ${plural(used, "unidade", "unidades")}. A construtora tem ${free} ${plural(free, "livre", "livres")}.`;
 
 	const form = (
 		<form
@@ -159,6 +161,19 @@ export function ChangeReservationDialog({
 				submit();
 			}}
 		>
+			{unitsFailed && (
+				<Alert variant="destructive">
+					<AlertDescription>{UNITS_FAILED}</AlertDescription>
+					<Button
+						type="button"
+						variant="outline"
+						className="mt-(--space-2) justify-self-start"
+						onClick={() => units.refetch()}
+					>
+						Tentar de novo
+					</Button>
+				</Alert>
+			)}
 			{change.isError && !knownRefusal && (
 				<Alert variant="destructive">
 					<AlertDescription>{SAVE_FAILED}</AlertDescription>

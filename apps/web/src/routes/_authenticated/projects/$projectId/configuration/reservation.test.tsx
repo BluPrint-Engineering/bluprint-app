@@ -27,6 +27,8 @@ const UNITS: OrganizationUnits = {
 };
 const SAVE_FAILED =
 	"Não foi possível salvar a reserva. Confira sua conexão e tente de novo.";
+const UNITS_FAILED =
+	"Não foi possível carregar as unidades livres. Confira sua conexão e tente de novo.";
 
 type Patch = (reserved: number) => Promise<Response> | Response;
 
@@ -598,6 +600,40 @@ describe("Alterar reserva", () => {
 		expect(
 			within(dialog).getByRole("button", { name: "Salvar" }),
 		).toBeDisabled();
+	});
+
+	test("explains when the livres fail to load, keeps Salvar disabled and loads them on Tentar de novo", async () => {
+		let failing = true;
+		const { handler } = reservationApi(OBRA);
+		stubApi(signedIn, {
+			api: (url, init) =>
+				failing && url.pathname === "/api/organization/units"
+					? json({}, 500)
+					: handler(url, init),
+		});
+		renderAt(CONFIG_PATH);
+		const dialog = await openDialog();
+
+		expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+			UNITS_FAILED,
+		);
+		expect(
+			within(dialog).getByRole("button", { name: "Salvar" }),
+		).toBeDisabled();
+		failing = false;
+		await userEvent.click(
+			within(dialog).getByRole("button", { name: "Tentar de novo" }),
+		);
+
+		expect(
+			await within(dialog).findByText(
+				"A obra usa 250 unidades. A construtora tem 150 livres.",
+			),
+		).toBeInTheDocument();
+		expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
+		expect(
+			within(dialog).getByRole("button", { name: "Salvar" }),
+		).toBeEnabled();
 	});
 });
 
