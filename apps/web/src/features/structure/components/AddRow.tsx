@@ -197,7 +197,7 @@ export function AddRow(props: AddRowProps) {
 	}
 
 	return (
-		<div className="pl-(--space-2)">
+		<div className="py-1.5 pl-(--space-2)">
 			<Button
 				ref={button}
 				variant="ghost"
