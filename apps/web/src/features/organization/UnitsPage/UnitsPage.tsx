@@ -128,6 +128,12 @@ export function UnitsPage() {
 
 	function blur(projectId: string) {
 		setTouched((previous) => ({ ...previous, [projectId]: true }));
+		setDrafts((previous) => {
+			const typed = previous[projectId];
+			return typed
+				? { ...previous, [projectId]: String(Number(typed)) }
+				: previous;
+		});
 	}
 
 	function discard() {

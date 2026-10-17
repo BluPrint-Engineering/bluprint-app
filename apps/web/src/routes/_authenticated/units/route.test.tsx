@@ -284,7 +284,7 @@ describe("units screen", () => {
 			expect(field("Residencial Jardins")).toHaveValue("300");
 		});
 
-		test("drops the leading zero when a digit follows a saved 0", async () => {
+		test("reads a digit typed after a saved 0 as that number, and tidies the field on blur", async () => {
 			openUnits({
 				reservations: () =>
 					json({
@@ -302,17 +302,38 @@ describe("units screen", () => {
 			await ready();
 			await userEvent.type(field("Edifício Aurora"), "5");
 
+			expect(within(figure("Livres")).getByText("1.545")).toBeVisible();
+			expect(screen.getByText("1 reserva alterada")).toBeInTheDocument();
+
+			await userEvent.tab();
+
 			expect(field("Edifício Aurora")).toHaveValue("5");
 		});
 
-		test("treats leading zeros over a saved value as no change", async () => {
+		test("treats leading zeros over a saved value as no change, and tidies the field on blur", async () => {
 			openUnits();
 			await ready();
 			await type("Edifício Aurora", "0300");
 
-			expect(field("Edifício Aurora")).toHaveValue("300");
 			expect(screen.queryByText(/reserva alterada/)).not.toBeInTheDocument();
 			expect(screen.queryByText("Antes: 300")).not.toBeInTheDocument();
+
+			await userEvent.tab();
+
+			expect(field("Edifício Aurora")).toHaveValue("300");
+		});
+
+		test("edits 300 to 400 by replacing the first digit", async () => {
+			openUnits();
+			await ready();
+			await userEvent.type(field("Edifício Aurora"), "{Backspace}4", {
+				initialSelectionStart: 1,
+				initialSelectionEnd: 1,
+			});
+
+			expect(field("Edifício Aurora")).toHaveValue("400");
+			expect(within(figure("Livres")).getByText("200")).toBeVisible();
+			expect(screen.getByText("1 reserva alterada")).toBeInTheDocument();
 		});
 
 		test("drops back to saved when the typed value matches it", async () => {
