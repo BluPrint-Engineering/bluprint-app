@@ -124,6 +124,22 @@ async function describeTower(
 const createButton = () =>
 	screen.findByRole("button", { name: /Criar estrutura|Criando estrutura…/ });
 
+async function addFloorArea(name: string, floor: string) {
+	await user.click(
+		await screen.findByRole("button", { name: "Área comum num andar" }),
+	);
+	await user.type(
+		screen.getByRole("textbox", { name: "Nome da área comum" }),
+		name,
+	);
+	await user.type(screen.getByRole("textbox", { name: "Andar" }), floor);
+	await user.click(screen.getByRole("button", { name: "Adicionar ao andar" }));
+	await screen.findByText(`· Torre A, ${floor}º andar`);
+}
+
+const floorAreaRow = (name: string) =>
+	screen.getByRole("button", { name: `Tirar ${name}` }).closest("li");
+
 async function toPreviewOnPhone() {
 	await user.click(
 		await screen.findByRole("button", { name: "Continuar · Áreas comuns" }),
@@ -413,6 +429,45 @@ describe("structure wizard", () => {
 				await screen.findByText("Já existe outra torre com esse nome."),
 			).toBeInTheDocument();
 			expect(sent).toHaveLength(0);
+		});
+
+		test("flags a one-floor area left outside the tower's floors, focuses its row and sends nothing (W5)", async () => {
+			const { handler, sent } = wizardApi();
+			open(handler);
+			await describeTower("20", "4");
+			await addFloorArea("Terraço", "20");
+			await typeInto("Último andar", "15");
+
+			await user.click(await createButton());
+
+			const row = floorAreaRow("Terraço");
+			expect(row).toHaveAccessibleDescription(
+				"O andar precisa estar entre o 1º e o 15º.",
+			);
+			await waitFor(() => expect(row).toHaveFocus());
+			expect(screen.getByText("· Torre A, 20º andar")).toBeInTheDocument();
+			expect(sent).toHaveLength(0);
+
+			await typeInto("Último andar", "20");
+			await user.click(await createButton());
+
+			await waitFor(() => expect(sent).toHaveLength(1));
+			expect(
+				sent[0]?.locations.filter((location) => location.name === "Terraço"),
+			).toHaveLength(1);
+		});
+
+		test("adds towers past a dozen", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			const more = await screen.findByRole("button", {
+				name: "Uma torre a mais",
+			});
+
+			for (let count = 1; count < 13; count++) await user.click(more);
+
+			expect(screen.getAllByRole("textbox", { name: "Nome" })).toHaveLength(13);
+			expect(more).toBeEnabled();
 		});
 
 		test("shows Criando estrutura… and blocks a second send (W6)", async () => {
@@ -804,6 +859,31 @@ describe("structure wizard", () => {
 					screen.getByRole("textbox", { name: "Último andar" }),
 				).toHaveFocus();
 			});
+		});
+
+		test("goes to the common areas step and focuses a one-floor area left outside the tower (W5)", async () => {
+			setViewport("phone");
+			const { handler, sent } = wizardApi();
+			open(handler);
+			await describeTower("20", "4");
+			await user.click(
+				screen.getByRole("button", { name: "Continuar · Áreas comuns" }),
+			);
+			await addFloorArea("Terraço", "20");
+			await user.click(screen.getByRole("button", { name: "Voltar" }));
+			await typeInto("Último andar", "15");
+
+			await user.click(
+				screen.getByRole("button", { name: "Continuar · Áreas comuns" }),
+			);
+
+			expect(await screen.findByText("Passo 2 de 3")).toBeInTheDocument();
+			const row = floorAreaRow("Terraço");
+			expect(row).toHaveAccessibleDescription(
+				"O andar precisa estar entre o 1º e o 15º.",
+			);
+			await waitFor(() => expect(row).toHaveFocus());
+			expect(sent).toHaveLength(0);
 		});
 
 		test("puts the over-reservation alert beside the disabled button in the bar (W4b)", async () => {

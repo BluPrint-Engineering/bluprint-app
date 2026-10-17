@@ -28,8 +28,6 @@ export interface WizardDraft {
 }
 
 export const SINGLE_TOWER_NAME = "Torre A";
-export const MAX_FLOOR = 200;
-export const MAX_TOWERS = 12;
 
 let towerKeys = 0;
 const nextTowerKey = () => `tower-${++towerKeys}`;
@@ -70,7 +68,7 @@ export function nextTowerName(previous: string): string {
 }
 
 export function withTowerCount(draft: WizardDraft, count: number): WizardDraft {
-	const target = Math.min(MAX_TOWERS, Math.max(1, count));
+	const target = Math.max(1, count);
 	if (target <= draft.towers.length) {
 		return { ...draft, towers: draft.towers.slice(0, target) };
 	}
@@ -106,7 +104,6 @@ export function parseTower(tower: TowerDraft): ParsedTower | undefined {
 		perFloor === undefined ||
 		first < 1 ||
 		last < first ||
-		last > MAX_FLOOR ||
 		perFloor < 1 ||
 		perFloor > MAX_UNITS_PER_FLOOR
 	) {
@@ -119,6 +116,11 @@ export type TowerField = "name" | "first" | "last" | "perFloor";
 
 export const towerFieldId = (index: number, field: TowerField) =>
 	`tower-${index}-${field}`;
+
+export const floorAreaFieldId = (key: string) => `floor-area-${key}`;
+
+export const listedFloorAreas = (draft: WizardDraft) =>
+	draft.floorAreas.filter((area) => area.tower < draft.towers.length);
 
 export type DraftErrors = Partial<Record<string, string>>;
 
@@ -150,8 +152,6 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		if (first === undefined) set("first", "Informe o primeiro andar.");
 		else if (first < 1) set("first", "O primeiro andar começa no 1º.");
 		if (last === undefined) set("last", "Informe o último andar.");
-		else if (last > MAX_FLOOR)
-			set("last", `O último andar vai até o ${MAX_FLOOR}º.`);
 		else if (first !== undefined && first >= 1 && last < first) {
 			set("last", "O último andar precisa ser igual ou maior que o primeiro.");
 		}
@@ -166,18 +166,39 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		}
 	});
 
+	for (const area of listedFloorAreas(draft)) {
+		const tower = draft.towers[area.tower] as TowerDraft;
+		const range = parseTower(tower);
+		const floor = Number(area.floor);
+		if (range === undefined) {
+			errors[floorAreaFieldId(area.key)] =
+				"Confira os andares da torre antes de criar.";
+		} else if (floor < range.first || floor > range.last) {
+			errors[floorAreaFieldId(area.key)] =
+				`O andar precisa estar entre o ${range.first}º e o ${range.last}º.`;
+		}
+	}
+
 	return errors;
 }
 
-export function firstInvalidFieldId(
+export type DraftSection = "towers" | "areas";
+
+export function firstInvalidField(
 	draft: WizardDraft,
 	errors: DraftErrors,
-): string | undefined {
-	return draft.towers
-		.flatMap((_, index) =>
-			(["name", "first", "last", "perFloor"] as const).map((field) =>
-				towerFieldId(index, field),
-			),
-		)
-		.find((id) => errors[id] !== undefined);
+): { id: string; section: DraftSection } | undefined {
+	const fields = [
+		...draft.towers.flatMap((_, index) =>
+			(["name", "first", "last", "perFloor"] as const).map((field) => ({
+				id: towerFieldId(index, field),
+				section: "towers" as const,
+			})),
+		),
+		...listedFloorAreas(draft).map((area) => ({
+			id: floorAreaFieldId(area.key),
+			section: "areas" as const,
+		})),
+	];
+	return fields.find((field) => errors[field.id] !== undefined);
 }

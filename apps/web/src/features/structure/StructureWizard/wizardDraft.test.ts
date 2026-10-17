@@ -1,6 +1,7 @@
 import { nth } from "@/test/nth";
 import {
-	firstInvalidFieldId,
+	type FloorAreaDraft,
+	firstInvalidField,
 	initialDraft,
 	nextTowerName,
 	parseTower,
@@ -25,6 +26,20 @@ function draftOf(
 			...tower,
 		})),
 	};
+}
+
+function floorArea(
+	floor: string,
+	area: Partial<FloorAreaDraft> = {},
+): FloorAreaDraft {
+	return { key: `area-${floor}`, tower: 0, floor, name: "Terraço", ...area };
+}
+
+function withFloorAreas(
+	draft: WizardDraft,
+	...floorAreas: FloorAreaDraft[]
+): WizardDraft {
+	return { ...draft, floorAreas };
 }
 
 describe("nextTowerName", () => {
@@ -75,6 +90,10 @@ describe("withTowerCount", () => {
 	test("never goes below one tower", () => {
 		expect(withTowerCount(draftOf({}), 0).towers).toHaveLength(1);
 	});
+
+	test("grows past a dozen towers", () => {
+		expect(withTowerCount(draftOf({}), 30).towers).toHaveLength(30);
+	});
 });
 
 describe("parseTower", () => {
@@ -93,10 +112,17 @@ describe("parseTower", () => {
 		[{ first: "5", last: "4" }],
 		[{ perFloor: "0" }],
 		[{ perFloor: "31" }],
-		[{ last: "201" }],
 		[{ last: "1a" }],
 	])("rejects %j", (change) => {
 		expect(parseTower(nth(draftOf(change).towers, 0))).toBeUndefined();
+	});
+
+	test("reads a tower taller than 200 floors", () => {
+		expect(parseTower(nth(draftOf({ last: "350" }).towers, 0))).toEqual({
+			first: 1,
+			last: 350,
+			perFloor: 4,
+		});
 	});
 });
 
@@ -149,18 +175,100 @@ describe("validateDraft", () => {
 	});
 });
 
-describe("firstInvalidFieldId", () => {
+describe("validateDraft on one-floor common areas", () => {
+	test("accepts an area inside its tower's floors", () => {
+		expect(validateDraft(withFloorAreas(draftOf({}), floorArea("12")))).toEqual(
+			{},
+		);
+	});
+
+	test("flags an area whose floor is now above the tower's last floor", () => {
+		const draft = withFloorAreas(
+			draftOf({ last: "15" }),
+			floorArea("20", { key: "terrace" }),
+		);
+
+		expect(validateDraft(draft)).toEqual({
+			"floor-area-terrace": "O andar precisa estar entre o 1º e o 15º.",
+		});
+	});
+
+	test("flags an area whose floor is now below the tower's first floor", () => {
+		const draft = withFloorAreas(
+			draftOf({ first: "3" }),
+			floorArea("2", { key: "terrace" }),
+		);
+
+		expect(validateDraft(draft)).toMatchObject({
+			"floor-area-terrace": "O andar precisa estar entre o 3º e o 12º.",
+		});
+	});
+
+	test("flags an area whose tower has no valid floors yet", () => {
+		const draft = withFloorAreas(
+			draftOf({ last: "" }),
+			floorArea("5", { key: "terrace" }),
+		);
+
+		expect(validateDraft(draft)).toMatchObject({
+			"tower-0-last": "Informe o último andar.",
+			"floor-area-terrace": "Confira os andares da torre antes de criar.",
+		});
+	});
+
+	test("checks each area against its own tower", () => {
+		const draft = withFloorAreas(
+			draftOf({}, { last: "20" }),
+			floorArea("20", { key: "on-a", tower: 0 }),
+			floorArea("20", { key: "on-b", tower: 1 }),
+		);
+
+		expect(validateDraft(draft)).toEqual({
+			"floor-area-on-a": "O andar precisa estar entre o 1º e o 12º.",
+		});
+	});
+
+	test("ignores an area kept for a tower removed from the count", () => {
+		const draft = withFloorAreas(draftOf({}), floorArea("99", { tower: 1 }));
+
+		expect(validateDraft(draft)).toEqual({});
+	});
+});
+
+describe("firstInvalidField", () => {
 	test("finds the first field in reading order", () => {
 		const draft = draftOf({}, { last: "", name: "" });
 
-		expect(firstInvalidFieldId(draft, validateDraft(draft))).toBe(
-			"tower-1-name",
+		expect(firstInvalidField(draft, validateDraft(draft))).toEqual({
+			id: "tower-1-name",
+			section: "towers",
+		});
+	});
+
+	test("points to a tower field before a common area", () => {
+		const draft = withFloorAreas(draftOf({ last: "" }), floorArea("5"));
+
+		expect(firstInvalidField(draft, validateDraft(draft))).toEqual({
+			id: "tower-0-last",
+			section: "towers",
+		});
+	});
+
+	test("points to the common area row when the towers are valid", () => {
+		const draft = withFloorAreas(
+			draftOf({ last: "15" }),
+			floorArea("20", { key: "terrace" }),
 		);
+
+		expect(firstInvalidField(draft, validateDraft(draft))).toEqual({
+			id: "floor-area-terrace",
+			section: "areas",
+		});
 	});
 
 	test("finds nothing in a valid draft", () => {
 		const draft = draftOf({});
 
-		expect(firstInvalidFieldId(draft, validateDraft(draft))).toBeUndefined();
+		expect(firstInvalidField(draft, validateDraft(draft))).toBeUndefined();
 	});
 });

@@ -12,7 +12,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
 import {
 	type DraftErrors,
-	MAX_TOWERS,
 	type Numbering,
 	type TowerDraft,
 	type TowerField,
@@ -220,7 +219,6 @@ export function TowersStep({
 						variant="outline"
 						size="icon"
 						aria-label="Uma torre a mais"
-						disabled={count >= MAX_TOWERS}
 						onClick={() => setCount(count + 1)}
 					>
 						<Plus aria-hidden="true" className="size-5" />

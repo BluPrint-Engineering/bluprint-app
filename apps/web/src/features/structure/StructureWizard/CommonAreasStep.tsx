@@ -5,7 +5,14 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { uuidV7 } from "@/lib/uuidV7";
 import { AddTag, Tags } from "./Tags";
-import { parseTower, SINGLE_TOWER_NAME, type WizardDraft } from "./wizardDraft";
+import {
+	type DraftErrors,
+	floorAreaFieldId,
+	listedFloorAreas,
+	parseTower,
+	SINGLE_TOWER_NAME,
+	type WizardDraft,
+} from "./wizardDraft";
 
 type Edit = (update: (draft: WizardDraft) => WizardDraft) => void;
 
@@ -134,18 +141,18 @@ function FloorAreaForm({
 
 export function CommonAreasStep({
 	draft,
+	errors,
 	edit,
 }: {
 	draft: WizardDraft;
+	errors: DraftErrors;
 	edit: Edit;
 }) {
 	const [adding, setAdding] = useState(false);
 	const several = draft.towers.length > 1;
 	const towerName = (index: number) =>
 		several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME;
-	const places = draft.floorAreas.filter(
-		(area) => area.tower < draft.towers.length,
-	);
+	const places = listedFloorAreas(draft);
 
 	return (
 		<div className="grid gap-(--space-5)">
@@ -209,35 +216,47 @@ export function CommonAreasStep({
 			>
 				{places.length > 0 ? (
 					<ul className="grid rounded-xl bg-card shadow-(--ring-hairline)">
-						{places.map((area) => (
-							<li
-								key={area.key}
-								className="flex min-h-14 items-center gap-(--space-2) pl-(--space-4)"
-							>
-								<span className="min-w-0 flex-1 [overflow-wrap:anywhere]">
-									<span className="font-medium">{area.name}</span>
-									<span className="text-sm text-muted-foreground">
-										{` · ${towerName(area.tower)}, ${area.floor}º andar`}
-									</span>
-								</span>
-								<Button
-									type="button"
-									variant="ghost"
-									size="icon"
-									aria-label={`Tirar ${area.name}`}
-									onClick={() =>
-										edit((current) => ({
-											...current,
-											floorAreas: current.floorAreas.filter(
-												(other) => other.key !== area.key,
-											),
-										}))
-									}
+						{places.map((area) => {
+							const id = floorAreaFieldId(area.key);
+							const error = errors[id];
+							return (
+								<li
+									key={area.key}
+									id={id}
+									tabIndex={-1}
+									aria-describedby={error ? `${id}-error` : undefined}
+									className="flex min-h-14 scroll-mt-22 items-center gap-(--space-2) pl-(--space-4) outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 								>
-									<X className="size-5" aria-hidden="true" />
-								</Button>
-							</li>
-						))}
+									<span className="grid min-w-0 flex-1 gap-(--space-1) [overflow-wrap:anywhere]">
+										<span>
+											<span className="font-medium">{area.name}</span>
+											<span className="text-sm text-muted-foreground">
+												{` · ${towerName(area.tower)}, ${area.floor}º andar`}
+											</span>
+										</span>
+										{error && (
+											<FieldError id={`${id}-error`}>{error}</FieldError>
+										)}
+									</span>
+									<Button
+										type="button"
+										variant="ghost"
+										size="icon"
+										aria-label={`Tirar ${area.name}`}
+										onClick={() =>
+											edit((current) => ({
+												...current,
+												floorAreas: current.floorAreas.filter(
+													(other) => other.key !== area.key,
+												),
+											}))
+										}
+									>
+										<X className="size-5" aria-hidden="true" />
+									</Button>
+								</li>
+							);
+						})}
 					</ul>
 				) : (
 					<span className="text-sm text-muted-foreground">Nenhuma.</span>

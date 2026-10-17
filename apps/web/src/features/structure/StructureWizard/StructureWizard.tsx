@@ -32,7 +32,7 @@ import {
 import { TowersStep } from "./TowersStep";
 import {
 	type DraftErrors,
-	firstInvalidFieldId,
+	firstInvalidField,
 	initialDraft,
 	validateDraft,
 	type WizardDraft,
@@ -165,11 +165,11 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 
 	function validate(): boolean {
 		const found = validateDraft(draft);
-		const first = firstInvalidFieldId(draft, found);
+		const first = firstInvalidField(draft, found);
 		setErrors(found);
 		if (first === undefined) return true;
-		setStep(0);
-		setReveal(first);
+		setStep(first.section === "towers" ? 0 : 1);
+		setReveal(first.id);
 		return false;
 	}
 
@@ -278,7 +278,9 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	const towersStep = (
 		<TowersStep draft={draft} errors={errors} edit={edit} desktop={desktop} />
 	);
-	const areasStep = <CommonAreasStep draft={draft} edit={edit} />;
+	const areasStep = (
+		<CommonAreasStep draft={draft} errors={errors} edit={edit} />
+	);
 
 	if (desktop) {
 		return (
