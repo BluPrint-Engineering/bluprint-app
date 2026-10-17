@@ -11,6 +11,8 @@ import {
 	type StructureFloor,
 	type StructureTower,
 	type StructureUnit,
+	type UnitType,
+	type UnitTypeList,
 } from "@bluprint/shared";
 import { type ApiHandler, json } from "@/test/renderApp";
 
@@ -411,4 +413,40 @@ export function writableApi(
 	);
 
 	return { handler, state, created, renamed };
+}
+
+export function unitTypeOf(
+	name: string,
+	rooms: string[],
+	usage: { units?: number; changed?: number } = {},
+): UnitType {
+	return {
+		id: unitTypeId(name),
+		name,
+		rooms: rooms.map(named),
+		unitCount: usage.units ?? 0,
+		changedUnitCount: usage.changed ?? 0,
+	};
+}
+
+export function unitTypesApi(
+	projectId: string,
+	list: UnitTypeList = { unitTypes: [] },
+): ApiHandler {
+	return (url, init) =>
+		url.pathname === `/api/projects/${projectId}/unit-types` &&
+		(init?.method ?? "GET") === "GET"
+			? json(list)
+			: undefined;
+}
+
+export function configurationSectionsApi(
+	projectId: string,
+	structure: Structure = emptyStructure,
+	unitTypes: UnitTypeList = { unitTypes: [] },
+): ApiHandler {
+	return combine(
+		structureApi(projectId, structure),
+		unitTypesApi(projectId, unitTypes),
+	);
 }

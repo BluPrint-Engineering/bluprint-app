@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { uuidV7 } from "@/lib/uuidV7";
+import { AddTag, Tags } from "../components/Tags";
 import { SELECT } from "./fieldStyles";
-import { AddTag, Tags } from "./Tags";
 import {
 	type DraftErrors,
 	floorAreaFieldId,

@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { project } from "@/test/projectsApi";
 import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
+import { combine, configurationSectionsApi } from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
 
 const OBRA = { ...project(7), name: "Casa Moinhos" };
@@ -39,7 +40,10 @@ function projectApi(initial: ProjectSummary, patch?: Patch) {
 		}
 		return json(state.current);
 	};
-	return { state, handler };
+	return {
+		state,
+		handler: combine(handler, configurationSectionsApi(initial.id)),
+	};
 }
 
 function patchRequests(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
@@ -59,7 +63,7 @@ describe("project configuration", () => {
 		onlineManager.setOnline(true);
 	});
 
-	test("shows Dados da obra, Status da obra and the side navigation, with the name and the way back (C1)", async () => {
+	test("shows the sections and the side navigation, with the name and the way back (C1)", async () => {
 		const { handler } = projectApi(OBRA);
 		stubApi(signedIn, { api: handler });
 
@@ -86,7 +90,7 @@ describe("project configuration", () => {
 			within(nav)
 				.getAllByRole("link")
 				.map((link) => link.textContent),
-		).toEqual(["Dados da obra", "Status da obra"]);
+		).toEqual(["Dados da obra", "Status da obra", "Estrutura", "Tipologias"]);
 		expect(
 			within(screen.getByRole("region", { name: "Status da obra" })).getByRole(
 				"heading",

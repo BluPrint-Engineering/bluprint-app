@@ -1,11 +1,11 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import { Pencil, SlidersHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChangeReservationDialog } from "../components/ChangeReservationDialog";
 import { plural } from "../components/plural";
-import { LockNote } from "./LockNote";
 import { RenameProjectForm } from "./RenameProjectForm";
 import { SECTION_ID } from "./sections";
 

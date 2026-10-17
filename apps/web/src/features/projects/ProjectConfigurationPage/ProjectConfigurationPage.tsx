@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIsDesktop } from "@/lib/useIsDesktop";
+import { StructureSection, UnitTypesSection } from "../../structure";
 import { ProjectScreen } from "../components/ProjectScreen";
 import { ProjectDetailsSection } from "./ProjectDetailsSection";
 import { ProjectStatusSection } from "./ProjectStatusSection";
@@ -56,6 +57,8 @@ export function ProjectConfigurationPage({
 								onReservationOpenChange={onReservationOpenChange}
 							/>
 							<ProjectStatusSection project={project} />
+							<StructureSection project={project} />
+							<UnitTypesSection project={project} />
 						</div>
 					</div>
 				</div>
