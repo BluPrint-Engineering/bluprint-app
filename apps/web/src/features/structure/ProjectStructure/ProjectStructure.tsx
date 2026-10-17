@@ -7,6 +7,7 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Building2, Layers, ListPlus, Plus } from "lucide-react";
+import type { Ref } from "react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
@@ -23,16 +24,28 @@ import { AddRow } from "../components/AddRow";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
 import { ListCard, ListRow, LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
-import { type Adding, useAdding } from "../components/useAdding";
+import {
+	type Adding,
+	useAdding,
+	useFocusOnClose,
+} from "../components/useAdding";
 import { PROJECT_ORIGIN } from "../LocationPage/origin";
 import { nextTowerName } from "../naming";
 import { TowerCards } from "./TowerCards";
 
-function AddMenu({ projectId, adding }: { projectId: string; adding: Adding }) {
+function AddMenu({
+	projectId,
+	adding,
+	towerOpener,
+}: {
+	projectId: string;
+	adding: Adding;
+	towerOpener: Ref<HTMLButtonElement>;
+}) {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
-				<Button variant="outline">
+				<Button ref={towerOpener} variant="outline">
 					<Plus className="size-4.5" aria-hidden="true" />
 					Adicionar
 				</Button>
@@ -164,12 +177,14 @@ function SingleTower({
 	structure,
 	tower,
 	adding,
+	towerOpener,
 	canEdit,
 }: {
 	projectId: string;
 	structure: Structure;
 	tower: StructureTower;
 	adding: Adding;
+	towerOpener: Ref<HTMLButtonElement>;
 	canEdit: boolean;
 }) {
 	const items = [
@@ -189,7 +204,13 @@ function SingleTower({
 			<section className="grid min-w-0 content-start gap-(--space-3)">
 				<div className="flex items-center justify-between gap-(--space-3)">
 					<h2 className="text-lg font-semibold tracking-tight">Fachada</h2>
-					{canEdit && <AddMenu projectId={projectId} adding={adding} />}
+					{canEdit && (
+						<AddMenu
+							projectId={projectId}
+							adding={adding}
+							towerOpener={towerOpener}
+						/>
+					)}
 				</div>
 				{adding.is("tower") && (
 					<TowerForm
@@ -231,11 +252,13 @@ function SeveralTowers({
 	projectId,
 	structure,
 	adding,
+	towerOpener,
 	canEdit,
 }: {
 	projectId: string;
 	structure: Structure;
 	adding: Adding;
+	towerOpener: Ref<HTMLButtonElement>;
 	canEdit: boolean;
 }) {
 	return (
@@ -244,7 +267,13 @@ function SeveralTowers({
 				<section className="grid gap-(--space-3)">
 					<div className="flex items-center justify-between gap-(--space-3)">
 						<h2 className="text-lg font-semibold tracking-tight">Torres</h2>
-						{canEdit && <AddMenu projectId={projectId} adding={adding} />}
+						{canEdit && (
+							<AddMenu
+								projectId={projectId}
+								adding={adding}
+								towerOpener={towerOpener}
+							/>
+						)}
 					</div>
 					{structure.towers.length > 0 && (
 						<TowerCards projectId={projectId} towers={structure.towers} />
@@ -273,6 +302,7 @@ function SeveralTowers({
 export function ProjectStructure({ project }: { project: ProjectSummary }) {
 	const query = useQuery(structureQueryOptions(project.id));
 	const adding = useAdding();
+	const towerOpener = useFocusOnClose<HTMLButtonElement>(adding.is("tower"));
 	const canEdit = project.status !== "delivered";
 
 	if (query.data) {
@@ -297,6 +327,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 							</Button>
 							{!adding.is("tower") && (
 								<Button
+									ref={towerOpener}
 									variant="ghost"
 									className="max-md:w-full"
 									onClick={() => adding.open("tower")}
@@ -332,6 +363,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 				structure={structure}
 				tower={onlyTower}
 				adding={adding}
+				towerOpener={towerOpener}
 				canEdit={canEdit}
 			/>
 		) : (
@@ -339,6 +371,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 				projectId={project.id}
 				structure={structure}
 				adding={adding}
+				towerOpener={towerOpener}
 				canEdit={canEdit}
 			/>
 		);

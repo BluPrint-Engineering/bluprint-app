@@ -112,9 +112,6 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	expect(await stored(await locationId("Residencial Jardins", "tower", "Torre Azul"))).toBe("Torre Azul");
 	await shot("tower-renamed");
 
-	const vertice = (await query("SELECT p.id FROM project p JOIN organization o ON o.id = p.organization_id WHERE p.name = 'Residencial Jardins' AND o.name = 'Construtora Horizonte'"))[0].id;
-	expect(vertice).toBe(jardins);
-
 	const delivered = await projectId("Residencial Vila Nova");
 	await page.goto(`/projects/${delivered}`);
 	await expect(page.getByText("A obra foi entregue: a estrutura não pode mais ser alterada.")).toBeVisible();

@@ -108,6 +108,9 @@ describe("a project with no structure (E1)", () => {
 			position: 0,
 		});
 		expect(screen.queryByText("Torre A")).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
+		);
 	});
 
 	test("goes back to the two buttons when the form is cancelled", async () => {
@@ -127,11 +130,11 @@ describe("a project with no structure (E1)", () => {
 
 		await user.keyboard("{Escape}");
 
-		expect(
-			await screen.findByRole("button", {
-				name: "Adicionar uma torre por vez",
-			}),
-		).toBeInTheDocument();
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Adicionar uma torre por vez" }),
+			).toHaveFocus(),
+		);
 		expect(api.created).toHaveLength(0);
 	});
 
@@ -205,6 +208,27 @@ describe("several towers (E2)", () => {
 		expect(
 			screen.queryByRole("textbox", { name: "Nome da torre" }),
 		).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
+		);
+	});
+
+	test("returns focus to the Adicionar menu when the tower form is cancelled", async () => {
+		const api = writableApi(obra(), severalTowers());
+		stubApi(signedIn, { api: api.handler });
+		renderAt(OBRA_PATH);
+		await openAddMenu();
+		await user.click(await screen.findByRole("menuitem", { name: "Torre" }));
+		const field = await screen.findByRole("textbox", { name: "Nome da torre" });
+		await waitFor(() => expect(field).toHaveFocus());
+
+		await user.click(screen.getByRole("button", { name: "Cancelar" }));
+
+		expect(field).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
+		);
+		expect(api.created).toHaveLength(0);
 	});
 
 	test("adds a common area of the obra at the end of its list", async () => {
@@ -334,6 +358,27 @@ describe("a single tower (E3)", () => {
 			name: "Torre B",
 			position: 2,
 		});
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
+		);
+	});
+
+	test("returns focus to the Adicionar menu when the tower form is dismissed with Escape", async () => {
+		stubApi(signedIn, {
+			api: writableApi(obra(), singleTower()).handler,
+		});
+		renderAt(OBRA_PATH);
+		await openAddMenu();
+		await user.click(await screen.findByRole("menuitem", { name: "Torre" }));
+		const field = await screen.findByRole("textbox", { name: "Nome da torre" });
+		await waitFor(() => expect(field).toHaveFocus());
+
+		await user.keyboard("{Escape}");
+
+		expect(field).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
+		);
 	});
 
 	test("adds a common area of the obra beside the tower's own, in one list", async () => {

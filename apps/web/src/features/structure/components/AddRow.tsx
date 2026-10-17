@@ -17,7 +17,7 @@ import { availableUnitsOf } from "../../projects/api";
 import { namesTakenOf, useCreateStructureMutation } from "../api";
 import { nameProblem, type Scope, takenText } from "../naming";
 import { plural } from "../plural";
-import type { Adding, AddKind } from "./useAdding";
+import { type Adding, type AddKind, useFocusOnClose } from "./useAdding";
 
 const ADD_FAILED =
 	"Não foi possível adicionar. Confira sua conexão e tente de novo.";
@@ -161,12 +161,7 @@ function AddForm({
 export function AddRow(props: AddRowProps) {
 	const { adding, kind, label, blocked } = props;
 	const open = adding.is(kind);
-	const button = useRef<HTMLButtonElement>(null);
-	const wasOpen = useRef(open);
-	useEffect(() => {
-		if (wasOpen.current && !open) button.current?.focus();
-		wasOpen.current = open;
-	}, [open]);
+	const button = useFocusOnClose<HTMLButtonElement>(open);
 
 	if (open) return <AddForm {...props} />;
 

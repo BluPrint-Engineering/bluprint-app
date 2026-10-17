@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type AddKind =
 	| "tower"
@@ -23,4 +23,14 @@ export function useAdding(): Adding {
 		}),
 		[current],
 	);
+}
+
+export function useFocusOnClose<T extends HTMLElement>(open: boolean) {
+	const target = useRef<T>(null);
+	const wasOpen = useRef(open);
+	useEffect(() => {
+		if (wasOpen.current && !open) target.current?.focus();
+		wasOpen.current = open;
+	}, [open]);
+	return target;
 }
