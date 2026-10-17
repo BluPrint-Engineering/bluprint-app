@@ -117,6 +117,8 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	}
 
 	await expect(page.getByRole("dialog")).toHaveCount(0);
+	await page.mouse.move(0, 0);
+	await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 15_000 });
 	await status.getByRole("button", { name: "Entregar obra" }).click();
 	const confirm = page.getByRole("alertdialog");
 	await expect(confirm).toHaveAccessibleName("Entregar “Residencial Jardins”?");
