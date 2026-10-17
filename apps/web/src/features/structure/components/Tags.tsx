@@ -3,15 +3,18 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 export function Tags({
 	items,
 	onRemove,
 	removeLabel = (name) => `Tirar ${name}`,
+	isNew = () => false,
 }: {
 	items: string[];
 	onRemove: (index: number) => void;
 	removeLabel?: (name: string) => string;
+	isNew?: (name: string) => boolean;
 }) {
 	if (items.length === 0) return null;
 	return (
@@ -19,7 +22,10 @@ export function Tags({
 			{items.map((name, index) => (
 				<li
 					key={name}
-					className="inline-flex min-h-8 items-center gap-1 rounded-full bg-muted pl-3 text-sm"
+					className={cn(
+						"inline-flex min-h-8 items-center gap-1 rounded-full bg-muted pl-3 text-sm",
+						isNew(name) && "shadow-[inset_0_0_0_1px_var(--primary)]",
+					)}
 				>
 					<span className="[overflow-wrap:anywhere]">{name}</span>
 					<button

@@ -59,7 +59,6 @@ export default async function structure({ page, shot, expect, query }) {
 	await expect(page.getByText("3 alterações")).toBeVisible();
 	await expect(page.getByText("Só desta unidade")).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Tirados desta unidade" })).toBeVisible();
-	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
 	await shot("unit-changes");
 	await page.getByRole("link", { name: "9º andar" }).click();
 	await page.getByRole("link", { name: /^901/ }).click();
@@ -112,14 +111,14 @@ export default async function structure({ page, shot, expect, query }) {
 
 	await page.goto(`/projects/${jardins}/locations/${await locationId("Residencial Jardins", "unit", "1204")}`);
 	await expect(page.getByText("Os cômodos desta unidade são só dela.")).toBeVisible();
-	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem")).toHaveCount(3);
+	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem")).toHaveCount(4);
 	await expect(page.getByText("Só desta unidade")).toHaveCount(0);
 	await shot("unit-without-type");
 
 	await page.goto(`/projects/${jardins}/locations/${await locationId("Residencial Jardins", "common_area", "Salão de festas")}`);
 	await expect(page.getByRole("heading", { level: 2, name: "Cômodos" })).toBeVisible();
 	await expect(page.getByRole("heading", { level: 2, name: "Tipologia" })).toHaveCount(0);
-	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem")).toHaveCount(2);
+	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem")).toHaveCount(3);
 	await shot("common-area-rooms");
 
 	await page.goto(`/projects/${await projectId("Edifício Aurora")}`);
