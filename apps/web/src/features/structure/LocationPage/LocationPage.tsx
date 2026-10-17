@@ -142,9 +142,19 @@ export function LocationPage({
 				<PageMain>
 					{tower && <TowerBody projectId={projectId} tower={tower} />}
 					{floor && <FloorBody projectId={projectId} floor={floor} />}
-					{location.data.type === "unit" && <UnitBody unit={location.data} />}
+					{location.data.type === "unit" && (
+						<UnitBody
+							projectId={projectId}
+							unit={location.data}
+							editable={project.data.status !== "delivered"}
+						/>
+					)}
 					{location.data.type === "common_area" && (
-						<CommonAreaBody area={location.data} />
+						<CommonAreaBody
+							projectId={projectId}
+							area={location.data}
+							editable={project.data.status !== "delivered"}
+						/>
 					)}
 				</PageMain>
 			</>

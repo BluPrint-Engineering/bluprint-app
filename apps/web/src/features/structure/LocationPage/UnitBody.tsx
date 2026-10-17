@@ -1,10 +1,40 @@
 import type { LocationDetail } from "@bluprint/shared";
+import { LayoutGrid, Undo2 } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { useResetUnitTypeMutation } from "../api";
+import { ChangeUnitTypeDialog } from "./ChangeUnitTypeDialog";
 import { RoomsCard } from "./RoomsCard";
 import { changesLabel } from "./unitTypeLine";
 
-export function UnitBody({ unit }: { unit: LocationDetail }) {
+export function UnitBody({
+	projectId,
+	unit,
+	editable,
+}: {
+	projectId: string;
+	unit: LocationDetail;
+	editable: boolean;
+}) {
 	const { unitType, changes } = unit;
+	const [changingType, setChangingType] = useState(false);
+	const reset = useResetUnitTypeMutation(projectId, unit.id);
+
+	function returnToUnitType() {
+		reset.mutate(undefined, {
+			onSuccess: () =>
+				toast.success(
+					`A unidade ${unit.name} voltou à tipologia ${unitType?.name}.`,
+				),
+			onError: () =>
+				toast.error(
+					`Não foi possível voltar a unidade ${unit.name} à tipologia. Confira sua conexão e tente de novo.`,
+				),
+		});
+	}
 
 	return (
 		<div className="grid gap-(--space-6) md:grid-cols-[320px_minmax(0,1fr)] md:items-start md:gap-(--space-8)">
@@ -24,13 +54,43 @@ export function UnitBody({ unit }: { unit: LocationDetail }) {
 							? `Os cômodos acompanham a tipologia ${unitType.name}. O que foi mudado só nesta unidade continua assim quando a tipologia muda.`
 							: "Os cômodos desta unidade são só dela."}
 					</p>
+					{editable && (
+						<div className="flex flex-wrap gap-(--space-2) max-md:*:flex-1">
+							<Button
+								type="button"
+								variant="outline"
+								onClick={() => setChangingType(true)}
+							>
+								<LayoutGrid aria-hidden="true" />
+								Trocar tipologia
+							</Button>
+							{changes > 0 && (
+								<Button
+									type="button"
+									variant="ghost"
+									disabled={reset.isPending}
+									onClick={returnToUnitType}
+								>
+									{reset.isPending ? (
+										<Spinner aria-hidden />
+									) : (
+										<Undo2 aria-hidden="true" />
+									)}
+									Voltar à tipologia
+								</Button>
+							)}
+						</div>
+					)}
 				</div>
 			</section>
-			<RoomsCard
-				rooms={unit.rooms}
-				droppedRooms={unit.droppedRooms}
-				unitType={unitType}
-			/>
+			<RoomsCard projectId={projectId} location={unit} editable={editable} />
+			{changingType && (
+				<ChangeUnitTypeDialog
+					projectId={projectId}
+					unit={unit}
+					onClose={() => setChangingType(false)}
+				/>
+			)}
 		</div>
 	);
 }

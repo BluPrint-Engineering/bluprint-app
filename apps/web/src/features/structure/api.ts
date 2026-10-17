@@ -1,14 +1,19 @@
 import {
+	type AddRoom,
 	type CreateStructure,
 	createStructureResultSchema,
 	LOCATION_NAME_TAKEN,
 	LOCATION_NOT_FOUND,
+	type LocationDetail,
 	locationDetailSchema,
 	PROJECT_NOT_FOUND,
 	projectUnitsBalanceSchema,
+	ROOM_NAME_TAKEN,
+	ROOM_NOT_FOUND,
 	type Structure,
 	structureSchema,
 	UNIT_TYPE_NAME_TAKEN,
+	unitTypeListSchema,
 } from "@bluprint/shared";
 import {
 	queryOptions,
@@ -125,4 +130,129 @@ export function useCreateStructureMutation(projectId: string) {
 			}
 		},
 	});
+}
+
+export function unitTypesQueryOptions(projectId: string) {
+	return queryOptions({
+		queryKey: ["structure", projectId, "unit-types"],
+		queryFn: () =>
+			apiFetch(`/projects/${projectId}/unit-types`, unitTypeListSchema),
+		retry: retryUnlessNotFound,
+	});
+}
+
+export function isRoomNameTaken(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === ROOM_NAME_TAKEN;
+}
+
+export function isRoomGone(error: unknown) {
+	return (
+		error instanceof ApiError &&
+		(error.problem?.code === ROOM_NOT_FOUND ||
+			error.problem?.code === LOCATION_NOT_FOUND)
+	);
+}
+
+const JSON_HEADERS = { "content-type": "application/json" };
+
+function useLocationMutation<Variables>(
+	projectId: string,
+	locationId: string,
+	send: (variables: Variables) => Promise<LocationDetail>,
+) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: send,
+		onSuccess: (detail) => {
+			queryClient.setQueryData(
+				locationQueryOptions(projectId, locationId).queryKey,
+				detail,
+			);
+			void queryClient.invalidateQueries({
+				queryKey: structureQueryOptions(projectId).queryKey,
+				exact: true,
+			});
+			void queryClient.invalidateQueries({
+				queryKey: unitTypesQueryOptions(projectId).queryKey,
+			});
+			void queryClient.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+			if (isRoomGone(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: locationQueryOptions(projectId, locationId).queryKey,
+				});
+			}
+		},
+	});
+}
+
+export function useAddRoomMutation(projectId: string, locationId: string) {
+	return useLocationMutation(projectId, locationId, (body: AddRoom) =>
+		apiFetch(
+			`/projects/${projectId}/locations/${locationId}/rooms`,
+			locationDetailSchema,
+			{ method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body) },
+		),
+	);
+}
+
+export function useRenameRoomMutation(projectId: string, locationId: string) {
+	return useLocationMutation(
+		projectId,
+		locationId,
+		({ roomId, name }: { roomId: string; name: string }) =>
+			apiFetch(`/projects/${projectId}/rooms/${roomId}`, locationDetailSchema, {
+				method: "PATCH",
+				headers: JSON_HEADERS,
+				body: JSON.stringify({ name }),
+			}),
+	);
+}
+
+export function useRemoveRoomMutation(projectId: string, locationId: string) {
+	return useLocationMutation(projectId, locationId, (roomId: string) =>
+		apiFetch(`/projects/${projectId}/rooms/${roomId}`, locationDetailSchema, {
+			method: "DELETE",
+		}),
+	);
+}
+
+export function useGiveRoomBackMutation(projectId: string, unitId: string) {
+	return useLocationMutation(projectId, unitId, (unitTypeRoomId: string) =>
+		apiFetch(
+			`/projects/${projectId}/locations/${unitId}/dropped-rooms/${unitTypeRoomId}`,
+			locationDetailSchema,
+			{ method: "DELETE" },
+		),
+	);
+}
+
+export function useChangeUnitTypeMutation(projectId: string, unitId: string) {
+	return useLocationMutation(projectId, unitId, (unitTypeId: string | null) =>
+		apiFetch(
+			`/projects/${projectId}/locations/${unitId}/unit-type`,
+			locationDetailSchema,
+			{
+				method: "PUT",
+				headers: JSON_HEADERS,
+				body: JSON.stringify({ unitTypeId }),
+			},
+		),
+	);
+}
+
+export function useResetUnitTypeMutation(projectId: string, unitId: string) {
+	return useLocationMutation(projectId, unitId, () =>
+		apiFetch(
+			`/projects/${projectId}/locations/${unitId}/unit-type/reset`,
+			locationDetailSchema,
+			{ method: "POST" },
+		),
+	);
 }

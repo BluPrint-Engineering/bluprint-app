@@ -777,7 +777,7 @@ describe("unit page", () => {
 			within(sectionOf("Cômodos"))
 				.getAllByRole("listitem")
 				.map((item) => item.textContent),
-		).toEqual(["Sala", "Cozinha"]);
+		).toEqual(["Sala", "Cozinha", "Adicionar cômodo"]);
 		expect(screen.getByText("2 cômodos")).toBeInTheDocument();
 		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
 		expect(screen.queryByText("Tirados desta unidade")).not.toBeInTheDocument();
@@ -802,14 +802,19 @@ describe("unit page", () => {
 		const rooms = within(screen.getByRole("list", { name: "Cômodos" }));
 		expect(
 			rooms.getAllByRole("listitem").map((item) => item.textContent),
-		).toEqual(["Sala", "Copa", "Home officeSó desta unidade"]);
+		).toEqual([
+			"Sala",
+			"Copa",
+			"Home officeSó desta unidade",
+			"Adicionar cômodo",
+		]);
 		expect(screen.getByText("3 cômodos")).toBeInTheDocument();
 		const dropped = within(
 			screen.getByRole("list", { name: "Tirados desta unidade" }),
 		);
 		expect(
 			dropped.getAllByRole("listitem").map((item) => item.textContent),
-		).toEqual(["SacadaDa tipologia Tipologia A"]);
+		).toEqual(["SacadaDa tipologia Tipologia ADevolver"]);
 	});
 
 	test("says the rooms of a unit without a unit type are only its own, with no badge on them", async () => {
@@ -830,21 +835,36 @@ describe("unit page", () => {
 			within(sectionOf("Cômodos"))
 				.getAllByRole("listitem")
 				.map((item) => item.textContent),
-		).toEqual(["Quarto", "Banheiro"]);
+		).toEqual(["Quarto", "Banheiro", "Adicionar cômodo"]);
 	});
 
-	test("says a unit has no rooms yet", async () => {
+	test("offers only the add row to a unit without rooms yet", async () => {
 		stubApi(signedIn, { api: api(typedStructure) });
+
+		renderAt(pathOf(unit504.id));
+
+		await screen.findByRole("heading", { level: 1, name: "504" });
+		expect(
+			within(sectionOf("Cômodos"))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Adicionar cômodo"]);
+		expect(screen.getByText("0 cômodos")).toBeInTheDocument();
+	});
+
+	test("says a delivered unit has no rooms", async () => {
+		stubApi(signedIn, {
+			api: api(typedStructure, { ...OBRA, status: "delivered" }),
+		});
 
 		renderAt(pathOf(unit504.id));
 
 		expect(
 			await screen.findByText("Nenhum cômodo cadastrado."),
 		).toBeInTheDocument();
-		expect(screen.getByText("0 cômodos")).toBeInTheDocument();
 	});
 
-	test("offers no button or menu yet, and shows the lock line on a delivered project", async () => {
+	test("offers no button or menu, and shows the lock line on a delivered project", async () => {
 		stubApi(signedIn, {
 			api: api(
 				typedStructure,
@@ -891,13 +911,28 @@ describe("common area page", () => {
 			within(sectionOf("Cômodos"))
 				.getAllByRole("listitem")
 				.map((item) => item.textContent),
-		).toEqual(["Cozinha", "Banheiro"]);
+		).toEqual(["Cozinha", "Banheiro", "Adicionar cômodo"]);
 		expect(screen.getByText("2 cômodos")).toBeInTheDocument();
 		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
 	});
 
-	test("says a common area has no rooms yet", async () => {
+	test("offers only the add row to a common area without rooms yet", async () => {
 		stubApi(signedIn, { api: api(typedStructure) });
+
+		renderAt(pathOf(nth(typedStructure.commonAreas, 0).id));
+
+		await screen.findByRole("heading", { level: 1 });
+		expect(
+			within(sectionOf("Cômodos"))
+				.getAllByRole("listitem")
+				.map((item) => item.textContent),
+		).toEqual(["Adicionar cômodo"]);
+	});
+
+	test("says a delivered common area has no rooms", async () => {
+		stubApi(signedIn, {
+			api: api(typedStructure, { ...OBRA, status: "delivered" }),
+		});
 
 		renderAt(pathOf(nth(typedStructure.commonAreas, 0).id));
 
