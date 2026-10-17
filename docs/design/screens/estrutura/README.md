@@ -395,8 +395,9 @@ and:
   obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist; it also creates the request's tipologias with their rooms (client ids, `409 UNIT_TYPE_NAME_TAKEN` for a name in use), and a unit that names a tipologia is born with its rooms;
 - `GET /api/projects/:id/units` → `{ reserved, used, remaining }`, for anyone linked to the obra, is served (the
   admin's `PATCH /api/projects/:id/units` lives in `../obra/`);
-- `POST` / `PATCH` / `DELETE` on locations and rooms, `PATCH` for order, unit types CRUD. A `DELETE` that deletes (no
-  content) gives the units of the subtree back to the obra's reserva; one that archives keeps them spent;
+- `PATCH /api/projects/:id/locations/:locationId` with `{ name }` (rename), served;
+- `POST` / `DELETE` on locations and rooms, `PATCH` on rooms, `PATCH` for order, unit types CRUD. A `DELETE` that
+  deletes (no content) gives the units of the subtree back to the obra's reserva; one that archives keeps them spent;
 - every write refuses a delivered obra with `409 PROJECT_DELIVERED` and moves `last_activity_at`;
 - `DELETE` answers whether it deleted or archived; until plans exist (#7) it always deletes (ADR 0073).
 
