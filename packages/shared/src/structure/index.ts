@@ -6,4 +6,5 @@ export * from "./location-rooms.js";
 export * from "./location-type.js";
 export * from "./structure.js";
 export * from "./unit-type-ref.js";
+export * from "./unit-type-write.js";
 export * from "./unit-types.js";

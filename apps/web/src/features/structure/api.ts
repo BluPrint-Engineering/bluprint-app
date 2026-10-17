@@ -1,6 +1,7 @@
 import {
 	type AddRoom,
 	type CreateStructure,
+	type CreateUnitType,
 	createStructureResultSchema,
 	LOCATION_NAME_TAKEN,
 	LOCATION_NOT_FOUND,
@@ -12,8 +13,12 @@ import {
 	ROOM_NOT_FOUND,
 	type Structure,
 	structureSchema,
+	UNIT_TYPE_IN_USE,
 	UNIT_TYPE_NAME_TAKEN,
+	type UpdateUnitType,
 	unitTypeListSchema,
+	unitTypeSchema,
+	updateUnitTypeResultSchema,
 } from "@bluprint/shared";
 import {
 	queryOptions,
@@ -141,6 +146,16 @@ export function unitTypesQueryOptions(projectId: string) {
 	});
 }
 
+export function isUnitTypeInUse(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === UNIT_TYPE_IN_USE;
+}
+
+export function roomNamesTakenOf(error: unknown): string[] | undefined {
+	return error instanceof ApiError && error.problem?.code === ROOM_NAME_TAKEN
+		? (error.problem.names ?? [])
+		: undefined;
+}
+
 export function isRoomNameTaken(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === ROOM_NAME_TAKEN;
 }
@@ -253,6 +268,66 @@ export function useResetUnitTypeMutation(projectId: string, unitId: string) {
 			`/projects/${projectId}/locations/${unitId}/unit-type/reset`,
 			locationDetailSchema,
 			{ method: "POST" },
+		),
+	);
+}
+
+function useUnitTypeMutation<Variables, Result>(
+	projectId: string,
+	send: (variables: Variables) => Promise<Result>,
+) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: send,
+		onSettled: () =>
+			Promise.all([
+				queryClient.invalidateQueries({
+					queryKey: structureQueryOptions(projectId).queryKey,
+				}),
+				queryClient.invalidateQueries({ queryKey: ["projects"] }),
+			]),
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+		},
+	});
+}
+
+export function useCreateUnitTypeMutation(projectId: string) {
+	return useUnitTypeMutation(projectId, (body: CreateUnitType) =>
+		apiFetch(`/projects/${projectId}/unit-types`, unitTypeSchema, {
+			method: "POST",
+			headers: JSON_HEADERS,
+			body: JSON.stringify(body),
+		}),
+	);
+}
+
+export function useUpdateUnitTypeMutation(projectId: string) {
+	return useUnitTypeMutation(
+		projectId,
+		({ unitTypeId, ...body }: { unitTypeId: string } & UpdateUnitType) =>
+			apiFetch(
+				`/projects/${projectId}/unit-types/${unitTypeId}`,
+				updateUnitTypeResultSchema,
+				{
+					method: "PATCH",
+					headers: JSON_HEADERS,
+					body: JSON.stringify(body),
+				},
+			),
+	);
+}
+
+export function useDeleteUnitTypeMutation(projectId: string) {
+	return useUnitTypeMutation(projectId, (unitTypeId: string) =>
+		apiFetch(
+			`/projects/${projectId}/unit-types/${unitTypeId}`,
+			unitTypeListSchema,
+			{ method: "DELETE" },
 		),
 	);
 }

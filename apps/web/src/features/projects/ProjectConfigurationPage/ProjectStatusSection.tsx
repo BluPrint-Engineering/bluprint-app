@@ -1,11 +1,11 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import { CircleCheck } from "lucide-react";
 import { useState } from "react";
+import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProjectStatusBadge } from "../components/ProjectStatusBadge";
 import { DeliverProjectDialog } from "./DeliverProjectDialog";
-import { LockNote } from "./LockNote";
 import { SECTION_ID } from "./sections";
 
 const ACTIVE_TEXT =

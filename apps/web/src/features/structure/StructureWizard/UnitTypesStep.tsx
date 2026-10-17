@@ -7,9 +7,9 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { AddTag, Tags } from "../components/Tags";
 import { plural } from "../plural";
 import { SELECT } from "./fieldStyles";
-import { AddTag, Tags } from "./Tags";
 import {
 	ALL_FINALS,
 	type RuleDraft,

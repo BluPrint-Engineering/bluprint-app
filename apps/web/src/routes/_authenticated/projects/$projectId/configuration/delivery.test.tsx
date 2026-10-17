@@ -7,6 +7,7 @@ import { organizationUnitsQueryOptions } from "@/features/account/api";
 import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
 import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
+import { combine, configurationSectionsApi } from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
 
 const OBRA: ProjectSummary = {
@@ -54,7 +55,10 @@ function deliveryApi(initial: ProjectSummary, deliver?: Deliver) {
 			return json(state.current);
 		return undefined;
 	};
-	return { state, handler };
+	return {
+		state,
+		handler: combine(handler, configurationSectionsApi(initial.id)),
+	};
 }
 
 function problem(status: number, code: string) {
@@ -224,6 +228,8 @@ describe("the Status da obra card", () => {
 		expect(links.map((link) => link.textContent)).toEqual([
 			"Dados da obra",
 			"Status da obra",
+			"Estrutura",
+			"Tipologias",
 		]);
 		expect(links[0]).toHaveAttribute("aria-current", "true");
 		await userEvent.click(nth(links, 1));
