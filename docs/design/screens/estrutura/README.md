@@ -389,7 +389,7 @@ The `location` table exists; `room`, `unit_detail` and `unit_type` do not (`docs
 and:
 
 - `GET /api/projects/:id/structure`, `GET /api/projects/:id/locations/:locationId`, both served;
-- `POST /api/projects/:id/structure` (the wizard, idempotent by ids) carries **every creation of units**: the wizard,
+- `POST /api/projects/:id/structure` (the wizard, idempotent by ids), served, carries **every creation of units**: the wizard,
   "Adicionar unidade", "Adicionar andares", Duplicar and Desfazer. When the obra's reserva does not cover the new units
   it answers `409 NO_UNITS_LEFT` with `requested` (new units in the request) and `available` (what remains in the
   obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist;
