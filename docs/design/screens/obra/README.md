@@ -329,7 +329,7 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 - `useRenameProjectMutation` → `setQueryData` on the project and invalidate the list.
 - `useChangeReservationMutation` (2.12) sends `{ reserved }`; success → `setQueryData` on the project's `units`,
   invalidate the organization units query and the list. Branch on `RESERVATION_BELOW_USED`, `NO_UNITS_LEFT` and
-  `PROJECT_DELIVERED`. Local UI state: dialog open + draft + error.
+  `PROJECT_DELIVERED`. Local UI state: draft + error.
   The dialog's open state lives in the address, `/projects/:id/configuration?reserva=alterar`, so the "Alterar
   reserva" links of the structure screens (W4c, F5b, R9b) reach it and Back closes it.
 - `useDeliverProjectMutation` (later ticket) → updates the project and the list. Local UI state: rename editing +
