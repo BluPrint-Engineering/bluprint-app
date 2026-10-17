@@ -11,7 +11,7 @@ import {
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
@@ -29,6 +29,7 @@ import { location } from "../structure/location.entity";
 const SIGN_UP = "/api/auth/sign-up/email";
 const PASSWORD = "senha-de-obra-123";
 const RESERVATIONS = "/api/organization/units/reservations";
+const RACE_PROJECT = "Galpão da Corrida de Reservas";
 
 type Person = { userId: string; agent: ReturnType<typeof request.agent> };
 
@@ -492,7 +493,7 @@ describe("PATCH /api/organization/units/reservations", () => {
 			...Array.from({ length: 3 }, () =>
 				admin.agent
 					.post("/api/projects")
-					.send({ id: randomUUID(), name: "Galpão Sul", units: 150 }),
+					.send({ id: randomUUID(), name: RACE_PROJECT, units: 150 }),
 			),
 			change(admin, [
 				{ projectId: aurora, reserved: 400 },
@@ -513,6 +514,13 @@ describe("PATCH /api/organization/units/reservations", () => {
 		for (const res of attempts.filter(({ status }) => status === 409)) {
 			expect(problemDetailsSchema.parse(res.body).code).toBe(NO_UNITS_LEFT);
 		}
-		await db.delete(project).where(eq(project.name, "Galpão Sul"));
+		await db
+			.delete(project)
+			.where(
+				and(
+					eq(project.organizationId, organizationId),
+					eq(project.name, RACE_PROJECT),
+				),
+			);
 	});
 });
