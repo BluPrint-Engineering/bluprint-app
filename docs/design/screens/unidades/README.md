@@ -28,12 +28,14 @@ discards. **Fidelity: high.**
 ## Route and files in `apps/web`
 
 ```
-src/routes/_authenticated/units.tsx              ← admin only (beforeLoad on the organization role); others redirect to /projects
+src/routes/_authenticated/units/route.tsx        ← admin only (beforeLoad on the organization role); others redirect to /projects
 src/features/organization/
-  api.ts                                         ← useOrganizationUnitsQuery, useUpdateReservationsMutation
+  api.ts                                         ← organizationReservationsQueryOptions, useUpdateReservationsMutation
   UnitsPage/UnitsPage.tsx
   UnitsPage/UnitFigures.tsx                      ← the three figures
-  UnitsPage/ReservationList.tsx                  ← desktop list card, mobile cards, footer / bottom bar
+  UnitsPage/ReservationList.tsx                  ← desktop list card, mobile cards
+  UnitsPage/SaveControls.tsx                     ← desktop footer, mobile bottom bar
+  UnitsPage/reservationDrafts.ts                 ← drafts, derived figures and copy
 ```
 
 Files follow ADR 0053: everything starts in the page folder and climbs only when a second page needs it. The app
@@ -162,14 +164,14 @@ Centered blocks follow the Obras pattern: max-width 26rem, gap 16px, padding-blo
 
 ## State management
 
-- `useOrganizationUnitsQuery()` → `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }` (admin only,
-  403 otherwise). The rows come from the obras em andamento with `units: { reserved, used }` (the obra summary
-  gains it). The delivered line is derived: used = `reserved` − Σ rows' reserva; count = `counts.delivered` of
-  `GET /api/projects`.
+- `organizationUnitsQueryOptions` → `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }` (admin
+  only, 403 otherwise).
+- `organizationReservationsQueryOptions` → `GET /api/organization/units/reservations` → `{ items: [{ projectId, name,
+  reserved, used }], delivered: { projects, used } }` (admin only): the rows and the delivered line.
 - Local UI state: draft per obra (string, so an empty field is representable), touched per obra, saving, save
   error. Figures, restam, changed marks and validity are derived from saved values + drafts, never stored.
 - `useUpdateReservationsMutation` → `PATCH /api/organization/units/reservations`; on success `setQueryData` on the
-  units query and invalidate the obras list and the changed obras.
+  reservations query and invalidate the units query and the obras queries.
 - Leaving the page with drafts: the drafts are lost (no blocker); a later ticket can add one if it is missed.
 
 ## What the API serves today vs. what is future
