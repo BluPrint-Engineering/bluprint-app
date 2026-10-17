@@ -23,11 +23,13 @@ export default async function structureWizard({ page, shot, expect, query }) {
 		return;
 	}
 
-	const galpao = await projectId("Galpão Logístico Sul", "Construtora Horizonte");
-	await page.goto(`/projects/${galpao}`);
+	const name = phone ? "Galpão Logístico Sul" : "Villa Toscana";
+	const reserve = phone ? 20 : 40;
+	const target = await projectId(name, "Construtora Horizonte");
+	await page.goto(`/projects/${target}`);
 	await page.getByRole("link", { name: "Montar estrutura" }).click();
-	await expect(page).toHaveURL(`/projects/${galpao}/structure/new`);
-	await expect(page.getByText("Galpão Logístico Sul · nada é salvo antes de criar")).toBeVisible();
+	await expect(page).toHaveURL(`/projects/${target}/structure/new`);
+	await expect(page.getByText(`${name} · nada é salvo antes de criar`)).toBeVisible();
 	await shot("w1-open");
 
 	await page.getByLabel("Último andar").fill("");
@@ -44,7 +46,7 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	await expect(page.getByRole("button", { name: "Tirar Guarita" })).toBeVisible();
 	await shot("w2-areas");
 	await continueTo("Prévia");
-	await expect(page.getByText("Esta estrutura tem 48 unidades e a obra tem 20.")).toBeVisible();
+	await expect(page.getByText(`Esta estrutura tem 48 unidades e a obra tem ${reserve}.`)).toBeVisible();
 	await expect(page.getByRole("button", { name: "Criar estrutura" })).toBeDisabled();
 	await shot("w4c-over");
 
@@ -54,16 +56,16 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	await continueTo("Áreas comuns");
 	await continueTo("Prévia");
 	await expect(page.getByText("1 torre · 4 andares · 12 unidades")).toBeVisible();
-	await expect(page.getByText("Usa 12 das 20 unidades que restam nesta obra. Depois de criar, sobram 8.")).toBeVisible();
+	await expect(page.getByText(`Usa 12 das ${reserve} unidades que restam nesta obra. Depois de criar, sobram ${reserve - 12}.`)).toBeVisible();
 	await shot("w4-preview");
 	await page.getByRole("button", { name: "Criar estrutura" }).click();
 
-	await expect(page).toHaveURL(`/projects/${galpao}`);
+	await expect(page).toHaveURL(`/projects/${target}`);
 	await expect(page.getByText("Estrutura criada: 1 torre e 12 unidades.")).toBeVisible();
 	await expect(page.getByRole("heading", { level: 2, name: "Fachada" })).toBeVisible();
 	await expect(page.getByRole("list", { name: "Fachada" }).getByRole("listitem")).toHaveCount(4);
 	await shot("w10-created");
-	expect(Number((await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type = 'unit'", [galpao]))[0].n)).toBe(12);
+	expect(Number((await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type = 'unit'", [target]))[0].n)).toBe(12);
 
 	const bela = await projectId("Condomínio Bela Vista", "Construtora Horizonte");
 	await page.goto(`/projects/${bela}/structure/new`);

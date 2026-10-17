@@ -32,7 +32,7 @@ A project's home at `/projects/<id>` shows its structure: a card per tower when 
 Preconditions:
 
 - `instance.ts doctor` prints no `FAIL`.
-- Run `.claude/skills/verify/journeys/structure-wizard.ts` with `--as admin` (builds `Galpão Logístico Sul`, which reserves 20 units) and with `--as admin-no-units` (Igor: every plan is over the reservation of Vértice's `Residencial Jardins`); a run mutates the seed, so `down` and `up` before the next.
+- Run `.claude/skills/verify/journeys/structure-wizard.ts` with `--as admin` (builds `Galpão Logístico Sul`, which reserves 20 units, on the phone and `Villa Toscana`, 40, on the desktop) and with `--as admin-no-units` (Igor: every plan is over the reservation of Vértice's `Residencial Jardins`); a run mutates the seed, so `down` and `up` before the next.
 - Run `.claude/skills/verify/journeys/structure.ts` with `--as admin` (Ana sees every project); `--as manager` (Carla) reaches the projects she is on and gets `Obra não encontrada` elsewhere.
 
 Where the seed (`apps/api/src/db/seed/fixture.ts`) holds each edge case:
