@@ -1,5 +1,5 @@
 import type { LocationType } from "@bluprint/shared";
-import { type RefObject, useId, useState } from "react";
+import { type RefObject, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,11 +59,13 @@ function RenameContent({
 	projectId,
 	target,
 	desktop,
+	field,
 	onDone,
 }: {
 	projectId: string;
 	target: RenameTarget;
 	desktop: boolean;
+	field: RefObject<HTMLInputElement | null>;
 	onDone: () => void;
 }) {
 	const formId = useId();
@@ -114,12 +116,13 @@ function RenameContent({
 			<Field data-invalid={!!error}>
 				<FieldLabel htmlFor={`${formId}-name`}>Nome</FieldLabel>
 				<Input
+					ref={field}
 					id={`${formId}-name`}
 					autoComplete="off"
 					enterKeyHint="done"
 					autoFocus
 					value={name}
-					disabled={saving}
+					readOnly={saving}
 					aria-invalid={!!error}
 					aria-describedby={`${formId}-note`}
 					className={cn(mono && "font-mono")}
@@ -203,6 +206,7 @@ export function RenameDialog({
 	returnFocus,
 }: RenameDialogProps) {
 	const desktop = useIsDesktop();
+	const field = useRef<HTMLInputElement>(null);
 
 	function focusOpener(event: Event) {
 		event.preventDefault();
@@ -214,6 +218,7 @@ export function RenameDialog({
 			projectId={projectId}
 			target={target}
 			desktop={desktop}
+			field={field}
 			onDone={() => onOpenChange(false)}
 		/>
 	);
@@ -235,6 +240,10 @@ export function RenameDialog({
 		<Drawer open={open} onOpenChange={onOpenChange}>
 			<DrawerContent
 				aria-describedby={undefined}
+				onOpenAutoFocus={(event) => {
+					event.preventDefault();
+					field.current?.focus();
+				}}
 				onCloseAutoFocus={focusOpener}
 			>
 				{content}

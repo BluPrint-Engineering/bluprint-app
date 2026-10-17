@@ -503,4 +503,17 @@ describe("on the phone", () => {
 		).toBeInTheDocument();
 		expect(api.renamed).toHaveLength(1);
 	});
+
+	test("opens the bottom panel from a row's menu with the focus on Nome", async () => {
+		const { ninth, several } = build();
+		stubApi(signedIn, { api: writableApi(obra(), several).handler });
+		setViewport("phone");
+		renderAt(pathOf(ninth.id));
+
+		const dialog = await renameFrom("Ações da unidade 901", "Renomear");
+
+		await waitFor(() => {
+			expect(nameField(dialog)).toHaveFocus();
+		});
+	});
 });

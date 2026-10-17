@@ -128,7 +128,7 @@ function AddForm({
 					enterKeyHint="done"
 					autoFocus
 					value={name}
-					disabled={saving}
+					readOnly={saving}
 					aria-invalid={!!error}
 					aria-describedby={hintId}
 					className={cn(mono && "font-mono")}
