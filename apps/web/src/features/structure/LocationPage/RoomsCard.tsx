@@ -1,6 +1,6 @@
 import type { DroppedRoom, LocationDetail, Room } from "@bluprint/shared";
 import { Ellipsis, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,12 +75,13 @@ function AddRoomRow({
 	const [adding, setAdding] = useState(false);
 	const [name, setName] = useState("");
 	const [error, setError] = useState<string>();
-	const [attempt, setAttempt] = useState(() => uuidV7());
+	const attempt = useRef<{ id: string; name: string }>(undefined);
 
 	function close() {
 		setAdding(false);
 		setName("");
 		setError(undefined);
+		attempt.current = undefined;
 		add.reset();
 	}
 
@@ -88,18 +89,18 @@ function AddRoomRow({
 		const invalid = roomNameError(name);
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
+		if (attempt.current?.name !== trimmed) {
+			attempt.current = { id: uuidV7(), name: trimmed };
+		}
 
 		add.mutate(
-			{ id: attempt, name: trimmed },
+			{ id: attempt.current.id, name: trimmed },
 			{
-				onSuccess: () => {
-					setAttempt(uuidV7());
-					close();
-				},
+				onSuccess: close,
 				onError: (failure) => {
 					if (isRoomNameTaken(failure)) {
 						setError(roomNameTakenText(holder, trimmed));
-						setAttempt(uuidV7());
+						attempt.current = undefined;
 					}
 				},
 			},

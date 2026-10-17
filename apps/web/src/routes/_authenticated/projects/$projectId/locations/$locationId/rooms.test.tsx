@@ -280,6 +280,42 @@ describe("adding a room (U3)", () => {
 		).toHaveValue("Varanda");
 	});
 
+	test("retries a failed name with the same id, and sends a new name or a reopened form with a new one", async () => {
+		const { handler, writes } = locationApi({
+			answer: () => problem(500, "INTERNAL_ERROR"),
+		});
+		await openUnit(handler);
+		const field = () =>
+			screen.getByRole("textbox", { name: "Adicionar cômodo" });
+		const failure =
+			"Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo.";
+		const sent = async (count: number) => {
+			await screen.findByText(failure);
+			await waitFor(() => expect(writes).toHaveLength(count));
+		};
+		await userEvent.click(
+			screen.getByRole("button", { name: "Adicionar cômodo" }),
+		);
+
+		await userEvent.type(field(), "Lavanderia{Enter}");
+		await sent(1);
+		await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+		await sent(2);
+		await userEvent.clear(field());
+		await userEvent.type(field(), "Despensa{Enter}");
+		await sent(3);
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+		await userEvent.click(
+			screen.getByRole("button", { name: "Adicionar cômodo" }),
+		);
+		await userEvent.type(field(), "Despensa{Enter}");
+		await sent(4);
+
+		const ids = writes.map((write) => (write.body as { id: string }).id);
+		expect(ids[1]).toBe(ids[0]);
+		expect(new Set([ids[0], ids[2], ids[3]]).size).toBe(3);
+	});
+
 	test("adds a room to a common area and names it in the error (U5)", async () => {
 		const { handler, writes } = locationApi({
 			details: { [hall.id]: { rooms: [room("Banheiro")] } },
