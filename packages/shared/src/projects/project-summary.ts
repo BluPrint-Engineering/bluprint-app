@@ -23,6 +23,15 @@ export const projectUnitsSchema = z.object({
 	}),
 });
 
+export const projectDeliverySchema = z.object({
+	at: z.iso.datetime().meta({ description: "When the project was delivered." }),
+	by: z.string().nullable().meta({
+		description:
+			"Name of who delivered the project; `null` when that person no longer exists.",
+		example: "Rafael Souza",
+	}),
+});
+
 export const projectSummarySchema = z.object({
 	id: z.uuid(),
 	name: z.string(),
@@ -37,8 +46,13 @@ export const projectSummarySchema = z.object({
 		description:
 			"`active`: in progress. `delivered`: handed over to the client; delivery is final, so nothing in the project changes again.",
 	}),
+	delivery: projectDeliverySchema.nullable().meta({
+		description:
+			"Who delivered the project and when; `null` while it is in progress.",
+	}),
 });
 
 export type ProjectAccessRole = z.infer<typeof projectAccessRoleSchema>;
+export type ProjectDelivery = z.infer<typeof projectDeliverySchema>;
 export type ProjectUnits = z.infer<typeof projectUnitsSchema>;
 export type ProjectSummary = z.infer<typeof projectSummarySchema>;

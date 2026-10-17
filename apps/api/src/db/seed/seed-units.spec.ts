@@ -46,7 +46,10 @@ describe("assertReservationsFit", () => {
 				{
 					name: "Torre B",
 					reservedUnits: 50,
-					status: "delivered" as const,
+					delivered: {
+						by: "ana@alfa.test",
+						at: new Date("2026-01-01T00:00:00Z"),
+					},
 					members: [],
 				},
 			],
@@ -64,7 +67,10 @@ describe("assertReservationsFit", () => {
 				{
 					name: "Torre B",
 					reservedUnits: 2,
-					status: "delivered" as const,
+					delivered: {
+						by: "ana@alfa.test",
+						at: new Date("2026-01-01T00:00:00Z"),
+					},
 					structure: twoUnits,
 					members: [],
 				},

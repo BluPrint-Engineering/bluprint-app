@@ -51,6 +51,7 @@ function stubProjects({ admin = false } = {}) {
 						role: "admin",
 						units: { reserved: 0, used: 0 },
 						status: "active",
+						delivery: null,
 					},
 				],
 				total: 26,

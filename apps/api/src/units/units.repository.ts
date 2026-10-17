@@ -22,9 +22,16 @@ export class UnitsRepository {
 
 	async lockProject(
 		projectId: string,
-	): Promise<{ reserved: number; status: ProjectStatus } | undefined> {
+	): Promise<
+		| { reserved: number; status: ProjectStatus; organizationId: string }
+		| undefined
+	> {
 		const [locked] = await this.txHost.tx
-			.select({ reserved: project.reservedUnits, status: project.status })
+			.select({
+				reserved: project.reservedUnits,
+				status: project.status,
+				organizationId: project.organizationId,
+			})
 			.from(project)
 			.where(eq(project.id, projectId))
 			.for("no key update");

@@ -1,8 +1,4 @@
-import type {
-	DefaultRole,
-	EffectiveRole,
-	ProjectStatus,
-} from "@bluprint/shared";
+import type { DefaultRole, EffectiveRole } from "@bluprint/shared";
 import {
 	type SeedStructure,
 	numberedFloors,
@@ -31,10 +27,15 @@ interface SeedProjectMember {
 	role: EffectiveRole;
 }
 
+interface SeedDelivery {
+	by: string;
+	at: Date;
+}
+
 interface SeedProject {
 	name: string;
 	reservedUnits: number;
-	status?: ProjectStatus | undefined;
+	delivered?: SeedDelivery | undefined;
 	members: SeedProjectMember[];
 	structure?: SeedStructure;
 }
@@ -278,7 +279,10 @@ export const organizations: SeedOrganization[] = [
 			{
 				name: "Residencial Vila Nova",
 				reservedUnits: 12,
-				status: "delivered",
+				delivered: {
+					by: "carla@horizonte.test",
+					at: new Date("2026-09-18T14:30:00-03:00"),
+				},
 				structure: vilaNova,
 				members: [
 					{ email: "carla@horizonte.test", role: "manager" },
@@ -288,13 +292,19 @@ export const organizations: SeedOrganization[] = [
 			{
 				name: "Edifício Lagoa Azul",
 				reservedUnits: 0,
-				status: "delivered",
+				delivered: {
+					by: "ana@horizonte.test",
+					at: new Date("2026-07-03T10:00:00-03:00"),
+				},
 				members: [{ email: "heitor@horizonte.test", role: "assistant" }],
 			},
 			{
 				name: "Condomínio Bela Vista",
 				reservedUnits: 0,
-				status: "delivered",
+				delivered: {
+					by: "ana@horizonte.test",
+					at: new Date("2026-05-20T16:45:00-03:00"),
+				},
 				members: [],
 			},
 		],

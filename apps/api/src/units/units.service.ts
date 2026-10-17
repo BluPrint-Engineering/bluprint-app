@@ -30,6 +30,11 @@ export class UnitsService {
 		return this.read(organizationId);
 	}
 
+	@Transactional(Propagation.Mandatory)
+	async lockOrganization(organizationId: string): Promise<void> {
+		await this.units.lockOrganization(organizationId);
+	}
+
 	async readReservations(
 		organizationId: string,
 	): Promise<OrganizationReservations> {
@@ -138,6 +143,14 @@ export class UnitsService {
 	@Transactional(Propagation.Mandatory)
 	async assertAvailable(projectId: string, requested: number): Promise<void> {
 		const locked = await this.lockProject(projectId);
+		if (locked.status === "delivered") {
+			throw new ProblemException({
+				status: 409,
+				code: PROJECT_DELIVERED,
+				detail:
+					"The project was delivered, so its structure can no longer change.",
+			});
+		}
 
 		const { remaining } = await this.balanceOf(projectId, locked.reserved);
 		if (requested > remaining) {

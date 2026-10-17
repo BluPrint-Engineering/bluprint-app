@@ -1,7 +1,10 @@
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useIsDesktop } from "@/lib/useIsDesktop";
 import { ProjectScreen } from "../components/ProjectScreen";
 import { ProjectDetailsSection } from "./ProjectDetailsSection";
+import { ProjectStatusSection } from "./ProjectStatusSection";
+import { SectionNav } from "./SectionNav";
 
 function ConfigurationSkeleton() {
 	return (
@@ -31,6 +34,8 @@ export function ProjectConfigurationPage({
 	reservationOpen,
 	onReservationOpenChange,
 }: ProjectConfigurationPageProps) {
+	const desktop = useIsDesktop();
+
 	return (
 		<ProjectScreen
 			projectId={projectId}
@@ -38,15 +43,21 @@ export function ProjectConfigurationPage({
 			loading={<ConfigurationSkeleton />}
 		>
 			{(project) => (
-				<div className="grid max-w-3xl gap-(--space-4)">
+				<div className="grid gap-(--space-4)">
 					<h2 className="text-[1.375rem] leading-tight font-semibold tracking-tight">
 						Configuração
 					</h2>
-					<ProjectDetailsSection
-						project={project}
-						reservationOpen={reservationOpen}
-						onReservationOpenChange={onReservationOpenChange}
-					/>
+					<div className="grid items-start gap-(--space-8) md:grid-cols-[200px_minmax(0,1fr)]">
+						{desktop && <SectionNav />}
+						<div className="grid max-w-3xl min-w-0 gap-(--space-4)">
+							<ProjectDetailsSection
+								project={project}
+								reservationOpen={reservationOpen}
+								onReservationOpenChange={onReservationOpenChange}
+							/>
+							<ProjectStatusSection project={project} />
+						</div>
+					</div>
 				</div>
 			)}
 		</ProjectScreen>

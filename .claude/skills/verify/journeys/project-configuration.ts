@@ -1,4 +1,4 @@
-export default async function projectConfiguration({ page, shot, expect, query, accounts }) {
+export default async function projectConfiguration({ page, shot, expect, query, accounts, device }) {
 	const session = await (await page.request.get("/api/auth/get-session")).json();
 	const email = session.user.email;
 	const role = email === accounts.ADMIN_EMAIL ? "admin" : email === accounts.MANAGER_EMAIL ? "manager" : "assistant";
@@ -18,8 +18,10 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	await expect(page.getByRole("heading", { level: 2, name: "Configuração" })).toBeVisible();
 	await expect(card.getByRole("heading", { level: 3, name: "Dados da obra" })).toBeVisible();
 	await expect(card.getByText("Residencial Jardins")).toBeVisible();
-	await expect(page.getByText("Status da obra")).toHaveCount(0);
-	await expect(page.getByRole("navigation")).toHaveCount(0);
+	const status = page.getByRole("region", { name: "Status da obra" });
+	await expect(status.getByRole("heading", { level: 3, name: "Status da obra" })).toBeVisible();
+	await expect(status.getByText("Em andamento")).toBeVisible();
+	await expect(page.getByRole("navigation", { name: "Seções da configuração" })).toHaveCount(device === "desktop" ? 1 : 0);
 	const used = (await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type = 'unit'", [projectId]))[0].n;
 	const reserved = (await query("SELECT reserved_units AS n FROM project WHERE id = $1", [projectId]))[0].n;
 	await expect(card.getByText("Unidades", { exact: true })).toBeVisible();
@@ -30,6 +32,8 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 		await expect(card.getByRole("button", { name: "Renomear" })).toHaveCount(0);
 		await expect(card.getByText("Só o gerente de obra ou o admin da construtora renomeia a obra.")).toBeVisible();
 		await expect(card.getByRole("button", { name: "Alterar reserva" })).toHaveCount(0);
+		await expect(status.getByText("Só o gerente de obra ou o admin da construtora entrega a obra.")).toBeVisible();
+		await expect(status.getByRole("button", { name: "Entregar obra" })).toHaveCount(0);
 		await shot("assistant-locked");
 		return;
 	}
@@ -112,6 +116,49 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 		await expect(card.getByText(`Usa ${used} de ${reserved} reservadas`)).toBeVisible();
 	}
 
+	await expect(page.getByRole("dialog")).toHaveCount(0);
+	await status.getByRole("button", { name: "Entregar obra" }).click();
+	const confirm = page.getByRole("alertdialog");
+	await expect(confirm).toHaveAccessibleName("Entregar “Residencial Jardins”?");
+	const acknowledge = confirm.getByRole("checkbox", { name: "Entendi que a obra não poderá ser reaberta." });
+	await expect(acknowledge).toBeFocused();
+	await expect(confirm.getByRole("button", { name: "Entregar obra" })).toBeDisabled();
+	await shot("deliver-dialog");
+	await acknowledge.check();
+	await expect(confirm.getByRole("button", { name: "Entregar obra" })).toBeEnabled();
+	await confirm.getByRole("button", { name: "Cancelar" }).click();
+	await expect(confirm).toHaveCount(0);
+	expect((await query("SELECT status FROM project WHERE id = $1", [projectId]))[0].status).toBe("active");
+
+	if (role === "admin") {
+		const target = device === "phone" ? "Villa Toscana" : "Edifício Solar do Campo";
+		await page.goto(`/projects?q=${target}`);
+		await page.getByRole("link", { name: new RegExp(target) }).click();
+		await page.getByRole("link", { name: "Configuração da obra" }).click();
+		const targetId = new URL(page.url()).pathname.split("/")[2];
+		const targetUsed = (await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type = 'unit'", [targetId]))[0].n;
+		const targetReserved = (await query("SELECT reserved_units AS n FROM project WHERE id = $1", [targetId]))[0].n;
+		const freeBefore = (await (await page.request.get("/api/organization/units")).json()).free;
+		const activityBefore = (await query("SELECT last_activity_at FROM project WHERE id = $1", [targetId]))[0].last_activity_at.toISOString();
+		await status.getByRole("button", { name: "Entregar obra" }).click();
+		await expect(confirm).toHaveAccessibleName(`Entregar “${target}”?`);
+		await acknowledge.check();
+		await confirm.getByRole("button", { name: "Entregar obra" }).click();
+		await expect(page.getByText(`Obra “${target}” entregue.`)).toBeVisible();
+		await expect(confirm).toHaveCount(0);
+		await expect(page.getByRole("heading", { level: 1 }).locator("xpath=..").getByText("Entregue")).toBeVisible();
+		await expect(status.getByText(/Entregue em \d{2}\/\d{2}\/\d{4} por Ana Ribeiro\./)).toBeVisible();
+		await expect(card.getByText(`Usou ${targetUsed} ${targetUsed === 1 ? "unidade" : "unidades"}.`)).toBeVisible();
+		await expect(status.getByRole("button", { name: "Entregar obra" })).toHaveCount(0);
+		await shot("delivered");
+		const row = (await query("SELECT status, reserved_units AS reserved, delivered_at, last_activity_at, u.name AS by FROM project p JOIN \"user\" u ON u.id = p.delivered_by WHERE p.id = $1", [targetId]))[0];
+		expect(row.status).toBe("delivered");
+		expect(row.reserved).toBe(targetUsed);
+		expect(row.by).toBe("Ana Ribeiro");
+		expect(row.last_activity_at.toISOString()).toBe(activityBefore);
+		expect((await (await page.request.get("/api/organization/units")).json()).free).toBe(freeBefore + targetReserved - targetUsed);
+	}
+
 	await page.goto("/projects?status=delivered&q=Vila Nova");
 	await page.getByRole("link", { name: /Residencial Vila Nova/ }).click();
 	await page.getByRole("link", { name: "Configuração da obra" }).click();
@@ -119,5 +166,7 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	await expect(card.getByText(/Usou \d+ unidades\./)).toBeVisible();
 	await expect(card.getByRole("button", { name: "Renomear" })).toHaveCount(0);
 	await expect(card.getByRole("button", { name: "Alterar reserva" })).toHaveCount(0);
+	await expect(status.getByText(/Entregue em \d{2}\/\d{2}\/\d{4} por Carla Mendes\./)).toBeVisible();
+	await expect(status.getByRole("button", { name: "Entregar obra" })).toHaveCount(0);
 	await shot("delivered-locked");
 }

@@ -8,6 +8,7 @@ import {
 	Body,
 	Controller,
 	Get,
+	HttpCode,
 	Param,
 	Patch,
 	Post,
@@ -164,5 +165,25 @@ export class ProjectsController {
 		@Body() body: ChangeReservationDto,
 	): Promise<ProjectSummary> {
 		return this.projects.changeReservation(session.user.id, params.id, body);
+	}
+
+	@Post(":id/delivery")
+	@HttpCode(200)
+	@ApiOperation({
+		summary: "Deliver a project",
+		description:
+			"Hands the project over: it becomes `delivered`, records who delivered it and when (`delivery`), and its reservation becomes the units it used, so the unused part returns to the organization's free units in the same transaction. Delivery is final: there is no route to reopen a project (ADR 0069). Allowed to the organization's `admin` and to a project's `manager`; an `assistant` gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. A project already delivered answers `409 PROJECT_DELIVERED`. Delivering does not move the last activity. The project is locked, then the organization, so a delivery never races a unit creation or a reservation change into leaving a project using more units than it reserves.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The delivered project.",
+		type: ProjectSummaryDto,
+	})
+	@ApiErrorResponses(400, 401, 403, 404, 409)
+	deliver(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+	): Promise<ProjectSummary> {
+		return this.projects.deliver(session.user.id, params.id);
 	}
 }
