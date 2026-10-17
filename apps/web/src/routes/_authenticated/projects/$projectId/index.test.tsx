@@ -201,9 +201,6 @@ describe("project home", () => {
 			screen.getByRole("heading", { level: 2, name: "Áreas comuns da obra" }),
 		).toBeInTheDocument();
 		expect(screen.getByRole("link", { name: "Guarita" })).toBeInTheDocument();
-		expect(
-			within(screen.getByRole("main")).queryByRole("button"),
-		).not.toBeInTheDocument();
 		expect(screen.queryByText(LOCKED)).not.toBeInTheDocument();
 	});
 
@@ -310,7 +307,10 @@ describe("project home", () => {
 
 	test("lists only the common areas of a project that has no tower yet", async () => {
 		stubApi(signedIn, {
-			api: projectApi(OBRA, structureOf([], ["Guarita"])),
+			api: projectApi(
+				{ ...OBRA, status: "delivered" },
+				structureOf([], ["Guarita"]),
+			),
 		});
 
 		renderAt(OBRA_PATH);

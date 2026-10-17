@@ -1,8 +1,11 @@
 import {
 	type CreateStructure,
 	type CreateStructureResult,
+	LOCATION_NAME_TAKEN,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
+	type LocationRef,
+	type RenameLocation,
 	type Structure,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
@@ -10,6 +13,7 @@ import { Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
 import { UnitsService } from "../units/units.service";
+import { nameKey } from "./location-names";
 import type { LocationRow } from "./location-row";
 import { planCreation } from "./plan-creation";
 import { buildStructure } from "./structure-tree";
@@ -17,6 +21,13 @@ import { StructureRepository } from "./structure.repository";
 import { UnitTypesRepository } from "./unit-types.repository";
 
 const toRef = ({ id, type, name }: LocationRow) => ({ id, type, name });
+
+const locationNotFound = () =>
+	new ProblemException({
+		status: 404,
+		code: LOCATION_NOT_FOUND,
+		detail: "The location does not exist in this project.",
+	});
 
 @Injectable()
 export class StructureService {
@@ -68,6 +79,39 @@ export class StructureService {
 		return { counts };
 	}
 
+	@Transactional()
+	async rename(
+		userId: string,
+		projectId: string,
+		locationId: string,
+		{ name }: RenameLocation,
+	): Promise<LocationRef> {
+		await this.projects.beginStructureWrite(userId, projectId);
+		await this.units.lockEditable(projectId);
+
+		const found = await this.locations.find(projectId, locationId);
+		if (!found) throw locationNotFound();
+
+		const inProject = await this.locations.listForNaming(projectId);
+		const known = new Map(inProject.map((row) => [row.id, row]));
+		const wanted = nameKey(found, name, known);
+		const clashes = inProject.some(
+			(row) => row.id !== found.id && nameKey(row, row.name, known) === wanted,
+		);
+		if (clashes) {
+			throw new ProblemException({
+				status: 409,
+				code: LOCATION_NAME_TAKEN,
+				detail: "The name is already in use where the location sits.",
+				names: [name],
+			});
+		}
+
+		await this.locations.rename(found.id, name);
+
+		return toRef({ ...found, name });
+	}
+
 	async readStructure(userId: string, projectId: string): Promise<Structure> {
 		await this.projects.findVisible(userId, projectId);
 
@@ -87,13 +131,7 @@ export class StructureService {
 		await this.projects.findVisible(userId, projectId);
 
 		const found = await this.locations.find(projectId, locationId);
-		if (!found) {
-			throw new ProblemException({
-				status: 404,
-				code: LOCATION_NOT_FOUND,
-				detail: "The location does not exist in this project.",
-			});
-		}
+		if (!found) throw locationNotFound();
 
 		const holdsRooms = found.type === "unit" || found.type === "common_area";
 		const [ancestors, children, rooms, droppedRooms, changes] =

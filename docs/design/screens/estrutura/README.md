@@ -145,7 +145,8 @@ and a **list card** (radius 14px, hairline ring, rows separated by 1px `--border
   prefilled ("905", Geist Mono), autofocus; primary "Adicionar" and outline "Cancelar" (each `flex: 1` on mobile).
   Enter submits, Escape cancels. A new unit takes the tipologia of nothing; it is set on the unit.
   The Field's hint says what the new unit uses of the obra's reserva (`GET /api/projects/:id/units`, `remaining`):
-  "Usa 1 das 12 unidades que restam nesta obra." ("Usa 1 da única unidade que resta nesta obra." with one). Only on
+  "Usa 1 das 12 unidades que restam nesta obra." ("Usa 1 da única unidade que resta nesta obra." with one, "A reserva
+  da obra acabou." with none). Only on
   units. Copy pattern everywhere units are created: "restam" is the count before, "sobram" the count after.
 - **F4 name taken** (Q5): Field error "Já existe a unidade 903 na Torre A." Unit names are unique in the tower; floor
   names in the tower; common-area names in their parent; ignoring case and spaces; archived ones do not count. The
@@ -156,7 +157,8 @@ and a **list card** (radius 14px, hairline ring, rows separated by 1px `--border
   obra acabou." and the link "Alterar reserva" (`--primary`, 500, underlined, 44px tall tap area), which opens the
   obra's Alterar reserva dialog (`../obra/` C7) over this page; on save the units query refetches and the row comes back.
   "Adicionar área comum", towers and floors are never limited. When `POST /structure` answers `409 NO_UNITS_LEFT`
-  (someone used the last place first), the form closes into F5.
+  (someone used the last place first), the form stays open with the Field error "A reserva da obra acabou." and the
+  units query takes the server's `available`; closing the form leaves F5.
 
 ### Unidade - `/projects/:id/locations/:unitId`
 
@@ -395,8 +397,9 @@ and:
   obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist; it also creates the request's tipologias with their rooms (client ids, `409 UNIT_TYPE_NAME_TAKEN` for a name in use), and a unit that names a tipologia is born with its rooms;
 - `GET /api/projects/:id/units` → `{ reserved, used, remaining }`, for anyone linked to the obra, is served (the
   admin's `PATCH /api/projects/:id/units` lives in `../obra/`);
-- `POST` / `PATCH` / `DELETE` on locations and rooms, `PATCH` for order, unit types CRUD. A `DELETE` that deletes (no
-  content) gives the units of the subtree back to the obra's reserva; one that archives keeps them spent;
+- `PATCH /api/projects/:id/locations/:locationId` with `{ name }` (rename), served;
+- `POST` / `DELETE` on locations and rooms, `PATCH` on rooms, `PATCH` for order, unit types CRUD. A `DELETE` that
+  deletes (no content) gives the units of the subtree back to the obra's reserva; one that archives keeps them spent;
 - every write refuses a delivered obra with `409 PROJECT_DELIVERED` and moves `last_activity_at`;
 - `DELETE` answers whether it deleted or archived; until plans exist (#7) it always deletes (ADR 0073).
 

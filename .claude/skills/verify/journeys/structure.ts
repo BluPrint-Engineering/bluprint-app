@@ -26,7 +26,7 @@ export default async function structure({ page, shot, expect, query }) {
 
 	await page.goto(`/projects/${await projectId("Galpão Logístico Sul")}`);
 	await expect(page.getByRole("heading", { name: "A obra ainda não tem estrutura" })).toBeVisible();
-	await expect(page.getByRole("main").getByRole("button")).toHaveCount(0);
+	await expect(page.getByRole("button", { name: "Adicionar uma torre por vez" })).toBeVisible();
 	await expect(page.getByRole("link", { name: "Montar estrutura" })).toBeVisible();
 	await shot("home-empty");
 
@@ -59,6 +59,7 @@ export default async function structure({ page, shot, expect, query }) {
 	await expect(page.getByText("3 alterações")).toBeVisible();
 	await expect(page.getByText("Só desta unidade")).toBeVisible();
 	await expect(page.getByRole("heading", { name: "Tirados desta unidade" })).toBeVisible();
+	await expect(page.getByRole("button", { name: "Ações da unidade" })).toBeVisible();
 	await shot("unit-changes");
 	await page.getByRole("link", { name: "9º andar" }).click();
 	await page.getByRole("link", { name: /^901/ }).click();
