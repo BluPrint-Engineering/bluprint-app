@@ -90,6 +90,6 @@ livres. Ajuste a reserva e tente de novo." (field error) · "300 livres na const
 obra ou fale com a BluPrint." (only with reclaimable units) · "Nenhuma unidade livre para uma obra nova. Fale com a
 BluPrint." · Unidades · "Usa 250 de 400 reservadas" · Alterar reserva · "Usou 380 unidades." ·
 "A obra usa 250 unidades. A construtora tem 150 livres." · Restam na obra · Livres na construtora · "Antes: 150" · "A obra já usa 250 unidades. A reserva não pode ficar abaixo
-disso." · "Só há 150 unidades livres." · "Reserva da Casa Moinhos: 450 unidades.". Written here, to review: the
+disso." · "Só há 150 unidades livres." · "Reserva de Casa Moinhos: 450 unidades.". Written here, to review: the
 dialog title "Alterar reserva" (the button's label) and the network failure "Não foi possível salvar a reserva.
 Confira sua conexão e tente de novo." (README only, not drawn).

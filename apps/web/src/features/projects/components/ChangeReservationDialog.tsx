@@ -114,7 +114,7 @@ export function ChangeReservationDialog({
 		saved: (saved) => {
 			const { reserved: now } = saved.units;
 			toast.success(
-				`Reserva da ${saved.name}: ${now} ${plural(now, "unidade", "unidades")}.`,
+				`Reserva de ${saved.name}: ${now} ${plural(now, "unidade", "unidades")}.`,
 			);
 			onSaved?.();
 			if (shown.current) onOpenChange(false);

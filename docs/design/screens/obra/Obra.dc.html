@@ -423,7 +423,7 @@ const validateReserve = (v, u) => {
   if (n > u.reserved + u.free) return "Só há " + unidades(u.free) + (u.free === 1 ? " livre." : " livres.");
   return null;
 };
-const reserveSaved = (name, n) => "Reserva da " + name + ": " + unidades(n) + ".";
+const reserveSaved = (name, n) => "Reserva de " + name + ": " + unidades(n) + ".";
 const ERR_CREATE = "Não foi possível criar a obra. Confira sua conexão e tente de novo.";
 const ERR_DELIVER = "Não foi possível entregar a obra. Confira sua conexão e tente de novo.";
 const DELIVERED_BY = "Entregue em 14/10/2026 por Rafael Souza.";

@@ -105,7 +105,7 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 		await shot("reservation-above-free");
 		await units.fill(String(reserved + 1));
 		await dialog.getByRole("button", { name: "Salvar" }).click();
-		await expect(page.getByText(`Reserva da Residencial Jardins: ${reserved + 1} unidades.`)).toBeVisible();
+		await expect(page.getByText(`Reserva de Residencial Jardins: ${reserved + 1} unidades.`)).toBeVisible();
 		await expect(card.getByText(`Usa ${used} de ${reserved + 1} reservadas`)).toBeVisible();
 		await expect(dialog).toHaveCount(0);
 		expect((await query("SELECT reserved_units AS n FROM project WHERE id = $1", [projectId]))[0].n).toBe(reserved + 1);
