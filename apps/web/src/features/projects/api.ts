@@ -194,6 +194,41 @@ export function useChangeReservationMutation(
 	});
 }
 
+export interface DeliveryFeedback {
+	delivered: (project: ProjectSummary) => void;
+	failed: (error: Error) => void;
+}
+
+export function useDeliverProjectMutation(
+	projectId: string,
+	feedback: DeliveryFeedback,
+) {
+	const queryClient = useQueryClient();
+	const { queryKey } = projectQueryOptions(projectId);
+	return useMutation({
+		mutationFn: () =>
+			apiFetch(`/projects/${projectId}/delivery`, projectSummarySchema, {
+				method: "POST",
+			}),
+		onSuccess: (delivered) => {
+			queryClient.setQueryData(queryKey, delivered);
+			feedback.delivered(delivered);
+			void queryClient.invalidateQueries(organizationUnitsQueryOptions);
+			return queryClient.invalidateQueries({
+				queryKey: ["projects"],
+				predicate: isListQuery,
+			});
+		},
+		onError: (error) => {
+			feedback.failed(error);
+			if (isProjectDelivered(error)) {
+				void queryClient.invalidateQueries(organizationUnitsQueryOptions);
+				return queryClient.invalidateQueries({ queryKey });
+			}
+		},
+	});
+}
+
 export function useCreateProjectMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({

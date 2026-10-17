@@ -20,7 +20,7 @@ and changed later by the admin in Dados da obra.
 | Reserva on creation | Creating an obra spends nothing; it reserves unidades. "Unidades reservadas" is required on Nova obra, from 1 to the construtora's **livres** (livres = contratadas − the reservas of all obras). With 0 livres the page cannot create (N6). |
 | Changing the reserva | Admin only, in Dados da obra, any time before delivery: from the obra's **usadas** (can be 0) to its reserva + the livres. Gerente and assistente read "Usa 250 de 400 reservadas" and never see the livres (ADR 0067). |
 | On delivery | The unused part of the reserva goes back to the livres in the same transaction: the reserva becomes the usadas, and Dados da obra reads "Usou 380 unidades.". |
-| Deliver (RF-215, RF-216) | Admin or gerente, after a confirmation dialog. Final: no reopen in the app, nothing on a delivered obra changes, its name included; only BluPrint support reopens one delivered by mistake (ADR 0069). Built in a later ticket of the obra screen, not in #46. |
+| Deliver (RF-215, RF-216) | Admin or gerente, after a confirmation dialog. Final: no reopen in the app, nothing on a delivered obra changes, its name included; only BluPrint support reopens one delivered by mistake (ADR 0069). Built in #168, not in #46. |
 | Not enough livres | Recognized by the API's `409 NO_UNITS_LEFT` (`requested`, `available`); the page keeps the name and the number and puts the error on the "Unidades reservadas" field, like any other out-of-range value, with the server's `available` (N5). The admin's way out is "fale com a BluPrint" or lowering another obra's reserva. |
 | Retry is safe | The page generates the obra id when it opens; resending answers the obra already created, never a second one (ADR 0068). |
 | Hidden, not faked | Sections whose epic is not built are **not shown** in the app, never "em breve". The design shows them all; this handoff marks which ship with #46. |
@@ -207,7 +207,7 @@ The Card holds the name and the unidades; the status lives in its own card (belo
   (the reserva became the usadas on delivery); `lock` line "A obra foi entregue: o nome e a reserva não podem
   mais ser alterados."
 
-#### Status da obra (later ticket of the obra screen; not in #46)
+#### Status da obra (#168; not in #46)
 
 Delivering is final: a delivered obra is closed for good and is never reopened, and the unused part of its
 reserva goes back to the livres ([0069](../../../adr/0069-delivering-a-project-is-final.md), RF-215 to RF-217). Its own Card right after Dados da obra, because it changes the whole obra, not a field
@@ -278,7 +278,7 @@ width on mobile) → `/projects`.
 | Início da obra | Any obra, through the organization (ADR 0067); later reads and exports, never records pins (ADR 0024) | Their obras | Their obras |
 | Dados da obra: rename (not on a delivered obra) | Yes | Yes | Reads only (RF-217) |
 | Dados da obra: reserva (not on a delivered obra) | Reads "Usa N de M reservadas"; changes it (2.12) | Reads only | Reads only |
-| Status da obra: deliver, final (later ticket) | Yes | Yes | Reads only |
+| Status da obra: deliver, final (#168) | Yes | Yes | Reads only |
 | Estrutura (#6) | Creates and edits; restores and deletes archived items | Same as admin | Creates and edits (RF-205); no restore or permanent delete (RF-212, RF-214) |
 | Equipe (#11) | Invites gerentes and assistentes (ADR 0070) | Invites assistentes | Invites nobody (RF-126, ADR 0023) |
 | Disciplinas (#8) | Creates extra disciplines | Same | Same (RF-402) |
@@ -332,7 +332,7 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
   `PROJECT_DELIVERED`. Local UI state: draft + error.
   The dialog's open state lives in the address, `/projects/:id/configuration?reserva=alterar`, so the "Alterar
   reserva" links of the structure screens (W4c, F5b, R9b) reach it and Back closes it.
-- `useDeliverProjectMutation` (later ticket) → updates the project and the list. Local UI state: rename editing +
+- `useDeliverProjectMutation` (#168) → updates the project and the list. Local UI state: rename editing +
   draft, deliver dialog open + checkbox.
 
 ## What the API serves today vs. future
@@ -345,13 +345,12 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 | Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | Served |
 | One obra `GET /api/projects/:id` (same visibility as the list, `404 PROJECT_NOT_FOUND` otherwise) | Served |
 | Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente (`403` for the assistente); `409 PROJECT_DELIVERED` on a delivered obra | Served |
-| Deliver, admin or gerente; final, no reopen route (ADR 0069) | Later ticket of the obra screen |
+| Deliver `POST /api/projects/:id/delivery`, admin or gerente; final, no reopen route (ADR 0069); `409 PROJECT_DELIVERED` when already delivered; the summary gains `delivery: { at, by } \| null` | Served |
 | Structure, team, disciplines, contractors | Their epics (#6, #11, #8, #9); no table migrated yet |
 | Dashboard, unit map, navigation | #13, #6 |
 
-`ProjectSummary` already carries id, name, status, createdAt, lastActivityAt and the caller's role. The
-delivered line "Entregue em … por …" needs who and when the obra was delivered, which `project` does not store
-today (`status` only).
+`ProjectSummary` carries id, name, status, createdAt, lastActivityAt, the caller's role, the units and, once the obra
+is delivered, `delivery: { at, by }` (when, and the name of who delivered), which the delivered line "Entregue em … por …" reads.
 
 ## Components and assets
 
@@ -365,8 +364,6 @@ variant).
 
 ## Open points
 
-1. Delivery records who delivered and when ([0069](../../../adr/0069-delivering-a-project-is-final.md));
-   `project` has no such columns yet, so the ticket that builds delivery adds them.
-2. Not-admin on `/projects/new` redirects silently; no screen.
-3. Until #11 ships, nothing links a gerente or assistente to an obra (only the seed does), so P1b, C3 as gerente,
+1. Not-admin on `/projects/new` redirects silently; no screen.
+2. Until #11 ships, nothing links a gerente or assistente to an obra (only the seed does), so P1b, C3 as gerente,
    C4 and C2b are reachable in the app only after #11; #46's tests cover them through seeded memberships.

@@ -59,7 +59,7 @@ describe("project configuration", () => {
 		onlineManager.setOnline(true);
 	});
 
-	test("shows only Dados da obra with the name, the way back and no side navigation (C1)", async () => {
+	test("shows Dados da obra, Status da obra and the side navigation, with the name and the way back (C1)", async () => {
 		const { handler } = projectApi(OBRA);
 		stubApi(signedIn, { api: handler });
 
@@ -79,8 +79,20 @@ describe("project configuration", () => {
 		expect(
 			within(card).getByRole("button", { name: "Renomear" }),
 		).toBeInTheDocument();
-		expect(screen.queryByText("Status da obra")).not.toBeInTheDocument();
-		expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+		const nav = screen.getByRole("navigation", {
+			name: "Seções da configuração",
+		});
+		expect(
+			within(nav)
+				.getAllByRole("link")
+				.map((link) => link.textContent),
+		).toEqual(["Dados da obra", "Status da obra"]);
+		expect(
+			within(screen.getByRole("region", { name: "Status da obra" })).getByRole(
+				"heading",
+				{ level: 3, name: "Status da obra" },
+			),
+		).toBeInTheDocument();
 		expect(
 			screen.queryByRole("link", { name: "Configuração da obra" }),
 		).not.toBeInTheDocument();
@@ -403,7 +415,7 @@ describe("renaming in place", () => {
 		await userEvent.type(field, " II");
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
-		expect(await screen.findByText("Entregue")).toBeInTheDocument();
+		expect(await screen.findAllByText("Entregue")).toHaveLength(2);
 		expect(
 			screen.getByText(
 				"A obra foi entregue: o nome e a reserva não podem mais ser alterados.",
@@ -468,7 +480,10 @@ describe("who may rename", () => {
 
 			renderAt(CONFIG_PATH);
 
-			expect(await screen.findByText("Entregue")).toBeInTheDocument();
+			expect(
+				await screen.findByRole("heading", { level: 1, name: "Casa Moinhos" }),
+			).toBeInTheDocument();
+			expect(screen.getAllByText("Entregue")).toHaveLength(2);
 			const card = screen.getByRole("region", { name: "Dados da obra" });
 			expect(within(card).getByText("Casa Moinhos")).toBeInTheDocument();
 			expect(

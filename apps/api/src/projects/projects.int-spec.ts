@@ -280,6 +280,7 @@ describe("GET /api/projects", () => {
 			expect(Object.keys(row).sort()).toEqual(
 				[
 					"createdAt",
+					"delivery",
 					"id",
 					"lastActivityAt",
 					"name",

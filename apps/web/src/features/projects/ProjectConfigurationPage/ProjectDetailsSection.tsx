@@ -1,11 +1,13 @@
 import type { ProjectSummary } from "@bluprint/shared";
-import { Lock, Pencil, SlidersHorizontal } from "lucide-react";
+import { Pencil, SlidersHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { plural } from "../components/plural";
 import { ChangeReservationDialog } from "./ChangeReservationDialog";
+import { LockNote } from "./LockNote";
 import { RenameProjectForm } from "./RenameProjectForm";
+import { SECTION_ID } from "./sections";
 
 function lockNote(project: ProjectSummary) {
 	if (project.status === "delivered") {
@@ -49,7 +51,11 @@ export function ProjectDetailsSection({
 	}, [editing]);
 
 	return (
-		<section aria-label="Dados da obra">
+		<section
+			id={SECTION_ID.details}
+			aria-label="Dados da obra"
+			className="scroll-mt-22"
+		>
 			<Card>
 				<CardHeader>
 					<CardTitle
@@ -109,12 +115,7 @@ export function ProjectDetailsSection({
 							</Button>
 						)}
 					</div>
-					{note && (
-						<div className="flex items-start gap-(--space-2) border-t pt-(--space-4) text-sm text-pretty text-muted-foreground">
-							<Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
-							<span>{note}</span>
-						</div>
-					)}
+					{note && <LockNote>{note}</LockNote>}
 				</CardContent>
 			</Card>
 			{canChangeReservation && (

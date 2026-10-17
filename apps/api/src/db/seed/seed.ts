@@ -114,8 +114,12 @@ async function main(): Promise<void> {
 						const createdProject = await projectsRepository.insert({
 							organizationId: createdOrganization.id,
 							name: seedProject.name,
-							status: seedProject.status,
 							reservedUnits: seedProject.reservedUnits,
+							...(seedProject.delivered && {
+								status: "delivered",
+								deliveredBy: userIdByEmail.get(seedProject.delivered.by)!,
+								deliveredAt: seedProject.delivered.at,
+							}),
 						});
 
 						if (seedProject.structure) {

@@ -20,7 +20,10 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { MembersRepository } from "../members/members.repository";
 import { UnitsService } from "../units/units.service";
-import { type ProjectRow, ProjectsRepository } from "./projects.repository";
+import {
+	type ProjectWithDeliverer,
+	ProjectsRepository,
+} from "./projects.repository";
 
 function toSummary(
 	row: {
@@ -31,6 +34,8 @@ function toSummary(
 		effectiveRole: EffectiveRole | null;
 		reservedUnits: number;
 		status: ProjectStatus;
+		deliveredAt: Date | null;
+		deliveredByName: string | null;
 	},
 	used: number,
 ): ProjectSummary {
@@ -43,6 +48,9 @@ function toSummary(
 		role: row.effectiveRole ?? "admin",
 		units: { reserved: row.reservedUnits, used },
 		status: row.status,
+		delivery: row.deliveredAt
+			? { at: row.deliveredAt.toISOString(), by: row.deliveredByName }
+			: null,
 	};
 }
 
@@ -172,6 +180,30 @@ export class ProjectsService {
 		return toSummary({ ...found, reservedUnits: reserved }, used);
 	}
 
+	@Transactional()
+	async deliver(userId: string, projectId: string): Promise<ProjectSummary> {
+		const found = await this.readVisible(userId, projectId);
+		if (found.effectiveRole === "assistant") {
+			throw new ForbiddenException();
+		}
+
+		const locked = await this.units.lockProject(projectId);
+		if (locked.status === "delivered") {
+			throw new ProblemException({
+				status: 409,
+				code: PROJECT_DELIVERED,
+				detail: "The project was already delivered.",
+			});
+		}
+
+		await this.units.lockOrganization(locked.organizationId);
+
+		const used = await this.units.usedBy(projectId);
+		await this.projects.deliver(projectId, userId, used);
+
+		return toSummary(await this.readVisible(userId, projectId), used);
+	}
+
 	private async readVisible(userId: string, projectId: string) {
 		const found = await this.projects.findVisible(userId, projectId);
 		if (!found) {
@@ -236,11 +268,14 @@ export class ProjectsService {
 			);
 		}
 
-		return toSummary({ ...created, effectiveRole: null }, 0);
+		return toSummary(
+			{ ...created, effectiveRole: null, deliveredByName: null },
+			0,
+		);
 	}
 
 	private async answerExisting(
-		existing: ProjectRow,
+		existing: ProjectWithDeliverer,
 		organizationId: string,
 	): Promise<ProjectSummary> {
 		if (existing.organizationId !== organizationId) {
