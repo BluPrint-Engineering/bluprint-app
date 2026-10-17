@@ -27,7 +27,7 @@ export function Facade({
 		<ul
 			aria-label={label}
 			style={{ "--units": widest } as React.CSSProperties}
-			className="grid gap-1.5 overflow-x-auto md:max-w-[calc(88px+var(--units)*138px+126px)]"
+			className="grid grid-cols-[max-content_repeat(var(--units),minmax(46px,1fr))_64px] gap-1.5 overflow-x-auto md:max-w-[calc(88px+var(--units)*138px+126px)] md:grid-cols-[88px_repeat(var(--units),minmax(0,132px))_120px]"
 		>
 			{floors.map((floor) => {
 				const short = floorLabel(floor.name);
@@ -50,15 +50,16 @@ export function Facade({
 				return (
 					<li
 						key={floor.id}
-						className="grid grid-cols-[56px_repeat(var(--units),minmax(46px,1fr))_64px] items-start gap-x-1.5 md:grid-cols-[88px_repeat(var(--units),minmax(0,132px))_120px]"
+						className="col-span-full grid grid-cols-subgrid items-start"
 					>
 						<Link
 							to="/projects/$projectId/locations/$locationId"
 							params={{ projectId, locationId: floor.id }}
 							aria-label={floor.name}
+							title={floor.name}
 							className={cn(
 								CHIP,
-								"sticky left-0 z-10 justify-start bg-card pr-1 font-semibold text-muted-foreground hover:bg-muted hover:text-foreground md:static md:pr-(--space-2)",
+								"sticky left-0 z-10 min-w-14 max-w-21 justify-start bg-card pr-1 font-semibold text-muted-foreground hover:bg-muted hover:text-foreground md:static md:max-w-none md:pr-(--space-2)",
 								isNumberedFloor(short) && "font-mono",
 							)}
 						>
