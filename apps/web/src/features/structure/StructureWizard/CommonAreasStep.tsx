@@ -1,3 +1,4 @@
+import { tidyLocationName } from "@bluprint/shared";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -69,7 +70,7 @@ function FloorAreaForm({
 	function submit(event: React.FormEvent) {
 		event.preventDefault();
 		const found: typeof errors = {};
-		const trimmed = name.trim().replace(/\s+/g, " ");
+		const trimmed = tidyLocationName(name);
 		if (trimmed === "") found.name = "Informe o nome da área comum.";
 		if (floor === "") found.floor = "Informe o andar.";
 		else {

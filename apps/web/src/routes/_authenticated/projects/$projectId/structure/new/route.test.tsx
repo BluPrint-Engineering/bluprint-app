@@ -908,6 +908,9 @@ describe("structure wizard", () => {
 			});
 			expect(screen.queryByText(/Esta estrutura tem/)).not.toBeInTheDocument();
 			expect(await createButton()).toBeEnabled();
+			await waitFor(async () => {
+				expect(await createButton()).toHaveFocus();
+			});
 			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
 				"3",
 			);

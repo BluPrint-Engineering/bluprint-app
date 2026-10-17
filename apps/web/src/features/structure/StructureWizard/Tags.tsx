@@ -1,3 +1,4 @@
+import { sameLocationName, tidyLocationName } from "@bluprint/shared";
 import { X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -49,9 +50,9 @@ export function AddTag({
 
 	function submit(event: React.FormEvent) {
 		event.preventDefault();
-		const name = typed.trim().replace(/\s+/g, " ");
+		const name = tidyLocationName(typed);
 		if (name === "") return;
-		if (existing.some((other) => other.toLowerCase() === name.toLowerCase())) {
+		if (existing.some((other) => sameLocationName(other, name))) {
 			setError("Essa área comum já está na lista.");
 			return;
 		}

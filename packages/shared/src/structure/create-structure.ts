@@ -16,6 +16,15 @@ export const locationNameSchema = z
 		example: "901",
 	});
 
+export const tidyLocationName = (name: string) =>
+	name.trim().replace(/\s+/g, " ");
+
+export const comparableLocationName = (name: string) =>
+	tidyLocationName(name).toLowerCase();
+
+export const sameLocationName = (a: string, b: string) =>
+	comparableLocationName(a) === comparableLocationName(b);
+
 export const newLocationSchema = z.object({
 	id: z.uuid().meta({
 		description:

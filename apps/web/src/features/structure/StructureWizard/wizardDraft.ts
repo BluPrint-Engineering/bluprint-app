@@ -1,4 +1,4 @@
-import { MAX_UNITS_PER_FLOOR } from "@bluprint/shared";
+import { MAX_UNITS_PER_FLOOR, sameLocationName } from "@bluprint/shared";
 
 export type Numbering = "digits" | "letters";
 
@@ -125,10 +125,6 @@ export const listedFloorAreas = (draft: WizardDraft) =>
 
 export type DraftErrors = Partial<Record<string, string>>;
 
-const sameName = (a: string, b: string) =>
-	a.trim().replace(/\s+/g, " ").toLowerCase() ===
-	b.trim().replace(/\s+/g, " ").toLowerCase();
-
 export interface FloorAreaProblem {
 	field: "name" | "floor";
 	message: string;
@@ -159,7 +155,7 @@ export function floorAreaProblem(
 			)
 			.map((other) => other.name),
 	];
-	if (taken.some((name) => sameName(name, area.name))) {
+	if (taken.some((name) => sameLocationName(name, area.name))) {
 		return {
 			field: "name",
 			message: "Esse andar já tem uma área comum com esse nome.",
@@ -180,7 +176,7 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 			if (tower.name.trim() === "") set("name", "Informe o nome da torre.");
 			else if (
 				draft.towers.some(
-					(other, at) => at < index && sameName(other.name, tower.name),
+					(other, at) => at < index && sameLocationName(other.name, tower.name),
 				)
 			) {
 				set("name", "Já existe outra torre com esse nome.");

@@ -1,4 +1,5 @@
 import {
+	comparableLocationName,
 	LOCATION_ID_TAKEN,
 	LOCATION_NAME_TAKEN,
 	LOCATION_PARENT_INVALID,
@@ -14,9 +15,6 @@ export interface CreationPlan {
 	newUnits: number;
 	counts: StructureCounts;
 }
-
-const comparable = (name: string) =>
-	name.trim().replace(/\s+/g, " ").toLowerCase();
 
 export function planCreation(
 	requested: NewLocation[],
@@ -68,7 +66,7 @@ export function planCreation(
 		return `${type}|${type === "tower" ? "" : parentId}`;
 	};
 	const nameKey = (row: Pick<LocationRow, "type" | "parentId">, name: string) =>
-		`${scopeOf(row)}|${comparable(name)}`;
+		`${scopeOf(row)}|${comparableLocationName(name)}`;
 
 	const fresh = requested.filter((entry) => !stored.has(entry.id));
 	const claimed = new Set(inProject.map((row) => nameKey(row, row.name)));

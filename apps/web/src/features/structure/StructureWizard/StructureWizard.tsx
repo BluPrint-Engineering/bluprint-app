@@ -127,6 +127,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	const [reveal, setReveal] = useState<string>();
 	const [reservationOpen, setReservationOpen] = useState(false);
 	const reservationButton = useRef<HTMLButtonElement>(null);
+	const createButtonRef = useRef<HTMLButtonElement>(null);
 	const ids = useRef(new Map<string, string>());
 	const stepTop = useRef<HTMLDivElement>(null);
 
@@ -148,6 +149,15 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	useEffect(() => {
 		if (step > 0) stepTop.current?.scrollIntoView?.();
 	}, [step]);
+
+	const wasBlocked = useRef(blocked);
+	useEffect(() => {
+		const unblocked = wasBlocked.current && !blocked;
+		wasBlocked.current = blocked;
+		if (unblocked && document.activeElement === document.body) {
+			createButtonRef.current?.focus();
+		}
+	}, [blocked]);
 
 	function edit(
 		update: (draft: WizardDraft) => WizardDraft,
@@ -253,13 +263,14 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			project={project}
 			open={reservationOpen}
 			onOpenChange={setReservationOpen}
-			returnFocus={reservationButton}
+			returnFocus={blocked ? reservationButton : createButtonRef}
 			onSaved={() => void units.refetch()}
 		/>
 	);
 
 	const createButton = (
 		<Button
+			ref={createButtonRef}
 			type="button"
 			size="lg"
 			className="w-full"
