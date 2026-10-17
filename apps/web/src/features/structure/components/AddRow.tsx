@@ -94,6 +94,7 @@ function AddForm({
 		if (found) return setProblem(found);
 		create.mutate(
 			{
+				unitTypes: [],
 				locations: [
 					{ id: id.current, parentId, type, name: name.trim(), position },
 				],

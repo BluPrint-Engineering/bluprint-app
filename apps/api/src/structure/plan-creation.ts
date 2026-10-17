@@ -1,4 +1,5 @@
 import {
+	comparableLocationName,
 	LOCATION_ID_TAKEN,
 	LOCATION_NAME_TAKEN,
 	LOCATION_PARENT_INVALID,
