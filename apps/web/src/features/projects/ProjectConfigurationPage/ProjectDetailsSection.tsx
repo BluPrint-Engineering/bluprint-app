@@ -3,8 +3,8 @@ import { Lock, Pencil, SlidersHorizontal } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ChangeReservationDialog } from "../components/ChangeReservationDialog";
 import { plural } from "../components/plural";
-import { ChangeReservationDialog } from "./ChangeReservationDialog";
 import { RenameProjectForm } from "./RenameProjectForm";
 
 function lockNote(project: ProjectSummary) {

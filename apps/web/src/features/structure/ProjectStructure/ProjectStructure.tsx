@@ -11,7 +11,7 @@ import { LoadFailure } from "@/components/LoadFailure";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
 import { firstLoadState } from "@/lib/firstLoadState";
-import { structureQueryOptions } from "../api";
+import { isBlankStructure, structureQueryOptions } from "../api";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
 import { LocationList } from "../components/LocationList";
 import { PROJECT_ORIGIN } from "../LocationPage/origin";
@@ -97,7 +97,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 
 	if (query.data) {
 		const structure = query.data;
-		if (structure.towers.length === 0 && structure.commonAreas.length === 0) {
+		if (isBlankStructure(structure)) {
 			return project.status === "delivered" ? (
 				<StateBlock
 					icon={Layers}

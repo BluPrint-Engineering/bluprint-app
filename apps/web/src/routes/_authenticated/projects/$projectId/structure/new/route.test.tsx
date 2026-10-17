@@ -5,6 +5,7 @@ import {
 	PROJECT_NOT_FOUND,
 	type ProjectSummary,
 	type ProjectUnitsBalance,
+	type Structure,
 } from "@bluprint/shared";
 import {
 	act,
@@ -26,7 +27,13 @@ import {
 	signedIn,
 	stubApi,
 } from "@/test/renderApp";
-import { combine, emptyStructure, structureApi } from "@/test/structureApi";
+import {
+	combine,
+	emptyStructure,
+	structureApi,
+	structureOf,
+	tower,
+} from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
 
 const user = userEvent.setup({ delay: null });
@@ -49,6 +56,7 @@ function balance(remaining: number, reserved = 150): ProjectUnitsBalance {
 function wizardApi(
 	options: {
 		summary?: ProjectSummary;
+		structure?: Structure;
 		units?: ProjectUnitsBalance;
 		unitsResponse?: () => Promise<Response> | Response;
 		create?: (
@@ -57,13 +65,33 @@ function wizardApi(
 		) => Promise<Response> | Response;
 	} = {},
 ) {
-	const summary = options.summary ?? OBRA;
+	let summary = options.summary ?? OBRA;
+	let structure = options.structure ?? emptyStructure;
 	const sent: CreateStructure[] = [];
 	const unitsReads: number[] = [];
 	let units = options.units ?? balance(150);
 	const handler: ApiHandler = combine(
 		(url, init) => {
+			if (url.pathname === "/api/organization/units") {
+				return json({
+					contracted: 500,
+					reserved: 300,
+					free: 200,
+					reclaimable: 0,
+				});
+			}
 			if (url.pathname === `/api/projects/${summary.id}`) return json(summary);
+			if (
+				url.pathname === `/api/projects/${summary.id}/units` &&
+				init?.method === "PATCH"
+			) {
+				const { reserved } = JSON.parse(String(init.body)) as {
+					reserved: number;
+				};
+				units = { ...units, reserved, remaining: reserved - units.used };
+				summary = { ...summary, units: { ...summary.units, reserved } };
+				return json(summary);
+			}
 			if (url.pathname === `/api/projects/${summary.id}/units`) {
 				unitsReads.push(Date.now());
 				return options.unitsResponse ? options.unitsResponse() : json(units);
@@ -75,11 +103,12 @@ function wizardApi(
 				const body = JSON.parse(String(init.body)) as CreateStructure;
 				sent.push(body);
 				if (options.create) return options.create(body, sent.length);
+				structure = structureOf([tower("Torre A")]);
 				return json({ counts: countsOf(body) }, 201);
 			}
 			return undefined;
 		},
-		structureApi(summary.id, emptyStructure),
+		(url, init) => structureApi(summary.id, structure)(url, init),
 	);
 	return {
 		handler,
@@ -840,9 +869,12 @@ describe("structure wizard", () => {
 			expect(await createButton()).toBeDisabled();
 		});
 
-		test("offers the admin Alterar reserva beside the sentence (W4c)", async () => {
-			const { handler } = wizardApi({ units: balance(6) });
-			open(handler);
+		test("offers the admin Alterar reserva over the wizard, keeps the draft and recomputes once saved (W4c)", async () => {
+			const { handler, unitsReads } = wizardApi({
+				summary: { ...OBRA, units: { reserved: 150, used: 144 } },
+				units: balance(6),
+			});
+			const { router } = open(handler);
 			await describeTower("3", "4");
 
 			expect(
@@ -850,13 +882,36 @@ describe("structure wizard", () => {
 					/Esta estrutura tem 12 unidades e a obra tem 6\. Tire 6 unidades ou aumente a reserva\./,
 				),
 			).toBeInTheDocument();
-			const link = screen.getByRole("link", { name: "Alterar reserva" });
-			expect(link).toHaveAttribute(
-				"href",
-				`/projects/${OBRA.id}/configuration`,
-			);
-			expect(link).toHaveAttribute("target", "_blank");
 			expect(await createButton()).toBeDisabled();
+			const readsBefore = unitsReads.length;
+			await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
+			const dialog = await screen.findByRole("dialog", {
+				name: "Alterar reserva",
+			});
+			const field = within(dialog).getByRole("textbox", {
+				name: "Unidades reservadas",
+			});
+			await user.clear(field);
+			await user.type(field, "160");
+			await user.click(within(dialog).getByRole("button", { name: "Salvar" }));
+
+			expect(
+				await screen.findByText(
+					"Usa 12 das 16 unidades que restam nesta obra. Depois de criar, sobram 4.",
+				),
+			).toBeInTheDocument();
+			expect(unitsReads.length).toBeGreaterThan(readsBefore);
+			await waitFor(() => {
+				expect(
+					screen.queryByRole("dialog", { name: "Alterar reserva" }),
+				).not.toBeInTheDocument();
+			});
+			expect(screen.queryByText(/Esta estrutura tem/)).not.toBeInTheDocument();
+			expect(await createButton()).toBeEnabled();
+			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
+				"3",
+			);
+			expect(router.state.location.pathname).toBe(WIZARD_PATH);
 		});
 
 		test("enables the button again once the plan fits", async () => {
@@ -980,6 +1035,47 @@ describe("structure wizard", () => {
 			expect(
 				screen.queryByRole("button", { name: "Criar estrutura" }),
 			).not.toBeInTheDocument();
+		});
+
+		test("opens the project instead of the wizard when it already has a structure", async () => {
+			const { handler, sent } = wizardApi({
+				structure: structureOf([tower("Torre A")]),
+			});
+			const { router } = open(handler);
+
+			await waitFor(() => {
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+			});
+			expect(
+				screen.queryByRole("heading", { level: 1, name: "Montar estrutura" }),
+			).not.toBeInTheDocument();
+			expect(sent).toHaveLength(0);
+		});
+
+		test("does not reopen the wizard with Back once the structure is created (W10)", async () => {
+			const { handler, sent } = wizardApi();
+			const { router } = open(handler, `/projects/${OBRA.id}`);
+			await user.click(
+				await screen.findByRole("link", { name: "Montar estrutura" }),
+			);
+			await describeTower("3", "4");
+			await user.click(await createButton());
+			await waitFor(() => {
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+			});
+
+			act(() => router.history.back());
+
+			await waitFor(() => {
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+			});
+			expect(
+				await screen.findByRole("heading", { name: "Fachada" }),
+			).toBeInTheDocument();
+			expect(
+				screen.queryByRole("heading", { level: 1, name: "Montar estrutura" }),
+			).not.toBeInTheDocument();
+			expect(sent).toHaveLength(1);
 		});
 
 		test("shows the not found page for a project that is not visible", async () => {

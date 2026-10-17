@@ -6,6 +6,7 @@ import {
 	locationDetailSchema,
 	PROJECT_NOT_FOUND,
 	projectUnitsBalanceSchema,
+	type Structure,
 	structureSchema,
 } from "@bluprint/shared";
 import {
@@ -40,6 +41,10 @@ export function structureQueryOptions(projectId: string) {
 			apiFetch(`/projects/${projectId}/structure`, structureSchema),
 		retry: retryUnlessNotFound,
 	});
+}
+
+export function isBlankStructure({ towers, commonAreas }: Structure) {
+	return towers.length === 0 && commonAreas.length === 0;
 }
 
 export function locationQueryOptions(projectId: string, locationId: string) {

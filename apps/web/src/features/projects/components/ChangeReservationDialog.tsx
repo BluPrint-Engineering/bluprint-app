@@ -35,7 +35,7 @@ import {
 	useChangeReservationMutation,
 	usedUnitsOf,
 } from "../api";
-import { plural } from "../components/plural";
+import { plural } from "./plural";
 import {
 	aboveFreeMessage,
 	belowUsedMessage,
@@ -64,6 +64,7 @@ interface ChangeReservationDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	returnFocus: RefObject<HTMLElement | null>;
+	onSaved?: () => void;
 }
 
 function Figure({
@@ -93,6 +94,7 @@ export function ChangeReservationDialog({
 	open,
 	onOpenChange,
 	returnFocus,
+	onSaved,
 }: ChangeReservationDialogProps) {
 	const desktop = useIsDesktop();
 	const units = useQuery({ ...organizationUnitsQueryOptions, enabled: open });
@@ -114,6 +116,7 @@ export function ChangeReservationDialog({
 			toast.success(
 				`Reserva da ${saved.name}: ${now} ${plural(now, "unidade", "unidades")}.`,
 			);
+			onSaved?.();
 			if (shown.current) onOpenChange(false);
 		},
 		failed: (failure) => {

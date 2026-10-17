@@ -8,9 +8,10 @@ A project's home at `/projects/<id>` shows its structure: a card per tower when 
 - `wizard-steps` opens `Montar estrutura` with the project name as back link and `<project> · nada é salvo antes de criar`: `Torres e andares` (towers stepper, first and last floor, units per floor, `Térreo sem unidades`, `Hall em cada andar`, numbering `101, 102` or `1A, 1B`; with several towers each gets a `Nome` and a new one copies the previous with the next letter), `Áreas comuns` (of the project, of each tower, of one floor) and `Prévia`; on a phone `Passo 1 de 3` with a bar `Continuar · <next step>` and `Voltar` (W1, W2, W4, W8).
 - `wizard-preview` shows `1 torre · 4 andares · 12 unidades`, the common area count, `Usa 12 das 20 unidades que restam nesta obra. Depois de criar, sobram 8.` and one small façade per tower (W4).
 - `wizard-validation` shows `Informe o último andar.` and the like under the fields, scrolls to the first wrong one and focuses it, and sends nothing (W5).
-- `wizard-reserve` disables `Criar estrutura` when the plan has more units than remain: `Esta estrutura tem 48 unidades e a obra tem 20. Tire 28 unidades ou aumente a reserva.` with the link `Alterar reserva` for the admin, `... ou peça mais reserva ao admin da construtora.` for a manager or assistant; on a phone the alert rides in the bottom bar above the buttons (W4b, W4c).
+- `wizard-reserve` disables `Criar estrutura` when the plan has more units than remain: `Esta estrutura tem 48 unidades e a obra tem 20. Tire 28 unidades ou aumente a reserva.` with the button `Alterar reserva` for the admin, `... ou peça mais reserva ao admin da construtora.` for a manager or assistant; on a phone the alert rides in the bottom bar above the buttons (W4b, W4c).
 - `wizard-create` creates the plan, returns to the project home with the toast `Estrutura criada: 1 torre e 12 unidades.` and the façade (W10); a failure keeps the draft with `Não foi possível criar a estrutura. Confira sua conexão e tente de novo. Nada foi salvo.` and a retry reuses the same ids (W7); `NO_UNITS_LEFT` and `LOCATION_NAME_TAKEN` show their alerts with the server's numbers and names (W7b). The failure paths are not reachable on a healthy instance; the web route-tree tests cover them.
 - `wizard-delivered` shows the lock line and no wizard for a delivered project.
+- `wizard-not-blank` sends `/projects/<id>/structure/new` on a project that already has structure to its home, replacing the history entry; after `Criar estrutura` the browser's Back does not reopen the wizard.
 - `home-towers` shows `Torres` with a card per tower (Andares, Unidades, Áreas comuns, Tipologias: `Tipologia A, Tipologia B, Cobertura`, or `Sem tipologia`) and `Áreas comuns da obra` (E2); a delivered project adds the lock line (E5).
 - `home-single-tower` shows `Fachada` and `Áreas comuns` with the tower's and the project's common areas, and the tower's name nowhere (E3).
 - `tower-facade` shows the façade, `Áreas comuns da torre`, the band `Torre · 15 andares · 50 unidades` and the back link to the project (T1); a tower without floors shows `A Torre B ainda não tem andares` (T3); a delivered project adds the lock line (T6).
@@ -56,7 +57,7 @@ Where the seed (`apps/api/src/db/seed/fixture.ts`) holds each edge case:
 ## Gotchas
 
 - The wizard's inputs are `Primeiro andar`, `Último andar` and `Unidades por andar` (with several towers, one set per tower and `Nome`); the common area inputs are named `Área comum da obra`, `Área comum de cada torre` and, in the one-floor form, `Nome da área comum`, `Torre`, `Andar`, button `Adicionar ao andar`.
-- `Alterar reserva` opens the project configuration in a new tab, because the reservation dialog arrives with its own ticket; the draft stays in the wizard tab.
+- `Alterar reserva` in the wizard is a button, not a link: it opens `getByRole("dialog", { name: "Alterar reserva" })` over the wizard, the draft stays, and on `Salvar` the alert recomputes from the refetched units.
 - On a phone the wizard has no `Prévia` heading until the third step; select `Criar estrutura` only there.
 
 - Read the ids with `query`: they are generated on seed and change with every `up`.

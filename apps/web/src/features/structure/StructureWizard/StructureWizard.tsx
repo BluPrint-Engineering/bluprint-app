@@ -3,7 +3,7 @@ import {
 	type ProjectSummary,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { Check } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -15,6 +15,7 @@ import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
 import { availableUnitsOf } from "../../projects/api";
+import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
 	namesTakenOf,
 	projectUnitsQueryOptions,
@@ -124,6 +125,8 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	const [step, setStep] = useState(0);
 	const [floorArea, setFloorArea] = useState<FloorAreaInput>();
 	const [reveal, setReveal] = useState<string>();
+	const [reservationOpen, setReservationOpen] = useState(false);
+	const reservationButton = useRef<HTMLButtonElement>(null);
 	const ids = useRef(new Map<string, string>());
 	const stepTop = useRef<HTMLDivElement>(null);
 
@@ -196,6 +199,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 					void navigate({
 						to: "/projects/$projectId",
 						params: { projectId: project.id },
+						replace: true,
 					});
 				},
 			},
@@ -226,15 +230,14 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 						{admin && (
 							<>
 								{" "}
-								<Link
-									to="/projects/$projectId/configuration"
-									params={{ projectId: project.id }}
-									target="_blank"
-									rel="noopener"
-									className="relative after:absolute after:-inset-y-3 after:inset-x-0"
+								<button
+									ref={reservationButton}
+									type="button"
+									className="relative underline underline-offset-3 after:absolute after:-inset-y-3 after:inset-x-0 hover:text-foreground"
+									onClick={() => setReservationOpen(true)}
 								>
 									Alterar reserva
-								</Link>
+								</button>
 							</>
 						)}
 					</>
@@ -244,6 +247,16 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			</AlertDescription>
 		</Alert>
 	) : null;
+
+	const reservationDialog = admin && (
+		<ChangeReservationDialog
+			project={project}
+			open={reservationOpen}
+			onOpenChange={setReservationOpen}
+			returnFocus={reservationButton}
+			onSaved={() => void units.refetch()}
+		/>
+	);
 
 	const createButton = (
 		<Button
@@ -335,6 +348,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 						{!tooLarge && <PreviewTowers plan={preview} />}
 					</div>
 				</aside>
+				{reservationDialog}
 			</div>
 		);
 	}
@@ -420,6 +434,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 					)}
 				</div>
 			</MobileBar>
+			{reservationDialog}
 		</div>
 	);
 }
