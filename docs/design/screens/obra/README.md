@@ -332,8 +332,9 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
   `PROJECT_DELIVERED`. Local UI state: draft + error.
   The dialog's open state lives in the address, `/projects/:id/configuration?reserva=alterar`, so the "Alterar
   reserva" links of the structure screens (W4c, F5b, R9b) reach it and Back closes it.
-- `useDeliverProjectMutation` (#168) → updates the project and the list. Local UI state: rename editing +
-  draft, deliver dialog open + checkbox.
+- `useDeliverProjectMutation` (#168) → `setQueryData` on the project, invalidate the organization units query and
+  the list; `PROJECT_DELIVERED` (stale tab) reloads the project and the organization units. Local UI state: rename
+  editing + draft, deliver dialog open + checkbox.
 
 ## What the API serves today vs. future
 
