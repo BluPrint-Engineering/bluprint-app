@@ -22,7 +22,6 @@ import { uuidV7 } from "@/lib/uuidV7";
 import { availableUnitsOf } from "../../projects/api";
 import { namesTakenOf, useCreateStructureMutation } from "../api";
 import { nameProblem, type Scope, takenText } from "../naming";
-import { plural } from "../plural";
 import { type Adding, type AddKind, useFocusOnClose } from "./useAdding";
 
 const ADD_FAILED =
@@ -80,13 +79,11 @@ function AddForm({
 	const refusal =
 		taken !== undefined
 			? takenText(type, name.trim(), scope, towerName)
-			: left === undefined
-				? create.isError
+			: left !== undefined
+				? RESERVE_OVER
+				: create.isError
 					? ADD_FAILED
-					: undefined
-				: left <= 0
-					? RESERVE_OVER
-					: `Restam só ${plural(left, "unidade", "unidades")} nesta obra.`;
+					: undefined;
 	const error = problem ?? refusal;
 
 	function submit() {
