@@ -2,7 +2,7 @@ const DESKTOP_WIDTH = 1280;
 const PHONE_WIDTH = 390;
 
 let width = DESKTOP_WIDTH;
-const viewportListeners = new Set<() => void>();
+const viewportListeners = new Set<EventListener>();
 
 function matches(query: string): boolean {
 	const minWidth = /\(min-width:\s*([\d.]+)(px|rem)\)/.exec(query);
@@ -13,7 +13,7 @@ function matches(query: string): boolean {
 
 export function setViewport(viewport: "phone" | "desktop") {
 	width = viewport === "phone" ? PHONE_WIDTH : DESKTOP_WIDTH;
-	for (const listener of [...viewportListeners]) listener();
+	for (const listener of [...viewportListeners]) listener(new Event("change"));
 }
 
 export function installViewport() {
@@ -22,10 +22,10 @@ export function installViewport() {
 			matches: matches(query),
 			media: query,
 			onchange: null,
-			addEventListener(_type: string, listener: () => void) {
+			addEventListener(_type: string, listener: EventListener) {
 				viewportListeners.add(listener);
 			},
-			removeEventListener(_type: string, listener: () => void) {
+			removeEventListener(_type: string, listener: EventListener) {
 				viewportListeners.delete(listener);
 			},
 			addListener() {},

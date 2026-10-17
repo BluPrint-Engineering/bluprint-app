@@ -101,9 +101,7 @@ function FloorAreaForm({
 					placeholder="Ex.: Terraço"
 					aria-invalid={errors.name !== undefined}
 					value={name}
-					onChange={(event) =>
-						onChange({ ...value, name: event.target.value })
-					}
+					onChange={(event) => onChange({ ...value, name: event.target.value })}
 				/>
 				{errors.name && <FieldError>{errors.name}</FieldError>}
 			</Field>
