@@ -3,6 +3,7 @@ import {
 	LOCATION_NAME_TAKEN,
 	NO_UNITS_LEFT,
 	PROJECT_DELIVERED,
+	PROJECT_NOT_FOUND,
 	type ProjectAccessRole,
 } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
@@ -439,6 +440,68 @@ describe("the reserva is over", () => {
 		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
 
 		api.state.units.remaining = 5;
+		await queryClient.refetchQueries({
+			queryKey: ["structure", obra().id, "units"],
+		});
+
+		const restored = await screen.findByRole("button", {
+			name: "Adicionar unidade",
+		});
+		await waitFor(() => expect(restored).not.toHaveAttribute("aria-disabled"));
+		expect(restored).not.toHaveFocus();
+		expect(document.body).toHaveFocus();
+	});
+
+	test("does not move focus on a later background refetch when the read after a save failed", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra("admin"), several, { remaining: 0 });
+		const unitsPath = `/api/projects/${obra().id}/units`;
+		let failedReads = 0;
+		let failReads = false;
+		stubApi(signedIn, {
+			api: (url, init) => {
+				if (failReads && url.pathname === unitsPath && !init?.method) {
+					failedReads += 1;
+					return problem(404, PROJECT_NOT_FOUND);
+				}
+				return api.handler(url, init);
+			},
+		});
+		const { queryClient } = renderAt(pathOf(ninth.id));
+		const row = await screen.findByRole("button", {
+			name: "Adicionar unidade",
+		});
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
+		await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
+		const dialog = await screen.findByRole("dialog", {
+			name: "Alterar reserva",
+		});
+		const units = within(dialog).getByRole("textbox", {
+			name: "Unidades reservadas",
+		});
+		await user.clear(units);
+		await user.type(units, "130");
+		await waitFor(() =>
+			expect(
+				within(dialog).getByRole("button", { name: "Salvar" }),
+			).toBeEnabled(),
+		);
+		failReads = true;
+		await user.click(within(dialog).getByRole("button", { name: "Salvar" }));
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Alterar reserva" }),
+			).not.toBeInTheDocument(),
+		);
+		await waitFor(() => expect(failedReads).toBeGreaterThan(0));
+		await waitFor(() =>
+			expect(
+				queryClient.getQueryState(["structure", obra().id, "units"])?.status,
+			).toBe("error"),
+		);
+		failReads = false;
+		(document.activeElement as HTMLElement | null)?.blur();
+
 		await queryClient.refetchQueries({
 			queryKey: ["structure", obra().id, "units"],
 		});

@@ -77,7 +77,9 @@ export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
 					returnFocus={exhausted ? alterReservation : addButton}
 					onSaved={() => {
 						savedAt.current = Date.now();
-						void units.refetch();
+						void units.refetch().then((result) => {
+							if (result.isError) savedAt.current = undefined;
+						});
 					}}
 				/>
 			)}
