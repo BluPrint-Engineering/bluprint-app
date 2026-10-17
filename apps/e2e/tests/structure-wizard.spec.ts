@@ -60,16 +60,24 @@ test("a new account reserves units for a project, builds its structure with the 
 	await describeTower(page, "3", "4");
 	await continueTo(page, "Áreas comuns");
 	await page.getByLabel("Área comum da obra").fill("Guarita");
-	await page.getByRole("button", { name: "Adicionar", exact: true }).click();
+	await page.getByLabel("Área comum da obra").press("Enter");
 	await expect(
 		page.getByRole("button", { name: "Tirar Guarita" }),
+	).toBeVisible();
+	await continueTo(page, "Tipologias");
+	await page.getByLabel("Novo cômodo da Tipologia A").fill("Sala");
+	await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
+	await expect(
+		page.getByRole("button", { name: "Tirar Sala da Tipologia A" }),
 	).toBeVisible();
 	await continueTo(page, "Prévia");
 
 	await expect(
 		page.getByText("1 torre · 4 andares · 12 unidades"),
 	).toBeVisible();
-	await expect(page.getByText("5 áreas comuns")).toBeVisible();
+	await expect(
+		page.getByText("5 áreas comuns · Tipologia A: 12"),
+	).toBeVisible();
 	await expect(
 		page.getByText(
 			"Usa 12 das 75 unidades que restam nesta obra. Depois de criar, sobram 63.",
@@ -95,6 +103,8 @@ test("a new account reserves units for a project, builds its structure with the 
 	await expect(
 		page.getByRole("heading", { level: 1, name: "304" }),
 	).toBeVisible();
+	await expect(page.getByText("Tipologia A").first()).toBeVisible();
+	await expect(page.getByText("Sala", { exact: true })).toBeVisible();
 });
 
 test("a project whose reservation is smaller than the plan cannot be sent", async ({
@@ -106,6 +116,7 @@ test("a project whose reservation is smaller than the plan cannot be sent", asyn
 	await page.getByRole("link", { name: "Montar estrutura" }).click();
 	await describeTower(page, "3", "4");
 	await continueTo(page, "Áreas comuns");
+	await continueTo(page, "Tipologias");
 	await continueTo(page, "Prévia");
 
 	await expect(

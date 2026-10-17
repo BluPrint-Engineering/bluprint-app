@@ -8,6 +8,7 @@ import {
 	projectUnitsBalanceSchema,
 	type Structure,
 	structureSchema,
+	UNIT_TYPE_NAME_TAKEN,
 } from "@bluprint/shared";
 import {
 	queryOptions,
@@ -71,6 +72,13 @@ export function projectUnitsQueryOptions(projectId: string) {
 export function namesTakenOf(error: unknown): string[] | undefined {
 	return error instanceof ApiError &&
 		error.problem?.code === LOCATION_NAME_TAKEN
+		? (error.problem.names ?? [])
+		: undefined;
+}
+
+export function unitTypeNamesTakenOf(error: unknown): string[] | undefined {
+	return error instanceof ApiError &&
+		error.problem?.code === UNIT_TYPE_NAME_TAKEN
 		? (error.problem.names ?? [])
 		: undefined;
 }

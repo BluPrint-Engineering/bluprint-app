@@ -5,8 +5,13 @@ import {
 	initialDraft,
 	nextTowerName,
 	parseTower,
+	ruleFieldId,
+	unitTypeFieldId,
 	validateDraft,
 	type WizardDraft,
+	withNewRule,
+	withNewUnitType,
+	withoutUnitType,
 	withTowerCount,
 } from "./wizardDraft";
 
@@ -294,5 +299,152 @@ describe("firstInvalidField", () => {
 		const draft = draftOf({});
 
 		expect(firstInvalidField(draft, validateDraft(draft))).toBeUndefined();
+	});
+});
+
+describe("unit types in the draft", () => {
+	test("starts with one unit type applied to every final and floor of the first tower", () => {
+		const draft = initialDraft();
+
+		expect(draft.unitTypes).toEqual([
+			expect.objectContaining({ name: "Tipologia A", rooms: [] }),
+		]);
+		expect(draft.rules).toEqual([
+			expect.objectContaining({
+				tower: 0,
+				finals: "todos",
+				from: "",
+				to: "",
+				unitType: draft.unitTypes[0]?.key,
+			}),
+		]);
+	});
+
+	test("copies the previous tower's rules to a new tower and drops them with the tower", () => {
+		const draft = initialDraft();
+
+		const three = withTowerCount(draft, 3);
+
+		expect(three.rules.map((rule) => rule.tower)).toEqual([0, 1, 2]);
+		expect(new Set(three.rules.map((rule) => rule.key)).size).toBe(3);
+		expect(
+			three.rules.every((rule) => rule.unitType === draft.rules[0]?.unitType),
+		).toBe(true);
+		expect(withTowerCount(three, 2).rules.map((rule) => rule.tower)).toEqual([
+			0, 1,
+		]);
+		expect(withTowerCount(three, 1).rules.map((rule) => rule.tower)).toEqual([
+			0,
+		]);
+	});
+
+	test("names a new unit type with the first free letter", () => {
+		const draft = withNewUnitType(withNewUnitType(initialDraft()));
+
+		expect(draft.unitTypes.map((unitType) => unitType.name)).toEqual([
+			"Tipologia A",
+			"Tipologia B",
+			"Tipologia C",
+		]);
+		expect(
+			withNewUnitType({
+				...draft,
+				unitTypes: draft.unitTypes.filter(
+					(unitType) => unitType.name !== "Tipologia B",
+				),
+			}).unitTypes.map((unitType) => unitType.name),
+		).toEqual(["Tipologia A", "Tipologia C", "Tipologia B"]);
+	});
+
+	test("takes a unit type out together with the rules that point at it", () => {
+		const draft = withNewUnitType(initialDraft());
+		const [first, second] = draft.unitTypes;
+
+		const only = withoutUnitType(draft, first?.key ?? "");
+
+		expect(only.unitTypes).toEqual([second]);
+		expect(only.rules).toEqual([]);
+	});
+
+	test("adds a rule for every final and floor of the first tower with the first unit type", () => {
+		const draft = withNewRule(initialDraft());
+
+		expect(draft.rules).toHaveLength(2);
+		expect(draft.rules[1]).toEqual(
+			expect.objectContaining({
+				tower: 0,
+				finals: "todos",
+				unitType: draft.unitTypes[0]?.key,
+			}),
+		);
+		expect(withNewRule({ ...draft, unitTypes: [] }).rules).toHaveLength(2);
+	});
+
+	test("asks for a unit type's name and refuses one that repeats an earlier name", () => {
+		const draft = withNewUnitType(withNewUnitType(initialDraft()));
+		const [first, second, third] = draft.unitTypes;
+		const named = {
+			...draft,
+			unitTypes: [
+				first,
+				{ ...second, name: "  " },
+				{ ...third, name: " tipologia   a " },
+			],
+		} as WizardDraft;
+
+		const errors = validateDraft(named);
+
+		expect(errors[unitTypeFieldId(second?.key ?? "")]).toBe(
+			"Informe o nome da tipologia.",
+		);
+		expect(errors[unitTypeFieldId(third?.key ?? "")]).toBe(
+			"Já existe outra tipologia com esse nome.",
+		);
+		expect(errors[unitTypeFieldId(first?.key ?? "")]).toBeUndefined();
+	});
+
+	test("refuses finals that are not numbers and a last floor below the first", () => {
+		const draft = initialDraft();
+		const rule = draft.rules[0];
+		const bad = {
+			...draft,
+			towers: [{ ...draft.towers[0], first: "1", last: "5", perFloor: "2" }],
+			rules: [{ ...rule, finals: "um", from: "5", to: "2" }],
+		} as WizardDraft;
+
+		const errors = validateDraft(bad);
+
+		expect(errors[ruleFieldId(rule?.key ?? "", "finals")]).toBe(
+			"Use números como 01, 03, ou escreva todos.",
+		);
+		expect(errors[ruleFieldId(rule?.key ?? "", "to")]).toBe(
+			"O andar final precisa ser igual ou maior que o inicial.",
+		);
+		expect(errors[ruleFieldId(rule?.key ?? "", "from")]).toBeUndefined();
+	});
+
+	test("points firstInvalidField at the unit types section after the towers and areas", () => {
+		const draft = withNewRule(initialDraft());
+		const rule = draft.rules[1];
+		const bad = {
+			...draft,
+			towers: [{ ...draft.towers[0], first: "1", last: "5", perFloor: "2" }],
+			rules: [draft.rules[0], { ...rule, finals: "x" }],
+		} as WizardDraft;
+
+		expect(firstInvalidField(bad, validateDraft(bad))).toEqual({
+			id: ruleFieldId(rule?.key ?? "", "finals"),
+			section: "types",
+		});
+	});
+
+	test("accepts the starting draft once the first tower is described", () => {
+		const draft = initialDraft();
+		const filled = {
+			...draft,
+			towers: [{ ...draft.towers[0], last: "5", perFloor: "2" }],
+		} as WizardDraft;
+
+		expect(validateDraft(filled)).toEqual({});
 	});
 });

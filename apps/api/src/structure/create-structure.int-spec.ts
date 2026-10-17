@@ -4,12 +4,18 @@ import {
 	LOCATION_ID_TAKEN,
 	LOCATION_NAME_TAKEN,
 	LOCATION_PARENT_INVALID,
+	locationDetailSchema,
 	NO_UNITS_LEFT,
 	type NewLocation,
+	type NewUnitType,
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	problemDetailsSchema,
 	structureSchema,
+	UNIT_TYPE_ID_TAKEN,
+	UNIT_TYPE_NAME_TAKEN,
+	UNIT_TYPE_NOT_FOUND,
+	unitTypeListSchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -121,6 +127,45 @@ async function create(
 	locations: NewLocation[],
 ) {
 	return person.agent.post(structurePath(projectId)).send({ locations });
+}
+
+async function createWith(
+	person: Person,
+	projectId: string,
+	unitTypes: NewUnitType[],
+	locations: NewLocation[],
+) {
+	return person.agent
+		.post(structurePath(projectId))
+		.send({ unitTypes, locations });
+}
+
+const unitTypeOf = (name: string, rooms: string[]): NewUnitType => ({
+	id: randomUUID(),
+	name,
+	rooms: rooms.map((room) => ({ id: randomUUID(), name: room })),
+});
+
+const unitOf = (
+	floorId: string,
+	name: string,
+	unitTypeId?: string,
+	position = 0,
+): NewLocation => ({
+	...entry(floorId, "unit", name, position),
+	...(unitTypeId !== undefined && { unitTypeId }),
+});
+
+async function readLocation(projectId: string, locationId: string) {
+	const res = await admin.agent.get(
+		`/api/projects/${projectId}/locations/${locationId}`,
+	);
+	return locationDetailSchema.parse(res.body);
+}
+
+async function readUnitTypes(projectId: string) {
+	const res = await admin.agent.get(`/api/projects/${projectId}/unit-types`);
+	return unitTypeListSchema.parse(res.body).unitTypes;
 }
 
 async function readStructure(projectId: string) {
@@ -706,5 +751,332 @@ describe("POST /api/projects/:id/structure", () => {
 			.from(project)
 			.where(eq(project.id, projectId));
 		expect(after!.lastActivityAt.getTime()).toBe(before.getTime());
+	});
+});
+
+describe("POST /api/projects/:id/structure with unit types", () => {
+	const roomsOfA = ["Sala", "Cozinha", "Dormitório"];
+
+	const aTower = () => entry(null, "tower", "Torre A");
+
+	function floorWith(towerName = "Torre A") {
+		const tower = entry(null, "tower", towerName);
+		const floor = entry(tower.id, "floor", "1º andar");
+		return { tower, floor };
+	}
+
+	it("creates the unit types with their rooms and gives each unit the rooms of its type", async () => {
+		const projectId = await newProject(10);
+		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const typeB = unitTypeOf("Tipologia B", ["Sala", "Banheiro"]);
+		const { tower, floor } = floorWith();
+		const unitA = unitOf(floor.id, "101", typeA.id);
+		const unitB = unitOf(floor.id, "102", typeB.id, 1);
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[typeA, typeB],
+			[tower, floor, unitA, unitB],
+		);
+
+		expect(res.status).toBe(201);
+		expect(res.body).toEqual({
+			counts: { towers: 1, floors: 1, units: 2, commonAreas: 0 },
+		});
+		const detailA = await readLocation(projectId, unitA.id);
+		expect(detailA.unitType).toEqual({ id: typeA.id, name: "Tipologia A" });
+		expect(detailA.rooms.map((room) => room.name)).toEqual(roomsOfA);
+		expect(detailA.rooms.map((room) => room.unitTypeRoomId)).toEqual(
+			typeA.rooms.map((room) => room.id),
+		);
+		expect(detailA.rooms.every((room) => !room.renamed)).toBe(true);
+		expect(detailA.changes).toBe(0);
+		const detailB = await readLocation(projectId, unitB.id);
+		expect(detailB.rooms.map((room) => room.name)).toEqual([
+			"Sala",
+			"Banheiro",
+		]);
+		const listed = await readUnitTypes(projectId);
+		expect(listed.find((type) => type.id === typeA.id)).toMatchObject({
+			name: "Tipologia A",
+			unitCount: 1,
+			changedUnitCount: 0,
+			rooms: typeA.rooms,
+		});
+		expect(listed.find((type) => type.id === typeB.id)).toMatchObject({
+			name: "Tipologia B",
+			unitCount: 1,
+		});
+	});
+
+	it("leaves a unit without a unit type with no unit type and no rooms", async () => {
+		const projectId = await newProject(10);
+		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const { tower, floor } = floorWith();
+		const bare = unitOf(floor.id, "101");
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[typeA],
+			[tower, floor, bare],
+		);
+
+		expect(res.status).toBe(201);
+		const detail = await readLocation(projectId, bare.id);
+		expect(detail.unitType).toBeNull();
+		expect(detail.rooms).toEqual([]);
+		expect((await readUnitTypes(projectId))[0]!.unitCount).toBe(0);
+	});
+
+	it("creates a unit type with no rooms", async () => {
+		const projectId = await newProject(10);
+		const empty = unitTypeOf("Tipologia A", []);
+		const { tower, floor } = floorWith();
+		const unit = unitOf(floor.id, "101", empty.id);
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[empty],
+			[tower, floor, unit],
+		);
+
+		expect(res.status).toBe(201);
+		expect((await readLocation(projectId, unit.id)).rooms).toEqual([]);
+	});
+
+	it("answers the same and creates nothing when the request is sent again", async () => {
+		const projectId = await newProject(10);
+		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const { tower, floor } = floorWith();
+		const unit = unitOf(floor.id, "101", typeA.id);
+		const request: [NewUnitType[], NewLocation[]] = [
+			[typeA],
+			[tower, floor, unit],
+		];
+
+		const first = await createWith(manager, projectId, ...request);
+		const again = await createWith(manager, projectId, ...request);
+
+		expect(again.status).toBe(201);
+		expect(again.body).toEqual(first.body);
+		expect(await readUnitTypes(projectId)).toHaveLength(1);
+		expect((await readLocation(projectId, unit.id)).rooms).toHaveLength(3);
+	});
+
+	it("gives a unit of a later request the rooms of a unit type that already exists", async () => {
+		const projectId = await newProject(10);
+		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const { tower, floor } = floorWith();
+		await createWith(manager, projectId, [typeA], [tower, floor]);
+		const unit = unitOf(floor.id, "101", typeA.id);
+
+		const res = await createWith(manager, projectId, [], [unit]);
+
+		expect(res.status).toBe(201);
+		expect(
+			(await readLocation(projectId, unit.id)).rooms.map((r) => r.name),
+		).toEqual(roomsOfA);
+	});
+
+	it.each([
+		["case", "tipologia a"],
+		["repeated spaces", "Tipologia    A"],
+		["the ends", "  Tipologia A "],
+	])(
+		"refuses a unit type name that differs only by %s",
+		async (_label, name) => {
+			const projectId = await newProject(10);
+			await createWith(
+				manager,
+				projectId,
+				[unitTypeOf("Tipologia A", [])],
+				[aTower()],
+			);
+			const { tower, floor } = floorWith("Torre B");
+
+			const res = await createWith(
+				manager,
+				projectId,
+				[unitTypeOf(name, ["Sala"])],
+				[tower, floor, unitOf(floor.id, "101")],
+			);
+
+			expect(res.status).toBe(409);
+			const problem = problemOf(res.body);
+			expect(problem.code).toBe(UNIT_TYPE_NAME_TAKEN);
+			expect(problem.names).toEqual([name.trim()]);
+			expect(await countLocations(projectId)).toBe(1);
+			expect(await readUnitTypes(projectId)).toHaveLength(1);
+		},
+	);
+
+	it("refuses two unit types of one request with the same name and creates nothing", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[unitTypeOf("Tipologia A", ["Sala"]), unitTypeOf("tipologia a", [])],
+			[tower, floor],
+		);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).code).toBe(UNIT_TYPE_NAME_TAKEN);
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("lets two projects each have their own unit type of the same name", async () => {
+		const first = await newProject(10);
+		const second = await newProject(10);
+
+		const a = await createWith(
+			manager,
+			first,
+			[unitTypeOf("Tipologia A", [])],
+			[aTower()],
+		);
+		const b = await createWith(
+			manager,
+			second,
+			[unitTypeOf("Tipologia A", [])],
+			[aTower()],
+		);
+
+		expect(a.status).toBe(201);
+		expect(b.status).toBe(201);
+	});
+
+	it("refuses a unit that follows a unit type the project does not have", async () => {
+		const projectId = await newProject(10);
+		const otherId = await newProject(10);
+		const foreign = unitTypeOf("Tipologia A", ["Sala"]);
+		const { tower, floor } = floorWith();
+		await createWith(manager, otherId, [foreign], [tower, floor]);
+		const mine = floorWith();
+
+		const unknown = await createWith(
+			manager,
+			projectId,
+			[],
+			[mine.tower, mine.floor, unitOf(mine.floor.id, "101", randomUUID())],
+		);
+		const ofAnotherProject = await createWith(
+			manager,
+			projectId,
+			[],
+			[mine.tower, mine.floor, unitOf(mine.floor.id, "101", foreign.id)],
+		);
+
+		for (const res of [unknown, ofAnotherProject]) {
+			expect(res.status).toBe(400);
+			expect(problemOf(res.body).code).toBe(UNIT_TYPE_NOT_FOUND);
+		}
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("refuses a unit type id or a room id that belongs to another project", async () => {
+		const projectId = await newProject(10);
+		const otherId = await newProject(10);
+		const taken = unitTypeOf("Tipologia A", ["Sala"]);
+		await createWith(manager, otherId, [taken], [aTower()]);
+
+		const sameType = await createWith(
+			manager,
+			projectId,
+			[{ ...unitTypeOf("Outra", []), id: taken.id }],
+			[aTower()],
+		);
+		const sameRoom = await createWith(
+			manager,
+			projectId,
+			[{ ...unitTypeOf("Outra", []), rooms: taken.rooms }],
+			[aTower()],
+		);
+
+		for (const res of [sameType, sameRoom]) {
+			expect(res.status).toBe(409);
+			expect(problemOf(res.body).code).toBe(UNIT_TYPE_ID_TAKEN);
+		}
+		expect(await readUnitTypes(projectId)).toEqual([]);
+	});
+
+	it("refuses a malformed unit type request", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+		const typeA = unitTypeOf("Tipologia A", ["Sala", "sala"]);
+
+		const sameRoomTwice = await createWith(
+			manager,
+			projectId,
+			[typeA],
+			[tower, floor],
+		);
+		const onAFloor = await createWith(
+			manager,
+			projectId,
+			[unitTypeOf("Tipologia B", [])],
+			[tower, { ...floor, unitTypeId: randomUUID() }],
+		);
+		const sharedId = unitTypeOf("Tipologia C", []);
+		const twoWithOneId = await createWith(
+			manager,
+			projectId,
+			[sharedId, { ...sharedId, name: "Tipologia D" }],
+			[tower, floor],
+		);
+
+		for (const res of [sameRoomTwice, onAFloor, twoWithOneId]) {
+			expect(res.status).toBe(400);
+		}
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("creates no unit type when the units do not fit the reservation", async () => {
+		const projectId = await newProject(1);
+		const typeA = unitTypeOf("Tipologia A", ["Sala"]);
+		const { tower, floor } = floorWith();
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[typeA],
+			[
+				tower,
+				floor,
+				unitOf(floor.id, "101", typeA.id),
+				unitOf(floor.id, "102", typeA.id, 1),
+			],
+		);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).code).toBe(NO_UNITS_LEFT);
+		expect(await readUnitTypes(projectId)).toEqual([]);
+	});
+
+	it("lets the assistant send unit types and refuses a delivered project", async () => {
+		const projectId = await newProject(10);
+		const delivered = await newProject(10, "delivered");
+
+		const ok = await createWith(
+			assistant,
+			projectId,
+			[unitTypeOf("Tipologia A", [])],
+			[aTower()],
+		);
+		const refused = await createWith(
+			admin,
+			delivered,
+			[unitTypeOf("Tipologia A", [])],
+			[aTower()],
+		);
+
+		expect(ok.status).toBe(201);
+		expect(refused.status).toBe(409);
+		expect(problemOf(refused.body).code).toBe(PROJECT_DELIVERED);
+		expect(await readUnitTypes(delivered)).toEqual([]);
 	});
 });

@@ -392,7 +392,7 @@ and:
 - `POST /api/projects/:id/structure` (the wizard, idempotent by ids), served, carries **every creation of units**: the wizard,
   "Adicionar unidade", "Adicionar andares", Duplicar and Desfazer. When the obra's reserva does not cover the new units
   it answers `409 NO_UNITS_LEFT` with `requested` (new units in the request) and `available` (what remains in the
-  obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist;
+  obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist; it also creates the request's tipologias with their rooms (client ids, `409 UNIT_TYPE_NAME_TAKEN` for a name in use), and a unit that names a tipologia is born with its rooms;
 - `GET /api/projects/:id/units` → `{ reserved, used, remaining }`, for anyone linked to the obra, is served (the
   admin's `PATCH /api/projects/:id/units` lives in `../obra/`);
 - `POST` / `PATCH` / `DELETE` on locations and rooms, `PATCH` for order, unit types CRUD. A `DELETE` that deletes (no
