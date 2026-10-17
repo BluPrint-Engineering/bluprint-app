@@ -18,6 +18,10 @@ describe("addUnitLine", () => {
 	test("says the only unit left in the singular", () => {
 		expect(addUnitLine(1)).toBe("Usa 1 da única unidade que resta nesta obra.");
 	});
+
+	test("says the reserva is over when nothing remains", () => {
+		expect(addUnitLine(0)).toBe("A reserva da obra acabou.");
+	});
 });
 
 describe("planLine", () => {

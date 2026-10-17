@@ -27,6 +27,7 @@ export function planLine(
 }
 
 export function addUnitLine(remaining: number): string {
+	if (remaining <= 0) return remainingLine(remaining);
 	return remaining === 1
 		? "Usa 1 da única unidade que resta nesta obra."
 		: `Usa 1 das ${remaining} unidades que restam nesta obra.`;
