@@ -503,7 +503,7 @@ describe("PATCH /api/projects/:id/unit-types/:unitTypeId", () => {
 		});
 
 		expect(res.status).toBe(200);
-		expect(updateUnitTypeResultSchema.parse(res.body).updatedUnitCount).toBe(2);
+		expect(updateUnitTypeResultSchema.parse(res.body).updatedUnitCount).toBe(3);
 		const owner = await detailOf(w, w.owner);
 		expect(roomNames(owner)).toEqual([
 			"Sala",

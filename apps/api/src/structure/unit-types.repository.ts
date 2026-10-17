@@ -346,9 +346,12 @@ export class UnitTypesRepository {
 		return updated.map(({ locationId }) => locationId);
 	}
 
-	async adoptOwnRooms(unitTypeId: string, addedIds: string[]): Promise<void> {
-		if (addedIds.length === 0) return;
-		await this.txHost.tx.execute(sql`
+	async adoptOwnRooms(
+		unitTypeId: string,
+		addedIds: string[],
+	): Promise<string[]> {
+		if (addedIds.length === 0) return [];
+		const { rows } = await this.txHost.tx.execute<{ location_id: string }>(sql`
 			update ${room} r
 			set unit_type_room_id = a.id, renamed = false, name = a.name, position = a.position
 			from ${unitTypeRoom} a, ${location} u
@@ -357,7 +360,10 @@ export class UnitTypesRepository {
 				and u.unit_type_id = ${unitTypeId}
 				and r.unit_type_room_id is null
 				and ${comparable(sql`r.name`)} = ${comparable(sql`a.name`)}
+			returning r.location_id
 		`);
+
+		return rows.map(({ location_id }) => location_id);
 	}
 
 	async addRoomsToUnits(

@@ -179,7 +179,12 @@ export class UnitTypesService {
 		for (const id of await this.unitTypes.renameRoomsInUnits(plan.renamedIds)) {
 			changed.add(id);
 		}
-		await this.unitTypes.adoptOwnRooms(unitTypeId, plan.addedIds);
+		for (const id of await this.unitTypes.adoptOwnRooms(
+			unitTypeId,
+			plan.addedIds,
+		)) {
+			changed.add(id);
+		}
 		for (const id of await this.unitTypes.addRoomsToUnits(
 			unitTypeId,
 			plan.addedIds,
