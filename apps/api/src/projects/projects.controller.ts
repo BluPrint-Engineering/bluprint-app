@@ -17,6 +17,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
+import { ChangeReservationDto } from "./dto/change-reservation.dto";
 import { CreateProjectDto } from "./dto/create-project.dto";
 import { ProjectListQueryDto } from "./dto/project-list-query.dto";
 import { ProjectListDto } from "./dto/project-list.dto";
@@ -143,5 +144,25 @@ export class ProjectsController {
 		@Body() body: RenameProjectDto,
 	): Promise<ProjectSummary> {
 		return this.projects.rename(session.user.id, params.id, body);
+	}
+
+	@Patch(":id/units")
+	@ApiOperation({
+		summary: "Change a project's reservation",
+		description:
+			"Sets how many units the project reserves and answers its updated summary. Restricted to the organization's `admin`; a `manager` or an `assistant` of the project gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. The reservation can go as low as the units the project uses and as high as its current reservation plus the organization's free units; below the first it answers `409 RESERVATION_BELOW_USED` with `used`, above the second `409 NO_UNITS_LEFT` with `requested` (how many units the reservation grows by) and `available` (the free units), and changes nothing. A delivered project answers `409 PROJECT_DELIVERED`: delivery already set its reservation to the units it used. The project is locked, then the organization, so a change never races a creation or another change into reserving more than the contracted units.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The project with its new reservation.",
+		type: ProjectSummaryDto,
+	})
+	@ApiErrorResponses(400, 401, 403, 404, 409)
+	changeReservation(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+		@Body() body: ChangeReservationDto,
+	): Promise<ProjectSummary> {
+		return this.projects.changeReservation(session.user.id, params.id, body);
 	}
 }

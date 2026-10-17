@@ -36,10 +36,9 @@ export class UnitsService {
 
 	@Transactional(Propagation.Mandatory)
 	async assertAvailable(projectId: string, requested: number): Promise<void> {
-		const reserved = await this.units.lockProject(projectId);
-		if (reserved === undefined) throw projectNotFound();
+		const locked = await this.lockProject(projectId);
 
-		const { remaining } = await this.balanceOf(projectId, reserved);
+		const { remaining } = await this.balanceOf(projectId, locked.reserved);
 		if (requested > remaining) {
 			throw new ProblemException({
 				status: 409,
@@ -49,6 +48,14 @@ export class UnitsService {
 				available: remaining,
 			});
 		}
+	}
+
+	@Transactional(Propagation.Mandatory)
+	async lockProject(projectId: string) {
+		const locked = await this.units.lockProject(projectId);
+		if (!locked) throw projectNotFound();
+
+		return locked;
 	}
 
 	async balanceOf(

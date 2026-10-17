@@ -20,7 +20,17 @@ function ConfigurationSkeleton() {
 	);
 }
 
-export function ProjectConfigurationPage({ projectId }: { projectId: string }) {
+interface ProjectConfigurationPageProps {
+	projectId: string;
+	reservationOpen: boolean;
+	onReservationOpenChange: (open: boolean) => void;
+}
+
+export function ProjectConfigurationPage({
+	projectId,
+	reservationOpen,
+	onReservationOpenChange,
+}: ProjectConfigurationPageProps) {
 	return (
 		<ProjectScreen
 			projectId={projectId}
@@ -32,7 +42,11 @@ export function ProjectConfigurationPage({ projectId }: { projectId: string }) {
 					<h2 className="text-[1.375rem] leading-tight font-semibold tracking-tight">
 						Configuração
 					</h2>
-					<ProjectDetailsSection project={project} />
+					<ProjectDetailsSection
+						project={project}
+						reservationOpen={reservationOpen}
+						onReservationOpenChange={onReservationOpenChange}
+					/>
 				</div>
 			)}
 		</ProjectScreen>

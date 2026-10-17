@@ -34,7 +34,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 - [Account menu and sign out](./account-menu.md): the header account menu, theme choice, signing out.
 - [Project list](./project-list.md): the Obras screen, phone infinite scroll versus desktop pagination, the admin's free units and `Nova obra` entry.
 - [Project home and not found](./project-home.md): a card opens the project's home (name, status, role, blank state), and the not-found pages for unknown addresses and projects the user cannot see.
-- [Project configuration and rename](./project-configuration.md): the configuration page (`Dados da obra`), renaming in place, and why an assistant or a delivered project cannot rename.
+- [Project configuration, rename and reservation](./project-configuration.md): the configuration page (`Dados da obra`), renaming in place, why an assistant or a delivered project cannot rename, the units row and the admin's `Alterar reserva` dialog.
 - [New project](./new-project.md): the Nova obra page, its free-units help, validation, creation and the page without free units.
 - [Project structure](./structure.md): a project's home with its towers or façade, the tower façade, the floor lists with each unit's unit type, the unit page with its unit type and rooms, the common area's rooms, and where the seed holds each edge case.
 - [Project filters, search and sort](./project-filters.md): status, manager, name search and sort, from the desktop toolbar and the phone sheet.

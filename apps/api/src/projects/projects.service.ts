@@ -5,12 +5,14 @@ import {
 	PROJECT_DELIVERED,
 	PROJECT_ID_TAKEN,
 	PROJECT_NOT_FOUND,
+	type ChangeReservation,
 	ProjectList,
 	ProjectListQuery,
 	ProjectManager,
 	ProjectStatus,
 	ProjectSummary,
 	ProjectUnitsBalance,
+	RESERVATION_BELOW_USED,
 	type RenameProject,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
@@ -116,6 +118,58 @@ export class ProjectsService {
 			{ ...found, name: renamed.name },
 			await this.units.usedBy(projectId),
 		);
+	}
+
+	@Transactional()
+	async changeReservation(
+		userId: string,
+		projectId: string,
+		{ reserved }: ChangeReservation,
+	): Promise<ProjectSummary> {
+		const found = await this.readVisible(userId, projectId);
+		const membership = await this.members.findByUser(userId);
+		if (membership?.role !== "admin") {
+			throw new ForbiddenException();
+		}
+
+		const locked = await this.units.lockProject(projectId);
+		if (locked.status === "delivered") {
+			throw new ProblemException({
+				status: 409,
+				code: PROJECT_DELIVERED,
+				detail:
+					"The project was delivered, so its reservation can no longer change.",
+			});
+		}
+
+		const { free } = await this.units.readForReservation(
+			membership.organizationId,
+		);
+		const used = await this.units.usedBy(projectId);
+		if (reserved < used) {
+			throw new ProblemException({
+				status: 409,
+				code: RESERVATION_BELOW_USED,
+				detail: "The reservation cannot drop below the units the project uses.",
+				used,
+			});
+		}
+
+		const requested = reserved - locked.reserved;
+		if (requested > free) {
+			throw new ProblemException({
+				status: 409,
+				code: NO_UNITS_LEFT,
+				detail:
+					"The organization has fewer free units than the reservation needs to grow by.",
+				requested,
+				available: free,
+			});
+		}
+
+		await this.projects.setReservedUnits(projectId, reserved);
+
+		return toSummary({ ...found, reservedUnits: reserved }, used);
 	}
 
 	private async readVisible(userId: string, projectId: string) {

@@ -406,7 +406,7 @@ describe("renaming in place", () => {
 		expect(await screen.findByText("Entregue")).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"A obra foi entregue: o nome não pode mais ser alterado.",
+				"A obra foi entregue: o nome e a reserva não podem mais ser alterados.",
 			),
 		).toBeInTheDocument();
 		expect(
@@ -473,7 +473,7 @@ describe("who may rename", () => {
 			expect(within(card).getByText("Casa Moinhos")).toBeInTheDocument();
 			expect(
 				within(card).getByText(
-					"A obra foi entregue: o nome não pode mais ser alterado.",
+					"A obra foi entregue: o nome e a reserva não podem mais ser alterados.",
 				),
 			).toBeInTheDocument();
 			expect(

@@ -1,3 +1,4 @@
+import type { ProjectStatus } from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, eq, inArray, sql } from "drizzle-orm";
@@ -19,14 +20,16 @@ export class UnitsRepository {
 			.for("no key update");
 	}
 
-	async lockProject(projectId: string): Promise<number | undefined> {
+	async lockProject(
+		projectId: string,
+	): Promise<{ reserved: number; status: ProjectStatus } | undefined> {
 		const [locked] = await this.txHost.tx
-			.select({ reserved: project.reservedUnits })
+			.select({ reserved: project.reservedUnits, status: project.status })
 			.from(project)
 			.where(eq(project.id, projectId))
 			.for("no key update");
 
-		return locked?.reserved;
+		return locked;
 	}
 
 	async countUsed(projectIds: string[]): Promise<Map<string, number>> {
