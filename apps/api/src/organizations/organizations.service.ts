@@ -1,4 +1,10 @@
-import { Organization, OrganizationUnits } from "@bluprint/shared";
+import {
+	Organization,
+	OrganizationReservations,
+	OrganizationUnits,
+	type UpdateReservations,
+} from "@bluprint/shared";
+import { Transactional } from "@nestjs-cls/transactional";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { MembersRepository } from "../members/members.repository";
@@ -27,11 +33,30 @@ export class OrganizationsService {
 	}
 
 	async findMyUnits(userId: string): Promise<OrganizationUnits> {
+		return this.units.read(await this.adminOrganizationOf(userId));
+	}
+
+	async findMyReservations(userId: string): Promise<OrganizationReservations> {
+		return this.units.readReservations(await this.adminOrganizationOf(userId));
+	}
+
+	@Transactional()
+	async changeMyReservations(
+		userId: string,
+		body: UpdateReservations,
+	): Promise<OrganizationReservations> {
+		return this.units.changeReservations(
+			await this.adminOrganizationOf(userId),
+			body,
+		);
+	}
+
+	private async adminOrganizationOf(userId: string): Promise<string> {
 		const membership = await this.members.findByUser(userId);
 		if (membership?.role !== "admin") {
 			throw new ForbiddenException();
 		}
 
-		return this.units.read(membership.organizationId);
+		return membership.organizationId;
 	}
 }

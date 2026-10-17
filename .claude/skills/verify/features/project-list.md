@@ -9,8 +9,8 @@
 - `projects-desktop-pages` shows `Mostrando 1–12 de 14` and pages with `Página 2`, putting `?page=2` in the address.
 - `projects-role-scope` shows an admin every project of the organization and a manager only theirs.
 - `projects-card-link` makes the whole card a link to `/projects/<id>` (see [project-home.md](./project-home.md)).
-- `projects-new-entry` shows the admin the free units as text (`290 unidades livres`, `1 unidade livre`) and `Nova obra`, a link to `/projects/new`. A manager or assistant sees neither.
-- `projects-no-units` disables `Nova obra` when no unit is free: `Nenhuma unidade livre. Baixe a reserva de uma obra ou fale com a BluPrint.` while some project has an unused reservation, `Nenhuma unidade livre. Fale com a BluPrint.` when none has. Igor of Vértice reaches the first.
+- `projects-new-entry` shows the admin the free units as a link to `/units` (`290 unidades livres`, `1 unidade livre`; see [units.md](./units.md)) and `Nova obra`, a link to `/projects/new`. A manager or assistant sees neither.
+- `projects-no-units` disables `Nova obra` when no unit is free: `Nenhuma unidade livre. Baixe a reserva de uma obra ou fale com a BluPrint.` while some project has an unused reservation, `Nenhuma unidade livre. Fale com a BluPrint.` when none has. `Baixe a reserva de uma obra` is a link to `/units`; the second has no link. Igor of Vértice reaches the first.
 - `projects-bar-hidden` takes the phone's bar away when the list fails to load or the connection is down. Not reachable on a healthy instance; the web route-tree tests cover it.
 - `projects-empty` shows an admin whose organization has no project `Nenhuma obra ainda`, and any other user linked to no project `Nenhuma obra por aqui`.
 
@@ -39,6 +39,6 @@ Preconditions:
 - `Mostrando 1–12 de 14` uses an en dash, not a hyphen.
 - The total counts only projects in progress: the status filter defaults to `Em andamento`, and the 3 delivered projects of Construtora Horizonte appear only under `Entregue` or `Todas`.
 - The phone list loads its next page when the last card scrolls into view; assert on the card count, not on a scroll position.
-- The free units line is text until the Unidades screen exists: assert on the text, not on a link.
+- The free units line is a link to `/units` only when some unit is free or some reservation is unused; `Nenhuma unidade livre. Fale com a BluPrint.` is plain text.
 - On the phone the bar is `position: fixed`, so a full-page `shot` draws it at the viewport's bottom, in the middle of a long list; it is not a layout bug.
 - A full-page `shot` does not scroll, so a phone capture right after landing still shows `Carregar mais` under 12 cards.

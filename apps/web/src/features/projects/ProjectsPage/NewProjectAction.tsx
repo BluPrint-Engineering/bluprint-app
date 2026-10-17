@@ -4,11 +4,32 @@ import { Plus } from "lucide-react";
 import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { organizationUnitsQueryOptions } from "../../account/api";
 import { plural } from "../components/plural";
 import { useBottomBarHeight } from "./useBottomBarHeight";
 
 export type NewProjectPlacement = "title" | "bar" | "empty";
+
+function UnitsLink({
+	className,
+	children,
+}: {
+	className?: string;
+	children: React.ReactNode;
+}) {
+	return (
+		<Link
+			to="/units"
+			className={cn(
+				"-my-3.25 inline-block rounded-sm py-3.25 text-primary underline-offset-3 hover:underline focus-visible:shadow-(--shadow-focus) focus-visible:outline-none",
+				className,
+			)}
+		>
+			{children}
+		</Link>
+	);
+}
 
 function UnitsLine() {
 	const units = useQuery(organizationUnitsQueryOptions);
@@ -19,17 +40,25 @@ function UnitsLine() {
 	const { free, reclaimable } = units.data;
 	if (free > 0) {
 		return (
-			<span className="font-medium tabular-nums">
+			<UnitsLink className="font-medium tabular-nums">
 				{free.toLocaleString("pt-BR")}{" "}
 				{plural(free, "unidade livre", "unidades livres")}
-			</span>
+			</UnitsLink>
 		);
 	}
 	return (
 		<span className="text-balance text-muted-foreground">
-			{reclaimable > 0
-				? "Nenhuma unidade livre. Baixe a reserva de uma obra ou fale com a BluPrint."
-				: "Nenhuma unidade livre. Fale com a BluPrint."}
+			{reclaimable > 0 ? (
+				<>
+					Nenhuma unidade livre.{" "}
+					<UnitsLink className="font-medium">
+						Baixe a reserva de uma obra
+					</UnitsLink>{" "}
+					ou fale com a BluPrint.
+				</>
+			) : (
+				"Nenhuma unidade livre. Fale com a BluPrint."
+			)}
 		</span>
 	);
 }

@@ -27,7 +27,7 @@ export default async function projectList({ page, shot, expect, accounts }) {
 		return;
 	}
 
-	await expect(page.getByText(`${units.free} unidades livres`)).toBeVisible();
+	await expect(page.getByRole("link", { name: `${units.free} unidades livres` })).toHaveAttribute("href", "/units");
 	await expect(newProject).toHaveAttribute("href", "/projects/new");
 	await shot("entry");
 	await newProject.click();

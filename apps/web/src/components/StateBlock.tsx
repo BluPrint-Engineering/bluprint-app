@@ -4,7 +4,7 @@ import type * as React from "react";
 interface StateBlockProps {
 	icon: LucideIcon;
 	title: string;
-	description: string;
+	description?: string | undefined;
 	role?: "status" | "alert";
 	children?: React.ReactNode;
 }
@@ -26,7 +26,9 @@ export function StateBlock({
 				<h2 className="text-lg leading-snug font-semibold tracking-tight text-foreground">
 					{title}
 				</h2>
-				<p className="text-sm leading-normal text-pretty">{description}</p>
+				{description && (
+					<p className="text-sm leading-normal text-pretty">{description}</p>
+				)}
 			</div>
 			{children}
 		</div>

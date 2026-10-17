@@ -47,6 +47,7 @@ the same "300 unidades livres" the obras list links from.
 
 ## API
 
-`GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`; rows from the obras em andamento with
-`units: { reserved, used }`; `PATCH /api/organization/units/reservations` `{ items: [{ projectId, reserved }] }`,
-all or nothing, refusals per item. None of it is served yet; the full table and the open points are in `README.md`.
+`GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`;
+`GET /api/organization/units/reservations` → `{ items: [{ projectId, name, reserved, used }], delivered: { projects, used } }`
+with every obra em andamento; `PATCH` the same path `{ items: [{ projectId, reserved }] }`, all or nothing, refusals
+per item, answering the same shape as the GET. All served; the full table and the open points are in `README.md`.
