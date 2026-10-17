@@ -598,6 +598,58 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(1);
 		});
 
+		test("keeps a common area typed while the request runs so it can be added after a failure (W6)", async () => {
+			let fail: () => void = () => {};
+			const { handler } = wizardApi({
+				create: () =>
+					new Promise((resolve) => {
+						fail = () => resolve(json({}, 500));
+					}),
+			});
+			open(handler);
+			await describeTower("3", "4");
+			await user.click(await createButton());
+			await screen.findByRole("button", { name: "Criando estrutura…" });
+
+			const projectArea = screen.getByRole("textbox", {
+				name: "Área comum da obra",
+			});
+			await user.type(projectArea, "Guarita{Enter}");
+			await user.click(
+				screen.getByRole("button", { name: "Área comum num andar" }),
+			);
+			await user.type(
+				screen.getByRole("textbox", { name: "Nome da área comum" }),
+				"Terraço",
+			);
+			await user.type(screen.getByRole("textbox", { name: "Andar" }), "3");
+			await user.click(
+				screen.getByRole("button", { name: "Adicionar ao andar" }),
+			);
+
+			expect(projectArea).toHaveValue("Guarita");
+			expect(
+				screen.queryByRole("button", { name: "Tirar Guarita" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.getByRole("textbox", { name: "Nome da área comum" }),
+			).toHaveValue("Terraço");
+			expect(screen.getByRole("textbox", { name: "Andar" })).toHaveValue("3");
+
+			fail();
+			await screen.findByText(/Nada foi salvo/);
+			await user.type(projectArea, "{Enter}");
+			await user.click(
+				screen.getByRole("button", { name: "Adicionar ao andar" }),
+			);
+
+			expect(
+				screen.getByRole("button", { name: "Tirar Guarita" }),
+			).toBeInTheDocument();
+			expect(projectArea).toHaveValue("");
+			expect(screen.getByText("· Torre A, 3º andar")).toBeInTheDocument();
+		});
+
 		test("creates the plan in one request with parents before children, then opens the project with the toast (W10)", async () => {
 			const { handler, sent } = wizardApi();
 			const { router } = open(handler);

@@ -42,7 +42,7 @@ export function AddTag({
 	label: string;
 	placeholder: string;
 	existing: string[];
-	onAdd: (name: string) => void;
+	onAdd: (name: string) => boolean;
 }) {
 	const [typed, setTyped] = useState("");
 	const [error, setError] = useState<string>();
@@ -55,7 +55,7 @@ export function AddTag({
 			setError("Essa área comum já está na lista.");
 			return;
 		}
-		onAdd(name);
+		if (!onAdd(name)) return;
 		setTyped("");
 		setError(undefined);
 	}

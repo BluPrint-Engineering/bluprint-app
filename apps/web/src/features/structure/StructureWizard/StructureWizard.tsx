@@ -145,8 +145,11 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		if (step > 0) stepTop.current?.scrollIntoView?.();
 	}, [step]);
 
-	function edit(update: (draft: WizardDraft) => WizardDraft, touched?: string) {
-		if (create.isPending) return;
+	function edit(
+		update: (draft: WizardDraft) => WizardDraft,
+		touched?: string,
+	): boolean {
+		if (create.isPending) return false;
 		ids.current = new Map();
 		create.reset();
 		const next = update(draft);
@@ -159,6 +162,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 					.map((key) => [key, found[key]]),
 			);
 		});
+		return true;
 	}
 
 	function idFor(key: string) {

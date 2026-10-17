@@ -14,7 +14,7 @@ import {
 	type WizardDraft,
 } from "./wizardDraft";
 
-type Edit = (update: (draft: WizardDraft) => WizardDraft) => void;
+type Edit = (update: (draft: WizardDraft) => WizardDraft) => boolean;
 
 function Group({
 	title,
@@ -268,11 +268,11 @@ export function CommonAreasStep({
 						draft={draft}
 						onCancel={() => setAdding(false)}
 						onAdd={(area) => {
-							edit((current) => ({
+							const added = edit((current) => ({
 								...current,
 								floorAreas: [...current.floorAreas, { key: uuidV7(), ...area }],
 							}));
-							setAdding(false);
+							if (added) setAdding(false);
 						}}
 					/>
 				) : (
