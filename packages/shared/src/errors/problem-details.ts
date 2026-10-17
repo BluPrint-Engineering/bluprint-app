@@ -33,13 +33,19 @@ export const problemDetailsSchema = z.object({
 		description: "One entry per invalid input, present on `VALIDATION_FAILED`.",
 	}),
 	requested: z.int().optional().meta({
-		description: "Units the request asked for, present on `NO_UNITS_LEFT`.",
+		description:
+			"Units the request asked for from the free units, present on `NO_UNITS_LEFT`.",
 		example: 80,
 	}),
 	available: z.int().optional().meta({
 		description:
 			"Units that were free when the request was refused, present on `NO_UNITS_LEFT`.",
 		example: 30,
+	}),
+	used: z.int().optional().meta({
+		description:
+			"Units the project uses, present on `RESERVATION_BELOW_USED`: the least its reservation can be.",
+		example: 250,
 	}),
 });
 

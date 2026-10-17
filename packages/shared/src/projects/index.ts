@@ -1,3 +1,4 @@
+export * from "./change-reservation.js";
 export * from "./create-project.js";
 export * from "./project-errors.js";
 export * from "./project-list.js";

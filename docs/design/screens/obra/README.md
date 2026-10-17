@@ -329,7 +329,9 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 - `useRenameProjectMutation` → `setQueryData` on the project and invalidate the list.
 - `useChangeReservationMutation` (2.12) sends `{ reserved }`; success → `setQueryData` on the project's `units`,
   invalidate the organization units query and the list. Branch on `RESERVATION_BELOW_USED`, `NO_UNITS_LEFT` and
-  `PROJECT_DELIVERED`. Local UI state: dialog open + draft + error.
+  `PROJECT_DELIVERED`. Local UI state: draft + error.
+  The dialog's open state lives in the address, `/projects/:id/configuration?reserva=alterar`, so the "Alterar
+  reserva" links of the structure screens (W4c, F5b, R9b) reach it and Back closes it.
 - `useDeliverProjectMutation` (later ticket) → updates the project and the list. Local UI state: rename editing +
   draft, deliver dialog open + checkbox.
 
@@ -340,7 +342,7 @@ A platform admin sees none of these screens' content (ADR 0021). Until #11, only
 | `POST /api/projects` `{ id, name, units }` → `ProjectSummary`; `409 NO_UNITS_LEFT` with `requested` and `available`; `PROJECT_ID_TAKEN` and the idempotent retry (ADR 0068) | Served, including `id`, `PROJECT_ID_TAKEN` and the idempotent retry; the page is built (#151) |
 | Livres `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }`, admin only (403 for everyone else). `reclaimable` = sum over obras em andamento of reserva − usadas, what lowering other reservas could free | Served |
 | The obra summary (`GET /api/projects`, `GET /api/projects/:id`) gains `units: { reserved, used }` | Served on `GET /api/projects`, `GET /api/projects/:id` and the create response; `used` counts the units in the obra's structure |
-| Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | 2.12 |
+| Alterar reserva `PATCH /api/projects/:id/units` `{ reserved }`, admin only; `409 RESERVATION_BELOW_USED` with `used`, `409 NO_UNITS_LEFT` with `requested` and `available`, `409 PROJECT_DELIVERED` | Served |
 | One obra `GET /api/projects/:id` (same visibility as the list, `404 PROJECT_NOT_FOUND` otherwise) | Served |
 | Rename `PATCH /api/projects/:id` `{ name }`, admin or gerente (`403` for the assistente); `409 PROJECT_DELIVERED` on a delivered obra | Served |
 | Deliver, admin or gerente; final, no reopen route (ADR 0069) | Later ticket of the obra screen |

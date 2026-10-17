@@ -4,10 +4,12 @@ import {
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	PROJECT_PAGE_SIZE,
+	type ProjectSummary,
 	projectListSchema,
 	projectManagersSchema,
 	projectParamsSchema,
 	projectSummarySchema,
+	RESERVATION_BELOW_USED,
 } from "@bluprint/shared";
 import {
 	infiniteQueryOptions,
@@ -138,6 +140,58 @@ export function availableUnitsOf(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === NO_UNITS_LEFT
 		? error.problem.available
 		: undefined;
+}
+
+export function usedUnitsOf(error: unknown) {
+	return error instanceof ApiError &&
+		error.problem?.code === RESERVATION_BELOW_USED
+		? error.problem.used
+		: undefined;
+}
+
+export function isReservationRefusal(error: unknown) {
+	return (
+		isProjectDelivered(error) ||
+		usedUnitsOf(error) !== undefined ||
+		availableUnitsOf(error) !== undefined
+	);
+}
+
+export interface ReservationFeedback {
+	saved: (project: ProjectSummary) => void;
+	failed: (error: Error) => void;
+}
+
+export function useChangeReservationMutation(
+	projectId: string,
+	feedback: ReservationFeedback,
+) {
+	const queryClient = useQueryClient();
+	const { queryKey } = projectQueryOptions(projectId);
+	return useMutation({
+		mutationFn: (reserved: number) =>
+			apiFetch(`/projects/${projectId}/units`, projectSummarySchema, {
+				method: "PATCH",
+				headers: { "content-type": "application/json" },
+				body: JSON.stringify({ reserved }),
+			}),
+		onSuccess: (changed) => {
+			queryClient.setQueryData(queryKey, changed);
+			feedback.saved(changed);
+			void queryClient.invalidateQueries(organizationUnitsQueryOptions);
+			return queryClient.invalidateQueries({
+				queryKey: ["projects"],
+				predicate: isListQuery,
+			});
+		},
+		onError: (error) => {
+			feedback.failed(error);
+			if (isReservationRefusal(error)) {
+				void queryClient.invalidateQueries(organizationUnitsQueryOptions);
+				return queryClient.invalidateQueries({ queryKey });
+			}
+		},
+	});
 }
 
 export function useCreateProjectMutation() {

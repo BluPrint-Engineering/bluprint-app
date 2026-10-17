@@ -198,6 +198,13 @@ export class ProjectsRepository {
 		return renamed;
 	}
 
+	async setReservedUnits(projectId: string, reservedUnits: number) {
+		await this.txHost.tx
+			.update(project)
+			.set({ reservedUnits })
+			.where(eq(project.id, projectId));
+	}
+
 	async findByIdInAnyOrganization(projectId: string) {
 		const [found] = await this.txHost.tx
 			.select()
