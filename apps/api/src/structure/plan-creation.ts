@@ -4,24 +4,105 @@ import {
 	LOCATION_NAME_TAKEN,
 	LOCATION_PARENT_INVALID,
 	type NewLocation,
+	type NewUnitType,
 	type StructureCounts,
+	UNIT_TYPE_ID_TAKEN,
+	UNIT_TYPE_NAME_TAKEN,
+	UNIT_TYPE_NOT_FOUND,
 } from "@bluprint/shared";
 import { ProblemException } from "../common/problems/problem.exception";
 import { canHoldChild } from "./location-pairs";
 import type { LocationRow } from "./location-row";
 
+export interface StoredUnitType {
+	id: string;
+	name: string;
+}
+
+export interface UnitTypeIdsInUse {
+	typesElsewhere: ReadonlySet<string>;
+	storedRooms: ReadonlySet<string>;
+}
+
 export interface CreationPlan {
+	freshUnitTypes: NewUnitType[];
 	fresh: NewLocation[];
 	newUnits: number;
 	counts: StructureCounts;
 }
 
+const idTakenProblem = () =>
+	new ProblemException({
+		status: 409,
+		code: UNIT_TYPE_ID_TAKEN,
+		detail: "A unit type or room id of the request is already taken.",
+	});
+
+function planUnitTypes(
+	requested: NewUnitType[],
+	stored: StoredUnitType[],
+	inUse: UnitTypeIdsInUse,
+): NewUnitType[] {
+	const storedIds = new Set(stored.map(({ id }) => id));
+	const fresh = requested.filter(({ id }) => !storedIds.has(id));
+
+	const idTaken = ({ id, rooms }: NewUnitType) =>
+		inUse.typesElsewhere.has(id) ||
+		rooms.some((room) => inUse.storedRooms.has(room.id));
+	if (fresh.some(idTaken)) throw idTakenProblem();
+
+	const claimed = new Set(
+		stored.map(({ name }) => comparableLocationName(name)),
+	);
+	const clashes = new Set<string>();
+	for (const { name } of fresh) {
+		const key = comparableLocationName(name);
+		if (claimed.has(key)) clashes.add(name);
+		claimed.add(key);
+	}
+	if (clashes.size > 0) {
+		throw new ProblemException({
+			status: 409,
+			code: UNIT_TYPE_NAME_TAKEN,
+			detail: "A unit type name of the request is already in use.",
+			names: [...clashes],
+		});
+	}
+
+	return fresh;
+}
+
+export interface CreationRequest {
+	unitTypes: NewUnitType[];
+	locations: NewLocation[];
+}
+
+export interface CreationContext {
+	locations: LocationRow[];
+	unitTypes: StoredUnitType[];
+	locationIdsElsewhere: ReadonlySet<string>;
+	unitTypeIdsInUse: UnitTypeIdsInUse;
+}
+
 export function planCreation(
-	requested: NewLocation[],
-	inProject: LocationRow[],
-	takenElsewhere: ReadonlySet<string>,
+	{ unitTypes: requestedUnitTypes, locations: requested }: CreationRequest,
+	{
+		locations: inProject,
+		unitTypes: storedUnitTypes,
+		locationIdsElsewhere: takenElsewhere,
+		unitTypeIdsInUse,
+	}: CreationContext,
 ): CreationPlan {
 	const stored = new Map(inProject.map((row) => [row.id, row]));
+	const freshUnitTypes = planUnitTypes(
+		requestedUnitTypes,
+		storedUnitTypes,
+		unitTypeIdsInUse,
+	);
+	const knownUnitTypes = new Set([
+		...storedUnitTypes.map(({ id }) => id),
+		...requestedUnitTypes.map(({ id }) => id),
+	]);
 
 	for (const entry of requested) {
 		const existing = stored.get(entry.id);
@@ -40,6 +121,18 @@ export function planCreation(
 
 	const known = new Map<string, Pick<LocationRow, "type" | "parentId">>(stored);
 	for (const entry of requested) {
+		if (
+			entry.unitTypeId !== undefined &&
+			!knownUnitTypes.has(entry.unitTypeId)
+		) {
+			throw new ProblemException({
+				status: 400,
+				code: UNIT_TYPE_NOT_FOUND,
+				detail:
+					"A unit follows a unit type that does not exist in the project.",
+			});
+		}
+
 		const parent = entry.parentId === null ? null : known.get(entry.parentId);
 		if (
 			parent === undefined ||
@@ -89,6 +182,7 @@ export function planCreation(
 		requested.filter((entry) => entry.type === type).length;
 
 	return {
+		freshUnitTypes,
 		fresh,
 		newUnits: fresh.filter((entry) => entry.type === "unit").length,
 		counts: {

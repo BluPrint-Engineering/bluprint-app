@@ -256,12 +256,234 @@ describe("buildPlan", () => {
 			return id;
 		};
 
-		const first = buildPlan(draftOf([{ hall: true }]), idFor);
-		const again = buildPlan(draftOf([{ hall: true }]), idFor);
+		const draft = draftOf([{ hall: true }]);
+		const first = buildPlan(draft, idFor);
+		const again = buildPlan(draft, idFor);
 
 		expect(again.locations).toEqual(first.locations);
+		expect(again.unitTypes).toEqual(first.unitTypes);
 		expect(new Set(first.locations.map((location) => location.id)).size).toBe(
 			first.locations.length,
 		);
+	});
+});
+
+const typeOf = (key: string, name: string, rooms: string[] = []) => ({
+	key,
+	name,
+	rooms,
+});
+
+const ruleOf = (
+	unitType: string,
+	rest: Partial<WizardDraft["rules"][number]> = {},
+) => ({
+	key: `rule-${unitType}-${Math.random()}`,
+	tower: 0,
+	finals: "todos",
+	from: "",
+	to: "",
+	unitType,
+	...rest,
+});
+
+const typesOfUnits = (plan: ReturnType<typeof buildPlan>) =>
+	plan.towers.flatMap((tower) =>
+		tower.floors.flatMap((floor) =>
+			floor.units.map((unit) => `${unit.name}:${unit.unitType ?? "-"}`),
+		),
+	);
+
+describe("buildPlan unit types", () => {
+	test("applies the starting unit type to every unit of every floor", () => {
+		const plan = buildPlan(draftOf([{ last: "2", perFloor: "2" }]), identity);
+
+		expect(typesOfUnits(plan)).toEqual([
+			"101:Tipologia A",
+			"102:Tipologia A",
+			"201:Tipologia A",
+			"202:Tipologia A",
+		]);
+		expect(plan.untyped).toBe(0);
+		expect(plan.unitTypeCounts).toEqual([
+			expect.objectContaining({ name: "Tipologia A", units: 4 }),
+		]);
+		const [type] = plan.unitTypes;
+		expect(plan.locations.filter((l) => l.type === "unit")).toSatisfy(
+			(units: typeof plan.locations) =>
+				units.every((unit) => unit.unitTypeId === type?.id),
+		);
+	});
+
+	test("gives odd and even stacks their own unit type", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "2", perFloor: "4" }], {
+				unitTypes: [typeOf("a", "A"), typeOf("b", "B")],
+				rules: [
+					ruleOf("a", { finals: "01, 03" }),
+					ruleOf("b", { finals: "02, 04" }),
+				],
+			}),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual([
+			"101:A",
+			"102:B",
+			"103:A",
+			"104:B",
+			"201:A",
+			"202:B",
+			"203:A",
+			"204:B",
+		]);
+		expect(plan.unitTypeCounts.map(({ name, units }) => [name, units])).toEqual(
+			[
+				["A", 4],
+				["B", 4],
+			],
+		);
+	});
+
+	test("applies a rule only inside its floor range and leaves the rest without a unit type", () => {
+		const plan = buildPlan(
+			draftOf([{ first: "1", last: "4", perFloor: "1" }], {
+				unitTypes: [typeOf("a", "A")],
+				rules: [ruleOf("a", { from: "2", to: "3" })],
+			}),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual(["101:-", "201:A", "301:A", "401:-"]);
+		expect(plan.untyped).toBe(2);
+		expect(
+			plan.locations.filter((l) => l.type === "unit").map((l) => l.unitTypeId),
+		).toEqual([undefined, "unit-type:a", "unit-type:a", undefined]);
+	});
+
+	test("reads a blank bound as open and a floor past the last as covered by an open end", () => {
+		const plan = buildPlan(
+			draftOf([{ first: "1", last: "3", perFloor: "1" }], {
+				unitTypes: [typeOf("a", "A"), typeOf("c", "Cobertura")],
+				rules: [ruleOf("c", { from: "3" }), ruleOf("a", { to: "2" })],
+			}),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual(["101:A", "201:A", "301:Cobertura"]);
+	});
+
+	test("lets the first rule that matches win", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", perFloor: "2" }], {
+				unitTypes: [typeOf("a", "A"), typeOf("b", "B")],
+				rules: [ruleOf("b", { finals: "2" }), ruleOf("a")],
+			}),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual(["101:A", "102:B"]);
+	});
+
+	test("keeps each tower's rules to that tower", () => {
+		const plan = buildPlan(
+			draftOf(
+				[
+					{ last: "1", perFloor: "1" },
+					{ last: "1", perFloor: "1" },
+				],
+				{
+					unitTypes: [typeOf("a", "A"), typeOf("b", "B")],
+					rules: [ruleOf("a", { tower: 0 }), ruleOf("b", { tower: 1 })],
+				},
+			),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual(["101:A", "101:B"]);
+	});
+
+	test("leaves a unit without a unit type when no rule reaches its stack", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", perFloor: "3" }], {
+				unitTypes: [typeOf("a", "A")],
+				rules: [ruleOf("a", { finals: "1" })],
+			}),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual(["101:A", "102:-", "103:-"]);
+		expect(plan.untyped).toBe(2);
+		expect(plan.unitTypeCounts).toHaveLength(1);
+	});
+
+	test("ignores a rule whose finals cannot be read", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", perFloor: "1" }], {
+				unitTypes: [typeOf("a", "A")],
+				rules: [ruleOf("a", { finals: "um" })],
+			}),
+			identity,
+		);
+
+		expect(plan.untyped).toBe(1);
+	});
+
+	test("sends every unit type with its rooms in order, including one no unit uses", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", perFloor: "1" }], {
+				unitTypes: [
+					typeOf("a", " Tipologia  A ", ["Sala", "Cozinha"]),
+					typeOf("b", "Cobertura", ["Terraço"]),
+				],
+				rules: [ruleOf("a")],
+			}),
+			identity,
+		);
+
+		expect(plan.unitTypes).toEqual([
+			{
+				id: "unit-type:a",
+				name: "Tipologia A",
+				rooms: [
+					{ id: "unit-type:a:room:0", name: "Sala" },
+					{ id: "unit-type:a:room:1", name: "Cozinha" },
+				],
+			},
+			{
+				id: "unit-type:b",
+				name: "Cobertura",
+				rooms: [{ id: "unit-type:b:room:0", name: "Terraço" }],
+			},
+		]);
+		expect(plan.unitTypeCounts.map(({ name }) => name)).toEqual([
+			"Tipologia A",
+		]);
+	});
+
+	test("leaves a unit without a unit type when its rule points at a unit type that is gone", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", perFloor: "1" }], {
+				unitTypes: [],
+				rules: [ruleOf("gone")],
+			}),
+			identity,
+		);
+
+		expect(typesOfUnits(plan)).toEqual(["101:-"]);
+	});
+
+	test("keeps the ground floor and the halls without a unit type", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", perFloor: "1", ground: true, hall: true }]),
+			identity,
+		);
+
+		expect(plan.untyped).toBe(0);
+		expect(
+			plan.locations
+				.filter((l) => l.type !== "unit")
+				.every((location) => location.unitTypeId === undefined),
+		).toBe(true);
 	});
 });

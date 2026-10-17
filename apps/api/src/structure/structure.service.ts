@@ -14,6 +14,7 @@ import type { LocationRow } from "./location-row";
 import { planCreation } from "./plan-creation";
 import { buildStructure } from "./structure-tree";
 import { StructureRepository } from "./structure.repository";
+import { UnitTypesRepository } from "./unit-types.repository";
 
 const toRef = ({ id, type, name }: LocationRow) => ({ id, type, name });
 
@@ -23,29 +24,46 @@ export class StructureService {
 		private readonly projects: ProjectsService,
 		private readonly units: UnitsService,
 		private readonly locations: StructureRepository,
+		private readonly unitTypes: UnitTypesRepository,
 	) {}
 
 	@Transactional()
 	async create(
 		userId: string,
 		projectId: string,
-		{ locations }: CreateStructure,
+		request: CreateStructure,
 	): Promise<CreateStructureResult> {
 		await this.projects.beginStructureWrite(userId, projectId);
 
+		const { unitTypes, locations } = request;
 		const inProject = await this.locations.listForNaming(projectId);
-		const takenElsewhere = await this.locations.findIdsInOtherProjects(
+		const storedUnitTypes = await this.unitTypes.list(projectId);
+		const locationIdsElsewhere = await this.locations.findIdsInOtherProjects(
 			projectId,
 			locations.map(({ id }) => id),
 		);
-		const { fresh, newUnits, counts } = planCreation(
-			locations,
-			inProject,
-			takenElsewhere,
+		const typesElsewhere = await this.unitTypes.findIdsInOtherProjects(
+			projectId,
+			unitTypes.map(({ id }) => id),
 		);
+		const storedRooms = await this.unitTypes.findRoomIds(
+			unitTypes.flatMap(({ rooms }) => rooms.map(({ id }) => id)),
+		);
+		const { freshUnitTypes, fresh, newUnits, counts } = planCreation(request, {
+			locations: inProject,
+			unitTypes: storedUnitTypes,
+			locationIdsElsewhere,
+			unitTypeIdsInUse: { typesElsewhere, storedRooms },
+		});
 
 		await this.units.assertAvailable(projectId, newUnits);
+		await this.unitTypes.insertAll(projectId, freshUnitTypes);
 		await this.locations.insertAll(projectId, fresh);
+		await this.unitTypes.giveUnitsTheirRooms(
+			fresh.flatMap(({ id, unitTypeId }) =>
+				unitTypeId === undefined ? [] : [{ id, unitTypeId }],
+			),
+		);
 
 		return { counts };
 	}

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { uuidV7 } from "@/lib/uuidV7";
+import { SELECT } from "./fieldStyles";
 import { AddTag, Tags } from "./Tags";
 import {
 	type DraftErrors,
@@ -46,9 +47,6 @@ function Group({
 		</div>
 	);
 }
-
-const SELECT =
-	"h-(--control-h) w-full min-w-0 rounded-lg border border-input bg-transparent px-2.5 text-base outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30";
 
 function FloorAreaForm({
 	draft,
@@ -196,6 +194,7 @@ export function CommonAreasStep({
 					label="Área comum da obra"
 					placeholder="Ex.: Guarita"
 					existing={draft.projectAreas}
+					duplicateMessage="Essa área comum já está na lista."
 					onAdd={(name) =>
 						edit((current) => ({
 							...current,
@@ -222,6 +221,7 @@ export function CommonAreasStep({
 						label="Área comum de cada torre"
 						placeholder="Ex.: Salão de festas"
 						existing={draft.towerAreas}
+						duplicateMessage="Essa área comum já está na lista."
 						onAdd={(name) =>
 							edit((current) => ({
 								...current,

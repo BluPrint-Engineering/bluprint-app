@@ -19,18 +19,26 @@ import { ChangeReservationDialog } from "../../projects/components/ChangeReserva
 import {
 	namesTakenOf,
 	projectUnitsQueryOptions,
+	unitTypeNamesTakenOf,
 	useCreateStructureMutation,
 } from "../api";
 import { buildPlan } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
-import { PreviewSummary, PreviewTowers, type UnitsLine } from "./Preview";
+import {
+	PreviewSummary,
+	PreviewTowers,
+	type UnitsLine,
+	UntypedAlert,
+} from "./Preview";
 import {
 	createdToast,
 	nameTakenText,
 	overReserveText,
 	planLine,
+	unitTypeNameTakenText,
 } from "./reserveText";
 import { TowersStep } from "./TowersStep";
+import { UnitTypesStep } from "./UnitTypesStep";
 import {
 	type DraftErrors,
 	firstInvalidField,
@@ -39,9 +47,17 @@ import {
 	type WizardDraft,
 } from "./wizardDraft";
 
-const STEP_TITLES = ["Torres e andares", "Áreas comuns", "Prévia"] as const;
+const STEP_TITLES = [
+	"Torres e andares",
+	"Áreas comuns",
+	"Tipologias",
+	"Prévia",
+] as const;
+const STEP_OF_SECTION = { towers: 0, areas: 1, types: 2 } as const;
 const LAST_STEP = STEP_TITLES.length - 1;
 const BLOCKER_ID = "wizard-blocker";
+const TYPES_DESCRIPTION =
+	"A lista de cômodos de cada tipo de unidade, e onde cada tipo se aplica: por final (a posição da unidade no andar: 01, 02…) e por andar.";
 
 const identity = (key: string) => key;
 
@@ -193,16 +209,16 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		const first = firstInvalidField(draft, found);
 		setErrors(found);
 		if (first === undefined) return true;
-		setStep(first.section === "towers" ? 0 : 1);
+		setStep(STEP_OF_SECTION[first.section]);
 		setReveal(first.id);
 		return false;
 	}
 
 	function submit() {
 		if (create.isPending || blocked || !validate()) return;
-		const { locations } = buildPlan(draft, idFor);
+		const { unitTypes, locations } = buildPlan(draft, idFor);
 		create.mutate(
-			{ locations },
+			{ unitTypes, locations },
 			{
 				onSuccess: ({ counts }) => {
 					toast.success(createdToast(counts.towers, counts.units));
@@ -226,9 +242,11 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 				};
 
 	const names = namesTakenOf(create.error);
+	const unitTypeNames = unitTypeNamesTakenOf(create.error);
 	const failed =
 		create.isError &&
 		names === undefined &&
+		unitTypeNames === undefined &&
 		availableUnitsOf(create.error) === undefined;
 
 	const blocker = blocked ? (
@@ -302,6 +320,13 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 					<AlertDescription>{nameTakenText(names)}</AlertDescription>
 				</Alert>
 			)}
+			{unitTypeNames !== undefined && (
+				<Alert variant="destructive">
+					<AlertDescription>
+						{unitTypeNameTakenText(unitTypeNames)}
+					</AlertDescription>
+				</Alert>
+			)}
 		</>
 	);
 
@@ -324,6 +349,15 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		/>
 	);
 
+	const typesStep = (
+		<UnitTypesStep
+			draft={draft}
+			errors={errors}
+			edit={edit}
+			desktop={desktop}
+		/>
+	);
+
 	const content = [
 		<Section
 			key="towers"
@@ -343,8 +377,18 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		>
 			{areasStep}
 		</Section>,
-		<Section key="preview" number={3} title={STEP_TITLES[2]} desktop={false}>
+		<Section
+			key="types"
+			number={3}
+			title={STEP_TITLES[2]}
+			description={TYPES_DESCRIPTION}
+			desktop={false}
+		>
+			{typesStep}
+		</Section>,
+		<Section key="preview" number={4} title={STEP_TITLES[3]} desktop={false}>
 			<PreviewSummary plan={preview} units={unitsLine} />
+			<UntypedAlert plan={preview} />
 			{!tooLarge && <PreviewTowers plan={preview} />}
 			{failures}
 			{note}
@@ -370,6 +414,14 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 				>
 					{areasStep}
 				</Section>
+				<Section
+					number={3}
+					title={STEP_TITLES[2]}
+					description={TYPES_DESCRIPTION}
+					desktop
+				>
+					{typesStep}
+				</Section>
 			</div>
 			<aside
 				aria-label="Prévia"
@@ -377,6 +429,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			>
 				<h2 className="text-lg font-semibold tracking-tight">Prévia</h2>
 				<PreviewSummary plan={preview} units={unitsLine} />
+				<UntypedAlert plan={preview} />
 				{failures}
 				{blocker}
 				{createButton}

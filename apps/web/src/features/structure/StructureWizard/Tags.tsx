@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 export function Tags({
 	items,
 	onRemove,
+	removeLabel = (name) => `Tirar ${name}`,
 }: {
 	items: string[];
 	onRemove: (index: number) => void;
+	removeLabel?: (name: string) => string;
 }) {
 	if (items.length === 0) return null;
 	return (
@@ -22,7 +24,7 @@ export function Tags({
 					<span className="[overflow-wrap:anywhere]">{name}</span>
 					<button
 						type="button"
-						aria-label={`Tirar ${name}`}
+						aria-label={removeLabel(name)}
 						onClick={() => onRemove(index)}
 						className="relative grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 hover:text-foreground focus-visible:shadow-(--shadow-focus)"
 					>
@@ -38,11 +40,17 @@ export function AddTag({
 	label,
 	placeholder,
 	existing,
+	duplicateMessage,
+	maxItems,
+	maxMessage,
 	onAdd,
 }: {
 	label: string;
 	placeholder: string;
 	existing: string[];
+	duplicateMessage: string;
+	maxItems?: number;
+	maxMessage?: string;
 	onAdd: (name: string) => boolean;
 }) {
 	const [typed, setTyped] = useState("");
@@ -53,7 +61,11 @@ export function AddTag({
 		const name = tidyLocationName(typed);
 		if (name === "") return;
 		if (existing.some((other) => sameLocationName(other, name))) {
-			setError("Essa área comum já está na lista.");
+			setError(duplicateMessage);
+			return;
+		}
+		if (maxItems !== undefined && existing.length >= maxItems) {
+			setError(maxMessage);
 			return;
 		}
 		if (!onAdd(name)) return;

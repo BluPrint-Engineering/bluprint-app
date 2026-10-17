@@ -1,4 +1,10 @@
-import type { NewLocation, StructureCounts } from "@bluprint/shared";
+import {
+	type NewLocation,
+	type NewUnitType,
+	type StructureCounts,
+	tidyLocationName,
+} from "@bluprint/shared";
+import { unitTypeKeyFor } from "./unitTypeRules";
 import {
 	FLOOR_HALL,
 	type ParsedTower,
@@ -12,9 +18,14 @@ export interface PlanArea {
 	name: string;
 }
 
+export interface PlanUnit {
+	name: string;
+	unitType: string | null;
+}
+
 export interface PlanFloor {
 	label: string;
-	units: string[];
+	units: PlanUnit[];
 	areas: PlanArea[];
 }
 
@@ -25,10 +36,19 @@ export interface PlanTower {
 	valid: boolean;
 }
 
+export interface PlanUnitTypeCount {
+	key: string;
+	name: string;
+	units: number;
+}
+
 export interface Plan {
+	unitTypes: NewUnitType[];
 	locations: NewLocation[];
 	counts: StructureCounts;
 	towers: PlanTower[];
+	unitTypeCounts: PlanUnitTypeCount[];
+	untyped: number;
 }
 
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -67,11 +87,26 @@ export function buildPlan(
 		type: NewLocation["type"],
 		name: string,
 		position: number,
+		unitTypeKey: string | null = null,
 	) => {
 		const id = idFor(key);
-		locations.push({ id, parentId, type, name, position });
+		locations.push({
+			id,
+			parentId,
+			type,
+			name,
+			position,
+			...(unitTypeKey !== null && { unitTypeId: idFor(unitTypeKey) }),
+		});
 		return id;
 	};
+
+	const unitTypeNames = new Map(
+		draft.unitTypes.map(({ key, name }) => [key, tidyLocationName(name)]),
+	);
+	const unitTypeIdKey = (key: string) => `unit-type:${key}`;
+	const typedUnits = new Map<string, number>();
+	let untyped = 0;
 
 	const several = draft.towers.length > 1;
 	const towers: PlanTower[] = [];
@@ -114,11 +149,27 @@ export function buildPlan(
 				floorName(number),
 				position++,
 			);
-			const units: string[] = [];
+			const units: PlanUnit[] = [];
 			for (let at = 0; at < parsed.perFloor; at++) {
-				const unit = unitName(number, at, draft.numbering);
-				add(`${floorKey}:unit:${at}`, floorId, "unit", unit, at);
-				units.push(unit);
+				const name = unitName(number, at, draft.numbering);
+				const ruled = unitTypeKeyFor(draft.rules, towerIndex, number, at + 1);
+				const typeKey =
+					ruled !== null && unitTypeNames.has(ruled) ? ruled : null;
+				add(
+					`${floorKey}:unit:${at}`,
+					floorId,
+					"unit",
+					name,
+					at,
+					typeKey === null ? null : unitTypeIdKey(typeKey),
+				);
+				units.push({
+					name,
+					unitType:
+						typeKey === null ? null : (unitTypeNames.get(typeKey) ?? null),
+				});
+				if (typeKey === null) untyped++;
+				else typedUnits.set(typeKey, (typedUnits.get(typeKey) ?? 0) + 1);
 			}
 
 			const names: string[] = [];
@@ -166,6 +217,22 @@ export function buildPlan(
 		locations.filter((location) => location.type === type).length;
 
 	return {
+		unitTypes: draft.unitTypes.map(({ key, rooms }) => ({
+			id: idFor(unitTypeIdKey(key)),
+			name: unitTypeNames.get(key) ?? "",
+			rooms: rooms.map((name, at) => ({
+				id: idFor(`${unitTypeIdKey(key)}:room:${at}`),
+				name,
+			})),
+		})),
+		unitTypeCounts: draft.unitTypes
+			.filter(({ key }) => typedUnits.has(key))
+			.map(({ key }) => ({
+				key,
+				name: unitTypeNames.get(key) ?? "",
+				units: typedUnits.get(key) ?? 0,
+			})),
+		untyped,
 		locations,
 		counts: {
 			towers: count("tower"),

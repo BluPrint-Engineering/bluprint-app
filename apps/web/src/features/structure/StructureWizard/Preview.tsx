@@ -1,3 +1,4 @@
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { plural } from "../plural";
 import type { Plan } from "./buildPlan";
@@ -17,6 +18,10 @@ export function PreviewSummary({
 }) {
 	const { floors, units: unitCount, commonAreas } = plan.counts;
 	const towers = plan.towers.length;
+	const perType = [
+		...plan.unitTypeCounts.map(({ name, units: count }) => `${name}: ${count}`),
+		...(plan.untyped > 0 ? [`Sem tipologia: ${plan.untyped}`] : []),
+	];
 	return (
 		<div className="grid gap-(--space-1)">
 			<span className="font-semibold">
@@ -27,7 +32,9 @@ export function PreviewSummary({
 				].join(" · ")}
 			</span>
 			<span className="text-sm text-muted-foreground">
-				{plural(commonAreas, "área comum", "áreas comuns")}
+				{[plural(commonAreas, "área comum", "áreas comuns"), ...perType].join(
+					" · ",
+				)}
 			</span>
 			{units.state === "loading" && (
 				<Skeleton aria-hidden className="mt-(--space-1) h-3.5 w-4/5" />
@@ -36,6 +43,18 @@ export function PreviewSummary({
 				<span className="mt-(--space-1) text-sm text-pretty">{units.text}</span>
 			)}
 		</div>
+	);
+}
+
+export function UntypedAlert({ plan }: { plan: Plan }) {
+	if (plan.untyped === 0) return null;
+	return (
+		<Alert>
+			<AlertDescription>
+				{plural(plan.untyped, "unidade fica", "unidades ficam")} sem tipologia.
+				Os cômodos delas se cadastram em cada uma.
+			</AlertDescription>
+		</Alert>
 	);
 }
 

@@ -68,7 +68,7 @@ export const problemDetailsSchema = z.object({
 		.optional()
 		.meta({
 			description:
-				"The names that clashed, as the request sent them, present on `LOCATION_NAME_TAKEN`.",
+				"The names that clashed, as the request sent them, present on `LOCATION_NAME_TAKEN` and `UNIT_TYPE_NAME_TAKEN`.",
 			example: ["Torre A", "901"],
 		}),
 });

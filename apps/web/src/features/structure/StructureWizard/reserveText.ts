@@ -62,3 +62,8 @@ export function nameTakenText(names: string[]): string {
 	const many = names.length > 1;
 	return `Já existe um local com ${many ? "os nomes" : "o nome"} ${listOfNames(names)}. Troque ${many ? "esses nomes" : "esse nome"} e tente de novo.`;
 }
+
+export function unitTypeNameTakenText(names: string[]): string {
+	const many = names.length > 1;
+	return `Já existe uma tipologia com ${many ? "os nomes" : "o nome"} ${listOfNames(names)}. Troque ${many ? "esses nomes" : "esse nome"} e tente de novo.`;
+}

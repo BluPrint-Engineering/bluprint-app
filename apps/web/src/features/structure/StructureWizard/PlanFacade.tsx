@@ -38,13 +38,14 @@ export function PlanFacade({ tower }: { tower: PlanTower }) {
 						</span>
 						{floor.units.map((unit) => (
 							<span
-								key={unit}
+								key={unit.name}
+								title={unit.unitType ?? "Sem tipologia"}
 								className={cn(
 									BLOCK,
 									"border border-input font-mono text-[13px] font-medium md:text-[10px] md:font-normal",
 								)}
 							>
-								{unit}
+								{unit.name}
 							</span>
 						))}
 						{floor.units.length > 0 ? (

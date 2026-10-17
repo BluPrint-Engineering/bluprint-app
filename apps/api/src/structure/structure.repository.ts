@@ -80,13 +80,14 @@ export class StructureRepository {
 			await this.txHost.tx.insert(location).values(
 				locations
 					.slice(start, start + INSERT_CHUNK)
-					.map(({ id, parentId, type, name, position }) => ({
+					.map(({ id, parentId, type, name, position, unitTypeId }) => ({
 						id,
 						projectId,
 						parentId,
 						type,
 						name,
 						position,
+						unitTypeId: unitTypeId ?? null,
 					})),
 			);
 		}
