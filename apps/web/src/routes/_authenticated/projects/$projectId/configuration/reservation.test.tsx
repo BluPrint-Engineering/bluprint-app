@@ -372,6 +372,80 @@ describe("Alterar reserva", () => {
 		).toBeInTheDocument();
 	});
 
+	async function saveThenGoBack() {
+		let answer: (response: Response | Promise<Response>) => void = () => {};
+		const answered = new Promise<Response>((resolve) => {
+			answer = resolve;
+		});
+		const { handler, state } = reservationApi(OBRA, {
+			patch: async (reserved) => {
+				const response = await answered;
+				if (response.ok) {
+					state.current = {
+						...state.current,
+						units: { ...state.current.units, reserved },
+					};
+					return json(state.current);
+				}
+				return response;
+			},
+		});
+		stubApi(signedIn, { api: handler });
+		const { router } = renderAt(CONFIG_PATH);
+		const dialog = await openDialog();
+		await typeUnits(dialog, "450");
+		await userEvent.click(
+			within(dialog).getByRole("button", { name: "Salvar" }),
+		);
+		await within(dialog).findByRole("button", { name: /Salvando/ });
+
+		router.history.back();
+
+		await waitFor(() => {
+			expect(
+				screen.queryByRole("dialog", { name: "Alterar reserva" }),
+			).not.toBeInTheDocument();
+		});
+		return answer;
+	}
+
+	test("Back during a save still toasts the saved reservation", async () => {
+		const answer = await saveThenGoBack();
+
+		answer(json({}));
+
+		expect(
+			await screen.findByText("Reserva da Casa Moinhos: 450 unidades."),
+		).toBeInTheDocument();
+		const card = screen.getByRole("region", { name: "Dados da obra" });
+		expect(
+			await within(card).findByText("Usa 250 de 450 reservadas"),
+		).toBeInTheDocument();
+	});
+
+	test("Back during a save toasts the server's refusal", async () => {
+		const answer = await saveThenGoBack();
+
+		answer(problem(409, NO_UNITS_LEFT, { requested: 50, available: 40 }));
+
+		expect(
+			await screen.findByText(
+				"A reserva não foi alterada. Só há 40 unidades livres.",
+			),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("dialog", { name: "Alterar reserva" }),
+		).not.toBeInTheDocument();
+	});
+
+	test("Back during a save toasts a network failure", async () => {
+		const answer = await saveThenGoBack();
+
+		answer(json({}, 500));
+
+		expect(await screen.findByText(SAVE_FAILED)).toBeInTheDocument();
+	});
+
 	test("saves, closes, updates the row and toasts (C7e)", async () => {
 		const { handler } = reservationApi(OBRA);
 		const { fetchMock } = stubApi(signedIn, { api: handler });

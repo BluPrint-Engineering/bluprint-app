@@ -4,6 +4,7 @@ import {
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	PROJECT_PAGE_SIZE,
+	type ProjectSummary,
 	projectListSchema,
 	projectManagersSchema,
 	projectParamsSchema,
@@ -156,7 +157,15 @@ export function isReservationRefusal(error: unknown) {
 	);
 }
 
-export function useChangeReservationMutation(projectId: string) {
+export interface ReservationFeedback {
+	saved: (project: ProjectSummary) => void;
+	failed: (error: Error) => void;
+}
+
+export function useChangeReservationMutation(
+	projectId: string,
+	feedback: ReservationFeedback,
+) {
 	const queryClient = useQueryClient();
 	const { queryKey } = projectQueryOptions(projectId);
 	return useMutation({
@@ -168,6 +177,7 @@ export function useChangeReservationMutation(projectId: string) {
 			}),
 		onSuccess: (changed) => {
 			queryClient.setQueryData(queryKey, changed);
+			feedback.saved(changed);
 			void queryClient.invalidateQueries(organizationUnitsQueryOptions);
 			return queryClient.invalidateQueries({
 				queryKey: ["projects"],
@@ -175,6 +185,7 @@ export function useChangeReservationMutation(projectId: string) {
 			});
 		},
 		onError: (error) => {
+			feedback.failed(error);
 			if (isReservationRefusal(error)) {
 				void queryClient.invalidateQueries(organizationUnitsQueryOptions);
 				return queryClient.invalidateQueries({ queryKey });

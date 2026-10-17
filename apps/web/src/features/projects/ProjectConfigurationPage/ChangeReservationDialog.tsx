@@ -1,6 +1,6 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { type RefObject, useEffect, useId, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -47,8 +47,17 @@ import {
 
 const SAVE_FAILED =
 	"Não foi possível salvar a reserva. Confira sua conexão e tente de novo.";
+const NOT_CHANGED = "A reserva não foi alterada.";
 const UNITS_FAILED =
 	"Não foi possível carregar as unidades livres. Confira sua conexão e tente de novo.";
+
+function refusalMessage(failure: Error) {
+	const floor = usedUnitsOf(failure);
+	if (floor !== undefined) return belowUsedMessage(floor);
+	const available = availableUnitsOf(failure);
+	if (available !== undefined) return aboveFreeMessage(available);
+	return undefined;
+}
 
 interface ChangeReservationDialogProps {
 	project: ProjectSummary;
@@ -87,25 +96,49 @@ export function ChangeReservationDialog({
 }: ChangeReservationDialogProps) {
 	const desktop = useIsDesktop();
 	const units = useQuery({ ...organizationUnitsQueryOptions, enabled: open });
-	const change = useChangeReservationMutation(project.id);
 	const { used, reserved } = project.units;
-	const free = units.data?.free;
-	const unitsFailed = free === undefined && firstLoadState(units) === "failed";
-	const figures = { used, reserved, free };
-	const saving = change.isPending;
 	const formId = useId();
 	const [typed, setTyped] = useState(String(reserved));
 	const [touched, setTouched] = useState(false);
 	const [refused, setRefused] = useState<string>();
+	const shown = useRef(open);
+	useEffect(() => {
+		shown.current = open;
+		return () => {
+			shown.current = false;
+		};
+	}, [open]);
+	const change = useChangeReservationMutation(project.id, {
+		saved: (saved) => {
+			const { reserved: now } = saved.units;
+			toast.success(
+				`Reserva da ${saved.name}: ${now} ${plural(now, "unidade", "unidades")}.`,
+			);
+			if (shown.current) onOpenChange(false);
+		},
+		failed: (failure) => {
+			if (isProjectDelivered(failure)) {
+				if (shown.current) onOpenChange(false);
+				return;
+			}
+			const refusal = refusalMessage(failure);
+			if (shown.current) setRefused(refusal);
+			else toast.error(refusal ? `${NOT_CHANGED} ${refusal}` : SAVE_FAILED);
+		},
+	});
+	const free = units.data?.free;
+	const unitsFailed = free === undefined && firstLoadState(units) === "failed";
+	const figures = { used, reserved, free };
+	const saving = change.isPending;
 
 	const { reset } = change;
 	useEffect(() => {
-		if (open) return;
+		if (open || saving) return;
 		setTyped(String(reserved));
 		setTouched(false);
 		setRefused(undefined);
 		reset();
-	}, [open, reserved, reset]);
+	}, [open, saving, reserved, reset]);
 
 	const wanted = parseUnits(typed);
 	const invalid = reservationError(figures, wanted);
@@ -125,22 +158,7 @@ export function ChangeReservationDialog({
 	function submit() {
 		setTouched(true);
 		if (blocked || wanted === undefined) return;
-		change.mutate(wanted, {
-			onSuccess: (saved) => {
-				const { reserved: now } = saved.units;
-				toast.success(
-					`Reserva da ${saved.name}: ${now} ${plural(now, "unidade", "unidades")}.`,
-				);
-				onOpenChange(false);
-			},
-			onError: (failure) => {
-				if (isProjectDelivered(failure)) return onOpenChange(false);
-				const floor = usedUnitsOf(failure);
-				if (floor !== undefined) return setRefused(belowUsedMessage(floor));
-				const available = availableUnitsOf(failure);
-				if (available !== undefined) setRefused(aboveFreeMessage(available));
-			},
-		});
+		change.mutate(wanted);
 	}
 
 	const context =
