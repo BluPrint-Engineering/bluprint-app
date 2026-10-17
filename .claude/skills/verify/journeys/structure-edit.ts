@@ -30,7 +30,7 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	await shot("e2-two-towers");
 
 	await page.getByRole("button", { name: "Adicionar", exact: true }).click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Torre", "Área comum da obra", "Montar com o assistente"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Torre", "Área comum da obra"]);
 	await settle();
 	await shot("e2-add-menu");
 	await page.keyboard.press("Escape");

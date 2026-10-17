@@ -164,7 +164,7 @@ describe("several towers (E2)", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("opens a menu with Torre, Área comum da obra and the wizard", async () => {
+	test("opens a menu with Torre and Área comum da obra, and no link to the wizard, which sends an obra with structure back home", async () => {
 		stubApi(signedIn, {
 			api: writableApi(obra(), severalTowers()).handler,
 		});
@@ -176,9 +176,10 @@ describe("several towers (E2)", () => {
 		expect(items.map((item) => item.textContent)).toEqual([
 			"Torre",
 			"Área comum da obra",
-			"Montar com o assistente",
 		]);
-		expect(items[2]).toHaveAttribute("href", `${OBRA_PATH}/structure/new`);
+		expect(
+			screen.queryByRole("link", { name: "Montar com o assistente" }),
+		).not.toBeInTheDocument();
 	});
 
 	test("adds a tower named after the next letter and shows its card", async () => {
@@ -360,7 +361,7 @@ describe("a single tower (E3)", () => {
 
 		expect(
 			(await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-		).toEqual(["Torre", "Área comum da obra", "Montar com o assistente"]);
+		).toEqual(["Torre", "Área comum da obra"]);
 	});
 
 	test("suggests Torre B for the second tower and then shows both with their cards", async () => {

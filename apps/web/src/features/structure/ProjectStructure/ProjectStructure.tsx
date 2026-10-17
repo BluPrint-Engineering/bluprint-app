@@ -15,7 +15,6 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { firstLoadState } from "@/lib/firstLoadState";
@@ -34,11 +33,9 @@ import { nextTowerName } from "../naming";
 import { TowerCards } from "./TowerCards";
 
 function AddMenu({
-	projectId,
 	adding,
 	towerOpener,
 }: {
-	projectId: string;
 	adding: Adding;
 	towerOpener: Ref<HTMLButtonElement>;
 }) {
@@ -66,13 +63,6 @@ function AddMenu({
 				<DropdownMenuItem onSelect={() => adding.open("project-area")}>
 					<Plus className="size-4.5" aria-hidden="true" />
 					Área comum da obra
-				</DropdownMenuItem>
-				<DropdownMenuSeparator />
-				<DropdownMenuItem asChild>
-					<Link to="/projects/$projectId/structure/new" params={{ projectId }}>
-						<ListPlus className="size-4.5" aria-hidden="true" />
-						Montar com o assistente
-					</Link>
 				</DropdownMenuItem>
 			</DropdownMenuContent>
 		</DropdownMenu>
@@ -204,13 +194,7 @@ function SingleTower({
 			<section className="grid min-w-0 content-start gap-(--space-3)">
 				<div className="flex items-center justify-between gap-(--space-3)">
 					<h2 className="text-lg font-semibold tracking-tight">Fachada</h2>
-					{canEdit && (
-						<AddMenu
-							projectId={projectId}
-							adding={adding}
-							towerOpener={towerOpener}
-						/>
-					)}
+					{canEdit && <AddMenu adding={adding} towerOpener={towerOpener} />}
 				</div>
 				{canEdit && adding.is("tower") && (
 					<TowerForm
@@ -267,13 +251,7 @@ function SeveralTowers({
 				<section className="grid gap-(--space-3)">
 					<div className="flex items-center justify-between gap-(--space-3)">
 						<h2 className="text-lg font-semibold tracking-tight">Torres</h2>
-						{canEdit && (
-							<AddMenu
-								projectId={projectId}
-								adding={adding}
-								towerOpener={towerOpener}
-							/>
-						)}
+						{canEdit && <AddMenu adding={adding} towerOpener={towerOpener} />}
 					</div>
 					{structure.towers.length > 0 && (
 						<TowerCards projectId={projectId} towers={structure.towers} />
