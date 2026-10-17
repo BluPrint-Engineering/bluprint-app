@@ -12,7 +12,11 @@ export const Route = createFileRoute(
 	beforeLoad: async ({ context, params }) => {
 		if (!isProjectId(params.projectId)) return;
 		const structure = await context.queryClient
-			.query(structureQueryOptions(params.projectId))
+			.query({
+				...structureQueryOptions(params.projectId),
+				staleTime: Infinity,
+				retry: false,
+			})
 			.catch(() => null);
 		if (structure && !isBlankStructure(structure)) {
 			throw redirect({ to: "/projects/$projectId", params, replace: true });

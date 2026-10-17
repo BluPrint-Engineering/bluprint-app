@@ -114,7 +114,7 @@ test("a project whose reservation is smaller than the plan cannot be sent", asyn
 		),
 	).toBeVisible();
 	await expect(
-		page.getByRole("link", { name: "Alterar reserva" }),
+		page.getByRole("button", { name: "Alterar reserva" }),
 	).toBeVisible();
 	await expect(
 		page.getByRole("button", { name: "Criar estrutura" }),

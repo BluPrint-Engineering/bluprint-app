@@ -846,7 +846,7 @@ describe("structure wizard", () => {
 				/Esta estrutura tem 12 unidades/,
 			);
 			expect(
-				screen.queryByRole("link", { name: "Alterar reserva" }),
+				screen.queryByRole("button", { name: "Alterar reserva" }),
 			).not.toBeInTheDocument();
 			await user.click(button);
 			expect(sent).toHaveLength(0);
@@ -1053,6 +1053,34 @@ describe("structure wizard", () => {
 				screen.queryByRole("heading", { level: 1, name: "Montar estrutura" }),
 			).not.toBeInTheDocument();
 			expect(sent).toHaveLength(0);
+		});
+
+		test("opens from the project home without waiting for the structure again", async () => {
+			const { handler } = wizardApi();
+			let structureHangs = false;
+			open(
+				combine(
+					(url) =>
+						structureHangs &&
+						url.pathname === `/api/projects/${OBRA.id}/structure`
+							? new Promise<Response>(() => {})
+							: undefined,
+					handler,
+				),
+				`/projects/${OBRA.id}`,
+			);
+			const start = await screen.findByRole("link", {
+				name: "Montar estrutura",
+			});
+			structureHangs = true;
+			await user.click(start);
+
+			expect(
+				await screen.findByRole("heading", {
+					level: 1,
+					name: "Montar estrutura",
+				}),
+			).toBeInTheDocument();
 		});
 
 		test("does not reopen the wizard with Back once the structure is created (W10)", async () => {
