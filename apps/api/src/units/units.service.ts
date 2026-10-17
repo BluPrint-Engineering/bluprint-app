@@ -141,7 +141,7 @@ export class UnitsService {
 	}
 
 	@Transactional(Propagation.Mandatory)
-	async assertAvailable(projectId: string, requested: number): Promise<void> {
+	async lockEditable(projectId: string) {
 		const locked = await this.lockProject(projectId);
 		if (locked.status === "delivered") {
 			throw new ProblemException({
@@ -151,6 +151,13 @@ export class UnitsService {
 					"The project was delivered, so its structure can no longer change.",
 			});
 		}
+
+		return locked;
+	}
+
+	@Transactional(Propagation.Mandatory)
+	async assertAvailable(projectId: string, requested: number): Promise<void> {
+		const locked = await this.lockEditable(projectId);
 
 		const { remaining } = await this.balanceOf(projectId, locked.reserved);
 		if (requested > remaining) {

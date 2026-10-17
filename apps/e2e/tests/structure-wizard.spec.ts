@@ -105,6 +105,15 @@ test("a new account reserves units for a project, builds its structure with the 
 	).toBeVisible();
 	await expect(page.getByText("Tipologia A").first()).toBeVisible();
 	await expect(page.getByText("Sala", { exact: true })).toBeVisible();
+
+	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
+	await page.getByLabel("Adicionar cômodo").fill("Lavanderia");
+	await page.getByLabel("Adicionar cômodo").press("Enter");
+
+	const rooms = page.getByRole("list", { name: "Cômodos" });
+	await expect(rooms.getByText("Lavanderia")).toBeVisible();
+	await expect(rooms.getByText("Só desta unidade")).toBeVisible();
+	await expect(page.getByText("1 alteração")).toBeVisible();
 });
 
 test("a project whose reservation is smaller than the plan cannot be sent", async ({
