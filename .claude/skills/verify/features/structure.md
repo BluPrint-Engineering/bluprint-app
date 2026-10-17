@@ -1,10 +1,16 @@
 # Project structure
 
-A project's home at `/projects/<id>` shows its structure: a card per tower when there are several, the tower's façade directly when there is one, and the project's common areas. A tower at `/projects/<id>/locations/<towerId>` reads as its façade, one floor per row with the highest on top, units in columns aligned on the widest floor and common areas in a column of their own. A floor lists its units, each with its unit type and changes, and its common areas; a unit opens its unit type and its rooms, a common area opens its rooms. Everything is read-only for now, for every role and for a delivered project, which adds the lock line `A obra foi entregue: a estrutura não pode mais ser alterada.`
+A project's home at `/projects/<id>` shows its structure: a card per tower when there are several, the tower's façade directly when there is one, and the project's common areas. A tower at `/projects/<id>/locations/<towerId>` reads as its façade, one floor per row with the highest on top, units in columns aligned on the widest floor and common areas in a column of their own. A floor lists its units, each with its unit type and changes, and its common areas; a unit opens its unit type and its rooms, a common area opens its rooms. A blank project offers `Montar estrutura`, the wizard at `/projects/<id>/structure/new`: on a desktop one page with the towers, the common areas and a sticky preview; on a phone three steps with a bottom bar. Nothing is saved before `Criar estrutura`, which sends one request that creates the towers, floors, units and common areas of the plan. Everything else is read-only for now, for every role and for a delivered project, which adds the lock line `A obra foi entregue: a estrutura não pode mais ser alterada.`
 
 ## Sub-features
 
-- `home-empty` shows `A obra ainda não tem estrutura` with `A estrutura aparece aqui quando alguém da equipe montar a obra.` and no button (E1); a delivered project without structure shows it under the lock line.
+- `home-empty` shows `A obra ainda não tem estrutura` with `Monte torres, andares, unidades e áreas comuns de uma vez. Depois, tudo se ajusta na fachada.` and the link `Montar estrutura` (E1); a delivered project without structure shows `A estrutura aparece aqui quando alguém da equipe montar a obra.` under the lock line and no link.
+- `wizard-steps` opens `Montar estrutura` with the project name as back link and `<project> · nada é salvo antes de criar`: `Torres e andares` (towers stepper, first and last floor, units per floor, `Térreo sem unidades`, `Hall em cada andar`, numbering `101, 102` or `1A, 1B`; with several towers each gets a `Nome` and a new one copies the previous with the next letter), `Áreas comuns` (of the project, of each tower, of one floor) and `Prévia`; on a phone `Passo 1 de 3` with a bar `Continuar · <next step>` and `Voltar` (W1, W2, W4, W8).
+- `wizard-preview` shows `1 torre · 4 andares · 12 unidades`, the common area count, `Usa 12 das 20 unidades que restam nesta obra. Depois de criar, sobram 8.` and one small façade per tower (W4).
+- `wizard-validation` shows `Informe o último andar.` and the like under the fields, scrolls to the first wrong one and focuses it, and sends nothing (W5).
+- `wizard-reserve` disables `Criar estrutura` when the plan has more units than remain: `Esta estrutura tem 48 unidades e a obra tem 20. Tire 28 unidades ou aumente a reserva.` with the link `Alterar reserva` for the admin, `... ou peça mais reserva ao admin da construtora.` for a manager or assistant; on a phone the alert rides in the bottom bar above the buttons (W4b, W4c).
+- `wizard-create` creates the plan, returns to the project home with the toast `Estrutura criada: 1 torre e 12 unidades.` and the façade (W10); a failure keeps the draft with `Não foi possível criar a estrutura. Confira sua conexão e tente de novo. Nada foi salvo.` and a retry reuses the same ids (W7); `NO_UNITS_LEFT` and `LOCATION_NAME_TAKEN` show their alerts with the server's numbers and names (W7b). The failure paths are not reachable on a healthy instance; the web route-tree tests cover them.
+- `wizard-delivered` shows the lock line and no wizard for a delivered project.
 - `home-towers` shows `Torres` with a card per tower (Andares, Unidades, Áreas comuns, Tipologias: `Tipologia A, Tipologia B, Cobertura`, or `Sem tipologia`) and `Áreas comuns da obra` (E2); a delivered project adds the lock line (E5).
 - `home-single-tower` shows `Fachada` and `Áreas comuns` with the tower's and the project's common areas, and the tower's name nowhere (E3).
 - `tower-facade` shows the façade, `Áreas comuns da torre`, the band `Torre · 15 andares · 50 unidades` and the back link to the project (T1); a tower without floors shows `A Torre B ainda não tem andares` (T3); a delivered project adds the lock line (T6).
@@ -26,6 +32,7 @@ A project's home at `/projects/<id>` shows its structure: a card per tower when 
 Preconditions:
 
 - `instance.ts doctor` prints no `FAIL`.
+- Run `.claude/skills/verify/journeys/structure-wizard.ts` with `--as admin` (builds `Galpão Logístico Sul`, which reserves 20 units) and with `--as admin-no-units` (Igor: every plan is over the reservation of Vértice's `Residencial Jardins`); a run mutates the seed, so `down` and `up` before the next.
 - Run `.claude/skills/verify/journeys/structure.ts` with `--as admin` (Ana sees every project); `--as manager` (Carla) reaches the projects she is on and gets `Obra não encontrada` elsewhere.
 
 Where the seed (`apps/api/src/db/seed/fixture.ts`) holds each edge case:
@@ -38,7 +45,7 @@ Where the seed (`apps/api/src/db/seed/fixture.ts`) holds each edge case:
 | Tower without floors in a project with several towers | `Condomínio Porto Belo` | Torre B, with `Salão de festas`; Diego (manager) is on it |
 | Delivered with structure | `Residencial Vila Nova` | two towers; Carla and Heitor are on it |
 | Delivered without structure | `Condomínio Bela Vista` | |
-| No structure | `Galpão Logístico Sul` and the other in-progress projects | |
+| No structure, reserving 20 units (the wizard's home) | `Galpão Logístico Sul` and the other in-progress projects | |
 | Same names in another organization, reserving exactly its units | `Residencial Jardins` (Vértice) | Torre A, units 101-302, 0 free |
 
 - **Home states.** `page.goto("/projects/" + id)` with the id from `SELECT id FROM project WHERE name = ... AND organization_id = ...` through `query`; assert the headings above.
@@ -47,6 +54,10 @@ Where the seed (`apps/api/src/db/seed/fixture.ts`) holds each edge case:
 - **Not found.** `page.goto("/projects/<id>/locations/0190b000-0000-7000-8000-999999999999")` shows `Local não encontrado`; `Voltar para a obra` lands on the project.
 
 ## Gotchas
+
+- The wizard's inputs are `Primeiro andar`, `Último andar` and `Unidades por andar` (with several towers, one set per tower and `Nome`); the common area inputs are named `Área comum da obra`, `Área comum de cada torre` and, in the one-floor form, `Nome da área comum`, `Torre`, `Andar`, button `Adicionar ao andar`.
+- `Alterar reserva` opens the project configuration in a new tab, because the reservation dialog arrives with its own ticket; the draft stays in the wizard tab.
+- On a phone the wizard has no `Prévia` heading until the third step; select `Criar estrutura` only there.
 
 - Read the ids with `query`: they are generated on seed and change with every `up`.
 - A unit's rooms and unit type are seeded only on `Residencial Jardins` (types A, B, Cobertura, Duplex), `Edifício Aurora` (`Apartamento`), `Parque das Águas · Fase 2` (`Padrão`), `Residencial Vila Nova` and Vértice's `Residencial Jardins` (`Tipologia A`); the other projects have no unit types.

@@ -237,9 +237,9 @@ export function structureApi(
 }
 
 export function combine(...handlers: ApiHandler[]): ApiHandler {
-	return (url) => {
+	return (url, init) => {
 		for (const handler of handlers) {
-			const answered = handler(url);
+			const answered = handler(url, init);
 			if (answered) return answered;
 		}
 		return undefined;

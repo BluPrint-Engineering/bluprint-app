@@ -5,9 +5,11 @@ import type {
 	StructureTower,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Layers } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Layers, ListPlus } from "lucide-react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { StateBlock } from "@/components/StateBlock";
+import { Button } from "@/components/ui/button";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { structureQueryOptions } from "../api";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
@@ -96,12 +98,28 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 	if (query.data) {
 		const structure = query.data;
 		if (structure.towers.length === 0 && structure.commonAreas.length === 0) {
-			return (
+			return project.status === "delivered" ? (
 				<StateBlock
 					icon={Layers}
 					title="A obra ainda não tem estrutura"
 					description="A estrutura aparece aqui quando alguém da equipe montar a obra."
 				/>
+			) : (
+				<StateBlock
+					icon={Layers}
+					title="A obra ainda não tem estrutura"
+					description="Monte torres, andares, unidades e áreas comuns de uma vez. Depois, tudo se ajusta na fachada."
+				>
+					<Button asChild size="lg" className="max-md:w-full">
+						<Link
+							to="/projects/$projectId/structure/new"
+							params={{ projectId: project.id }}
+						>
+							<ListPlus className="size-5" aria-hidden="true" />
+							Montar estrutura
+						</Link>
+					</Button>
+				</StateBlock>
 			);
 		}
 

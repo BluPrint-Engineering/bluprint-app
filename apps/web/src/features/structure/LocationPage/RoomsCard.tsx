@@ -1,6 +1,6 @@
 import type { DroppedRoom, Room, UnitTypeRef } from "@bluprint/shared";
 import { Badge } from "@/components/ui/badge";
-import { plural } from "./plural";
+import { plural } from "../plural";
 
 function RoomRow({
 	name,

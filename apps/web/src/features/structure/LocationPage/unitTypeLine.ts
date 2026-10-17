@@ -1,5 +1,5 @@
 import type { UnitTypeRef } from "@bluprint/shared";
-import { plural } from "./plural";
+import { plural } from "../plural";
 
 export function changesLabel(changes: number): string {
 	return plural(changes, "alteração", "alterações");

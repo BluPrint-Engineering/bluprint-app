@@ -15,7 +15,7 @@ import {
 	RESERVATION_BELOW_USED,
 	type RenameProject,
 } from "@bluprint/shared";
-import { Transactional } from "@nestjs-cls/transactional";
+import { Propagation, Transactional } from "@nestjs-cls/transactional";
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { MembersRepository } from "../members/members.repository";
@@ -170,6 +170,23 @@ export class ProjectsService {
 		await this.projects.setReservedUnits(projectId, reserved);
 
 		return toSummary({ ...found, reservedUnits: reserved }, used);
+	}
+
+	@Transactional(Propagation.Mandatory)
+	async beginStructureWrite(userId: string, projectId: string): Promise<void> {
+		await this.readVisible(userId, projectId);
+
+		const locked = await this.projects.lockForWrite(projectId);
+		if (locked?.status === "delivered") {
+			throw new ProblemException({
+				status: 409,
+				code: PROJECT_DELIVERED,
+				detail:
+					"The project was delivered, so its structure can no longer change.",
+			});
+		}
+
+		await this.projects.touch(projectId);
 	}
 
 	private async readVisible(userId: string, projectId: string) {

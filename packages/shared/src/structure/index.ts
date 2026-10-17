@@ -1,3 +1,4 @@
+export * from "./create-structure.js";
 export * from "./location-detail.js";
 export * from "./location-errors.js";
 export * from "./location-params.js";

@@ -1,12 +1,17 @@
 import {
+	type CreateStructure,
+	type CreateStructureResult,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	type Structure,
 } from "@bluprint/shared";
+import { Transactional } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
+import { UnitsService } from "../units/units.service";
 import type { LocationRow } from "./location-row";
+import { planCreation } from "./plan-creation";
 import { buildStructure } from "./structure-tree";
 import { StructureRepository } from "./structure.repository";
 
@@ -16,8 +21,34 @@ const toRef = ({ id, type, name }: LocationRow) => ({ id, type, name });
 export class StructureService {
 	constructor(
 		private readonly projects: ProjectsService,
+		private readonly units: UnitsService,
 		private readonly locations: StructureRepository,
 	) {}
+
+	@Transactional()
+	async create(
+		userId: string,
+		projectId: string,
+		{ locations }: CreateStructure,
+	): Promise<CreateStructureResult> {
+		await this.projects.beginStructureWrite(userId, projectId);
+
+		const inProject = await this.locations.listForNaming(projectId);
+		const takenElsewhere = await this.locations.findIdsInOtherProjects(
+			projectId,
+			locations.map(({ id }) => id),
+		);
+		const { fresh, newUnits, counts } = planCreation(
+			locations,
+			inProject,
+			takenElsewhere,
+		);
+
+		await this.units.assertAvailable(projectId, newUnits);
+		await this.locations.insertAll(projectId, fresh);
+
+		return { counts };
+	}
 
 	async readStructure(userId: string, projectId: string): Promise<Structure> {
 		await this.projects.findVisible(userId, projectId);

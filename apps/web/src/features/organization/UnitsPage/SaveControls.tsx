@@ -3,8 +3,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CardFooter } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { useBottomBarHeight } from "@/lib/useBottomBarHeight";
 import { cn } from "@/lib/utils";
-import { useBottomBarHeight } from "../../projects/ProjectsPage/useBottomBarHeight";
 import { changedLine, signedUnits } from "./reservationDrafts";
 
 export const SAVE_FAILED =

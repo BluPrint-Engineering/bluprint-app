@@ -34,6 +34,8 @@ import { SignupProvisioningModule } from "./signup/signup-provisioning.module";
 				}),
 				// without this, the module re-calls enableCors during init and overrides configureApp's CORS
 				disableTrustedOriginsCors: true,
+				// 5,000 locations in one structure request run past the 100kb default
+				bodyParser: { json: { limit: "2mb" } },
 			}),
 		}),
 	],

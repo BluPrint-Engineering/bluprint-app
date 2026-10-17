@@ -205,6 +205,23 @@ export class ProjectsRepository {
 			.where(eq(project.id, projectId));
 	}
 
+	async lockForWrite(projectId: string) {
+		const [locked] = await this.txHost.tx
+			.select({ status: project.status })
+			.from(project)
+			.where(eq(project.id, projectId))
+			.for("no key update");
+
+		return locked;
+	}
+
+	async touch(projectId: string): Promise<void> {
+		await this.txHost.tx
+			.update(project)
+			.set({ lastActivityAt: sql`now()` })
+			.where(eq(project.id, projectId));
+	}
+
 	async findByIdInAnyOrganization(projectId: string) {
 		const [found] = await this.txHost.tx
 			.select()
