@@ -574,6 +574,156 @@ const typeARooms = [
 	room("Home office"),
 ];
 
+describe("back from a unit or a common area", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	const towerBFloor = nth(towerB.floors, 0);
+	const towerBUnit = nth(towerBFloor.units, 0);
+	const ninthUnit = nth(ninth.units, 2);
+
+	async function pathnameIs(
+		router: { state: { location: { pathname: string } } },
+		id: string,
+	) {
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe(pathOf(id));
+		});
+	}
+
+	test("a unit opened from the tower façade goes back to the tower", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		const { router } = renderAt(pathOf(towerB.id));
+		await userEvent.click(
+			await screen.findByRole("link", { name: `Unidade ${towerBUnit.name}` }),
+		);
+
+		await pathnameIs(router, towerBUnit.id);
+		expect(router.state.location.search).toEqual({ from: towerB.id });
+		await userEvent.click(await screen.findByRole("link", { name: "Torre B" }));
+		await pathnameIs(router, towerB.id);
+	});
+
+	test("a unit opened from its floor goes back to the floor, then the tower", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		const { router } = renderAt(pathOf(towerB.id));
+		await userEvent.click(
+			await screen.findByRole("link", { name: towerBFloor.name }),
+		);
+		await userEvent.click(
+			await screen.findByRole("link", {
+				name: new RegExp(`^${towerBUnit.name}`),
+			}),
+		);
+
+		await pathnameIs(router, towerBUnit.id);
+		expect(router.state.location.search).toEqual({});
+		await userEvent.click(
+			await screen.findByRole("link", { name: towerBFloor.name }),
+		);
+		await pathnameIs(router, towerBFloor.id);
+		await userEvent.click(await screen.findByRole("link", { name: "Torre B" }));
+		await pathnameIs(router, towerB.id);
+	});
+
+	test("a floor common area opened from the tower façade goes back to the tower", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		const { router } = renderAt(pathOf(towerA.id));
+		const facade = await screen.findByRole("list", {
+			name: "Fachada da Torre A",
+		});
+		await userEvent.click(
+			within(rowStartingWith(facade, "9º")).getByRole("link", { name: "Hall" }),
+		);
+
+		await pathnameIs(router, nth(ninth.commonAreas, 0).id);
+		await userEvent.click(await screen.findByRole("link", { name: "Torre A" }));
+		await pathnameIs(router, towerA.id);
+	});
+
+	test("a unit opened from the façade of a single-tower project home goes back to the project", async () => {
+		stubApi(signedIn, { api: api(single) });
+
+		const { router } = renderAt(`/projects/${OBRA.id}`);
+		await userEvent.click(
+			await screen.findByRole("link", { name: `Unidade ${ninthUnit.name}` }),
+		);
+
+		await pathnameIs(router, ninthUnit.id);
+		expect(router.state.location.search).toEqual({ from: "project" });
+		await userEvent.click(
+			await screen.findByRole("link", { name: "Casa Moinhos" }),
+		);
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+		});
+	});
+
+	test("keeps the origin after a reload", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		renderAt(`${pathOf(ninthUnit.id)}?from=${towerA.id}`);
+
+		expect(
+			await screen.findByRole("link", { name: "Torre A" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("link", { name: "9º andar" }),
+		).not.toBeInTheDocument();
+	});
+
+	test("goes back to the floor when the URL has no origin", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		const { router } = renderAt(pathOf(ninthUnit.id));
+		await userEvent.click(
+			await screen.findByRole("link", { name: "9º andar" }),
+		);
+
+		await pathnameIs(router, ninth.id);
+	});
+
+	test.each([
+		["not an id", "torre-b"],
+		["not an ancestor", towerB.id],
+		["unknown", "0190b000-0000-7000-8000-999999999999"],
+	])("goes back to the floor when the origin is %s", async (_, from) => {
+		stubApi(signedIn, { api: api(several) });
+
+		const { router } = renderAt(`${pathOf(ninthUnit.id)}?from=${from}`);
+		await userEvent.click(
+			await screen.findByRole("link", { name: "9º andar" }),
+		);
+
+		await pathnameIs(router, ninth.id);
+		expect(screen.queryByRole("link", { name: "Torre B" })).toBeNull();
+	});
+
+	test("goes back to the floor when the origin is a single tower the page does not name", async () => {
+		stubApi(signedIn, { api: api(single) });
+
+		renderAt(`${pathOf(ninthUnit.id)}?from=${towerA.id}`);
+
+		expect(
+			await screen.findByRole("link", { name: "9º andar" }),
+		).toBeInTheDocument();
+	});
+
+	test("leaves the band as it was", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		renderAt(`${pathOf(ninthUnit.id)}?from=${towerA.id}`);
+
+		expect(
+			await screen.findByText("Unidade · Torre A · 9º andar"),
+		).toBeInTheDocument();
+	});
+});
+
 describe("floor page with unit types", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();

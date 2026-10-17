@@ -60,6 +60,9 @@ back link, h1 28 / 36px, meta row). Main column max-width 72rem, padding mobile 
 
 - Back link to the parent: "Casa Moinhos" from a tower, "Torre A" from a floor, "9º andar" from a unit. With a single
   tower, the tower is skipped: a floor goes back to the obra.
+- A unit or floor common area opened from a façade goes back to that façade instead: "Torre B" from a tower's façade,
+  the obra from a single tower's início. The origin rides in the URL as `?from=` and survives a reload; a missing or
+  invalid origin falls back to the parent.
 - h1 = the location's name; a unit's name in **Geist Mono** (it is a number).
 - Meta line, 14px muted, separated by " · ": kind, where it is, counts. `Torre · 13 andares · 48 unidades`,
   `Andar · Torre A · 4 unidades`, `Unidade · Torre A · 9º andar`, `Área comum · Torre A · Térreo` /

@@ -57,9 +57,11 @@ function LocationNotFound({ projectId }: { projectId: string }) {
 export function LocationPage({
 	projectId,
 	locationId,
+	from,
 }: {
 	projectId: string;
 	locationId: string;
+	from?: string | undefined;
 }) {
 	const validProject = isProjectId(projectId);
 	const validLocation = isLocationId(locationId);
@@ -85,7 +87,7 @@ export function LocationPage({
 	}
 
 	if (project.data && location.data && structure.data) {
-		const band = describeLocation(location.data, structure.data);
+		const band = describeLocation(location.data, structure.data, from);
 		const tower =
 			location.data.type === "tower"
 				? structure.data.towers.find(

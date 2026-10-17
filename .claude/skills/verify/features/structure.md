@@ -11,6 +11,7 @@ A project's home at `/projects/<id>` shows its structure: a card per tower when 
 - `floor-lists` shows `Unidades`, each row with `Tipologia A`, `Tipologia A · 3 alterações` or `Sem tipologia`, `Áreas comuns do andar`, the band `Andar · Torre A · 4 unidades` and the back link to the tower (F1); with a single tower both drop the tower.
 - `unit-page` shows the `Tipologia` card (name, an outline badge `3 alterações` when it has changes, `Os cômodos acompanham a tipologia Tipologia A. ...`; without one `Sem tipologia` and `Os cômodos desta unidade são só dela.`), the `Cômodos` list with the count, `Só desta unidade` on the rooms only the unit has, and `Tirados desta unidade` with `Da tipologia Tipologia A` (U1, U2). No button or menu yet.
 - `common-area-page` shows only the `Cômodos` card, no `Tipologia` (U5); a common area without rooms says `Nenhum cômodo cadastrado.`.
+- `back-origin` sends the back link of a unit or a floor common area to the screen it was opened from: a unit tapped on a tower's façade shows `Torre B` and goes back to the tower, one opened from its floor shows `7º andar` and goes back to the floor and then the tower, and on a single-tower project home the façade's unit goes back to the project. The origin rides in the URL as `?from=<ancestor id>` (or `project`), survives a reload, and an absent or non-ancestor origin falls back to the structural parent.
 - `location-band` shows a unit in mono with `Unidade · Torre A · 9º andar` and a common area with `Área comum · da obra`.
 - `location-not-found` shows `Local não encontrado` with `Voltar para a obra` for a location that does not exist, belongs to another project or sits in a project the user cannot see (T5).
 - `load-states` shows `Carregando estrutura`, `Não foi possível carregar a obra` / `o local` with `Tentar de novo`, and `Sem conexão.`. Not reachable on a healthy instance; the web route-tree tests cover them.
@@ -42,7 +43,7 @@ Where the seed (`apps/api/src/db/seed/fixture.ts`) holds each edge case:
 
 - **Home states.** `page.goto("/projects/" + id)` with the id from `SELECT id FROM project WHERE name = ... AND organization_id = ...` through `query`; assert the headings above.
 - **Façade.** On a tower, `page.getByRole("list", { name: "Fachada da Torre A" })` has one `listitem` per floor, the first being `Cobertura`; `page.getByRole("link", { name: "Unidade 903" }).click()` opens the unit.
-- **Back links.** From a floor `page.getByRole("link", { name: "Torre A" }).click()` returns to the tower; the first link of the band returns to the project.
+- **Back links.** From a floor `page.getByRole("link", { name: "Torre A" }).click()` returns to the tower; the first link of the band returns to the project. Select the back link with `{ name: "Torre B", exact: true }`; on `Residencial Jardins` Torre B, `Unidade 701` from the façade backs to `Torre B`, via `7º andar` it backs to `7º andar`. Both towers have a `701`, so reach it through the façade, not by a `locationId` query.
 - **Not found.** `page.goto("/projects/<id>/locations/0190b000-0000-7000-8000-999999999999")` shows `Local não encontrado`; `Voltar para a obra` lands on the project.
 
 ## Gotchas
