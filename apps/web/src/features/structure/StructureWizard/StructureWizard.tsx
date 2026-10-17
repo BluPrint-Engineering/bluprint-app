@@ -21,7 +21,7 @@ import {
 	useCreateStructureMutation,
 } from "../api";
 import { buildPlan } from "./buildPlan";
-import { CommonAreasStep } from "./CommonAreasStep";
+import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
 import { PreviewSummary, PreviewTowers, type UnitsLine } from "./Preview";
 import {
 	createdToast,
@@ -122,6 +122,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	const [draft, setDraft] = useState<WizardDraft>(initialDraft);
 	const [errors, setErrors] = useState<DraftErrors>({});
 	const [step, setStep] = useState(0);
+	const [floorArea, setFloorArea] = useState<FloorAreaInput>();
 	const [reveal, setReveal] = useState<string>();
 	const ids = useRef(new Map<string, string>());
 	const stepTop = useRef<HTMLDivElement>(null);
@@ -290,7 +291,13 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		<TowersStep draft={draft} errors={errors} edit={edit} desktop={desktop} />
 	);
 	const areasStep = (
-		<CommonAreasStep draft={draft} errors={errors} edit={edit} />
+		<CommonAreasStep
+			draft={draft}
+			errors={errors}
+			edit={edit}
+			floorArea={floorArea}
+			onFloorAreaChange={setFloorArea}
+		/>
 	);
 
 	if (desktop) {

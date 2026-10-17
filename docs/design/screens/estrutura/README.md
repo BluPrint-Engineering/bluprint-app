@@ -111,12 +111,12 @@ A destructive menu item is the DropdownMenuItem `destructive` variant.
 ### Torre - `/projects/:id/locations/:towerId`
 
 - **T1 façade** (Q2): a card (padding 20px desktop / 12px mobile, radius 14px, hairline ring). One row per floor, top
-  floor first, gap 6px. Each row is a grid: floor label column (88px desktop; mobile as wide as the tower's widest label, 56px to 84px, 4px right padding), then one column per unit
+  floor first, gap 6px. Each row is a grid: floor label column (88px desktop / 56px mobile, 4px right padding), then one column per unit
   up to the tower's widest floor (`minmax(0, 132px)` desktop, `1fr` mobile), then a common-area column (120px / 64px).
   Columns line up across floors, so a floor with fewer units shows the gap where the missing units would be.
   - Floor label: button, 44px tall, 14px/600 muted (Geist Mono for "9º", Geist for "Térreo"), hover `--muted`
-    background. Opens the floor. On mobile "Cobertura", "Mezanino", "Garagem" and "Subsolo" fit in full; a longer name
-    ends in an ellipsis and shows in full as the button's title.
+    background. Opens the floor. On mobile a name longer than "Térreo" ends in an ellipsis and shows in full as the
+    button's title.
   - Unit: button 44px tall, radius 8px, 1px `--input` border on `--card`, Geist Mono 14px/500, hover `--muted`. Opens
     the unit. No color: unit status paints this grid only in the #13 dashboard.
   - Common area: same size, `--muted` fill, no border, 12px muted Geist, ellipsis when long; several stack in the area

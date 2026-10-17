@@ -16,6 +16,14 @@ import {
 
 type Edit = (update: (draft: WizardDraft) => WizardDraft) => boolean;
 
+export type FloorAreaInput = { name: string; tower: number; floor: string };
+
+export const EMPTY_FLOOR_AREA: FloorAreaInput = {
+	name: "",
+	tower: 0,
+	floor: "",
+};
+
 function Group({
 	title,
 	description,
@@ -43,17 +51,19 @@ const SELECT =
 
 function FloorAreaForm({
 	draft,
+	value,
+	onChange,
 	onAdd,
 	onCancel,
 }: {
 	draft: WizardDraft;
-	onAdd: (area: { tower: number; floor: string; name: string }) => void;
+	value: FloorAreaInput;
+	onChange: (value: FloorAreaInput) => void;
+	onAdd: (area: FloorAreaInput) => void;
 	onCancel: () => void;
 }) {
 	const several = draft.towers.length > 1;
-	const [name, setName] = useState("");
-	const [tower, setTower] = useState(0);
-	const [floor, setFloor] = useState("");
+	const { name, tower, floor } = value;
 	const [errors, setErrors] = useState<{ name?: string; floor?: string }>({});
 
 	function submit(event: React.FormEvent) {
@@ -91,7 +101,9 @@ function FloorAreaForm({
 					placeholder="Ex.: Terraço"
 					aria-invalid={errors.name !== undefined}
 					value={name}
-					onChange={(event) => setName(event.target.value)}
+					onChange={(event) =>
+						onChange({ ...value, name: event.target.value })
+					}
 				/>
 				{errors.name && <FieldError>{errors.name}</FieldError>}
 			</Field>
@@ -103,7 +115,9 @@ function FloorAreaForm({
 							id="floor-area-tower"
 							className={SELECT}
 							value={tower}
-							onChange={(event) => setTower(Number(event.target.value))}
+							onChange={(event) =>
+								onChange({ ...value, tower: Number(event.target.value) })
+							}
 						>
 							{draft.towers.map((option, index) => (
 								<option key={option.key} value={index}>
@@ -123,7 +137,10 @@ function FloorAreaForm({
 						aria-invalid={errors.floor !== undefined}
 						value={floor}
 						onChange={(event) =>
-							setFloor(event.target.value.replace(/\D/g, ""))
+							onChange({
+								...value,
+								floor: event.target.value.replace(/\D/g, ""),
+							})
 						}
 					/>
 					{errors.floor && <FieldError>{errors.floor}</FieldError>}
@@ -145,12 +162,15 @@ export function CommonAreasStep({
 	draft,
 	errors,
 	edit,
+	floorArea,
+	onFloorAreaChange,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
 	edit: Edit;
+	floorArea: FloorAreaInput | undefined;
+	onFloorAreaChange: (value: FloorAreaInput | undefined) => void;
 }) {
-	const [adding, setAdding] = useState(false);
 	const several = draft.towers.length > 1;
 	const towerName = (index: number) =>
 		several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME;
@@ -263,16 +283,18 @@ export function CommonAreasStep({
 				) : (
 					<span className="text-sm text-muted-foreground">Nenhuma.</span>
 				)}
-				{adding ? (
+				{floorArea ? (
 					<FloorAreaForm
 						draft={draft}
-						onCancel={() => setAdding(false)}
+						value={floorArea}
+						onChange={onFloorAreaChange}
+						onCancel={() => onFloorAreaChange(undefined)}
 						onAdd={(area) => {
 							const added = edit((current) => ({
 								...current,
 								floorAreas: [...current.floorAreas, { key: uuidV7(), ...area }],
 							}));
-							if (added) setAdding(false);
+							if (added) onFloorAreaChange(undefined);
 						}}
 					/>
 				) : (
@@ -280,7 +302,7 @@ export function CommonAreasStep({
 						type="button"
 						variant="ghost"
 						className="justify-self-start text-primary"
-						onClick={() => setAdding(true)}
+						onClick={() => onFloorAreaChange(EMPTY_FLOOR_AREA)}
 					>
 						<Plus className="size-5" aria-hidden="true" />
 						Área comum num andar

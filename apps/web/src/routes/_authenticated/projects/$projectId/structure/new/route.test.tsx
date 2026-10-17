@@ -6,7 +6,13 @@ import {
 	type ProjectSummary,
 	type ProjectUnitsBalance,
 } from "@bluprint/shared";
-import { fireEvent, screen, waitFor, within } from "@testing-library/react";
+import {
+	act,
+	fireEvent,
+	screen,
+	waitFor,
+	within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -509,6 +515,35 @@ describe("structure wizard", () => {
 				screen.getByText("Esse andar já tem uma área comum com esse nome."),
 			).toBeInTheDocument();
 			expect(screen.getAllByText(/· Torre A, \d+º andar/)).toHaveLength(1);
+		});
+
+		test("keeps an open one-floor area form across the phone breakpoint", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("12", "4");
+			await user.click(
+				screen.getByRole("button", { name: "Área comum num andar" }),
+			);
+			await user.type(
+				screen.getByRole("textbox", { name: "Nome da área comum" }),
+				"Terraço",
+			);
+			await user.type(screen.getByRole("textbox", { name: "Andar" }), "12");
+
+			act(() => setViewport("phone"));
+			expect(await screen.findByText("Passo 1 de 3")).toBeInTheDocument();
+			act(() => setViewport("desktop"));
+
+			expect(
+				await screen.findByRole("textbox", { name: "Nome da área comum" }),
+			).toHaveValue("Terraço");
+			expect(screen.getByRole("textbox", { name: "Andar" })).toHaveValue("12");
+			await user.click(
+				screen.getByRole("button", { name: "Adicionar ao andar" }),
+			);
+			expect(
+				await screen.findByText("· Torre A, 12º andar"),
+			).toBeInTheDocument();
 		});
 
 		test("refuses a one-floor area while its tower's floors are not filled in", async () => {
