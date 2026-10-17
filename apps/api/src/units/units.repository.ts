@@ -1,7 +1,7 @@
 import type { ProjectStatus } from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { license } from "../licenses/license.entity";
 import { organization } from "../organizations/organization.entity";
@@ -30,6 +30,76 @@ export class UnitsRepository {
 			.for("no key update");
 
 		return locked;
+	}
+
+	/** Locked in id order, the order every batch takes them in, so two batches never wait on each other. */
+	async lockProjectsOf(
+		organizationId: string,
+		projectIds: string[],
+	): Promise<{ id: string; reserved: number; status: ProjectStatus }[]> {
+		return this.txHost.tx
+			.select({
+				id: project.id,
+				reserved: project.reservedUnits,
+				status: project.status,
+			})
+			.from(project)
+			.where(
+				and(
+					eq(project.organizationId, organizationId),
+					inArray(project.id, projectIds),
+				),
+			)
+			.orderBy(asc(project.id))
+			.for("no key update");
+	}
+
+	async setReserved(projectId: string, reservedUnits: number): Promise<void> {
+		await this.txHost.tx
+			.update(project)
+			.set({ reservedUnits })
+			.where(eq(project.id, projectId));
+	}
+
+	async listInProgress(
+		organizationId: string,
+	): Promise<{ projectId: string; name: string; reserved: number }[]> {
+		return this.txHost.tx
+			.select({
+				projectId: project.id,
+				name: project.name,
+				reserved: project.reservedUnits,
+			})
+			.from(project)
+			.where(
+				and(
+					eq(project.organizationId, organizationId),
+					eq(project.status, "active"),
+				),
+			)
+			.orderBy(
+				asc(sql`${project.name} collate "pt-BR-x-icu"`),
+				asc(project.id),
+			);
+	}
+
+	async sumDelivered(
+		organizationId: string,
+	): Promise<{ projects: number; units: number }> {
+		const [delivered] = await this.txHost.tx
+			.select({
+				projects: sql<number>`count(*)::int`,
+				units: sql<number>`coalesce(sum(${project.reservedUnits}), 0)::int`,
+			})
+			.from(project)
+			.where(
+				and(
+					eq(project.organizationId, organizationId),
+					eq(project.status, "delivered"),
+				),
+			);
+
+		return delivered!;
 	}
 
 	async countUsed(projectIds: string[]): Promise<Map<string, number>> {

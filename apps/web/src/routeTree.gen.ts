@@ -14,6 +14,7 @@ import { Route as LoginRouteRouteImport } from './routes/login/route'
 import { Route as SignupRouteRouteImport } from './routes/signup/route'
 import { Route as AuthenticatedIndexRouteImport } from './routes/_authenticated/index'
 import { Route as AuthenticatedSplatRouteRouteImport } from './routes/_authenticated/$/route'
+import { Route as AuthenticatedUnitsRouteRouteImport } from './routes/_authenticated/units/route'
 import { Route as AuthenticatedProjectsIndexRouteImport } from './routes/_authenticated/projects/index'
 import { Route as AuthenticatedProjectsNewRouteRouteImport } from './routes/_authenticated/projects/new/route'
 import { Route as AuthenticatedProjectsProjectIdIndexRouteImport } from './routes/_authenticated/projects/$projectId/index'
@@ -42,6 +43,11 @@ const AuthenticatedIndexRoute = AuthenticatedIndexRouteImport.update({
 const AuthenticatedSplatRouteRoute = AuthenticatedSplatRouteRouteImport.update({
   id: '/$',
   path: '/$',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedUnitsRouteRoute = AuthenticatedUnitsRouteRouteImport.update({
+  id: '/units',
+  path: '/units',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedProjectsIndexRoute =
@@ -80,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRouteRoute
   '/signup': typeof SignupRouteRoute
   '/$': typeof AuthenticatedSplatRouteRoute
+  '/units': typeof AuthenticatedUnitsRouteRoute
   '/projects/new': typeof AuthenticatedProjectsNewRouteRoute
   '/projects/': typeof AuthenticatedProjectsIndexRoute
   '/projects/$projectId/configuration': typeof AuthenticatedProjectsProjectIdConfigurationRouteRoute
@@ -90,6 +97,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRouteRoute
   '/signup': typeof SignupRouteRoute
   '/$': typeof AuthenticatedSplatRouteRoute
+  '/units': typeof AuthenticatedUnitsRouteRoute
   '/': typeof AuthenticatedIndexRoute
   '/projects/new': typeof AuthenticatedProjectsNewRouteRoute
   '/projects': typeof AuthenticatedProjectsIndexRoute
@@ -103,6 +111,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRouteRoute
   '/signup': typeof SignupRouteRoute
   '/_authenticated/$': typeof AuthenticatedSplatRouteRoute
+  '/_authenticated/units': typeof AuthenticatedUnitsRouteRoute
   '/_authenticated/': typeof AuthenticatedIndexRoute
   '/_authenticated/projects/new': typeof AuthenticatedProjectsNewRouteRoute
   '/_authenticated/projects/': typeof AuthenticatedProjectsIndexRoute
@@ -117,6 +126,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/$'
+    | '/units'
     | '/projects/new'
     | '/projects/'
     | '/projects/$projectId/configuration'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/$'
+    | '/units'
     | '/'
     | '/projects/new'
     | '/projects'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_authenticated/$'
+    | '/_authenticated/units'
     | '/_authenticated/'
     | '/_authenticated/projects/new'
     | '/_authenticated/projects/'
@@ -190,6 +202,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedSplatRouteRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/units': {
+      id: '/_authenticated/units'
+      path: '/units'
+      fullPath: '/units'
+      preLoaderRoute: typeof AuthenticatedUnitsRouteRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/projects/': {
       id: '/_authenticated/projects/'
       path: '/projects'
@@ -230,6 +249,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedSplatRouteRoute: typeof AuthenticatedSplatRouteRoute
+  AuthenticatedUnitsRouteRoute: typeof AuthenticatedUnitsRouteRoute
   AuthenticatedIndexRoute: typeof AuthenticatedIndexRoute
   AuthenticatedProjectsNewRouteRoute: typeof AuthenticatedProjectsNewRouteRoute
   AuthenticatedProjectsIndexRoute: typeof AuthenticatedProjectsIndexRoute
@@ -240,6 +260,7 @@ interface AuthenticatedRouteRouteChildren {
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedSplatRouteRoute: AuthenticatedSplatRouteRoute,
+  AuthenticatedUnitsRouteRoute: AuthenticatedUnitsRouteRoute,
   AuthenticatedIndexRoute: AuthenticatedIndexRoute,
   AuthenticatedProjectsNewRouteRoute: AuthenticatedProjectsNewRouteRoute,
   AuthenticatedProjectsIndexRoute: AuthenticatedProjectsIndexRoute,

@@ -38,6 +38,10 @@ const NO_FREE_RECLAIMABLE_TEXT =
 	"Nenhuma unidade livre. Baixe a reserva de uma obra ou fale com a BluPrint.";
 const NO_FREE_TEXT = "Nenhuma unidade livre. Fale com a BluPrint.";
 
+const reclaimableLine = (_: string, element: Element | null) =>
+	element?.tagName === "SPAN" &&
+	element.textContent === NO_FREE_RECLAIMABLE_TEXT;
+
 function open(
 	path: string,
 	options: {
@@ -82,15 +86,12 @@ describe("new project entry on the project list", () => {
 			expect(screen.queryByText(/unidades? livres?/)).not.toBeInTheDocument();
 		});
 
-		test("shows the free units as text beside the button (O2)", async () => {
+		test("links the free units to the Unidades screen beside the button (O2)", async () => {
 			open("/projects");
 
 			expect(
-				await screen.findByText("300 unidades livres"),
-			).toBeInTheDocument();
-			expect(
-				screen.queryByRole("link", { name: "300 unidades livres" }),
-			).not.toBeInTheDocument();
+				await screen.findByRole("link", { name: "300 unidades livres" }),
+			).toHaveAttribute("href", "/units");
 			expect(screen.getByRole("link", { name: "Nova obra" })).toHaveAttribute(
 				"href",
 				"/projects/new",
@@ -109,9 +110,10 @@ describe("new project entry on the project list", () => {
 		test("disables the button and offers lowering a reservation when some is unused (O4)", async () => {
 			open("/projects", { units: () => json(NO_FREE_RECLAIMABLE) });
 
+			expect(await screen.findByText(reclaimableLine)).toBeInTheDocument();
 			expect(
-				await screen.findByText(NO_FREE_RECLAIMABLE_TEXT),
-			).toBeInTheDocument();
+				screen.getByRole("link", { name: "Baixe a reserva de uma obra" }),
+			).toHaveAttribute("href", "/units");
 			expect(screen.getByRole("button", { name: "Nova obra" })).toBeDisabled();
 			expect(
 				screen.queryByRole("link", { name: "Nova obra" }),
@@ -123,6 +125,7 @@ describe("new project entry on the project list", () => {
 
 			expect(await screen.findByText(NO_FREE_TEXT)).toBeInTheDocument();
 			expect(screen.queryByText(/Baixe a reserva/)).not.toBeInTheDocument();
+			expect(screen.queryByRole("link", { name: /unidade/ })).toBeNull();
 			expect(screen.getByRole("button", { name: "Nova obra" })).toBeDisabled();
 		});
 
@@ -151,8 +154,8 @@ describe("new project entry on the project list", () => {
 				within(block).getByRole("link", { name: "Nova obra" }),
 			).toHaveAttribute("href", "/projects/new");
 			expect(
-				await within(block).findByText("300 unidades livres"),
-			).toBeInTheDocument();
+				await within(block).findByRole("link", { name: "300 unidades livres" }),
+			).toHaveAttribute("href", "/units");
 			expect(screen.getAllByRole("link", { name: "Nova obra" })).toHaveLength(
 				1,
 			);
@@ -254,9 +257,10 @@ describe("new project entry on the project list", () => {
 		test("disables the button and offers lowering a reservation (O4)", async () => {
 			open("/projects", { units: () => json(NO_FREE_RECLAIMABLE) });
 
+			expect(await screen.findByText(reclaimableLine)).toBeInTheDocument();
 			expect(
-				await screen.findByText(NO_FREE_RECLAIMABLE_TEXT),
-			).toBeInTheDocument();
+				screen.getByRole("link", { name: "Baixe a reserva de uma obra" }),
+			).toHaveAttribute("href", "/units");
 			expect(screen.getByRole("button", { name: "Nova obra" })).toBeDisabled();
 		});
 
@@ -265,6 +269,7 @@ describe("new project entry on the project list", () => {
 
 			expect(await screen.findByText(NO_FREE_TEXT)).toBeInTheDocument();
 			expect(screen.queryByText(/Baixe a reserva/)).not.toBeInTheDocument();
+			expect(screen.queryByRole("link", { name: /unidade/ })).toBeNull();
 		});
 
 		test("puts the action in the empty block, not in a bar (O5)", async () => {

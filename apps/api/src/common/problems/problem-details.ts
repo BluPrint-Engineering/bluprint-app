@@ -12,6 +12,8 @@ export interface ProblemInit {
 	requested?: number | undefined;
 	available?: number | undefined;
 	used?: number | undefined;
+	projectId?: string | undefined;
+	items?: ProblemDetails["items"];
 }
 
 export function codeForStatus(status: number): string {
@@ -29,6 +31,8 @@ export function problemDetails({
 	requested,
 	available,
 	used,
+	projectId,
+	items,
 }: ProblemInit): ProblemDetails {
 	return {
 		type: "about:blank",
@@ -41,6 +45,8 @@ export function problemDetails({
 		...(requested !== undefined && { requested }),
 		...(available !== undefined && { available }),
 		...(used !== undefined && { used }),
+		...(projectId !== undefined && { projectId }),
+		...(items !== undefined && { items }),
 	};
 }
 

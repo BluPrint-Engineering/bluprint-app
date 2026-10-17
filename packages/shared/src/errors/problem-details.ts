@@ -47,6 +47,22 @@ export const problemDetailsSchema = z.object({
 			"Units the project uses, present on `RESERVATION_BELOW_USED`: the least its reservation can be.",
 		example: 250,
 	}),
+	projectId: z.uuid().optional().meta({
+		description:
+			"The project a batch request was refused for, present on `PROJECT_NOT_FOUND` and `PROJECT_DELIVERED` when the request named several projects.",
+	}),
+	items: z
+		.array(
+			z.object({
+				projectId: z.uuid(),
+				used: z.int().meta({ example: 250 }),
+			}),
+		)
+		.optional()
+		.meta({
+			description:
+				"One entry per refused project, present on `RESERVATION_BELOW_USED` when the request named several projects: `used` is the least that project's reservation can be.",
+		}),
 });
 
 export type FieldError = z.infer<typeof fieldErrorSchema>;

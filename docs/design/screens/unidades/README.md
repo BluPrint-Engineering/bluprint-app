@@ -180,7 +180,7 @@ Centered blocks follow the Obras pattern: max-width 26rem, gap 16px, padding-blo
 | Licences as purchases of N unidades, contratadas | Served: a `license` row is a purchase of `units`; signup seeds one license of 500 |
 | Reserva per obra, usadas, `units: { reserved, used }` on the obra summary | Served; `used` counts the units in the obra's structure |
 | `GET /api/organization/units` → `{ contracted, reserved, free, reclaimable }` | Served, admin only |
-| `PATCH /api/organization/units/reservations`, `RESERVATION_BELOW_USED`, `PROJECT_DELIVERED` | Not served |
+| `GET` and `PATCH /api/organization/units/reservations` (every project in progress in one response; all-or-nothing save), `RESERVATION_BELOW_USED` with `items`, `PROJECT_DELIVERED` with `projectId` | Served (#167) |
 | `NO_UNITS_LEFT` with `requested` and `available` | Served by `POST /api/projects` |
 | `GET /api/organization/licenses` | Never served; `NO_FREE_LICENSE` is dropped |
 
@@ -231,10 +231,11 @@ possível salvar as reservas. Confira sua conexão e tente de novo."
 
 ## Open points
 
-1. The rows need every obra em andamento in one response, and `GET /api/projects` pages at 12. The implementation
-   refinement picks between a large `pageSize` on the list and `GET /api/organization/units` carrying the rows.
-2. An obra delivered while the admin edits it answers `409 PROJECT_DELIVERED`; no state is drawn. Proposal: refetch,
-   the obra leaves the list with its draft, the other drafts stay, and a danger Alert says which obra was delivered
-   (copy to write).
+1. Decided in #167: `GET /api/organization/units/reservations` carries every obra em andamento in one response, and the
+   figures take Contratadas from `GET /api/organization/units`.
+2. Decided in #167: an obra delivered while the admin edits answers `409 PROJECT_DELIVERED` with its `projectId`. The
+   screen refetches, the obra leaves the list with its draft, the other drafts stay, and a danger Alert at the top says
+   "A obra “Torre Atlântica” foi entregue enquanto você editava e saiu da lista. As outras reservas continuam aqui:
+   confira e salve de novo." (copy written in the implementation, for review).
 3. The only way in is the free units link on the obras list (and its 0-livres sentence). A "Unidades" item in the
    user menu was not added; decide if the admin needs it from other screens.
