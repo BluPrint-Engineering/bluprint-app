@@ -15,6 +15,7 @@ Element.prototype.releasePointerCapture ??= () => {};
 Element.prototype.hasPointerCapture ??= () => false;
 
 window.scrollTo = () => {};
+Element.prototype.scrollIntoView ??= () => {};
 
 installViewport();
 installIntersectionObserver();

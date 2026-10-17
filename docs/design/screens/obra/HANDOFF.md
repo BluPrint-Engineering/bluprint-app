@@ -45,10 +45,10 @@ Card, Checkbox, DropdownMenu, Field, Icon, Input, Logo, SegmentedControl, Sheet,
   refinamento do #N.". No content: each epic's refinement decides it and may redesign the hub.
 - **Início blank obra**: #46 (P1) has no button, "As pendências aparecem aqui quando a obra tiver estrutura.".
   The vision P1c is replaced by E1 in `../estrutura/`.
-- **Status**: #46 shows it only in the header badge; the Status da obra card arrives with the later ticket.
+- **Status**: #46 shows it only in the header badge; the Status da obra card arrives with #168.
 - **Rename**: inline. "Renomear" (outline, `pencil`) turns the name row into a Field + "Salvar" / "Cancelar".
   Saving: "Salvando…", field locked. Success returns to read mode and the header shows the new name.
-- **Status da obra** (later ticket): its own Card after Dados da obra. Badge + what the status means +
+- **Status da obra** (#168): its own Card after Dados da obra. Badge + what the status means +
   outline "Entregar obra" with `circle-check`. Delivering is final: no reopen, no rename afterwards. The action
   opens an AlertDialog (new primitive; Sheet on mobile) listing what happens, with a checkbox "Entendi que a
   obra não poderá ser reaberta." that enables the primary "Entregar obra".

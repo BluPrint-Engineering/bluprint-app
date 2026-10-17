@@ -10,8 +10,9 @@ import {
 	asc,
 	count,
 	desc,
-	exists,
 	eq,
+	exists,
+	getTableColumns,
 	isNotNull,
 	or,
 	sql,
@@ -31,6 +32,11 @@ function nameContains(q: string) {
 }
 
 export type ProjectRow = typeof project.$inferSelect;
+export type ProjectWithDeliverer = ProjectRow & {
+	deliveredByName: string | null;
+};
+
+const deliverer = alias(user, "deliverer");
 
 @Injectable()
 export class ProjectsRepository {
@@ -50,6 +56,10 @@ export class ProjectsRepository {
 					status: project.status,
 					lastActivityAt: project.lastActivityAt,
 					reservedUnits: project.reservedUnits,
+					deliveredAt: project.deliveredAt,
+					deliveredByName: sql<string | null>`${deliverer.name}`.as(
+						"delivered_by_name",
+					),
 					effectiveRole: projectMember.role,
 				})
 				.from(project)
@@ -68,6 +78,7 @@ export class ProjectsRepository {
 						eq(projectMember.userId, userId),
 					),
 				)
+				.leftJoin(deliverer, eq(deliverer.id, project.deliveredBy))
 				.where(
 					and(
 						or(isNotNull(projectMember.id), eq(member.role, "admin")),
@@ -198,6 +209,18 @@ export class ProjectsRepository {
 		return renamed;
 	}
 
+	async deliver(projectId: string, deliveredBy: string, reservedUnits: number) {
+		await this.txHost.tx
+			.update(project)
+			.set({
+				status: "delivered",
+				deliveredBy,
+				deliveredAt: sql`now()`,
+				reservedUnits,
+			})
+			.where(eq(project.id, projectId));
+	}
+
 	async setReservedUnits(projectId: string, reservedUnits: number) {
 		await this.txHost.tx
 			.update(project)
@@ -224,8 +247,9 @@ export class ProjectsRepository {
 
 	async findByIdInAnyOrganization(projectId: string) {
 		const [found] = await this.txHost.tx
-			.select()
+			.select({ ...getTableColumns(project), deliveredByName: deliverer.name })
 			.from(project)
+			.leftJoin(deliverer, eq(deliverer.id, project.deliveredBy))
 			.where(eq(project.id, projectId));
 
 		return found;
@@ -236,6 +260,8 @@ export class ProjectsRepository {
 		name: string;
 		reservedUnits: number;
 		status?: ProjectStatus | undefined;
+		deliveredBy?: string | undefined;
+		deliveredAt?: Date | undefined;
 	}): Promise<ProjectRow> {
 		const [created] = await this.txHost.tx
 			.insert(project)

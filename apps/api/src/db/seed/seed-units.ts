@@ -26,10 +26,7 @@ export function assertReservationsFit(organization: SeedOrganization): void {
 			);
 		}
 
-		if (
-			seedProject.status === "delivered" &&
-			seedProject.reservedUnits !== used
-		) {
+		if (seedProject.delivered && seedProject.reservedUnits !== used) {
 			throw new Error(
 				`"${seedProject.name}" is delivered but reserves ${seedProject.reservedUnits} units and uses ${used}; a delivered project keeps only the units it used.`,
 			);

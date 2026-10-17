@@ -16,6 +16,10 @@ export function project(
 		role,
 		units: { reserved: 0, used: 0 },
 		status,
+		delivery:
+			status === "delivered"
+				? { at: "2026-10-14T15:00:00.000Z", by: "Rafael Souza" }
+				: null,
 	};
 }
 
