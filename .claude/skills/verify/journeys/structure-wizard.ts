@@ -11,13 +11,16 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	if (email === "igor@vertice.test") {
 		const jardins = await projectId("Residencial Jardins", "Vértice Engenharia");
 		await page.goto(`/projects/${jardins}/structure/new`);
+		await expect(page).toHaveURL(`/projects/${jardins}`);
+		const ipe = await projectId("Torre Ipê", "Vértice Engenharia");
+		await page.goto(`/projects/${ipe}/structure/new`);
 		await expect(page.getByRole("heading", { level: 1, name: "Montar estrutura" })).toBeVisible();
-		await page.getByLabel("Último andar").fill("2");
-		await page.getByLabel("Unidades por andar").fill("2");
+		await page.getByLabel("Último andar").fill("31");
+		await page.getByLabel("Unidades por andar").fill("4");
 		await continueTo("Áreas comuns");
 		await continueTo("Prévia");
-		await expect(page.getByText("Esta estrutura tem 4 unidades e a reserva da obra acabou. Aumente a reserva.")).toBeVisible();
-		await expect(page.getByRole("link", { name: "Alterar reserva" })).toBeVisible();
+		await expect(page.getByText("Esta estrutura tem 124 unidades e a obra tem 120. Tire 4 unidades ou aumente a reserva.")).toBeVisible();
+		await expect(page.getByRole("button", { name: "Alterar reserva" })).toBeVisible();
 		await expect(page.getByRole("button", { name: "Criar estrutura" })).toBeDisabled();
 		await shot("reserve-over-admin");
 		return;
