@@ -127,7 +127,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	const stepTop = useRef<HTMLDivElement>(null);
 
 	const preview = useMemo(() => buildPlan(draft, identity), [draft]);
-	const remaining = units.data?.remaining;
+	const remaining = units.data?.remaining ?? availableUnitsOf(create.error);
 	const admin = project.role === "admin";
 	const over = remaining !== undefined && preview.counts.units > remaining;
 	const tooLarge = preview.locations.length > MAX_LOCATIONS_PER_REQUEST;
@@ -146,12 +146,19 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 	}, [step]);
 
 	function edit(update: (draft: WizardDraft) => WizardDraft, touched?: string) {
+		if (create.isPending) return;
 		ids.current = new Map();
 		create.reset();
-		setDraft(update);
-		if (touched !== undefined) {
-			setErrors((current) => ({ ...current, [touched]: undefined }));
-		}
+		const next = update(draft);
+		setDraft(next);
+		setErrors((current) => {
+			const found = validateDraft(next);
+			return Object.fromEntries(
+				Object.keys(current)
+					.filter((key) => key !== touched && found[key] !== undefined)
+					.map((key) => [key, found[key]]),
+			);
+		});
 	}
 
 	function idFor(key: string) {

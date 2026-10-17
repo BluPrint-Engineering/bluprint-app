@@ -1,5 +1,6 @@
 import type { NewLocation, StructureCounts } from "@bluprint/shared";
 import {
+	FLOOR_HALL,
 	type ParsedTower,
 	parseTower,
 	SINGLE_TOWER_NAME,
@@ -54,7 +55,6 @@ export const floorName = (floor: number) => `${floor}º andar`;
 
 export const GROUND_FLOOR = "Térreo";
 export const GROUND_HALL = "Hall de entrada";
-export const FLOOR_HALL = "Hall";
 
 export function buildPlan(
 	draft: WizardDraft,

@@ -28,6 +28,7 @@ export interface WizardDraft {
 }
 
 export const SINGLE_TOWER_NAME = "Torre A";
+export const FLOOR_HALL = "Hall";
 
 let towerKeys = 0;
 const nextTowerKey = () => `tower-${++towerKeys}`;
@@ -128,6 +129,45 @@ const sameName = (a: string, b: string) =>
 	a.trim().replace(/\s+/g, " ").toLowerCase() ===
 	b.trim().replace(/\s+/g, " ").toLowerCase();
 
+export interface FloorAreaProblem {
+	field: "name" | "floor";
+	message: string;
+}
+
+export function floorAreaProblem(
+	draft: WizardDraft,
+	area: Omit<FloorAreaDraft, "key">,
+	before: FloorAreaDraft[],
+): FloorAreaProblem | undefined {
+	const tower = draft.towers[area.tower];
+	const range = tower && parseTower(tower);
+	if (!tower || !range) {
+		return { field: "floor", message: "Confira os andares da torre primeiro." };
+	}
+	const floor = Number(area.floor);
+	if (floor < range.first || floor > range.last) {
+		return {
+			field: "floor",
+			message: `O andar precisa estar entre o ${range.first}º e o ${range.last}º.`,
+		};
+	}
+	const taken = [
+		...(tower.hall ? [FLOOR_HALL] : []),
+		...before
+			.filter(
+				(other) => other.tower === area.tower && Number(other.floor) === floor,
+			)
+			.map((other) => other.name),
+	];
+	if (taken.some((name) => sameName(name, area.name))) {
+		return {
+			field: "name",
+			message: "Esse andar já tem uma área comum com esse nome.",
+		};
+	}
+	return undefined;
+}
+
 export function validateDraft(draft: WizardDraft): DraftErrors {
 	const errors: DraftErrors = {};
 	const several = draft.towers.length > 1;
@@ -166,18 +206,11 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		}
 	});
 
-	for (const area of listedFloorAreas(draft)) {
-		const tower = draft.towers[area.tower] as TowerDraft;
-		const range = parseTower(tower);
-		const floor = Number(area.floor);
-		if (range === undefined) {
-			errors[floorAreaFieldId(area.key)] =
-				"Confira os andares da torre antes de criar.";
-		} else if (floor < range.first || floor > range.last) {
-			errors[floorAreaFieldId(area.key)] =
-				`O andar precisa estar entre o ${range.first}º e o ${range.last}º.`;
-		}
-	}
+	const listed = listedFloorAreas(draft);
+	listed.forEach((area, index) => {
+		const problem = floorAreaProblem(draft, area, listed.slice(0, index));
+		if (problem) errors[floorAreaFieldId(area.key)] = problem.message;
+	});
 
 	return errors;
 }

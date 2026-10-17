@@ -8,8 +8,8 @@ import { AddTag, Tags } from "./Tags";
 import {
 	type DraftErrors,
 	floorAreaFieldId,
+	floorAreaProblem,
 	listedFloorAreas,
-	parseTower,
 	SINGLE_TOWER_NAME,
 	type WizardDraft,
 } from "./wizardDraft";
@@ -61,12 +61,14 @@ function FloorAreaForm({
 		const found: typeof errors = {};
 		const trimmed = name.trim().replace(/\s+/g, " ");
 		if (trimmed === "") found.name = "Informe o nome da área comum.";
-		const selected = draft.towers[tower];
-		const range = selected && parseTower(selected);
-		const number = Number(floor);
 		if (floor === "") found.floor = "Informe o andar.";
-		else if (range && (number < range.first || number > range.last)) {
-			found.floor = `O andar precisa estar entre o ${range.first}º e o ${range.last}º.`;
+		else {
+			const problem = floorAreaProblem(
+				draft,
+				{ tower, floor, name: trimmed },
+				listedFloorAreas(draft),
+			);
+			if (problem) found[problem.field] = problem.message;
 		}
 		setErrors(found);
 		if (Object.keys(found).length > 0) return;

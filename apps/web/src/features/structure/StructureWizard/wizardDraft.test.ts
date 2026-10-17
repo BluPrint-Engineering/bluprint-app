@@ -212,7 +212,7 @@ describe("validateDraft on one-floor common areas", () => {
 
 		expect(validateDraft(draft)).toMatchObject({
 			"tower-0-last": "Informe o último andar.",
-			"floor-area-terrace": "Confira os andares da torre antes de criar.",
+			"floor-area-terrace": "Confira os andares da torre primeiro.",
 		});
 	});
 
@@ -226,6 +226,30 @@ describe("validateDraft on one-floor common areas", () => {
 		expect(validateDraft(draft)).toEqual({
 			"floor-area-on-a": "O andar precisa estar entre o 1º e o 12º.",
 		});
+	});
+
+	test("flags a second area with the same name on one floor, ignoring case and spacing", () => {
+		const draft = withFloorAreas(
+			draftOf({}),
+			floorArea("12", { key: "first" }),
+			floorArea("12", { key: "second", name: " terraço " }),
+			floorArea("11", { key: "other-floor" }),
+		);
+
+		expect(validateDraft(draft)).toEqual({
+			"floor-area-second": "Esse andar já tem uma área comum com esse nome.",
+		});
+	});
+
+	test("flags an area named like the floor's hall only while the hall is on", () => {
+		const hall = floorArea("5", { key: "hall", name: "hall" });
+
+		expect(validateDraft(withFloorAreas(draftOf({}), hall))).toEqual({
+			"floor-area-hall": "Esse andar já tem uma área comum com esse nome.",
+		});
+		expect(
+			validateDraft(withFloorAreas(draftOf({ hall: false }), hall)),
+		).toEqual({});
 	});
 
 	test("ignores an area kept for a tower removed from the count", () => {
