@@ -12,6 +12,7 @@ import { firstLoadState } from "@/lib/firstLoadState";
 import { structureQueryOptions } from "../api";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
 import { LocationList } from "../components/LocationList";
+import { PROJECT_ORIGIN } from "../LocationPage/origin";
 import { TowerCards } from "./TowerCards";
 
 function SingleTower({
@@ -37,7 +38,12 @@ function SingleTower({
 				<h2 className="text-lg font-semibold tracking-tight">Fachada</h2>
 				{tower.floors.length > 0 ? (
 					<FacadeCard>
-						<Facade projectId={projectId} tower={tower} label="Fachada" />
+						<Facade
+							projectId={projectId}
+							tower={tower}
+							label="Fachada"
+							from={PROJECT_ORIGIN}
+						/>
 					</FacadeCard>
 				) : (
 					<StateBlock

@@ -1,5 +1,6 @@
 import type { LocationDetail, LocationRef, Structure } from "@bluprint/shared";
 import { describeLocation } from "./locationBand";
+import { PROJECT_ORIGIN } from "./origin";
 
 const tower = (
 	id: string,
@@ -167,5 +168,56 @@ describe("describeLocation", () => {
 		expect(unit.meta).toBe("Unidade · 9º andar");
 		expect(area.parent).toEqual({ kind: "project" });
 		expect(area.meta).toBe("Área comum · da obra");
+	});
+
+	test("a unit opened from its tower goes back to the tower, naming it", () => {
+		const unit = detail("unit", "903", [towerA, ninth]);
+
+		expect(describeLocation(unit, several, "ta")).toMatchObject({
+			parent: { kind: "location", id: "ta", name: "Torre A" },
+			meta: "Unidade · Torre A · 9º andar",
+		});
+	});
+
+	test("a unit opened from its floor goes back to the floor", () => {
+		const unit = detail("unit", "903", [towerA, ninth]);
+
+		expect(describeLocation(unit, several, "f9").parent).toEqual({
+			kind: "location",
+			id: "f9",
+			name: "9º andar",
+		});
+	});
+
+	test("a unit opened from the project goes back to the project", () => {
+		const unit = detail("unit", "903", [towerA, ninth]);
+
+		expect(describeLocation(unit, single, PROJECT_ORIGIN).parent).toEqual({
+			kind: "project",
+		});
+	});
+
+	test.each([
+		["a place that is not an ancestor", "tb"],
+		["the location itself", "x"],
+		["an unknown id", "nowhere"],
+	])("an origin that is %s falls back to the structural parent", (_, from) => {
+		const unit = detail("unit", "903", [towerA, ninth]);
+
+		expect(describeLocation(unit, several, from).parent).toEqual({
+			kind: "location",
+			id: "f9",
+			name: "9º andar",
+		});
+	});
+
+	test("the tower of a single-tower project is not an origin to go back to", () => {
+		const unit = detail("unit", "903", [towerA, ninth]);
+
+		expect(describeLocation(unit, single, "ta").parent).toEqual({
+			kind: "location",
+			id: "f9",
+			name: "9º andar",
+		});
 	});
 });

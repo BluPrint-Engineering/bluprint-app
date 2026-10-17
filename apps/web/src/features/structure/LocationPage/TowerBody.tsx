@@ -46,6 +46,7 @@ export function TowerBody({
 						projectId={projectId}
 						tower={tower}
 						label={`Fachada da ${tower.name}`}
+						from={tower.id}
 					/>
 				</FacadeCard>
 			</section>

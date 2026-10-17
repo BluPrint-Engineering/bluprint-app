@@ -69,6 +69,46 @@ export default async function structure({ page, shot, expect, query }) {
 	await page.getByRole("link", { name: "Torre A" }).click();
 	await expect(page.getByRole("heading", { level: 1, name: "Torre A" })).toBeVisible();
 
+	await page.goto(`/projects/${jardins}`);
+	await page.getByRole("link", { name: /^Torre B/ }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "Torre B" })).toBeVisible();
+	const facadeB = page.getByRole("list", { name: "Fachada da Torre B" });
+	const backTo = (name) => page.getByRole("link", { name, exact: true });
+
+	await facadeB.getByRole("link", { name: "Unidade 701" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "701" })).toBeVisible();
+	await expect(page.getByText("Unidade · Torre B · 7º andar")).toBeVisible();
+	await expect(backTo("Torre B")).toBeVisible();
+	await expect(backTo("7º andar")).toHaveCount(0);
+	await shot("unit-from-facade");
+	await page.reload();
+	await expect(backTo("Torre B")).toBeVisible();
+	await backTo("Torre B").click();
+	await expect(page.getByRole("heading", { level: 1, name: "Torre B" })).toBeVisible();
+	await shot("tower-after-unit-back");
+
+	await facadeB.getByRole("listitem").filter({ hasText: /^7º/ }).getByRole("link", { name: "Hall" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "Hall" })).toBeVisible();
+	await expect(backTo("Torre B")).toBeVisible();
+	await backTo("Torre B").click();
+	await expect(page.getByRole("heading", { level: 1, name: "Torre B" })).toBeVisible();
+
+	await facadeB.getByRole("link", { name: "7º andar" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "7º andar" })).toBeVisible();
+	await page.getByRole("link", { name: /^701/ }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "701" })).toBeVisible();
+	await expect(backTo("7º andar")).toBeVisible();
+	const unitFromFloor = page.url();
+	await shot("unit-from-floor");
+	await backTo("7º andar").click();
+	await expect(page.getByRole("heading", { level: 1, name: "7º andar" })).toBeVisible();
+	await shot("floor-after-unit-back");
+	await backTo("Torre B").click();
+	await expect(page.getByRole("heading", { level: 1, name: "Torre B" })).toBeVisible();
+
+	await page.goto(`${unitFromFloor}?from=${await locationId("Residencial Jardins", "tower", "Torre A")}`);
+	await expect(backTo("7º andar")).toBeVisible();
+
 	await page.goto(`/projects/${jardins}/locations/${await locationId("Residencial Jardins", "unit", "1204")}`);
 	await expect(page.getByText("Os cômodos desta unidade são só dela.")).toBeVisible();
 	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem")).toHaveCount(3);
@@ -85,6 +125,12 @@ export default async function structure({ page, shot, expect, query }) {
 	await expect(page.getByRole("heading", { level: 2, name: "Fachada" })).toBeVisible();
 	await expect(page.getByText("Torre A")).toHaveCount(0);
 	await shot("home-single-tower");
+	await page.getByRole("list", { name: "Fachada" }).getByRole("link", { name: "Unidade 8A" }).click();
+	await expect(page.getByRole("heading", { level: 1, name: "8A" })).toBeVisible();
+	await expect(backTo("Edifício Aurora")).toBeVisible();
+	await shot("single-tower-unit-from-facade");
+	await backTo("Edifício Aurora").click();
+	await expect(page.getByRole("heading", { level: 2, name: "Fachada" })).toBeVisible();
 
 	await page.goto(`/projects/${await projectId("Condomínio Porto Belo")}/locations/${await locationId("Condomínio Porto Belo", "tower", "Torre B")}`);
 	await expect(page.getByRole("heading", { name: "A Torre B ainda não tem andares" })).toBeVisible();

@@ -13,10 +13,12 @@ export function Facade({
 	projectId,
 	tower,
 	label,
+	from,
 }: {
 	projectId: string;
 	tower: StructureTower;
 	label: string;
+	from: string;
 }) {
 	const floors = [...tower.floors].reverse();
 	const widest = Math.max(1, ...floors.map((floor) => floor.units.length));
@@ -34,6 +36,7 @@ export function Facade({
 						key={area.id}
 						to="/projects/$projectId/locations/$locationId"
 						params={{ projectId, locationId: area.id }}
+						search={{ from }}
 						title={area.name}
 						className={cn(
 							CHIP,
@@ -66,6 +69,7 @@ export function Facade({
 								key={unit.id}
 								to="/projects/$projectId/locations/$locationId"
 								params={{ projectId, locationId: unit.id }}
+								search={{ from }}
 								aria-label={`Unidade ${unit.name}`}
 								className={cn(
 									CHIP,

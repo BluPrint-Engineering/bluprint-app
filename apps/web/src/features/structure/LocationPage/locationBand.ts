@@ -1,4 +1,5 @@
 import type { LocationDetail, LocationRef, Structure } from "@bluprint/shared";
+import { PROJECT_ORIGIN } from "./origin";
 import { plural } from "./plural";
 
 export interface LocationBand {
@@ -23,12 +24,14 @@ function unitsOf(structure: Structure, towerId: string): number {
 export function describeLocation(
 	location: LocationDetail,
 	structure: Structure,
+	from?: string,
 ): LocationBand {
 	const showTower = structure.towers.length > 1;
 	const above: LocationRef[] = location.ancestors.filter(
 		(ancestor) => ancestor.type !== "tower" || showTower,
 	);
-	const parent = above.at(-1);
+	const origin = above.find((ancestor) => ancestor.id === from);
+	const parent = origin ?? above.at(-1);
 
 	const context: string[] = [];
 	switch (location.type) {
@@ -65,9 +68,10 @@ export function describeLocation(
 	}
 
 	return {
-		parent: parent
-			? { kind: "location", id: parent.id, name: parent.name }
-			: { kind: "project" },
+		parent:
+			from === PROJECT_ORIGIN || !parent
+				? { kind: "project" }
+				: { kind: "location", id: parent.id, name: parent.name },
 		title: location.name,
 		mono: location.type === "unit",
 		meta: [KIND_LABEL[location.type], ...context].join(" · "),
