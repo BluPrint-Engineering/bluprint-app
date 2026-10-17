@@ -385,7 +385,7 @@ are plain dialogs (`role="dialog"`), the rest `role="alertdialog"`.
 
 ## What the API serves today vs. future
 
-The `location` table exists; `room`, `unit_detail` and `unit_type` do not (`docs/data-model.md` §3). #6 adds them
+The `location`, `unit_type` and `room` tables exist; `unit_detail` does not (`docs/data-model.md` §3). #6 adds it
 and:
 
 - `GET /api/projects/:id/structure`, `GET /api/projects/:id/locations/:locationId`, both served;
