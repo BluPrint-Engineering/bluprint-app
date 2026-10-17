@@ -917,6 +917,33 @@ describe("structure wizard", () => {
 			expect(router.state.location.pathname).toBe(WIZARD_PATH);
 		});
 
+		test("keeps an open Alterar reserva and its typed number across the phone breakpoint", async () => {
+			const { handler } = wizardApi({
+				summary: { ...OBRA, units: { reserved: 150, used: 144 } },
+				units: balance(6),
+			});
+			open(handler);
+			await describeTower("3", "4");
+			await user.click(
+				await screen.findByRole("button", { name: "Alterar reserva" }),
+			);
+			const field = within(
+				await screen.findByRole("dialog", { name: "Alterar reserva" }),
+			).getByRole("textbox", { name: "Unidades reservadas" });
+			await user.clear(field);
+			await user.type(field, "155");
+
+			act(() => setViewport("phone"));
+			expect(await screen.findByText("Passo 1 de 3")).toBeInTheDocument();
+			act(() => setViewport("desktop"));
+
+			expect(
+				within(
+					await screen.findByRole("dialog", { name: "Alterar reserva" }),
+				).getByRole("textbox", { name: "Unidades reservadas" }),
+			).toHaveValue("155");
+		});
+
 		test("enables the button again once the plan fits", async () => {
 			const { handler } = wizardApi({ units: balance(6) });
 			open(handler);

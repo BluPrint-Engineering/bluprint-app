@@ -324,46 +324,6 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		/>
 	);
 
-	if (desktop) {
-		return (
-			<div className="grid items-start gap-(--space-8) md:grid-cols-[minmax(0,1fr)_360px]">
-				<div className="grid gap-(--space-5)">
-					<Section
-						number={1}
-						title={STEP_TITLES[0]}
-						description="Cada torre com o seu número de andares e de unidades. Uma torre nova começa igual à anterior."
-						desktop
-					>
-						{towersStep}
-					</Section>
-					<Section
-						number={2}
-						title={STEP_TITLES[1]}
-						description="O hall de cada andar já está no passo 1. Aqui entram as outras."
-						desktop
-					>
-						{areasStep}
-					</Section>
-				</div>
-				<aside
-					aria-label="Prévia"
-					className="sticky top-22 grid gap-(--space-4) rounded-xl bg-card p-(--space-5) shadow-(--ring-hairline)"
-				>
-					<h2 className="text-lg font-semibold tracking-tight">Prévia</h2>
-					<PreviewSummary plan={preview} units={unitsLine} />
-					{failures}
-					{blocker}
-					{createButton}
-					{note}
-					<div className="max-h-[max(180px,calc(100dvh-520px))] overflow-y-auto border-t border-border pt-(--space-4) pr-1">
-						{!tooLarge && <PreviewTowers plan={preview} />}
-					</div>
-				</aside>
-				{reservationDialog}
-			</div>
-		);
-	}
-
 	const content = [
 		<Section
 			key="towers"
@@ -391,7 +351,42 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		</Section>,
 	][step];
 
-	return (
+	const layout = desktop ? (
+		<div className="grid items-start gap-(--space-8) md:grid-cols-[minmax(0,1fr)_360px]">
+			<div className="grid gap-(--space-5)">
+				<Section
+					number={1}
+					title={STEP_TITLES[0]}
+					description="Cada torre com o seu número de andares e de unidades. Uma torre nova começa igual à anterior."
+					desktop
+				>
+					{towersStep}
+				</Section>
+				<Section
+					number={2}
+					title={STEP_TITLES[1]}
+					description="O hall de cada andar já está no passo 1. Aqui entram as outras."
+					desktop
+				>
+					{areasStep}
+				</Section>
+			</div>
+			<aside
+				aria-label="Prévia"
+				className="sticky top-22 grid gap-(--space-4) rounded-xl bg-card p-(--space-5) shadow-(--ring-hairline)"
+			>
+				<h2 className="text-lg font-semibold tracking-tight">Prévia</h2>
+				<PreviewSummary plan={preview} units={unitsLine} />
+				{failures}
+				{blocker}
+				{createButton}
+				{note}
+				<div className="max-h-[max(180px,calc(100dvh-520px))] overflow-y-auto border-t border-border pt-(--space-4) pr-1">
+					{!tooLarge && <PreviewTowers plan={preview} />}
+				</div>
+			</aside>
+		</div>
+	) : (
 		<div
 			ref={stepTop}
 			className="grid scroll-mt-4 gap-(--space-5) pb-(--bottom-bar-height)"
@@ -445,7 +440,13 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 					)}
 				</div>
 			</MobileBar>
-			{reservationDialog}
 		</div>
+	);
+
+	return (
+		<>
+			{layout}
+			{reservationDialog}
+		</>
 	);
 }
