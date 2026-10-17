@@ -183,17 +183,6 @@ export class ProjectsService {
 	@Transactional(Propagation.Mandatory)
 	async beginStructureWrite(userId: string, projectId: string): Promise<void> {
 		await this.readVisible(userId, projectId);
-
-		const locked = await this.projects.lockForWrite(projectId);
-		if (locked?.status === "delivered") {
-			throw new ProblemException({
-				status: 409,
-				code: PROJECT_DELIVERED,
-				detail:
-					"The project was delivered, so its structure can no longer change.",
-			});
-		}
-
 		await this.projects.touch(projectId);
 	}
 
