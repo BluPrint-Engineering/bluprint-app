@@ -51,7 +51,7 @@ export const createStructureSchema = z
 			.min(1)
 			.max(MAX_LOCATIONS_PER_REQUEST)
 			.meta({
-				description: `The locations to create, parents before their children, at most ${MAX_LOCATIONS_PER_REQUEST} in one request and ${MAX_UNITS_PER_FLOOR} units under one floor.`,
+				description: `The locations to create, parents before their children, at most ${MAX_LOCATIONS_PER_REQUEST} locations and ${MAX_UNITS_PER_FLOOR} units under one floor in one request.`,
 			}),
 	})
 	.superRefine(({ locations }, ctx) => {
