@@ -32,7 +32,6 @@ export class UnitsRepository {
 		return locked;
 	}
 
-	/** Locked in id order, the order every batch takes them in, so two batches never wait on each other. */
 	async lockProjectsOf(
 		organizationId: string,
 		projectIds: string[],

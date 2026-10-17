@@ -139,6 +139,30 @@ function DesktopRow({
 	);
 }
 
+function ReservationTableHead() {
+	return (
+		<thead>
+			<tr>
+				<th scope="col" className={cn(HEAD, "pl-4 text-left font-medium")}>
+					Obra
+				</th>
+				<th scope="col" className={cn(HEAD, NUMBER_COLUMN, "font-medium")}>
+					Usadas
+				</th>
+				<th
+					scope="col"
+					className={cn(HEAD, "w-36 pl-6 text-right font-medium")}
+				>
+					Reserva
+				</th>
+				<th scope="col" className={cn(HEAD, NUMBER_COLUMN, "pr-4 font-medium")}>
+					Restam
+				</th>
+			</tr>
+		</thead>
+	);
+}
+
 export function DesktopReservationList({
 	footer,
 	...props
@@ -146,28 +170,7 @@ export function DesktopReservationList({
 	return (
 		<Card className="gap-0 overflow-visible p-0">
 			<table aria-label="Reservas das obras" className="w-full table-fixed">
-				<thead>
-					<tr>
-						<th scope="col" className={cn(HEAD, "pl-4 text-left font-medium")}>
-							Obra
-						</th>
-						<th scope="col" className={cn(HEAD, NUMBER_COLUMN, "font-medium")}>
-							Usadas
-						</th>
-						<th
-							scope="col"
-							className={cn(HEAD, "w-36 pl-6 text-right font-medium")}
-						>
-							Reserva
-						</th>
-						<th
-							scope="col"
-							className={cn(HEAD, NUMBER_COLUMN, "pr-4 font-medium")}
-						>
-							Restam
-						</th>
-					</tr>
-				</thead>
+				<ReservationTableHead />
 				<tbody>
 					{props.rows.map((row) => (
 						<DesktopRow key={row.projectId} {...props} row={row} />
@@ -259,28 +262,7 @@ export function ReservationListSkeleton({ desktop }: { desktop: boolean }) {
 	return desktop ? (
 		<Card aria-hidden className="gap-0 overflow-visible p-0">
 			<table className="w-full table-fixed">
-				<thead>
-					<tr>
-						<th scope="col" className={cn(HEAD, "pl-4 text-left font-medium")}>
-							Obra
-						</th>
-						<th scope="col" className={cn(HEAD, NUMBER_COLUMN, "font-medium")}>
-							Usadas
-						</th>
-						<th
-							scope="col"
-							className={cn(HEAD, "w-36 pl-6 text-right font-medium")}
-						>
-							Reserva
-						</th>
-						<th
-							scope="col"
-							className={cn(HEAD, NUMBER_COLUMN, "pr-4 font-medium")}
-						>
-							Restam
-						</th>
-					</tr>
-				</thead>
+				<ReservationTableHead />
 				<tbody>
 					{[0, 1, 2, 3].map((index) => (
 						<tr key={index} className="border-t border-border">

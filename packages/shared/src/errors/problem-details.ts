@@ -49,7 +49,7 @@ export const problemDetailsSchema = z.object({
 	}),
 	projectId: z.uuid().optional().meta({
 		description:
-			"The project a batch request was refused for, present on `PROJECT_NOT_FOUND` and `PROJECT_DELIVERED` when the request named several projects.",
+			"The project a request to `PATCH /organization/units/reservations` was refused for, present on `PROJECT_NOT_FOUND` and `PROJECT_DELIVERED`.",
 	}),
 	items: z
 		.array(
@@ -61,7 +61,7 @@ export const problemDetailsSchema = z.object({
 		.optional()
 		.meta({
 			description:
-				"One entry per refused project, present on `RESERVATION_BELOW_USED` when the request named several projects: `used` is the least that project's reservation can be.",
+				"One entry per refused project, present on `RESERVATION_BELOW_USED` from `PATCH /organization/units/reservations`: `used` is the least that project's reservation can be.",
 		}),
 });
 

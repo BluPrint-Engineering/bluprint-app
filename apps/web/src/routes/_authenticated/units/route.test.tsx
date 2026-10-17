@@ -535,6 +535,49 @@ describe("units screen", () => {
 			expect(field("Torre Atlântica")).toHaveValue("650");
 		});
 
+		test("reloads the rows when the free units ran out meanwhile, showing what took them and blocking saving", async () => {
+			let createdMeanwhile = false;
+			openUnits({
+				reservations: () =>
+					json(
+						createdMeanwhile
+							? {
+									...RESERVATIONS,
+									items: [
+										...RESERVATIONS.items,
+										{
+											projectId: "0190a000-0000-7000-8000-00000000000e",
+											name: "Vila Nova",
+											reserved: 290,
+											used: 0,
+										},
+									],
+								}
+							: RESERVATIONS,
+					),
+				save: () => {
+					createdMeanwhile = true;
+					return problem(409, NO_UNITS_LEFT, { requested: 50, available: 10 });
+				},
+			});
+			await editBoth();
+
+			await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+			expect(
+				await screen.findByRole("textbox", { name: "Reserva de Vila Nova" }),
+			).toBeInTheDocument();
+			expect(within(figure("Livres")).getByText("−40")).toHaveClass(
+				"text-destructive",
+			);
+			expect(field("Torre Atlântica")).toHaveValue("650");
+
+			await type("Residencial Primavera", "40");
+
+			expect(within(figure("Livres")).getByText("−30")).toBeVisible();
+			expect(screen.getByRole("button", { name: "Salvar" })).toBeDisabled();
+		});
+
 		test("reloads the rows when a project was delivered meanwhile, naming it and keeping the other drafts", async () => {
 			let delivered = false;
 			openUnits({

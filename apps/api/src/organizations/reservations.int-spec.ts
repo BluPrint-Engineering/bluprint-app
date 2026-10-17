@@ -245,7 +245,7 @@ describe("GET /api/organization/units/reservations", () => {
 		expect(rows + reservations.delivered.used).toBe(units.reserved);
 	});
 
-	test("answers an organization with no project as empty", async () => {
+	test("lists only the caller's organization's projects", async () => {
 		const res = await outsider.agent.get(RESERVATIONS);
 
 		expect(res.status).toBe(200);

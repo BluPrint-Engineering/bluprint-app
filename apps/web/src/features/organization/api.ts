@@ -90,7 +90,10 @@ export function useUpdateReservationsMutation() {
 				);
 			}
 			if (overContractedBy(error) !== undefined) {
-				return queryClient.invalidateQueries(organizationUnitsQueryOptions);
+				return Promise.all([
+					queryClient.invalidateQueries(organizationReservationsQueryOptions),
+					queryClient.invalidateQueries(organizationUnitsQueryOptions),
+				]);
 			}
 		},
 	});
