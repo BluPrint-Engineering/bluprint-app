@@ -36,6 +36,7 @@ export function FloorBody({
 			<LocationMenu
 				projectId={projectId}
 				label={`Ações da unidade ${unit.name}`}
+				duplicate={{ type: "unit", id: unit.id }}
 				movable
 				removal={{ counts: NO_CHILDREN }}
 				target={{

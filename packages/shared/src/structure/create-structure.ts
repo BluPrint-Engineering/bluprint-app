@@ -73,11 +73,11 @@ export const newLocationSchema = z.object({
 		.max(MAX_ROOMS_PER_LOCATION)
 		.optional()
 		.meta({
-			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION}, so a location removed by mistake comes back as it was. Given, even empty, they are the location's rooms exactly; left out, a unit is born with the rooms of its unit type and a common area with none.`,
+			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION}, so a location removed by mistake comes back as it was and a copy keeps what the original changed. Given, even empty, they are the location's rooms exactly; left out, a unit is born with the rooms of its unit type and a common area with none. A unit that follows a unit type lists each room of it once, here or in \`droppedRooms\`, and a room of the unit type that was not renamed carries the unit type's name for it.`,
 		}),
 	droppedRooms: z.array(z.uuid()).max(MAX_ROOMS_PER_LOCATION).optional().meta({
 		description:
-			"The rooms of the unit's unit type that the unit took out, by their id in the unit type. Only a unit with a `unitTypeId` takes them.",
+			"The rooms of the unit's unit type that the unit took out, by their id in the unit type. Only a unit with a `unitTypeId` that lists its `rooms` takes them.",
 	}),
 });
 
@@ -195,6 +195,13 @@ export const createStructureSchema = z
 					code: "custom",
 					path: ["locations", index, "droppedRooms"],
 					message: "Only a unit that follows a unit type takes rooms out.",
+				});
+			}
+			if (entry.droppedRooms !== undefined && entry.rooms === undefined) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["locations", index, "droppedRooms"],
+					message: "A unit lists the rooms it took out only with its rooms.",
 				});
 			}
 

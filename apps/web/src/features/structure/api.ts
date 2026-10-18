@@ -1,6 +1,7 @@
 import {
 	type AddRoom,
 	type CreateStructure,
+	type CreateStructureResult,
 	type CreateUnitType,
 	createStructureResultSchema,
 	LOCATION_NAME_TAKEN,
@@ -15,7 +16,9 @@ import {
 	ROOM_NOT_FOUND,
 	removeLocationResultSchema,
 	type Structure,
+	type SubtreeRooms,
 	structureSchema,
+	subtreeRoomsSchema,
 	UNIT_TYPE_IN_USE,
 	UNIT_TYPE_NAME_TAKEN,
 	type UpdateUnitType,
@@ -98,19 +101,25 @@ export function unitTypeNamesTakenOf(error: unknown): string[] | undefined {
 		: undefined;
 }
 
-export function useCreateStructureMutation(projectId: string) {
+function postStructure(projectId: string, body: CreateStructure) {
+	return apiFetch(
+		`/projects/${projectId}/structure`,
+		createStructureResultSchema,
+		{
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+		},
+	);
+}
+
+function useStructureCreation<Variables>(
+	projectId: string,
+	send: (variables: Variables) => Promise<CreateStructureResult>,
+) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		mutationFn: (body: CreateStructure) =>
-			apiFetch(
-				`/projects/${projectId}/structure`,
-				createStructureResultSchema,
-				{
-					method: "POST",
-					headers: { "content-type": "application/json" },
-					body: JSON.stringify(body),
-				},
-			),
+		mutationFn: send,
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
 			void queryClient.invalidateQueries(organizationUnitsQueryOptions);
@@ -138,8 +147,54 @@ export function useCreateStructureMutation(projectId: string) {
 					queryKey: projectQueryOptions(projectId).queryKey,
 				});
 			}
+			if (namesTakenOf(error) !== undefined) {
+				return queryClient.invalidateQueries({
+					queryKey: ["structure", projectId],
+				});
+			}
 		},
 	});
+}
+
+export function useCreateStructureMutation(projectId: string) {
+	return useStructureCreation(projectId, (body: CreateStructure) =>
+		postStructure(projectId, body),
+	);
+}
+
+export function subtreeRoomsQueryOptions(
+	projectId: string,
+	locationId: string,
+) {
+	return queryOptions({
+		queryKey: ["structure", projectId, "location", locationId, "subtree-rooms"],
+		queryFn: () =>
+			apiFetch(
+				`/projects/${projectId}/locations/${locationId}/subtree-rooms`,
+				subtreeRoomsSchema,
+			),
+		staleTime: 0,
+		retry: retryUnlessNotFound,
+	});
+}
+
+export function useDuplicateLocationMutation(projectId: string) {
+	const queryClient = useQueryClient();
+	return useStructureCreation(
+		projectId,
+		async ({
+			locationId,
+			build,
+		}: {
+			locationId: string;
+			build: (below: SubtreeRooms) => CreateStructure;
+		}) => {
+			const below = await queryClient.fetchQuery(
+				subtreeRoomsQueryOptions(projectId, locationId),
+			);
+			return postStructure(projectId, build(below));
+		},
+	);
 }
 
 export function useRenameLocationMutation(projectId: string) {

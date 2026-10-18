@@ -10,7 +10,7 @@ import {
 	UNIT_TYPE_ID_TAKEN,
 	UNIT_TYPE_NAME_TAKEN,
 	UNIT_TYPE_NOT_FOUND,
-	UNIT_TYPE_ROOM_NOT_FOUND,
+	UNIT_TYPE_ROOM_INVALID,
 } from "@bluprint/shared";
 import { ProblemException } from "../common/problems/problem.exception";
 import { nameKey } from "./location-names";
@@ -80,13 +80,64 @@ export interface CreationRequest {
 	locations: NewLocation[];
 }
 
+export interface StoredTypeRoom {
+	id: string;
+	unitTypeId: string;
+	name: string;
+}
+
 export interface CreationContext {
 	locations: LocationRow[];
 	unitTypes: StoredUnitType[];
 	locationIdsElsewhere: ReadonlySet<string>;
 	unitTypeIdsInUse: UnitTypeIdsInUse;
-	storedUnitTypeRooms: ReadonlyMap<string, ReadonlySet<string>>;
+	typeRooms: StoredTypeRoom[];
 	roomIdsInUse: ReadonlySet<string>;
+}
+
+const noTypeRooms: ReadonlyMap<string, string> = new Map();
+
+function assertRoomsFit(
+	entry: NewLocation,
+	typeRoomNames: ReadonlyMap<string, ReadonlyMap<string, string>>,
+	roomIdsInUse: ReadonlySet<string>,
+): void {
+	if ((entry.rooms ?? []).some(({ id }) => roomIdsInUse.has(id))) {
+		throw new ProblemException({
+			status: 409,
+			code: ROOM_ID_TAKEN,
+			detail: "A room id of the request is already taken.",
+		});
+	}
+
+	if (entry.rooms === undefined) return;
+	const expected =
+		(entry.unitTypeId === undefined
+			? undefined
+			: typeRoomNames.get(entry.unitTypeId)) ?? noTypeRooms;
+	const covered = new Set([
+		...entry.rooms.flatMap(({ unitTypeRoomId }) =>
+			unitTypeRoomId === undefined ? [] : [unitTypeRoomId],
+		),
+		...(entry.droppedRooms ?? []),
+	]);
+	const fits =
+		covered.size === expected.size &&
+		[...covered].every((id) => expected.has(id)) &&
+		entry.rooms.every(
+			({ unitTypeRoomId, renamed, name }) =>
+				unitTypeRoomId === undefined ||
+				renamed === true ||
+				expected.get(unitTypeRoomId) === name,
+		);
+	if (!fits) {
+		throw new ProblemException({
+			status: 400,
+			code: UNIT_TYPE_ROOM_INVALID,
+			detail:
+				"The rooms of a unit do not account for every room of its unit type, once, under the unit type's name unless renamed.",
+		});
+	}
 }
 
 export function planCreation(
@@ -96,7 +147,7 @@ export function planCreation(
 		unitTypes: storedUnitTypes,
 		locationIdsElsewhere: takenElsewhere,
 		unitTypeIdsInUse,
-		storedUnitTypeRooms,
+		typeRooms: storedTypeRooms,
 		roomIdsInUse,
 	}: CreationContext,
 ): CreationPlan {
@@ -106,6 +157,18 @@ export function planCreation(
 		storedUnitTypes,
 		unitTypeIdsInUse,
 	);
+	const typeRoomNames = new Map<string, Map<string, string>>();
+	const typeRooms = [
+		...storedTypeRooms,
+		...freshUnitTypes.flatMap(({ id: unitTypeId, rooms }) =>
+			rooms.map(({ id, name }) => ({ id, unitTypeId, name })),
+		),
+	];
+	for (const { id, unitTypeId, name } of typeRooms) {
+		const names = typeRoomNames.get(unitTypeId) ?? new Map<string, string>();
+		names.set(id, name);
+		typeRoomNames.set(unitTypeId, names);
+	}
 	const knownUnitTypes = new Set([
 		...storedUnitTypes.map(({ id }) => id),
 		...requestedUnitTypes.map(({ id }) => id),
@@ -156,6 +219,8 @@ export function planCreation(
 	}
 
 	const fresh = requested.filter((entry) => !stored.has(entry.id));
+	for (const entry of fresh) assertRoomsFit(entry, typeRoomNames, roomIdsInUse);
+
 	const claimed = new Set(
 		inProject.map((row) => nameKey(row, row.name, known)),
 	);
@@ -172,42 +237,6 @@ export function planCreation(
 			detail: "A name of the request is already in use where it would go.",
 			names: [...clashes],
 		});
-	}
-
-	const roomsOfUnitType = new Map<string, Set<string>>(
-		[...storedUnitTypeRooms].map(([id, rooms]) => [id, new Set(rooms)]),
-	);
-	for (const { id, rooms } of requestedUnitTypes) {
-		const known = roomsOfUnitType.get(id) ?? new Set<string>();
-		for (const room of rooms) known.add(room.id);
-		roomsOfUnitType.set(id, known);
-	}
-	for (const entry of fresh) {
-		for (const { id } of entry.rooms ?? []) {
-			if (roomIdsInUse.has(id)) {
-				throw new ProblemException({
-					status: 409,
-					code: ROOM_ID_TAKEN,
-					detail: "A room id of the request is already taken.",
-				});
-			}
-		}
-
-		const followed = roomsOfUnitType.get(entry.unitTypeId ?? "");
-		const followedIds = [
-			...(entry.rooms ?? []).flatMap(({ unitTypeRoomId }) =>
-				unitTypeRoomId === undefined ? [] : [unitTypeRoomId],
-			),
-			...(entry.droppedRooms ?? []),
-		];
-		if (followedIds.some((id) => !followed?.has(id))) {
-			throw new ProblemException({
-				status: 400,
-				code: UNIT_TYPE_ROOM_NOT_FOUND,
-				detail:
-					"A room of the request follows a room that its unit's unit type does not have.",
-			});
-		}
 	}
 
 	const count = (type: NewLocation["type"]) =>

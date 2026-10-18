@@ -79,3 +79,22 @@ export function unitTypeNameTakenText(names: string[]): string {
 	const many = names.length > 1;
 	return `Já existe uma tipologia com ${many ? "os nomes" : "o nome"} ${listOfNames(names)}. Troque ${many ? "esses nomes" : "esse nome"} e tente de novo.`;
 }
+
+export function duplicateLine(units: number, remaining: number): string {
+	if (remaining === 1 && units === 1) {
+		return "Cria 1 unidade, a única que resta nesta obra. Depois, sobram 0.";
+	}
+	return `Cria ${plural(units, "unidade", "unidades")} das ${remaining} que restam nesta obra. Depois, ${sobram(remaining - units)}.`;
+}
+
+export function duplicateOverText(
+	title: string,
+	units: number,
+	remaining: number,
+): string {
+	const left =
+		remaining <= 0
+			? "a reserva da obra acabou"
+			: `${remaining === 1 ? "resta" : "restam"}${NBSP}${remaining}`;
+	return `${title} cria ${plural(units, "unidade", "unidades")} e ${left}.`;
+}

@@ -16,6 +16,20 @@ export default async function structureReserve({ page, shot, expect, query }) {
 	await expect(page.getByRole("dialog", { name: "Alterar reserva" })).toBeVisible();
 	await shot("f5b-alter-reserve");
 
+	await page.keyboard.press("Escape");
+	await page.getByRole("button", { name: "Ações da unidade 101" }).click();
+	await page.getByRole("menuitem", { name: "Duplicar unidade" }).click();
+	const duplicate = page.getByRole("dialog", { name: "Duplicar a unidade 101" });
+	await expect(duplicate).toBeVisible();
+	await expect(duplicate.getByRole("alert")).toHaveText("Duplicar a unidade 101 cria 1 unidade e a reserva da obra acabou. Alterar reserva");
+	await expect(duplicate.getByRole("button", { name: "Duplicar", exact: true })).toBeDisabled();
+	await page.waitForTimeout(300);
+	await shot("r9b-duplicate-reserve-over");
+	await duplicate.getByRole("button", { name: "Alterar reserva" }).click();
+	await expect(page.getByRole("dialog", { name: "Alterar reserva" })).toBeVisible();
+	await page.waitForTimeout(300);
+	await shot("r9b-duplicate-alter-reserve");
+
 	await page.goto(`/projects/${row.project}`);
 	await page.getByRole("link", { name: "Adicionar andares" }).click();
 	await expect(page.getByRole("heading", { level: 1, name: "Adicionar andares" })).toBeVisible();

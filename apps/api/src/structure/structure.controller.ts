@@ -4,6 +4,7 @@ import type {
 	LocationRef,
 	RemoveLocationResult,
 	Structure,
+	SubtreeRooms,
 } from "@bluprint/shared";
 import {
 	Body,
@@ -29,6 +30,7 @@ import { MoveLocationDto } from "./dto/move-location.dto";
 import { RemoveLocationResultDto } from "./dto/remove-location-result.dto";
 import { RenameLocationDto } from "./dto/rename-location.dto";
 import { StructureDto } from "./dto/structure.dto";
+import { SubtreeRoomsDto } from "./dto/subtree-rooms.dto";
 import { StructureService } from "./structure.service";
 
 @ApiTags("Structure")
@@ -59,7 +61,7 @@ export class StructureController {
 	@ApiOperation({
 		summary: "Create structure",
 		description:
-			"Creates the unit types (*tipologias*) with their rooms and the locations of the request, towers, floors, units and common areas, in one transaction: all of them or none. This is the one route every creation of units goes through. Each unit type and location carries the id the client chose. A location also has its parent (one that exists in the project or one listed earlier in the request), its kind, name and position, and a unit may name the unit type it follows (one that exists in the project or one listed in the request) and is then born with that unit type's rooms. A unit type that does not exist answers `400 UNIT_TYPE_NOT_FOUND`. Sending the same request again answers the same `201` and creates nothing: a location whose id already belongs to this project, as the same kind under the same parent, and a unit type whose id already belongs to this project, are skipped. An id that belongs to another project, or to another kind or parent, answers `409 LOCATION_ID_TAKEN`; a unit type or room id that belongs to another project, `409 UNIT_TYPE_ID_TAKEN`. A name already in use where it would go, ignoring case and repeated spaces, answers `409 LOCATION_NAME_TAKEN` with the clashing `names`: a tower is unique in the project, a floor and a unit in their tower, a common area under its parent. A unit type name already in use in the project, with the same comparison, answers `409 UNIT_TYPE_NAME_TAKEN` with the clashing `names`. A parent that does not exist or cannot hold the kind answers `400 LOCATION_PARENT_INVALID`; at most 5,000 locations, 30 units under one floor, 50 unit types and 50 rooms per unit type in one request. Units the request creates beyond what the project's reservation still holds answer `409 NO_UNITS_LEFT` with `requested` and `available`, and nothing is created; only new units count, so the repeated request is never refused for that. Anyone linked to the project may write, and the admin of its organization; a project that cannot be seen answers `404 PROJECT_NOT_FOUND`, and a delivered one `409 PROJECT_DELIVERED`. One structure write at a time runs per project, and it moves the project's last activity.",
+			"Creates the unit types (*tipologias*) with their rooms and the locations of the request, towers, floors, units and common areas, in one transaction: all of them or none. This is the one route every creation of units goes through. Each unit type and location carries the id the client chose. A location also has its parent (one that exists in the project or one listed earlier in the request), its kind, name and position, and a unit may name the unit type it follows (one that exists in the project or one listed in the request) and is then born with that unit type's rooms unless the request lists the rooms it has: a location may carry `rooms` (a unit or a common area, each with its own id and name, and for a unit's room of the unit type the id it came from and whether it was renamed) and a unit `droppedRooms` (the rooms of its unit type it took out), which is how a copy keeps what the original changed. A unit that follows a unit type and lists its rooms accounts for each room of that unit type once, in `rooms` or in `droppedRooms`, and a room of the unit type it did not rename carries the unit type's name; a room that does not belong to the unit's unit type, one left out, or one not renamed under another name answers `400 UNIT_TYPE_ROOM_INVALID`; a room id already in use, `409 ROOM_ID_TAKEN`. A unit type that does not exist answers `400 UNIT_TYPE_NOT_FOUND`. Sending the same request again answers the same `201` and creates nothing: a location whose id already belongs to this project, as the same kind under the same parent, and a unit type whose id already belongs to this project, are skipped. An id that belongs to another project, or to another kind or parent, answers `409 LOCATION_ID_TAKEN`; a unit type or room id that belongs to another project, `409 UNIT_TYPE_ID_TAKEN`. A name already in use where it would go, ignoring case and repeated spaces, answers `409 LOCATION_NAME_TAKEN` with the clashing `names`: a tower is unique in the project, a floor and a unit in their tower, a common area under its parent. A unit type name already in use in the project, with the same comparison, answers `409 UNIT_TYPE_NAME_TAKEN` with the clashing `names`. A parent that does not exist or cannot hold the kind answers `400 LOCATION_PARENT_INVALID`; at most 5,000 locations, 30 units under one floor, 50 unit types and 50 rooms per unit type in one request. Units the request creates beyond what the project's reservation still holds answer `409 NO_UNITS_LEFT` with `requested` and `available`, and nothing is created; only new units count, so the repeated request is never refused for that. Anyone linked to the project may write, and the admin of its organization; a project that cannot be seen answers `404 PROJECT_NOT_FOUND`, and a delivered one `409 PROJECT_DELIVERED`. One structure write at a time runs per project, and it moves the project's last activity.",
 	})
 	@ZodResponse({
 		status: 201,
@@ -92,6 +94,29 @@ export class StructureController {
 		@Param() params: LocationParamsDto,
 	): Promise<LocationDetail> {
 		return this.structure.readLocation(
+			session.user.id,
+			params.id,
+			params.locationId,
+		);
+	}
+
+	@Get("locations/:locationId/subtree-rooms")
+	@ApiOperation({
+		summary: "The rooms below a location",
+		description:
+			"Every unit and common area at or below the location, a tower, floor, unit or common area, each with its rooms (where each came from and whether it was renamed here) and, for a unit, the rooms of its unit type it took out, in one response: what copying the location needs. The project's visibility applies first: `404 PROJECT_NOT_FOUND` for a project the caller cannot see. A location that does not exist, or that belongs to another project, answers `404 LOCATION_NOT_FOUND`.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The rooms of the units and common areas below the location.",
+		type: SubtreeRoomsDto,
+	})
+	@ApiErrorResponses(400, 401, 404)
+	readSubtreeRooms(
+		@Session() session: UserSession,
+		@Param() params: LocationParamsDto,
+	): Promise<SubtreeRooms> {
+		return this.structure.readSubtreeRooms(
 			session.user.id,
 			params.id,
 			params.locationId,

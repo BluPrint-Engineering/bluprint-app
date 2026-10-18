@@ -13,6 +13,7 @@ import {
 	type StructureFloor,
 	type StructureTower,
 	type StructureUnit,
+	type SubtreeRooms,
 	type UnitType,
 	type UnitTypeList,
 } from "@bluprint/shared";
@@ -387,6 +388,7 @@ function moveNode(structure: Structure, id: string, direction: MoveDirection) {
 
 export interface WritableApiOptions {
 	remaining?: number;
+	subtreeRooms?: SubtreeRooms["locations"];
 	organization?: OrganizationUnits;
 	details?: Record<string, Partial<LocationDetail>>;
 	remove?: (locationId: string, attempt: number) => Reply | undefined;
@@ -417,6 +419,7 @@ export function writableApi(
 	};
 	const created: CreateStructure[] = [];
 	const renamed: { locationId: string; name: string }[] = [];
+	const roomsRead: string[] = [];
 	const removed: string[] = [];
 	const moved: { locationId: string; direction: MoveDirection }[] = [];
 	const base = `/api/projects/${initial.id}`;
@@ -476,6 +479,13 @@ export function writableApi(
 					},
 					201,
 				);
+			}
+			const below = new RegExp(
+				`^${base}/locations/([^/]+)/subtree-rooms$`,
+			).exec(url.pathname);
+			if (below) {
+				roomsRead.push(below[1] ?? "");
+				return json({ locations: options.subtreeRooms ?? [] });
 			}
 			const moveTarget = new RegExp(`^${base}/locations/([^/]+)/move$`).exec(
 				url.pathname,
@@ -541,7 +551,7 @@ export function writableApi(
 		structureApi(initial.id, structure, options.details),
 	);
 
-	return { handler, state, created, renamed, removed, moved };
+	return { handler, state, created, renamed, removed, moved, roomsRead };
 }
 
 export function unitTypeOf(

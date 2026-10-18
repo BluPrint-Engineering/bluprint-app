@@ -41,3 +41,8 @@ export function floorSummary(names: string[]): string {
 	if (parts.length === 1) return last;
 	return `${parts.slice(0, -1).join(", ")} e ${last}`;
 }
+
+export function highestFloorNumber(names: string[]): number | undefined {
+	const numbers = names.flatMap((name) => floorNumber(name) ?? []);
+	return numbers.length === 0 ? undefined : Math.max(...numbers);
+}

@@ -1,21 +1,6 @@
 import type { LocationType } from "@bluprint/shared";
 import { type RefObject, useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import {
-	Dialog,
-	DialogContent,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/ui/dialog";
-import {
-	Drawer,
-	DrawerContent,
-	DrawerFooter,
-	DrawerHeader,
-	DrawerTitle,
-} from "@/components/ui/drawer";
 import {
 	Field,
 	FieldDescription,
@@ -23,8 +8,6 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
-import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
 import { isProjectDelivered } from "../../projects/api";
 import { namesTakenOf, useRenameLocationMutation } from "../api";
@@ -35,6 +18,7 @@ import {
 	takenText,
 	uniqueHint,
 } from "../naming";
+import { NameDialogFrame, NameDialogLayout } from "./NameDialog";
 
 export interface RenameTarget {
 	id: string;
@@ -144,57 +128,17 @@ function RenameContent({
 		</form>
 	);
 
-	const actions = (size: "default" | "lg", className?: string) => (
-		<>
-			<Button
-				type="submit"
-				form={formId}
-				size={size}
-				disabled={saving}
-				className={className}
-			>
-				{saving && <Spinner aria-hidden />}
-				{saving ? "Salvando…" : "Salvar"}
-			</Button>
-			<Button
-				type="button"
-				variant="outline"
-				size={size}
-				disabled={saving}
-				className={className}
-				onClick={onDone}
-			>
-				Cancelar
-			</Button>
-		</>
-	);
-
-	if (desktop) {
-		return (
-			<>
-				<DialogHeader>
-					<DialogTitle>{renameTitle(target.type)}</DialogTitle>
-				</DialogHeader>
-				{form}
-				<DialogFooter className="flex-row-reverse justify-start">
-					{actions("default")}
-				</DialogFooter>
-			</>
-		);
-	}
-
 	return (
-		<>
-			<DrawerHeader>
-				<DrawerTitle>{renameTitle(target.type)}</DrawerTitle>
-			</DrawerHeader>
-			<div className="grid px-(--page-pad) pt-(--space-2) pb-(--space-5)">
-				{form}
-			</div>
-			<DrawerFooter className="flex-col">
-				{actions("lg", "w-full")}
-			</DrawerFooter>
-		</>
+		<NameDialogLayout
+			desktop={desktop}
+			title={renameTitle(target.type)}
+			formId={formId}
+			form={form}
+			saving={saving}
+			submitLabel="Salvar"
+			pendingLabel="Salvando…"
+			onCancel={onDone}
+		/>
 	);
 }
 
@@ -205,49 +149,24 @@ export function RenameDialog({
 	onOpenChange,
 	returnFocus,
 }: RenameDialogProps) {
-	const desktop = useIsDesktop();
 	const field = useRef<HTMLInputElement>(null);
 
-	function focusOpener(event: Event) {
-		event.preventDefault();
-		returnFocus.current?.focus();
-	}
-
-	const content = (
-		<RenameContent
-			projectId={projectId}
-			target={target}
-			desktop={desktop}
-			field={field}
-			onDone={() => onOpenChange(false)}
-		/>
-	);
-
-	if (desktop) {
-		return (
-			<Dialog open={open} onOpenChange={onOpenChange}>
-				<DialogContent
-					aria-describedby={undefined}
-					onCloseAutoFocus={focusOpener}
-				>
-					{content}
-				</DialogContent>
-			</Dialog>
-		);
-	}
-
 	return (
-		<Drawer open={open} onOpenChange={onOpenChange}>
-			<DrawerContent
-				aria-describedby={undefined}
-				onOpenAutoFocus={(event) => {
-					event.preventDefault();
-					field.current?.focus();
-				}}
-				onCloseAutoFocus={focusOpener}
-			>
-				{content}
-			</DrawerContent>
-		</Drawer>
+		<NameDialogFrame
+			open={open}
+			onOpenChange={onOpenChange}
+			returnFocus={returnFocus}
+			field={field}
+		>
+			{(desktop) => (
+				<RenameContent
+					projectId={projectId}
+					target={target}
+					desktop={desktop}
+					field={field}
+					onDone={() => onOpenChange(false)}
+				/>
+			)}
+		</NameDialogFrame>
 	);
 }

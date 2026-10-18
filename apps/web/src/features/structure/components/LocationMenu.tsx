@@ -1,4 +1,11 @@
-import { ArrowDown, ArrowUp, Ellipsis, Pencil, Trash2 } from "lucide-react";
+import {
+	ArrowDown,
+	ArrowUp,
+	Copy,
+	Ellipsis,
+	Pencil,
+	Trash2,
+} from "lucide-react";
 import { type ReactNode, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,9 +16,11 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useMoveLocationMutation } from "../api";
+import { duplicateMenuLabel } from "../duplicateText";
 import { removeLabel, renameLabel } from "../naming";
 import { type ChildCounts, hasChildren } from "../removeText";
 import { useRemoveLocation } from "../useRemoveLocation";
+import { DuplicateDialog, type DuplicateTarget } from "./DuplicateDialog";
 import { RemoveLocationDialog } from "./RemoveLocationDialog";
 import { RenameDialog, type RenameTarget } from "./RenameDialog";
 
@@ -24,6 +33,7 @@ export function LocationMenu({
 	projectId,
 	target,
 	label,
+	duplicate,
 	variant = "ghost",
 	movable = false,
 	removal,
@@ -33,6 +43,7 @@ export function LocationMenu({
 	projectId: string;
 	target: RenameTarget;
 	label: string;
+	duplicate?: DuplicateTarget;
 	variant?: "ghost" | "outline";
 	movable?: boolean;
 	removal: Removal;
@@ -40,6 +51,7 @@ export function LocationMenu({
 	children?: ReactNode;
 }) {
 	const [renaming, setRenaming] = useState(false);
+	const [duplicating, setDuplicating] = useState(false);
 	const [confirming, setConfirming] = useState(false);
 	const trigger = useRef<HTMLButtonElement>(null);
 	const move = useMoveLocationMutation(projectId);
@@ -99,6 +111,12 @@ export function LocationMenu({
 							</DropdownMenuItem>
 						</>
 					)}
+					{duplicate && (
+						<DropdownMenuItem onSelect={() => setDuplicating(true)}>
+							<Copy className="size-4.5" aria-hidden="true" />
+							{duplicateMenuLabel(duplicate.type)}
+						</DropdownMenuItem>
+					)}
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						variant="destructive"
@@ -122,6 +140,15 @@ export function LocationMenu({
 				onOpenChange={setRenaming}
 				returnFocus={trigger}
 			/>
+			{duplicate && (
+				<DuplicateDialog
+					projectId={projectId}
+					target={duplicate}
+					open={duplicating}
+					onOpenChange={setDuplicating}
+					returnFocus={trigger}
+				/>
+			)}
 			<RemoveLocationDialog
 				type={type}
 				name={name}
