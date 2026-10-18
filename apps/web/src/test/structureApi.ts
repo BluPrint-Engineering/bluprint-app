@@ -17,10 +17,6 @@ import {
 	type UnitType,
 	type UnitTypeList,
 } from "@bluprint/shared";
-import {
-	findDuplicateSource,
-	holderIdsCopied,
-} from "@/features/structure/duplicate";
 import { type ApiHandler, json } from "@/test/renderApp";
 
 let sequence = 0;
@@ -322,6 +318,30 @@ function applyCreation(structure: Structure, body: CreateStructure) {
 	recount(structure);
 }
 
+function holdersUnder(structure: Structure, id: string): string[] {
+	const ids = (nodes: { id: string }[]) => nodes.map((node) => node.id);
+	const ofFloor = (floor: StructureFloor) => [
+		...ids(floor.units),
+		...ids(floor.commonAreas),
+	];
+	for (const tower of structure.towers) {
+		if (tower.id === id) {
+			return [...tower.floors.flatMap(ofFloor), ...ids(tower.commonAreas)];
+		}
+		for (const floor of tower.floors) {
+			if (floor.id === id) return ofFloor(floor);
+		}
+	}
+	const leaves = [
+		...ids(structure.commonAreas),
+		...structure.towers.flatMap((tower) => [
+			...ids(tower.commonAreas),
+			...tower.floors.flatMap(ofFloor),
+		]),
+	];
+	return leaves.includes(id) ? [id] : [];
+}
+
 function removeNode(
 	structure: Structure,
 	id: string,
@@ -489,14 +509,11 @@ export function writableApi(
 			).exec(url.pathname);
 			if (below) {
 				roomsRead.push(below[1] ?? "");
-				const source = (["tower", "floor", "unit"] as const)
-					.map((type) => findDuplicateSource(structure, type, below[1] ?? ""))
-					.find((found) => found !== undefined);
 				const given = new Map(
 					(options.subtreeRooms ?? []).map((entry) => [entry.id, entry]),
 				);
 				return json({
-					locations: (source ? holderIdsCopied(source) : []).map(
+					locations: holdersUnder(structure, below[1] ?? "").map(
 						(id) => given.get(id) ?? { id, rooms: [], droppedRooms: [] },
 					),
 				});

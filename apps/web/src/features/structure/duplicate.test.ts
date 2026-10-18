@@ -193,24 +193,58 @@ describe("locationsCopied", () => {
 	});
 });
 
+describe("holderIdsCopied", () => {
+	test("lists the units and common areas of every floor and of the tower itself", () => {
+		const { ninth, tenth, towerA, structure } = scene();
+		const [u901, u902, u903, u904] = ninth.units;
+		const [hall, terraco] = ninth.commonAreas;
+		const [u1001, u1002] = tenth.units;
+		const [salao] = towerA.commonAreas;
+
+		expect(holderIdsCopied(sourceOf(structure, "tower", towerA.id))).toEqual([
+			u901?.id,
+			u902?.id,
+			u903?.id,
+			u904?.id,
+			hall?.id,
+			terraco?.id,
+			u1001?.id,
+			u1002?.id,
+			salao?.id,
+		]);
+		expect(holderIdsCopied(sourceOf(structure, "floor", tenth.id))).toEqual([
+			u1001?.id,
+			u1002?.id,
+		]);
+		expect(
+			holderIdsCopied(sourceOf(structure, "unit", nth(ninth.units, 2).id)),
+		).toEqual([u903?.id]);
+	});
+});
+
 describe("assertCopyMatches", () => {
 	const blank = (ids: string[]): SubtreeRooms => ({
 		locations: ids.map((id) => roomsOf(id, [])),
 	});
 
-	test("lets through rooms read for exactly the units and areas of the copy", () => {
+	const ninthHolders = (ninth: ReturnType<typeof scene>["ninth"]) => [
+		...ninth.units.map(({ id }) => id),
+		...ninth.commonAreas.map(({ id }) => id),
+	];
+
+	test("lets through rooms read for exactly the units and areas of the copy, in any order", () => {
 		const { ninth, structure } = scene();
 		const source = sourceOf(structure, "floor", ninth.id);
 
 		expect(() =>
-			assertCopyMatches(source, blank([...holderIdsCopied(source)].reverse())),
+			assertCopyMatches(source, blank(ninthHolders(ninth).reverse())),
 		).not.toThrow();
 	});
 
 	test("refuses rooms read for a unit or area missing from the cache, or without one it has", () => {
 		const { ninth, structure } = scene();
 		const source = sourceOf(structure, "floor", ninth.id);
-		const ids = holderIdsCopied(source);
+		const ids = ninthHolders(ninth);
 
 		expect(() => assertCopyMatches(source, blank(ids.slice(1)))).toThrow(
 			StaleCopyError,
