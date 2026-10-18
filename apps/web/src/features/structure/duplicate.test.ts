@@ -22,6 +22,7 @@ import {
 import {
 	copiedUnitsTakenText,
 	duplicatedToast,
+	duplicateGoneText,
 	duplicateMenuLabel,
 	duplicateTitle,
 	duplicateTooLargeText,
@@ -661,6 +662,24 @@ describe("duplicate texts", () => {
 		);
 		expect(copiedUnitsTakenText(["1401", "1402"], true, "Torre A")).toBe(
 			"Já existem as unidades “1401” e “1402” na Torre A. Troque o número do andar e tente de novo.",
+		);
+	});
+
+	test("says the location to copy was removed, by its kind", () => {
+		expect(duplicateGoneText("unit", "903")).toBe(
+			"A unidade 903 foi excluída e não pode mais ser duplicada. Feche para ver a estrutura atualizada.",
+		);
+		expect(duplicateGoneText("floor", "9º andar")).toBe(
+			"O 9º andar foi excluído e não pode mais ser duplicado. Feche para ver a estrutura atualizada.",
+		);
+		expect(duplicateGoneText("floor", "Cobertura")).toBe(
+			"O andar Cobertura foi excluído e não pode mais ser duplicado. Feche para ver a estrutura atualizada.",
+		);
+		expect(duplicateGoneText("tower", "Torre A")).toBe(
+			"A Torre A foi excluída e não pode mais ser duplicada. Feche para ver a estrutura atualizada.",
+		);
+		expect(duplicateGoneText("tower", "Bloco 1")).toBe(
+			"A torre Bloco 1 foi excluída e não pode mais ser duplicada. Feche para ver a estrutura atualizada.",
 		);
 	});
 

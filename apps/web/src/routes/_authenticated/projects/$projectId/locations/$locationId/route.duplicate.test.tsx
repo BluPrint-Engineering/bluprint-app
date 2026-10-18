@@ -1,5 +1,6 @@
 import {
 	LOCATION_NAME_TAKEN,
+	LOCATION_NOT_FOUND,
 	NO_UNITS_LEFT,
 	type ProjectAccessRole,
 	UNIT_TYPE_ROOM_INVALID,
@@ -491,6 +492,45 @@ describe("duplicating a unit", () => {
 			await within(dialog).findByText("Informe o nome."),
 		).toBeInTheDocument();
 		expect(api.created).toHaveLength(0);
+	});
+
+	test("says the unit was removed and refreshes the structure when it is gone", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra(), several, { remaining: 12 });
+		let structureReads = 0;
+		stubApi(signedIn, {
+			api: (url, init) => {
+				if (url.pathname.endsWith("/subtree-rooms")) {
+					return problem(404, LOCATION_NOT_FOUND);
+				}
+				if (url.pathname.endsWith("/structure") && init?.method !== "POST") {
+					structureReads += 1;
+				}
+				return api.handler(url, init);
+			},
+		});
+		renderAt(pathOf(ninth.id));
+		const dialog = await openDuplicate(
+			"Ações da unidade 903",
+			"Duplicar unidade",
+		);
+
+		await submit(dialog);
+
+		expect(
+			await within(dialog).findByText(
+				"A unidade 903 foi excluída e não pode mais ser duplicada. Feche para ver a estrutura atualizada.",
+			),
+		).toBeInTheDocument();
+		expect(
+			within(dialog).queryByText(/Confira sua conexão/),
+		).not.toBeInTheDocument();
+		expect(api.created).toHaveLength(0);
+		const readsBefore = structureReads;
+
+		await user.click(within(dialog).getByRole("button", { name: "Cancelar" }));
+
+		await waitFor(() => expect(structureReads).toBeGreaterThan(readsBefore));
 	});
 
 	test("says the structure changed when the API refuses the copy", async () => {

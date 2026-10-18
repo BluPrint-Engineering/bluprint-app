@@ -61,3 +61,15 @@ export function copiedUnitsTakenText(
 export function duplicateTooLargeText(locations: number): string {
 	return `Esta cópia tem ${locations.toLocaleString("pt-BR")} locais e o limite é ${MAX_LOCATIONS_PER_REQUEST.toLocaleString("pt-BR")} por vez. Duplique os andares um a um.`;
 }
+
+export function duplicateGoneText(type: DuplicateKind, name: string): string {
+	const close = "Feche para ver a estrutura atualizada.";
+	switch (type) {
+		case "tower":
+			return `${/^torre\b/i.test(name) ? `A ${name}` : `A torre ${name}`} foi excluída e não pode mais ser duplicada. ${close}`;
+		case "floor":
+			return `${/andar$/i.test(name) ? `O ${name}` : `O andar ${name}`} foi excluído e não pode mais ser duplicado. ${close}`;
+		case "unit":
+			return `A unidade ${name} foi excluída e não pode mais ser duplicada. ${close}`;
+	}
+}

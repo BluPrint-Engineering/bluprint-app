@@ -1,7 +1,11 @@
-import { MAX_LOCATIONS_PER_REQUEST } from "@bluprint/shared";
-import { useQuery } from "@tanstack/react-query";
+import {
+	LOCATION_NOT_FOUND,
+	LOCATION_PARENT_INVALID,
+	MAX_LOCATIONS_PER_REQUEST,
+} from "@bluprint/shared";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
-import { type RefObject, useId, useRef, useState } from "react";
+import { type RefObject, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
@@ -41,6 +45,7 @@ import {
 import {
 	copiedUnitsTakenText,
 	duplicatedToast,
+	duplicateGoneText,
 	duplicateTitle,
 	duplicateTooLargeText,
 } from "../duplicateText";
@@ -123,8 +128,22 @@ function DuplicateContent({
 		duplicate.isError &&
 		taken === undefined &&
 		availableUnitsOf(duplicate.error) === undefined;
-	const refused =
-		duplicate.error instanceof ApiError && duplicate.error.status === 400;
+	const failure =
+		duplicate.error instanceof ApiError ? duplicate.error : undefined;
+	const gone =
+		failure?.problem?.code === LOCATION_NOT_FOUND ||
+		failure?.problem?.code === LOCATION_PARENT_INVALID;
+	const refused = failure?.status === 400;
+
+	const queryClient = useQueryClient();
+	useEffect(() => {
+		if (!gone) return;
+		return () => {
+			void queryClient.invalidateQueries({
+				queryKey: ["structure", projectId],
+			});
+		};
+	}, [gone, queryClient, projectId]);
 
 	function idFor(key: string) {
 		let id = ids.current.get(key);
@@ -197,7 +216,11 @@ function DuplicateContent({
 			{failed && (
 				<Alert variant="destructive">
 					<AlertDescription>
-						{refused ? DUPLICATE_REFUSED : DUPLICATE_FAILED}
+						{gone
+							? duplicateGoneText(source.type, sourceName(source))
+							: refused
+								? DUPLICATE_REFUSED
+								: DUPLICATE_FAILED}
 					</AlertDescription>
 				</Alert>
 			)}
