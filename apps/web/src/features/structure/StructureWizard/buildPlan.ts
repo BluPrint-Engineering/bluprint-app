@@ -10,6 +10,7 @@ import {
 	type ParsedTower,
 	parseTower,
 	SINGLE_TOWER_NAME,
+	unitName,
 	type WizardDraft,
 } from "./wizardDraft";
 
@@ -50,26 +51,6 @@ export interface Plan {
 	towers: PlanTower[];
 	unitTypeCounts: PlanUnitTypeCount[];
 	untyped: number;
-}
-
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-
-function letters(index: number): string {
-	const head =
-		index >= LETTERS.length
-			? letters(Math.floor(index / LETTERS.length) - 1)
-			: "";
-	return `${head}${LETTERS[index % LETTERS.length]}`;
-}
-
-export function unitName(
-	floor: number,
-	index: number,
-	numbering: WizardDraft["numbering"],
-): string {
-	return numbering === "letters"
-		? `${floor}${letters(index)}`
-		: `${floor}${String(index + 1).padStart(2, "0")}`;
 }
 
 export const floorName = (floor: number) => `${floor}º andar`;

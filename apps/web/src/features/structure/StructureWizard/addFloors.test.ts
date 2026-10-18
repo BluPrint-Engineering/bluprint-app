@@ -364,4 +364,35 @@ describe("validateDraft for added floors", () => {
 			"A obra já tem o 2º andar.",
 		);
 	});
+
+	test("refuses floors whose units a renamed top floor already has", () => {
+		const draft = extendedDraft(withCobertura(), [], true);
+		draft.towers = draft.towers.map((one) => ({ ...one, last: "5" }));
+
+		expect(draft.towers[0]?.first).toBe("4");
+		expect(validateDraft(draft)).toEqual({
+			"tower-0-first":
+				"A Torre B já tem a unidade 401. Comece em um andar acima dela.",
+		});
+	});
+
+	test("speaks of the obra when a unit clashes on the only tower", () => {
+		const draft = extendedDraft(withCobertura(), [], false);
+		draft.towers = draft.towers.map((one) => ({ ...one, last: "4" }));
+
+		expect(validateDraft(draft)["tower-0-first"]).toBe(
+			"A obra já tem a unidade 401. Comece em um andar acima dela.",
+		);
+	});
+
+	test("accepts floors above the units of a renamed top floor", () => {
+		const draft = extendedDraft(withCobertura(), [], true);
+		draft.towers = draft.towers.map((one) => ({
+			...one,
+			first: "5",
+			last: "6",
+		}));
+
+		expect(validateDraft(draft)).toEqual({});
+	});
 });

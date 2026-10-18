@@ -38,6 +38,7 @@ export interface ExtendDraft {
 	named: boolean;
 	position: number;
 	takenFloors: number[];
+	takenUnits: string[];
 	lead: string;
 }
 
@@ -169,6 +170,9 @@ export function extendedDraft(
 			named,
 			position: now.position,
 			takenFloors: now.numbered,
+			takenUnits: tower.floors.flatMap((floor) =>
+				floor.units.map((unit) => unit.name),
+			),
 			lead: newFloorsLead(tower, named),
 		},
 		towers: [
@@ -286,6 +290,26 @@ export function withTowerCount(draft: WizardDraft, count: number): WizardDraft {
 	return { ...draft, towers, rules };
 }
 
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+function letters(index: number): string {
+	const head =
+		index >= LETTERS.length
+			? letters(Math.floor(index / LETTERS.length) - 1)
+			: "";
+	return `${head}${LETTERS[index % LETTERS.length]}`;
+}
+
+export function unitName(
+	floor: number,
+	index: number,
+	numbering: Numbering,
+): string {
+	return numbering === "letters"
+		? `${floor}${letters(index)}`
+		: `${floor}${String(index + 1).padStart(2, "0")}`;
+}
+
 export interface ParsedTower {
 	first: number;
 	last: number;
@@ -371,6 +395,23 @@ export function floorAreaProblem(
 	return undefined;
 }
 
+function clashingUnit(
+	tower: TowerDraft,
+	numbering: Numbering,
+	takenUnits: string[],
+): string | undefined {
+	const range = parseTower(tower);
+	if (!range) return undefined;
+	for (let floor = range.first; floor <= range.last; floor++) {
+		for (let at = 0; at < range.perFloor; at++) {
+			const name = unitName(floor, at, numbering);
+			const clash = takenUnits.find((taken) => sameLocationName(taken, name));
+			if (clash !== undefined) return clash;
+		}
+	}
+	return undefined;
+}
+
 export function validateDraft(draft: WizardDraft): DraftErrors {
 	const errors: DraftErrors = {};
 	const several = draft.towers.length > 1;
@@ -400,13 +441,22 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		}
 
 		if (draft.extend && first !== undefined && first >= 1) {
+			const label = draft.extend.named
+				? `A ${draft.extend.towerName}`
+				: "A obra";
 			const taken = draft.extend.takenFloors.find(
 				(number) => number >= first && number <= (last ?? first),
 			);
+			const clash =
+				taken === undefined
+					? clashingUnit(tower, draft.numbering, draft.extend.takenUnits)
+					: undefined;
 			if (taken !== undefined) {
+				set("first", `${label} já tem o ${taken}º andar.`);
+			} else if (clash !== undefined) {
 				set(
 					"first",
-					`${draft.extend.named ? `A ${draft.extend.towerName}` : "A obra"} já tem o ${taken}º andar.`,
+					`${label} já tem a unidade ${clash}. Comece em um andar acima dela.`,
 				);
 			}
 		}

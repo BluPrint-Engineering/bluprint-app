@@ -386,16 +386,43 @@ describe("adding floors to a tower (W9)", () => {
 			expect(screen.getByRole("textbox", { name: "Do andar" })).toHaveFocus();
 		});
 
-		test("continues past a renamed top floor and starts a tower without floors at the 1º", async () => {
+		test("continues past a renamed top floor", async () => {
 			const withCobertura = tower("Torre B", [
 				...typedFloors(1, 3, ["Tipologia A"]),
 				floor("Cobertura", [{ name: "401", unitType: "Tipologia A" }]),
 			]);
-			const first = scenario({ towerB: withCobertura });
-			open(first.handler, pathFor(withCobertura.id));
+			const { handler } = scenario({ towerB: withCobertura });
+			open(handler, pathFor(withCobertura.id));
 			expect(
 				await screen.findByRole("textbox", { name: "Do andar" }),
 			).toHaveValue("4");
+		});
+
+		test("refuses floors whose units a renamed top floor already has before sending anything", async () => {
+			const withCobertura = tower("Torre B", [
+				...typedFloors(1, 12, ["Tipologia A", "Tipologia A"]),
+				floor("Cobertura", [
+					{ name: "1301", unitType: "Tipologia A" },
+					{ name: "1302", unitType: "Tipologia A" },
+				]),
+			]);
+			const { handler, created } = scenario({ towerB: withCobertura });
+			open(handler, pathFor(withCobertura.id));
+			expect(
+				await screen.findByRole("textbox", { name: "Do andar" }),
+			).toHaveValue("13");
+			await typeInto("Último andar", "14");
+			await user.click(
+				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
+			);
+
+			expect(
+				await screen.findByText(
+					"A Torre B já tem a unidade 1301. Comece em um andar acima dela.",
+				),
+			).toBeInTheDocument();
+			expect(created).toHaveLength(0);
+			expect(screen.getByRole("textbox", { name: "Do andar" })).toHaveFocus();
 		});
 
 		test("starts a tower without floors at the 1º", async () => {

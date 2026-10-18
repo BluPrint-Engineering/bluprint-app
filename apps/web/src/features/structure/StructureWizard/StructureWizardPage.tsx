@@ -1,9 +1,4 @@
-import {
-	locationParamsSchema,
-	type ProjectSummary,
-	type Structure,
-	type UnitTypeList,
-} from "@bluprint/shared";
+import type { ProjectSummary, Structure, UnitTypeList } from "@bluprint/shared";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { Navigate } from "@tanstack/react-router";
 import { LoadFailure } from "@/components/LoadFailure";
@@ -51,9 +46,8 @@ export function StructureWizardPage({
 
 	if (
 		towerId !== undefined &&
-		(!locationParamsSchema.shape.locationId.safeParse(towerId).success ||
-			(structure.data &&
-				!structure.data.towers.some((tower) => tower.id === towerId)))
+		structure.data &&
+		!structure.data.towers.some((tower) => tower.id === towerId)
 	) {
 		return (
 			<Navigate to="/projects/$projectId" params={{ projectId }} replace />
