@@ -141,6 +141,9 @@ function LocationView({
 			projectId={projectId}
 			variant="outline"
 			label={PAGE_MENU_LABELS[location.type]}
+			{...(location.type !== "common_area" && {
+				duplicate: { type: location.type, id: location.id },
+			})}
 			movable={location.type === "floor" || location.type === "unit"}
 			removal={{
 				counts: tower

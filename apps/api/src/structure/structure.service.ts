@@ -10,6 +10,7 @@ import {
 	type RemoveLocationResult,
 	type RenameLocation,
 	type Structure,
+	type SubtreeRooms,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
@@ -66,15 +67,7 @@ export class StructureService {
 		const storedRooms = await this.unitTypes.findRoomIds(
 			unitTypes.flatMap(({ rooms }) => rooms.map(({ id }) => id)),
 		);
-		const storedUnitTypeRooms = new Map<string, Set<string>>();
-		for (const { id, unitTypeId } of await this.unitTypes.listRooms(
-			projectId,
-		)) {
-			storedUnitTypeRooms.set(
-				unitTypeId,
-				(storedUnitTypeRooms.get(unitTypeId) ?? new Set()).add(id),
-			);
-		}
+		const typeRooms = await this.unitTypes.listRooms(projectId);
 		const roomIdsInUse = await this.locations.findRoomIds(
 			locations.flatMap(({ rooms }) => rooms?.map(({ id }) => id) ?? []),
 		);
@@ -83,7 +76,7 @@ export class StructureService {
 			unitTypes: storedUnitTypes,
 			locationIdsElsewhere,
 			unitTypeIdsInUse: { typesElsewhere, storedRooms },
-			storedUnitTypeRooms,
+			typeRooms,
 			roomIdsInUse,
 		});
 
@@ -255,6 +248,34 @@ export class StructureService {
 		]);
 
 		return buildStructure(rows, changes);
+	}
+
+	async readSubtreeRooms(
+		userId: string,
+		projectId: string,
+		locationId: string,
+	): Promise<SubtreeRooms> {
+		await this.projects.findVisible(userId, projectId);
+
+		const subtree = await this.locations.listSubtree(projectId, locationId);
+		if (subtree.length === 0) throw locationNotFound();
+
+		const holders = subtree.filter(
+			(row) => row.type === "unit" || row.type === "common_area",
+		);
+
+		const ids = holders.map(({ id }) => id);
+		const [rooms, droppedRooms] = await Promise.all([
+			this.locations.roomsByLocation(ids),
+			this.locations.droppedRoomsByLocation(ids),
+		]);
+		return {
+			locations: ids.map((id) => ({
+				id,
+				rooms: rooms.get(id) ?? [],
+				droppedRooms: droppedRooms.get(id) ?? [],
+			})),
+		};
 	}
 
 	async readLocation(

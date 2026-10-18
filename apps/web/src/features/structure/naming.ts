@@ -69,7 +69,7 @@ export function nameProblem(raw: string): string | undefined {
 	return undefined;
 }
 
-function placeOf(scope: Scope, towerName: string | undefined): string {
+export function placeOf(scope: Scope, towerName: string | undefined): string {
 	if (scope === "project") return "na obra";
 	if (scope === "floor") return "neste andar";
 	return towerName ? `na ${towerName}` : "nesta torre";

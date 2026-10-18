@@ -20,7 +20,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	await expect.poll(unitButtons).toEqual(["901", "902", "903", "904"]);
 
 	await menu("Ações da unidade 902").click();
-	await items(["Renomear", "Mover para cima", "Mover para baixo", "Remover unidade"]);
+	await items(["Renomear", "Mover para cima", "Mover para baixo", "Duplicar unidade", "Remover unidade"]);
 	await settle();
 	await shot("f1c-unit-menu");
 	await page.keyboard.press("Escape");
@@ -72,7 +72,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	await expect(menu("Ações da área comum Hall")).toBeVisible();
 
 	await menu("Ações do andar").click();
-	await items(["Renomear andar", "Mover para cima", "Mover para baixo", "Remover andar"]);
+	await items(["Renomear andar", "Mover para cima", "Mover para baixo", "Duplicar andar", "Remover andar"]);
 	await page.getByRole("menuitem", { name: "Mover para cima" }).click();
 	await expect.poll(async () => { const names = await floorsOf("Torre A"); return names.indexOf("9º andar") > names.indexOf("10º andar"); }).toBe(true);
 	await menu("Ações do andar").click();
@@ -101,7 +101,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 
 	await page.setViewportSize({ width: page.viewportSize().width, height: 1600 });
 	await menu("Ações da torre").click();
-	await items(["Renomear torre", "Adicionar andares", "Adicionar área comum", "Remover torre"]);
+	await items(["Renomear torre", "Adicionar andares", "Adicionar área comum", "Duplicar torre", "Remover torre"]);
 	await settle();
 	await shot("t2-tower-menu-remove");
 	await page.getByRole("menuitem", { name: "Remover torre" }).click();

@@ -70,14 +70,13 @@ export const newLocationSchema = z.object({
 	}),
 	rooms: z
 		.array(newLocationRoomSchema)
-		.max(MAX_ROOMS_PER_LOCATION)
 		.optional()
 		.meta({
-			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION}, so a location removed by mistake comes back as it was. Given, even empty, they are the location's rooms exactly; left out, a unit is born with the rooms of its unit type and a common area with none.`,
+			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION} unless the request is a \`copy\`, so a location removed by mistake comes back as it was and a copy keeps what the original changed. Given, even empty, they are the location's rooms exactly; left out, a unit is born with the rooms of its unit type and a common area with none. A unit that follows a unit type lists each room of it once, here or in \`droppedRooms\`, and a room of the unit type that was not renamed carries the unit type's name for it.`,
 		}),
 	droppedRooms: z.array(z.uuid()).max(MAX_ROOMS_PER_LOCATION).optional().meta({
 		description:
-			"The rooms of the unit's unit type that the unit took out, by their id in the unit type. Only a unit with a `unitTypeId` takes them.",
+			"The rooms of the unit's unit type that the unit took out, by their id in the unit type. Only a unit with a `unitTypeId` that lists its `rooms` takes them.",
 	}),
 });
 
@@ -118,10 +117,16 @@ export const createStructureSchema = z
 			.min(1)
 			.max(MAX_LOCATIONS_PER_REQUEST)
 			.meta({
-				description: `The locations to create, parents before their children, at most ${MAX_LOCATIONS_PER_REQUEST} locations and ${MAX_UNITS_PER_FLOOR} units under one floor in one request.`,
+				description: `The locations to create, parents before their children, at most ${MAX_LOCATIONS_PER_REQUEST} locations and, unless the request is a \`copy\`, ${MAX_UNITS_PER_FLOOR} units under one floor in one request.`,
+			}),
+		copy: z
+			.boolean()
+			.optional()
+			.meta({
+				description: `Whether the request copies locations the project already has (*Duplicar*). A copy repeats what already exists, so neither the ${MAX_UNITS_PER_FLOOR} units under one floor nor the ${MAX_ROOMS_PER_LOCATION} rooms of a location apply to it. Left out means false.`,
 			}),
 	})
-	.superRefine(({ locations, unitTypes }, ctx) => {
+	.superRefine(({ locations, unitTypes, copy }, ctx) => {
 		const seenTypes = new Set<string>();
 		const seenRooms = new Set<string>();
 		unitTypes.forEach((unitType, typeIndex) => {
@@ -197,6 +202,21 @@ export const createStructureSchema = z
 					message: "Only a unit that follows a unit type takes rooms out.",
 				});
 			}
+			if (entry.droppedRooms !== undefined && entry.rooms === undefined) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["locations", index, "droppedRooms"],
+					message: "A unit lists the rooms it took out only with its rooms.",
+				});
+			}
+
+			if (!copy && (entry.rooms?.length ?? 0) > MAX_ROOMS_PER_LOCATION) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["locations", index, "rooms"],
+					message: `A location takes at most ${MAX_ROOMS_PER_LOCATION} rooms per request.`,
+				});
+			}
 
 			const taken = new Set(entry.droppedRooms);
 			const roomNames = new Set<string>();
@@ -256,7 +276,7 @@ export const createStructureSchema = z
 				});
 			}
 
-			if (entry.type !== "unit" || entry.parentId === null) return;
+			if (copy || entry.type !== "unit" || entry.parentId === null) return;
 			const units = (unitsPerFloor.get(entry.parentId) ?? 0) + 1;
 			unitsPerFloor.set(entry.parentId, units);
 			if (units === MAX_UNITS_PER_FLOOR + 1) {

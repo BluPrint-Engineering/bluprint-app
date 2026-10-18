@@ -13,6 +13,7 @@ import {
 	type StructureFloor,
 	type StructureTower,
 	type StructureUnit,
+	type SubtreeRooms,
 	type UnitType,
 	type UnitTypeList,
 } from "@bluprint/shared";
@@ -317,6 +318,30 @@ function applyCreation(structure: Structure, body: CreateStructure) {
 	recount(structure);
 }
 
+function holdersUnder(structure: Structure, id: string): string[] {
+	const ids = (nodes: { id: string }[]) => nodes.map((node) => node.id);
+	const ofFloor = (floor: StructureFloor) => [
+		...ids(floor.units),
+		...ids(floor.commonAreas),
+	];
+	for (const tower of structure.towers) {
+		if (tower.id === id) {
+			return [...tower.floors.flatMap(ofFloor), ...ids(tower.commonAreas)];
+		}
+		for (const floor of tower.floors) {
+			if (floor.id === id) return ofFloor(floor);
+		}
+	}
+	const leaves = [
+		...ids(structure.commonAreas),
+		...structure.towers.flatMap((tower) => [
+			...ids(tower.commonAreas),
+			...tower.floors.flatMap(ofFloor),
+		]),
+	];
+	return leaves.includes(id) ? [id] : [];
+}
+
 function removeNode(
 	structure: Structure,
 	id: string,
@@ -387,6 +412,7 @@ function moveNode(structure: Structure, id: string, direction: MoveDirection) {
 
 export interface WritableApiOptions {
 	remaining?: number;
+	subtreeRooms?: SubtreeRooms["locations"];
 	organization?: OrganizationUnits;
 	details?: Record<string, Partial<LocationDetail>>;
 	remove?: (locationId: string, attempt: number) => Reply | undefined;
@@ -417,6 +443,7 @@ export function writableApi(
 	};
 	const created: CreateStructure[] = [];
 	const renamed: { locationId: string; name: string }[] = [];
+	const roomsRead: string[] = [];
 	const removed: string[] = [];
 	const moved: { locationId: string; direction: MoveDirection }[] = [];
 	const base = `/api/projects/${initial.id}`;
@@ -476,6 +503,20 @@ export function writableApi(
 					},
 					201,
 				);
+			}
+			const below = new RegExp(
+				`^${base}/locations/([^/]+)/subtree-rooms$`,
+			).exec(url.pathname);
+			if (below) {
+				roomsRead.push(below[1] ?? "");
+				const given = new Map(
+					(options.subtreeRooms ?? []).map((entry) => [entry.id, entry]),
+				);
+				return json({
+					locations: holdersUnder(structure, below[1] ?? "").map(
+						(id) => given.get(id) ?? { id, rooms: [], droppedRooms: [] },
+					),
+				});
 			}
 			const moveTarget = new RegExp(`^${base}/locations/([^/]+)/move$`).exec(
 				url.pathname,
@@ -541,7 +582,7 @@ export function writableApi(
 		structureApi(initial.id, structure, options.details),
 	);
 
-	return { handler, state, created, renamed, removed, moved };
+	return { handler, state, created, renamed, removed, moved, roomsRead };
 }
 
 export function unitTypeOf(

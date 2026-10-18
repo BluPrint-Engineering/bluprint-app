@@ -61,7 +61,7 @@ describe("the page menu", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("offers renaming, adding floors, adding a common area and removing on a tower (T2)", async () => {
+	test("offers renaming, adding floors, adding a common area, duplicating and removing on a tower (T2)", async () => {
 		const { towerA, several } = build();
 		stubApi(signedIn, { api: writableApi(obra(), several).handler });
 		renderAt(pathOf(towerA.id));
@@ -75,6 +75,7 @@ describe("the page menu", () => {
 			"Renomear torre",
 			"Adicionar andares",
 			"Adicionar área comum",
+			"Duplicar torre",
 			"Remover torre",
 		]);
 		expect(
@@ -94,6 +95,7 @@ describe("the page menu", () => {
 				"Renomear andar",
 				"Mover para cima",
 				"Mover para baixo",
+				"Duplicar andar",
 				"Remover andar",
 			],
 		],
@@ -101,7 +103,13 @@ describe("the page menu", () => {
 			"a unit",
 			"unit",
 			"Ações da unidade",
-			["Renomear", "Mover para cima", "Mover para baixo", "Remover unidade"],
+			[
+				"Renomear",
+				"Mover para cima",
+				"Mover para baixo",
+				"Duplicar unidade",
+				"Remover unidade",
+			],
 		],
 		[
 			"a common area of a floor",
@@ -110,7 +118,7 @@ describe("the page menu", () => {
 			["Renomear", "Remover área comum"],
 		],
 	] as const)(
-		"offers renaming, moving and removing on %s",
+		"offers renaming, moving, duplicating and removing on %s",
 		async (_label, which, menu, labels) => {
 			const { ninth, several } = build();
 			const target = {
