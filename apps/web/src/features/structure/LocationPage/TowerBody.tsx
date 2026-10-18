@@ -1,6 +1,11 @@
 import type { StructureTower } from "@bluprint/shared";
-import { Layers } from "lucide-react";
+import { Layers, ListPlus } from "lucide-react";
 import { StateBlock } from "@/components/StateBlock";
+import { Button } from "@/components/ui/button";
+import {
+	AddFloorsLink,
+	NO_FLOORS_DESCRIPTION,
+} from "../components/AddFloorsLink";
 import { AddRow } from "../components/AddRow";
 import { Facade, FacadeCard } from "../components/Facade";
 import { LocationList } from "../components/LocationList";
@@ -67,8 +72,21 @@ export function TowerBody({
 				<StateBlock
 					icon={Layers}
 					title={`A ${tower.name} ainda não tem andares`}
-					description="Os andares aparecem aqui quando alguém da equipe adicionar."
-				/>
+					description={
+						canEdit
+							? NO_FLOORS_DESCRIPTION
+							: "Os andares aparecem aqui quando alguém da equipe adicionar."
+					}
+				>
+					{canEdit && (
+						<Button asChild size="lg" className="max-md:w-full">
+							<AddFloorsLink projectId={projectId} towerId={tower.id}>
+								<ListPlus className="size-5" aria-hidden="true" />
+								Adicionar andares
+							</AddFloorsLink>
+						</Button>
+					)}
+				</StateBlock>
 				{areas}
 			</div>
 		);

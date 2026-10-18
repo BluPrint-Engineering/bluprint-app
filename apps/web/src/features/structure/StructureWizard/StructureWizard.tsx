@@ -22,8 +22,10 @@ import {
 	unitTypeNamesTakenOf,
 	useCreateStructureMutation,
 } from "../api";
+import { plural } from "../plural";
 import {
 	createdToast,
+	floorsAddedToast,
 	nameTakenText,
 	overReserveText,
 	planLine,
@@ -49,6 +51,12 @@ import {
 
 const STEP_TITLES = [
 	"Torres e andares",
+	"Áreas comuns",
+	"Tipologias",
+	"Prévia",
+] as const;
+const EXTEND_STEP_TITLES = [
+	"Novos andares",
 	"Áreas comuns",
 	"Tipologias",
 	"Prévia",
@@ -131,12 +139,20 @@ function MobileBar({ children }: { children: React.ReactNode }) {
 	);
 }
 
-export function StructureWizard({ project }: { project: ProjectSummary }) {
+export function StructureWizard({
+	project,
+	start,
+}: {
+	project: ProjectSummary;
+	start?: WizardDraft;
+}) {
 	const desktop = useIsDesktop();
 	const navigate = useNavigate();
 	const create = useCreateStructureMutation(project.id);
 	const units = useQuery(projectUnitsQueryOptions(project.id));
-	const [draft, setDraft] = useState<WizardDraft>(initialDraft);
+	const [draft, setDraft] = useState<WizardDraft>(start ?? initialDraft);
+	const extend = draft.extend;
+	const stepTitles = extend ? EXTEND_STEP_TITLES : STEP_TITLES;
 	const [errors, setErrors] = useState<DraftErrors>({});
 	const [step, setStep] = useState(0);
 	const [floorArea, setFloorArea] = useState<FloorAreaInput>();
@@ -221,6 +237,27 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			{ unitTypes, locations },
 			{
 				onSuccess: ({ counts }) => {
+					if (extend) {
+						const towerName = extend.named ? extend.towerName : undefined;
+						toast.success(floorsAddedToast(counts.floors, towerName));
+						void navigate(
+							extend.named
+								? {
+										to: "/projects/$projectId/locations/$locationId",
+										params: {
+											projectId: project.id,
+											locationId: extend.towerId,
+										},
+										replace: true,
+									}
+								: {
+										to: "/projects/$projectId",
+										params: { projectId: project.id },
+										replace: true,
+									},
+						);
+						return;
+					}
 					toast.success(createdToast(counts.towers, counts.units));
 					void navigate({
 						to: "/projects/$projectId",
@@ -238,7 +275,11 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			? { state: "unknown" }
 			: {
 					state: "ready",
-					text: planLine(preview.counts.units, remaining, "criar"),
+					text: planLine(
+						preview.counts.units,
+						remaining,
+						extend ? "adicionar" : "criar",
+					),
 				};
 
 	const names = namesTakenOf(create.error);
@@ -286,6 +327,16 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		/>
 	);
 
+	const createLabel = extend
+		? preview.counts.floors > 0
+			? `Adicionar ${plural(preview.counts.floors, "andar", "andares")}`
+			: "Adicionar andares"
+		: "Criar estrutura";
+	const pendingLabel = extend ? "Adicionando andares…" : "Criando estrutura…";
+	const heading = extend
+		? `${extend.named ? extend.towerName : "A obra"} ganha ${plural(preview.counts.floors, "andar", "andares")} e ${plural(preview.counts.units, "unidade", "unidades")}`
+		: undefined;
+
 	const createButton = (
 		<Button
 			ref={createButtonRef}
@@ -301,7 +352,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			) : (
 				<Check className="size-5" aria-hidden="true" />
 			)}
-			{create.isPending ? "Criando estrutura…" : "Criar estrutura"}
+			{create.isPending ? pendingLabel : createLabel}
 		</Button>
 	);
 
@@ -332,7 +383,8 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 
 	const note = (
 		<p className="text-sm text-muted-foreground">
-			Nada é salvo antes de criar. Depois, tudo se ajusta na fachada.
+			Nada é salvo antes de {extend ? "adicionar" : "criar"}. Depois, tudo se
+			ajusta na fachada.
 		</p>
 	);
 
@@ -358,12 +410,16 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		/>
 	);
 
+	const towersDescription =
+		extend?.lead ??
+		"Cada torre com o seu número de andares e de unidades. Uma torre nova começa igual à anterior.";
+
 	const content = [
 		<Section
 			key="towers"
 			number={1}
-			title={STEP_TITLES[0]}
-			description="Cada torre com o seu número de andares e de unidades. Uma torre nova começa igual à anterior."
+			title={stepTitles[0]}
+			description={towersDescription}
 			desktop={false}
 		>
 			{towersStep}
@@ -371,7 +427,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		<Section
 			key="areas"
 			number={2}
-			title={STEP_TITLES[1]}
+			title={stepTitles[1]}
 			description="O hall de cada andar já está no passo 1. Aqui entram as outras."
 			desktop={false}
 		>
@@ -380,14 +436,14 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		<Section
 			key="types"
 			number={3}
-			title={STEP_TITLES[2]}
+			title={stepTitles[2]}
 			description={TYPES_DESCRIPTION}
 			desktop={false}
 		>
 			{typesStep}
 		</Section>,
-		<Section key="preview" number={4} title={STEP_TITLES[3]} desktop={false}>
-			<PreviewSummary plan={preview} units={unitsLine} />
+		<Section key="preview" number={4} title={stepTitles[3]} desktop={false}>
+			<PreviewSummary plan={preview} units={unitsLine} heading={heading} />
 			<UntypedAlert plan={preview} />
 			{!tooLarge && <PreviewTowers plan={preview} />}
 			{failures}
@@ -400,15 +456,15 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 			<div className="grid gap-(--space-5)">
 				<Section
 					number={1}
-					title={STEP_TITLES[0]}
-					description="Cada torre com o seu número de andares e de unidades. Uma torre nova começa igual à anterior."
+					title={stepTitles[0]}
+					description={towersDescription}
 					desktop
 				>
 					{towersStep}
 				</Section>
 				<Section
 					number={2}
-					title={STEP_TITLES[1]}
+					title={stepTitles[1]}
 					description="O hall de cada andar já está no passo 1. Aqui entram as outras."
 					desktop
 				>
@@ -416,7 +472,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 				</Section>
 				<Section
 					number={3}
-					title={STEP_TITLES[2]}
+					title={stepTitles[2]}
 					description={TYPES_DESCRIPTION}
 					desktop
 				>
@@ -428,7 +484,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 				className="sticky top-22 grid gap-(--space-4) rounded-xl bg-card p-(--space-5) shadow-(--ring-hairline)"
 			>
 				<h2 className="text-lg font-semibold tracking-tight">Prévia</h2>
-				<PreviewSummary plan={preview} units={unitsLine} />
+				<PreviewSummary plan={preview} units={unitsLine} heading={heading} />
 				<UntypedAlert plan={preview} />
 				{failures}
 				{blocker}
@@ -446,10 +502,10 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 		>
 			<div className="grid gap-(--space-2)">
 				<span className="text-sm text-muted-foreground">
-					Passo {step + 1} de {STEP_TITLES.length}
+					Passo {step + 1} de {stepTitles.length}
 				</span>
 				<div className="flex gap-1" aria-hidden="true">
-					{STEP_TITLES.map((title, at) => (
+					{stepTitles.map((title, at) => (
 						<span
 							key={title}
 							className={cn(
@@ -486,7 +542,7 @@ export function StructureWizard({ project }: { project: ProjectSummary }) {
 								setStep(step + 1);
 							}}
 						>
-							Continuar · {STEP_TITLES[step + 1]}
+							Continuar · {stepTitles[step + 1]}
 						</Button>
 					) : (
 						<div className="flex-2">{createButton}</div>

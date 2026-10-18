@@ -15,10 +15,16 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { isBlankStructure, structureQueryOptions } from "../api";
+import {
+	AddFloorsLink,
+	AssistantMenuItem,
+	NO_FLOORS_DESCRIPTION,
+} from "../components/AddFloorsLink";
 import { AddRow } from "../components/AddRow";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
 import { ListCard, ListRow, LocationList } from "../components/LocationList";
@@ -33,9 +39,13 @@ import { nextTowerName } from "../naming";
 import { TowerCards } from "./TowerCards";
 
 function AddMenu({
+	projectId,
+	towers,
 	adding,
 	towerOpener,
 }: {
+	projectId: string;
+	towers: StructureTower[];
 	adding: Adding;
 	towerOpener: Ref<HTMLButtonElement>;
 }) {
@@ -64,6 +74,8 @@ function AddMenu({
 					<Plus className="size-4.5" aria-hidden="true" />
 					Área comum da obra
 				</DropdownMenuItem>
+				{towers.length > 0 && <DropdownMenuSeparator />}
+				<AssistantMenuItem projectId={projectId} towers={towers} />
 			</DropdownMenuContent>
 		</DropdownMenu>
 	);
@@ -194,7 +206,24 @@ function SingleTower({
 			<section className="grid min-w-0 content-start gap-(--space-3)">
 				<div className="flex items-center justify-between gap-(--space-3)">
 					<h2 className="text-lg font-semibold tracking-tight">Fachada</h2>
-					{canEdit && <AddMenu adding={adding} towerOpener={towerOpener} />}
+					{canEdit && (
+						<div className="flex items-center gap-(--space-2)">
+							{tower.floors.length > 0 && (
+								<Button asChild variant="outline">
+									<AddFloorsLink projectId={projectId} towerId={tower.id}>
+										<ListPlus className="size-4.5" aria-hidden="true" />
+										Adicionar andares
+									</AddFloorsLink>
+								</Button>
+							)}
+							<AddMenu
+								projectId={projectId}
+								towers={structure.towers}
+								adding={adding}
+								towerOpener={towerOpener}
+							/>
+						</div>
+					)}
 				</div>
 				{canEdit && adding.is("tower") && (
 					<TowerForm
@@ -216,8 +245,21 @@ function SingleTower({
 					<StateBlock
 						icon={Layers}
 						title="A obra ainda não tem andares"
-						description="Os andares aparecem aqui quando alguém da equipe adicionar."
-					/>
+						description={
+							canEdit
+								? NO_FLOORS_DESCRIPTION
+								: "Os andares aparecem aqui quando alguém da equipe adicionar."
+						}
+					>
+						{canEdit && (
+							<Button asChild size="lg" className="max-md:w-full">
+								<AddFloorsLink projectId={projectId} towerId={tower.id}>
+									<ListPlus className="size-5" aria-hidden="true" />
+									Adicionar andares
+								</AddFloorsLink>
+							</Button>
+						)}
+					</StateBlock>
 				)}
 			</section>
 			<ProjectAreas
@@ -251,7 +293,14 @@ function SeveralTowers({
 				<section className="grid gap-(--space-3)">
 					<div className="flex items-center justify-between gap-(--space-3)">
 						<h2 className="text-lg font-semibold tracking-tight">Torres</h2>
-						{canEdit && <AddMenu adding={adding} towerOpener={towerOpener} />}
+						{canEdit && (
+							<AddMenu
+								projectId={projectId}
+								towers={structure.towers}
+								adding={adding}
+								towerOpener={towerOpener}
+							/>
+						)}
 					</div>
 					{structure.towers.length > 0 && (
 						<TowerCards projectId={projectId} towers={structure.towers} />

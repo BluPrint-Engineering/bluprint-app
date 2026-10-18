@@ -68,12 +68,14 @@ function TowerCard({
 	tower,
 	index,
 	named,
+	extending,
 	errors,
 	edit,
 }: {
 	tower: TowerDraft;
 	index: number;
 	named: boolean;
+	extending: boolean;
 	errors: DraftErrors;
 	edit: Edit;
 }) {
@@ -120,7 +122,7 @@ function TowerCard({
 				<NumberField
 					index={index}
 					field="first"
-					label="Primeiro andar"
+					label={extending ? "Do andar" : "Primeiro andar"}
 					value={tower.first}
 					error={errors[towerFieldId(index, "first")]}
 					onChange={(value) => set("first", value)}
@@ -144,22 +146,27 @@ function TowerCard({
 				/>
 			</div>
 			<div className="grid">
-				<Field
-					orientation="horizontal"
-					className="min-h-(--tap-min) items-center"
-				>
-					<Checkbox
-						id={`tower-${index}-ground`}
-						checked={tower.ground}
-						onCheckedChange={(checked) => toggle("ground", checked === true)}
-					/>
-					<FieldLabel htmlFor={`tower-${index}-ground`} className="grid gap-0">
-						<span className="font-medium">Térreo sem unidades</span>
-						<span className="text-sm font-normal text-muted-foreground">
-							Com hall de entrada
-						</span>
-					</FieldLabel>
-				</Field>
+				{!extending && (
+					<Field
+						orientation="horizontal"
+						className="min-h-(--tap-min) items-center"
+					>
+						<Checkbox
+							id={`tower-${index}-ground`}
+							checked={tower.ground}
+							onCheckedChange={(checked) => toggle("ground", checked === true)}
+						/>
+						<FieldLabel
+							htmlFor={`tower-${index}-ground`}
+							className="grid gap-0"
+						>
+							<span className="font-medium">Térreo sem unidades</span>
+							<span className="text-sm font-normal text-muted-foreground">
+								Com hall de entrada
+							</span>
+						</FieldLabel>
+					</Field>
+				)}
 				<Field
 					orientation="horizontal"
 					className="min-h-(--tap-min) items-center"
@@ -190,8 +197,25 @@ export function TowersStep({
 	desktop: boolean;
 }) {
 	const count = draft.towers.length;
+	const extending = draft.extend !== undefined;
 	const setCount = (next: number) =>
 		edit((current) => withTowerCount(current, next));
+
+	if (extending) {
+		const [tower] = draft.towers;
+		return (
+			tower && (
+				<TowerCard
+					tower={tower}
+					index={0}
+					named={false}
+					extending
+					errors={errors}
+					edit={edit}
+				/>
+			)
+		);
+	}
 
 	return (
 		<div className="grid gap-(--space-4)">
@@ -237,6 +261,7 @@ export function TowersStep({
 					tower={tower}
 					index={index}
 					named={count > 1}
+					extending={false}
 					errors={errors}
 					edit={edit}
 				/>

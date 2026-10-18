@@ -24,7 +24,7 @@ export default async function structureConfiguration({ page, shot, expect, query
 	].join(" · ");
 	await expect(estrutura.getByText(summary)).toBeVisible();
 	await expect(estrutura.getByRole("link", { name: "Abrir estrutura" })).toBeVisible();
-	await expect(estrutura.getByRole("link", { name: "Assistente" })).toHaveCount(0);
+	await expect(estrutura.getByRole("button", { name: "Assistente" })).toBeVisible();
 	await expect(tipologias.getByRole("button", { name: "Nova tipologia" })).toBeVisible();
 	await shot("c1-sections");
 
@@ -92,6 +92,7 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await page.goto(`/projects/${await projectId("Residencial Vila Nova")}/configuration`);
 	await expect(section("Estrutura").getByRole("link", { name: "Abrir estrutura" })).toBeVisible();
 	await expect(section("Estrutura").getByRole("link", { name: "Assistente" })).toHaveCount(0);
+	await expect(section("Estrutura").getByRole("button", { name: "Assistente" })).toHaveCount(0);
 	await expect(section("Estrutura").getByText(locked)).toBeVisible();
 	await expect(section("Tipologias").getByText(locked)).toBeVisible();
 	await expect(section("Tipologias").getByRole("button")).toHaveCount(0);

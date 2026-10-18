@@ -59,6 +59,11 @@ export function createdToast(towers: number, units: number): string {
 	return `Estrutura criada: ${plural(towers, "torre", "torres")} e ${plural(units, "unidade", "unidades")}.`;
 }
 
+export function floorsAddedToast(floors: number, towerName?: string): string {
+	const added = floors === 1 ? "andar adicionado" : "andares adicionados";
+	return `${floors} ${added}${towerName ? ` à ${towerName}` : ""}.`;
+}
+
 export function listOfNames(names: string[]): string {
 	const quoted = names.map((name) => `“${name}”`);
 	const last = quoted.pop();

@@ -170,39 +170,42 @@ export function CommonAreasStep({
 }) {
 	const several = draft.towers.length > 1;
 	const towerName = (index: number) =>
-		several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME;
+		draft.extend?.towerName ??
+		(several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME);
 	const places = listedFloorAreas(draft);
 
 	return (
 		<div className="grid gap-(--space-5)">
-			<Group
-				title="Da obra"
-				description="Fora das torres: garagem, fachada, piscina."
-			>
-				<Tags
-					items={draft.projectAreas}
-					onRemove={(index) =>
-						edit((current) => ({
-							...current,
-							projectAreas: current.projectAreas.filter(
-								(_, at) => at !== index,
-							),
-						}))
-					}
-				/>
-				<AddTag
-					label="Área comum da obra"
-					placeholder="Ex.: Guarita"
-					existing={draft.projectAreas}
-					duplicateMessage="Essa área comum já está na lista."
-					onAdd={(name) =>
-						edit((current) => ({
-							...current,
-							projectAreas: [...current.projectAreas, name],
-						}))
-					}
-				/>
-			</Group>
+			{!draft.extend && (
+				<Group
+					title="Da obra"
+					description="Fora das torres: garagem, fachada, piscina."
+				>
+					<Tags
+						items={draft.projectAreas}
+						onRemove={(index) =>
+							edit((current) => ({
+								...current,
+								projectAreas: current.projectAreas.filter(
+									(_, at) => at !== index,
+								),
+							}))
+						}
+					/>
+					<AddTag
+						label="Área comum da obra"
+						placeholder="Ex.: Guarita"
+						existing={draft.projectAreas}
+						duplicateMessage="Essa área comum já está na lista."
+						onAdd={(name) =>
+							edit((current) => ({
+								...current,
+								projectAreas: [...current.projectAreas, name],
+							}))
+						}
+					/>
+				</Group>
+			)}
 			{several && (
 				<Group
 					title="Em cada torre"

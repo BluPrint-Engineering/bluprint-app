@@ -17,6 +17,7 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	await page.keyboard.press("Enter");
 	await expect(page.getByRole("heading", { name: "A obra ainda não tem andares" })).toBeVisible();
 	await expect(page.getByText("Torre A")).toHaveCount(0);
+	await expect(page.getByRole("link", { name: "Adicionar andares" })).toHaveAttribute("href", /\/structure\/new\?tower=/);
 	await shot("e3-first-tower");
 
 	await page.getByRole("button", { name: "Adicionar", exact: true }).click();
@@ -30,7 +31,7 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	await shot("e2-two-towers");
 
 	await page.getByRole("button", { name: "Adicionar", exact: true }).click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Torre", "Área comum da obra"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Torre", "Área comum da obra", "Adicionar andares à Torre A", "Adicionar andares à Torre B"]);
 	await settle();
 	await shot("e2-add-menu");
 	await page.keyboard.press("Escape");
@@ -94,7 +95,7 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	await expect(page.getByRole("heading", { level: 1, name: "Torre A" })).toBeVisible();
 	await shot("t1-tower-page-menu");
 	await pageMenu("Ações da torre").click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Renomear torre", "Adicionar área comum"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Renomear torre", "Adicionar andares", "Adicionar área comum"]);
 	await settle();
 	await shot("t2-tower-menu");
 	await page.keyboard.press("Escape");

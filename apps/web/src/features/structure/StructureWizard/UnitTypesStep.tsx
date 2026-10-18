@@ -35,6 +35,22 @@ const RULE_GRID =
 	"grid-cols-[1fr_0.7fr_0.7fr_1.3fr_44px] items-start gap-(--space-2)";
 const RULE_GRID_WITH_TOWER = "grid-cols-[1.1fr_1fr_0.7fr_0.7fr_1.3fr_44px]";
 
+function ExistingUnitTypeCard({ unitType }: { unitType: UnitTypeDraft }) {
+	return (
+		<div className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline)">
+			<div className="flex items-baseline justify-between gap-(--space-2)">
+				<span className="font-semibold [overflow-wrap:anywhere]">
+					{unitType.name}
+				</span>
+				<span className="shrink-0 text-sm text-muted-foreground">
+					{plural(unitType.rooms.length, "cômodo", "cômodos")}
+				</span>
+			</div>
+			<Tags items={unitType.rooms} />
+		</div>
+	);
+}
+
 function UnitTypeCard({
 	unitType,
 	errors,
@@ -316,20 +332,27 @@ export function UnitTypesStep({
 						desktop && "grid-cols-[repeat(auto-fit,minmax(240px,1fr))]",
 					)}
 				>
-					{draft.unitTypes.map((unitType) => (
-						<UnitTypeCard
-							key={unitType.key}
-							unitType={unitType}
-							errors={errors}
-							edit={edit}
-						/>
-					))}
+					{draft.unitTypes.map((unitType) =>
+						unitType.existing ? (
+							<ExistingUnitTypeCard key={unitType.key} unitType={unitType} />
+						) : (
+							<UnitTypeCard
+								key={unitType.key}
+								unitType={unitType}
+								errors={errors}
+								edit={edit}
+							/>
+						),
+					)}
 				</div>
 				<Button
 					type="button"
 					variant="outline"
 					className="justify-self-start"
-					disabled={draft.unitTypes.length >= MAX_UNIT_TYPES_PER_REQUEST}
+					disabled={
+						draft.unitTypes.filter(({ existing }) => !existing).length >=
+						MAX_UNIT_TYPES_PER_REQUEST
+					}
 					onClick={() => edit(withNewUnitType)}
 				>
 					<Plus className="size-5" aria-hidden="true" />

@@ -2,6 +2,7 @@ export interface UnitTypeDraft {
 	key: string;
 	name: string;
 	rooms: string[];
+	existing?: true;
 }
 
 export interface RuleDraft {

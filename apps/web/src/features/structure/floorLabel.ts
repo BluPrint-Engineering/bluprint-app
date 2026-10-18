@@ -6,7 +6,7 @@ export function isNumberedFloor(label: string): boolean {
 	return /^\d+º$/.test(label);
 }
 
-function numberOf(name: string): number | undefined {
+export function floorNumber(name: string): number | undefined {
 	const label = floorLabel(name);
 	return isNumberedFloor(label) ? Number.parseInt(label, 10) : undefined;
 }
@@ -24,7 +24,7 @@ export function floorSummary(names: string[]): string {
 	};
 
 	for (const name of names) {
-		const number = numberOf(name);
+		const number = floorNumber(name);
 		if (number === undefined) {
 			flushRun();
 			parts.push(name);
