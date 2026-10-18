@@ -87,6 +87,18 @@ describe("removing an empty location at once (R1)", () => {
 		).toBeInTheDocument();
 	});
 
+	test("draws Desfazer as an outlined button", async () => {
+		const { ninth, several } = build();
+		stubApi(signedIn, { api: writableApi(obra(), several).handler });
+		renderAt(pathOf(ninth.id));
+
+		await pick("Ações da unidade 904", "Remover unidade");
+
+		const undo = await screen.findByRole("button", { name: "Desfazer" });
+		expect(undo).toHaveClass("border-border");
+		expect(undo).not.toHaveClass("border-transparent");
+	});
+
 	test("brings the unit back with the same id, place, unit type, rooms and changes when Desfazer is pressed", async () => {
 		const { ninth, several } = build();
 		const unit = nth(ninth.units, 3);
