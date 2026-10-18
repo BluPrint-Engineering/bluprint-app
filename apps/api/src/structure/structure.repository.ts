@@ -1,10 +1,15 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import type { DroppedRoom, NewLocation, Room } from "@bluprint/shared";
-import { and, asc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
-import type { LocationRow, StructureRow } from "./location-row";
+import type {
+	LocationRow,
+	PlacedRow,
+	SiblingRow,
+	StructureRow,
+} from "./location-row";
 import { droppedRoom, room } from "./room.entity";
 import { type UnitChangesRow, unitChangesQuery } from "./unit-changes";
 import { unitType, unitTypeRoom } from "./unit-type.entity";
@@ -93,6 +98,103 @@ export class StructureRepository {
 		}
 	}
 
+	async findRoomIds(ids: string[]): Promise<Set<string>> {
+		if (ids.length === 0) return new Set();
+		const rows = await this.txHost.tx
+			.select({ id: room.id })
+			.from(room)
+			.where(inArray(room.id, ids));
+
+		return new Set(rows.map((row) => row.id));
+	}
+
+	async insertRooms(
+		rooms: {
+			id: string;
+			locationId: string;
+			name: string;
+			position: number;
+			unitTypeRoomId: string | null;
+			renamed: boolean;
+		}[],
+	): Promise<void> {
+		for (let start = 0; start < rooms.length; start += INSERT_CHUNK) {
+			await this.txHost.tx
+				.insert(room)
+				.values(rooms.slice(start, start + INSERT_CHUNK));
+		}
+	}
+
+	async insertDroppedRooms(
+		dropped: { locationId: string; unitTypeRoomId: string }[],
+	): Promise<void> {
+		for (let start = 0; start < dropped.length; start += INSERT_CHUNK) {
+			await this.txHost.tx
+				.insert(droppedRoom)
+				.values(dropped.slice(start, start + INSERT_CHUNK));
+		}
+	}
+
+	async listSubtree(projectId: string, rootId: string): Promise<LocationRow[]> {
+		const { rows } = await this.txHost.tx.execute<{
+			id: string;
+			parent_id: string | null;
+			type: LocationRow["type"];
+			name: string;
+		}>(sql`
+			with recursive subtree as (
+				select ${location.id} as id, ${location.parentId} as parent_id, ${location.type} as type, ${location.name} as name
+				from ${location}
+				where ${location.id} = ${rootId} and ${location.projectId} = ${projectId}
+				union all
+				select l.id, l.parent_id, l.type, l.name
+				from ${location} l
+				join subtree on l.parent_id = subtree.id
+			)
+			select id, parent_id, type, name from subtree
+		`);
+
+		return rows.map((row) => ({
+			id: row.id,
+			parentId: row.parent_id,
+			type: row.type,
+			name: row.name,
+		}));
+	}
+
+	async delete(locationId: string): Promise<void> {
+		await this.txHost.tx.delete(location).where(eq(location.id, locationId));
+	}
+
+	listSiblings(
+		projectId: string,
+		parentId: string | null,
+	): Promise<SiblingRow[]> {
+		return this.txHost.tx
+			.select({
+				id: location.id,
+				type: location.type,
+				position: location.position,
+			})
+			.from(location)
+			.where(
+				and(
+					eq(location.projectId, projectId),
+					parentId === null
+						? isNull(location.parentId)
+						: eq(location.parentId, parentId),
+				),
+			)
+			.orderBy(asc(location.position), asc(location.id));
+	}
+
+	async setPosition(locationId: string, position: number): Promise<void> {
+		await this.txHost.tx
+			.update(location)
+			.set({ position })
+			.where(eq(location.id, locationId));
+	}
+
 	async rename(locationId: string, name: string): Promise<void> {
 		await this.txHost.tx
 			.update(location)
@@ -103,16 +205,16 @@ export class StructureRepository {
 	async find(
 		projectId: string,
 		locationId: string,
-	): Promise<StructureRow | undefined> {
+	): Promise<PlacedRow | undefined> {
 		const [found] = await this.txHost.tx
-			.select(structureColumns)
+			.select({ ...structureColumns, position: location.position })
 			.from(location)
 			.leftJoin(unitType, eq(unitType.id, location.unitTypeId))
 			.where(
 				and(eq(location.projectId, projectId), eq(location.id, locationId)),
 			);
 
-		return found && toStructureRow(found);
+		return found && { ...toStructureRow(found), position: found.position };
 	}
 
 	async countUnitChanges(

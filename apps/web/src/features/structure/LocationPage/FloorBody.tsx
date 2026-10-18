@@ -9,6 +9,7 @@ import { LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
 import type { Adding } from "../components/useAdding";
 import { nextUnitName } from "../naming";
+import { NO_CHILDREN } from "../removeText";
 import { unitTypeLine } from "./unitTypeLine";
 
 export function FloorBody({
@@ -35,6 +36,8 @@ export function FloorBody({
 			<LocationMenu
 				projectId={projectId}
 				label={`Ações da unidade ${unit.name}`}
+				movable
+				removal={{ counts: NO_CHILDREN }}
 				target={{
 					id: unit.id,
 					type: "unit",
@@ -52,6 +55,7 @@ export function FloorBody({
 			<LocationMenu
 				projectId={projectId}
 				label={`Ações da área comum ${area.name}`}
+				removal={{ counts: NO_CHILDREN }}
 				target={{
 					id: area.id,
 					type: "common_area",

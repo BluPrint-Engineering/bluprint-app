@@ -71,7 +71,7 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	await expect(page.getByRole("link", { name: "Terraço" })).toBeVisible();
 
 	await page.getByRole("button", { name: "Ações da unidade 905" }).click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Renomear"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Renomear", "Mover para cima", "Mover para baixo", "Remover unidade"]);
 	await settle();
 	await shot("f1b-unit-menu");
 	await page.keyboard.press("Escape");
@@ -94,7 +94,7 @@ export default async function structureEdit({ page, shot, expect, query }) {
 	await expect(page.getByRole("heading", { level: 1, name: "Torre A" })).toBeVisible();
 	await shot("t1-tower-page-menu");
 	await pageMenu("Ações da torre").click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Renomear torre", "Adicionar área comum"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Renomear torre", "Adicionar área comum", "Remover torre"]);
 	await settle();
 	await shot("t2-tower-menu");
 	await page.keyboard.press("Escape");

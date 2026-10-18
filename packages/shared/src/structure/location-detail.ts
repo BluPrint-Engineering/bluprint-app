@@ -39,6 +39,11 @@ export const locationDetailSchema = z.object({
 	id: z.uuid(),
 	type: locationTypeSchema,
 	name: z.string().meta({ example: "903" }),
+	position: z.int().nonnegative().meta({
+		description:
+			"Where the location sits among the locations under the same parent, counting from 0, as it was created. Positions can have gaps after a removal; the order is what counts.",
+		example: 2,
+	}),
 	ancestors: z.array(locationRefSchema).meta({
 		description:
 			"The locations above this one, from the highest down to its parent. Empty for a tower and for a common area of the project.",
