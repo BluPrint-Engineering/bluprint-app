@@ -164,9 +164,10 @@ describe("several towers (E2)", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("opens a menu with Torre and Área comum da obra, and no link to the wizard, which sends an obra with structure back home", async () => {
+	test("opens a menu with Torre, Área comum da obra and, under the assistant, one item per tower that can grow", async () => {
+		const structure = severalTowers();
 		stubApi(signedIn, {
-			api: writableApi(obra(), severalTowers()).handler,
+			api: writableApi(obra(), structure).handler,
 		});
 		renderAt(OBRA_PATH);
 
@@ -176,10 +177,17 @@ describe("several towers (E2)", () => {
 		expect(items.map((item) => item.textContent)).toEqual([
 			"Torre",
 			"Área comum da obra",
+			"Adicionar andares à Torre A",
+			"Adicionar andares à Torre B",
 		]);
+		expect(screen.getByText("Montar com o assistente")).toBeInTheDocument();
+		const [, second] = structure.towers;
 		expect(
-			screen.queryByRole("link", { name: "Montar com o assistente" }),
-		).not.toBeInTheDocument();
+			screen.getByRole("menuitem", { name: "Adicionar andares à Torre B" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${obra().id}/structure/new?tower=${second?.id}`,
+		);
 	});
 
 	test("adds a tower named after the next letter and shows its card", async () => {
@@ -351,9 +359,10 @@ describe("a single tower (E3)", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("carries the same Adicionar menu on the façade", async () => {
+	test("carries the same Adicionar menu on the façade, with the wizard going straight to the tower", async () => {
+		const structure = singleTower();
 		stubApi(signedIn, {
-			api: writableApi(obra(), singleTower()).handler,
+			api: writableApi(obra(), structure).handler,
 		});
 		renderAt(OBRA_PATH);
 
@@ -361,7 +370,50 @@ describe("a single tower (E3)", () => {
 
 		expect(
 			(await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-		).toEqual(["Torre", "Área comum da obra"]);
+		).toEqual(["Torre", "Área comum da obra", "Montar com o assistente"]);
+		expect(
+			screen.getByRole("menuitem", { name: "Montar com o assistente" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${obra().id}/structure/new?tower=${structure.towers[0]?.id}`,
+		);
+	});
+
+	test("offers Adicionar andares beside the menu, to the only tower", async () => {
+		const structure = singleTower();
+		stubApi(signedIn, {
+			api: writableApi(obra(), structure).handler,
+		});
+		renderAt(OBRA_PATH);
+
+		const link = await screen.findByRole("link", { name: "Adicionar andares" });
+
+		expect(link).toHaveAttribute(
+			"href",
+			`/projects/${obra().id}/structure/new?tower=${structure.towers[0]?.id}`,
+		);
+	});
+
+	test("replaces the façade by an Adicionar andares call to action when the only tower has no floors", async () => {
+		const structure = structureOf([tower("Torre A")]);
+		stubApi(signedIn, {
+			api: writableApi(obra(), structure).handler,
+		});
+		renderAt(OBRA_PATH);
+
+		expect(
+			await screen.findByRole("heading", {
+				name: "A obra ainda não tem andares",
+			}),
+		).toBeInTheDocument();
+		expect(
+			screen.getByText(
+				"Adicione os andares e as unidades de uma vez, com a numeração pronta.",
+			),
+		).toBeInTheDocument();
+		expect(
+			screen.getAllByRole("link", { name: "Adicionar andares" }),
+		).toHaveLength(1);
 	});
 
 	test("suggests Torre B for the second tower and then shows both with their cards", async () => {

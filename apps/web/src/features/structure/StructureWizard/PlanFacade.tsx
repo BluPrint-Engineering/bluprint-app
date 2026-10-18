@@ -42,7 +42,8 @@ export function PlanFacade({ tower }: { tower: PlanTower }) {
 								title={unit.unitType ?? "Sem tipologia"}
 								className={cn(
 									BLOCK,
-									"border border-input font-mono text-[13px] font-medium md:text-[10px] md:font-normal",
+									"border font-mono text-[13px] font-medium md:text-[10px] md:font-normal",
+									floor.added ? "border-dashed border-primary" : "border-input",
 								)}
 							>
 								{unit.name}

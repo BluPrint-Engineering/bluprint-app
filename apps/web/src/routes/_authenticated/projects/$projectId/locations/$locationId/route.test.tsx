@@ -28,6 +28,7 @@ import {
 	structureOf,
 	tower,
 } from "@/test/structureApi";
+import { setViewport } from "@/test/viewport";
 
 const OBRA = { ...project(3), name: "Casa Moinhos" };
 const LOCKED = "A obra foi entregue: a estrutura não pode mais ser alterada.";
@@ -212,15 +213,79 @@ describe("tower page", () => {
 		).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"Os andares aparecem aqui quando alguém da equipe adicionar.",
+				"Adicione os andares e as unidades de uma vez, com a numeração pronta.",
 			),
 		).toBeInTheDocument();
+		expect(
+			screen.getByRole("link", { name: "Adicionar andares" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${OBRA.id}/structure/new?tower=${emptyTower.id}`,
+		);
 		expect(
 			screen.getByRole("link", { name: "Churrasqueira" }),
 		).toBeInTheDocument();
 		expect(
 			screen.getByText("Torre · 0 andares · 0 unidades"),
 		).toBeInTheDocument();
+	});
+
+	test("puts Adicionar andares beside the page menu on the desktop (T1)", async () => {
+		stubApi(signedIn, { api: api(several) });
+
+		renderAt(pathOf(towerA.id));
+
+		expect(
+			await screen.findByRole("link", { name: "Adicionar andares" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${OBRA.id}/structure/new?tower=${towerA.id}`,
+		);
+	});
+
+	test("keeps Adicionar andares in the page menu alone on the phone (T1)", async () => {
+		stubApi(signedIn, { api: api(several) });
+		setViewport("phone");
+
+		renderAt(pathOf(towerA.id));
+
+		await screen.findByRole("button", { name: "Ações da torre" });
+		expect(
+			screen.queryByRole("link", { name: "Adicionar andares" }),
+		).not.toBeInTheDocument();
+	});
+
+	test("offers no way to add floors to a delivered tower (T6)", async () => {
+		stubApi(signedIn, {
+			api: api(several, { ...OBRA, status: "delivered" }),
+		});
+
+		renderAt(pathOf(towerA.id));
+
+		await screen.findByText(LOCKED);
+		expect(
+			screen.queryByRole("link", { name: "Adicionar andares" }),
+		).not.toBeInTheDocument();
+	});
+
+	test("offers no way to add floors to a delivered tower without floors (T3)", async () => {
+		stubApi(signedIn, {
+			api: api(several, { ...OBRA, status: "delivered" }),
+		});
+
+		renderAt(pathOf(emptyTower.id));
+
+		await screen.findByRole("heading", {
+			name: "A Torre C ainda não tem andares",
+		});
+		expect(
+			screen.getByText(
+				"Os andares aparecem aqui quando alguém da equipe adicionar.",
+			),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("link", { name: "Adicionar andares" }),
+		).not.toBeInTheDocument();
 	});
 
 	test("keeps the band and shows the façade with a lock line on a delivered project (T6)", async () => {

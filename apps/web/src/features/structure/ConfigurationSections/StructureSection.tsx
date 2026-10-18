@@ -6,6 +6,7 @@ import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { isBlankStructure, structureQueryOptions } from "../api";
+import { AssistantButton } from "../components/AddFloorsLink";
 import { STRUCTURE_LOCKED } from "../lockedText";
 import { plural } from "../plural";
 import { SectionCard, SectionNote } from "./SectionCard";
@@ -64,6 +65,12 @@ export function StructureSection({ project }: { project: ProjectSummary }) {
 									<ChevronRight className="size-4.5" aria-hidden />
 								</Link>
 							</Button>
+							{!delivered && (
+								<AssistantButton
+									projectId={project.id}
+									towers={query.data.towers}
+								/>
+							)}
 						</div>
 						{delivered ? (
 							<LockNote>{STRUCTURE_LOCKED}</LockNote>

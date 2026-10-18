@@ -1,4 +1,10 @@
-import { MAX_UNITS_PER_FLOOR, sameLocationName } from "@bluprint/shared";
+import {
+	MAX_UNITS_PER_FLOOR,
+	type StructureTower,
+	sameLocationName,
+	type UnitType,
+} from "@bluprint/shared";
+import { describeTower, newFloorsLead } from "./towerNow";
 import {
 	ALL_FINALS,
 	parseFinals,
@@ -26,7 +32,17 @@ export interface FloorAreaDraft {
 	name: string;
 }
 
+export interface ExtendDraft {
+	towerId: string;
+	towerName: string;
+	named: boolean;
+	position: number;
+	takenFloors: number[];
+	lead: string;
+}
+
 export interface WizardDraft {
+	extend?: ExtendDraft;
 	towers: TowerDraft[];
 	numbering: Numbering;
 	projectAreas: string[];
@@ -83,6 +99,99 @@ export function initialDraft(): WizardDraft {
 				unitType: unitType.key,
 			},
 		],
+	};
+}
+
+function mirroredRules(
+	tower: StructureTower,
+	unitTypes: UnitTypeDraft[],
+): RuleDraft[] | undefined {
+	const units = describeTower(tower).lastFloor?.units ?? [];
+	if (units.length === 0) return undefined;
+	const finalsByType = new Map<string, number[]>();
+	units.forEach((unit, at) => {
+		const id = unit.unitType?.id;
+		if (id === undefined || !unitTypes.some(({ key }) => key === id)) return;
+		finalsByType.set(id, [...(finalsByType.get(id) ?? []), at + 1]);
+	});
+	return [...finalsByType].map(([unitType, finals]) => ({
+		key: nextRuleKey(),
+		tower: 0,
+		finals:
+			finals.length === units.length
+				? ALL_FINALS
+				: finals.map((final) => String(final).padStart(2, "0")).join(", "),
+		from: "",
+		to: "",
+		unitType,
+	}));
+}
+
+export function extendedDraft(
+	tower: StructureTower,
+	existingTypes: UnitType[],
+	named: boolean,
+): WizardDraft {
+	const now = describeTower(tower);
+	const unitTypes: UnitTypeDraft[] = existingTypes.map(
+		({ id, name, rooms }) => ({
+			key: id,
+			name,
+			rooms: rooms.map((room) => room.name),
+			existing: true,
+		}),
+	);
+	let rules = mirroredRules(tower, unitTypes);
+	if (rules === undefined) {
+		const first = unitTypes[0];
+		const unitType = first ?? {
+			key: nextUnitTypeKey(),
+			name: FIRST_UNIT_TYPE_NAME,
+			rooms: [],
+		};
+		if (!first) unitTypes.push(unitType);
+		rules = [
+			{
+				key: nextRuleKey(),
+				tower: 0,
+				finals: ALL_FINALS,
+				from: "",
+				to: "",
+				unitType: unitType.key,
+			},
+		];
+	}
+	const perFloor = now.lastFloor?.units.length ?? 0;
+	return {
+		extend: {
+			towerId: tower.id,
+			towerName: tower.name,
+			named,
+			position: now.position,
+			takenFloors: now.numbered,
+			lead: newFloorsLead(tower, named),
+		},
+		towers: [
+			{
+				key: nextTowerKey(),
+				name: tower.name,
+				first: String((now.numbered.at(-1) ?? 0) + 1),
+				last: "",
+				perFloor: perFloor > 0 ? String(perFloor) : "",
+				ground: false,
+				hall:
+					now.lastFloor === undefined ||
+					now.lastFloor.commonAreas.some((area) =>
+						sameLocationName(area.name, FLOOR_HALL),
+					),
+			},
+		],
+		numbering: now.lettered ? "letters" : "digits",
+		projectAreas: [],
+		towerAreas: [],
+		floorAreas: [],
+		unitTypes,
+		rules,
 	};
 }
 
@@ -288,6 +397,18 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		if (last === undefined) set("last", "Informe o último andar.");
 		else if (first !== undefined && first >= 1 && last < first) {
 			set("last", "O último andar precisa ser igual ou maior que o primeiro.");
+		}
+
+		if (draft.extend && first !== undefined && first >= 1) {
+			const taken = draft.extend.takenFloors.find(
+				(number) => number >= first && number <= (last ?? first),
+			);
+			if (taken !== undefined) {
+				set(
+					"first",
+					`${draft.extend.named ? `A ${draft.extend.towerName}` : "A obra"} já tem o ${taken}º andar.`,
+				);
+			}
 		}
 
 		const perFloor = wholeNumber(tower.perFloor);

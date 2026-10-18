@@ -383,7 +383,19 @@ export function writableApi(
 				state.units.remaining -= body.locations.filter(
 					(entry) => entry.type === "unit",
 				).length;
-				return json({ counts: structure.counts }, 201);
+				const requested = (type: string) =>
+					body.locations.filter((entry) => entry.type === type).length;
+				return json(
+					{
+						counts: {
+							towers: requested("tower"),
+							floors: requested("floor"),
+							units: requested("unit"),
+							commonAreas: requested("common_area"),
+						},
+					},
+					201,
+				);
 			}
 			const target = new RegExp(`^${base}/locations/([^/]+)$`).exec(
 				url.pathname,

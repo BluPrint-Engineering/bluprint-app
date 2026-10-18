@@ -76,14 +76,53 @@ describe("Estrutura on the configuration (C1)", () => {
 			`/projects/${OBRA.id}`,
 		);
 		expect(
-			card.queryByRole("link", { name: "Assistente" }),
-		).not.toBeInTheDocument();
+			card.getByRole("button", { name: "Assistente" }),
+		).toBeInTheDocument();
 		expect(
 			card.getByText(
 				"A estrutura se edita onde se navega: torre, andar e unidade têm “Adicionar” e um menu em cada item.",
 			),
 		).toBeInTheDocument();
 		expect(card.queryByText(LOCKED)).not.toBeInTheDocument();
+	});
+
+	test("lets the assistant add floors to the tower that grew (C1)", async () => {
+		stubConfiguration(OBRA, casaMoinhos);
+		renderAt(CONFIG_PATH);
+		const card = await structureCard();
+
+		await userEvent.click(
+			await card.findByRole("button", { name: "Assistente" }),
+		);
+
+		const [, second] = casaMoinhos.towers;
+		expect(
+			await screen.findByRole("menuitem", {
+				name: "Adicionar andares à Torre A",
+			}),
+		).toBeInTheDocument();
+		expect(
+			screen.getByRole("menuitem", { name: "Adicionar andares à Torre B" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${OBRA.id}/structure/new?tower=${second?.id}`,
+		);
+	});
+
+	test("goes straight to the only tower from the assistant (C1)", async () => {
+		const single = structureOf([
+			tower("Torre A", [floor("1º andar", ["101"], ["Hall"])]),
+		]);
+		stubConfiguration(OBRA, single);
+		renderAt(CONFIG_PATH);
+		const card = await structureCard();
+
+		expect(
+			await card.findByRole("link", { name: "Assistente" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${OBRA.id}/structure/new?tower=${single.towers[0]?.id}`,
+		);
 	});
 
 	test("counts one of each in the singular", async () => {

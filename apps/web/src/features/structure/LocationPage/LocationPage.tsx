@@ -6,7 +6,7 @@ import {
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { MapPinOff, Plus } from "lucide-react";
+import { ListPlus, MapPinOff, Plus } from "lucide-react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
 import { NotFound } from "@/components/NotFound";
@@ -24,6 +24,7 @@ import {
 	locationQueryOptions,
 	structureQueryOptions,
 } from "../api";
+import { AddFloorsLink } from "../components/AddFloorsLink";
 import { FacadeSkeleton } from "../components/Facade";
 import { LocationMenu } from "../components/LocationMenu";
 import { useAdding } from "../components/useAdding";
@@ -139,10 +140,18 @@ function LocationView({
 			}}
 		>
 			{tower && (
-				<DropdownMenuItem onSelect={() => adding.open("tower-area")}>
-					<Plus className="size-4.5" aria-hidden="true" />
-					Adicionar área comum
-				</DropdownMenuItem>
+				<>
+					<DropdownMenuItem asChild>
+						<AddFloorsLink projectId={projectId} towerId={tower.id}>
+							<ListPlus className="size-4.5" aria-hidden="true" />
+							Adicionar andares
+						</AddFloorsLink>
+					</DropdownMenuItem>
+					<DropdownMenuItem onSelect={() => adding.open("tower-area")}>
+						<Plus className="size-4.5" aria-hidden="true" />
+						Adicionar área comum
+					</DropdownMenuItem>
+				</>
 			)}
 		</LocationMenu>
 	);
@@ -178,7 +187,19 @@ function LocationView({
 						<p className="text-sm text-muted-foreground">{band.meta}</p>
 						{!canEdit && <LockLine>{STRUCTURE_LOCKED}</LockLine>}
 					</div>
-					{desktop && menu}
+					{desktop && (
+						<div className="flex items-center gap-(--space-2)">
+							{canEdit && tower && tower.floors.length > 0 && (
+								<Button asChild variant="outline">
+									<AddFloorsLink projectId={projectId} towerId={tower.id}>
+										<ListPlus className="size-4.5" aria-hidden="true" />
+										Adicionar andares
+									</AddFloorsLink>
+								</Button>
+							)}
+							{menu}
+						</div>
+					)}
 				</div>
 			</PageBand>
 			<PageMain>

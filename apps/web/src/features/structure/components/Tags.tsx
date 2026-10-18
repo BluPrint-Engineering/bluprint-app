@@ -12,7 +12,7 @@ export function Tags({
 	isNew = () => false,
 }: {
 	items: string[];
-	onRemove: (index: number) => void;
+	onRemove?: ((index: number) => void) | undefined;
 	removeLabel?: (name: string) => string;
 	isNew?: (name: string) => boolean;
 }) {
@@ -24,18 +24,21 @@ export function Tags({
 					key={name}
 					className={cn(
 						"inline-flex min-h-8 items-center gap-1 rounded-full bg-muted pl-3 text-sm",
+						!onRemove && "pr-3",
 						isNew(name) && "shadow-[inset_0_0_0_1px_var(--primary)]",
 					)}
 				>
 					<span className="[overflow-wrap:anywhere]">{name}</span>
-					<button
-						type="button"
-						aria-label={removeLabel(name)}
-						onClick={() => onRemove(index)}
-						className="relative grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 hover:text-foreground focus-visible:shadow-(--shadow-focus)"
-					>
-						<X className="size-4" aria-hidden="true" />
-					</button>
+					{onRemove && (
+						<button
+							type="button"
+							aria-label={removeLabel(name)}
+							onClick={() => onRemove(index)}
+							className="relative grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 hover:text-foreground focus-visible:shadow-(--shadow-focus)"
+						>
+							<X className="size-4" aria-hidden="true" />
+						</button>
+					)}
 				</li>
 			))}
 		</ul>

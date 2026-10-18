@@ -12,9 +12,11 @@ export type UnitsLine =
 export function PreviewSummary({
 	plan,
 	units,
+	heading,
 }: {
 	plan: Plan;
 	units: UnitsLine;
+	heading?: string | undefined;
 }) {
 	const { floors, units: unitCount, commonAreas } = plan.counts;
 	const towers = plan.towers.length;
@@ -25,11 +27,12 @@ export function PreviewSummary({
 	return (
 		<div className="grid gap-(--space-1)">
 			<span className="font-semibold">
-				{[
-					plural(towers, "torre", "torres"),
-					plural(floors, "andar", "andares"),
-					plural(unitCount, "unidade", "unidades"),
-				].join(" · ")}
+				{heading ??
+					[
+						plural(towers, "torre", "torres"),
+						plural(floors, "andar", "andares"),
+						plural(unitCount, "unidade", "unidades"),
+					].join(" · ")}
 			</span>
 			<span className="text-sm text-muted-foreground">
 				{[plural(commonAreas, "área comum", "áreas comuns"), ...perType].join(

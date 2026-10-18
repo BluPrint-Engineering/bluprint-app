@@ -61,7 +61,7 @@ describe("the page menu", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("offers renaming and adding a common area on a tower (T2)", async () => {
+	test("offers renaming, adding floors and adding a common area on a tower (T2)", async () => {
 		const { towerA, several } = build();
 		stubApi(signedIn, { api: writableApi(obra(), several).handler });
 		renderAt(pathOf(towerA.id));
@@ -73,8 +73,15 @@ describe("the page menu", () => {
 		const items = await screen.findAllByRole("menuitem");
 		expect(items.map((item) => item.textContent)).toEqual([
 			"Renomear torre",
+			"Adicionar andares",
 			"Adicionar área comum",
 		]);
+		expect(
+			screen.getByRole("menuitem", { name: "Adicionar andares" }),
+		).toHaveAttribute(
+			"href",
+			`/projects/${obra().id}/structure/new?tower=${towerA.id}`,
+		);
 	});
 
 	test.each([
