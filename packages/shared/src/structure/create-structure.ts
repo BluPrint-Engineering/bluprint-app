@@ -61,7 +61,7 @@ export const newLocationSchema = z.object({
 	name: locationNameSchema,
 	position: z.int().nonnegative().meta({
 		description:
-			"Where it sits among the locations under the same parent, counting from 0; the stored order is what the client reads back.",
+			"Where it sits among the locations under the same parent, counting from 0: the locations already there from that place on move one place later, and a position past the end puts it last.",
 		example: 0,
 	}),
 	unitTypeId: z.uuid().optional().meta({
