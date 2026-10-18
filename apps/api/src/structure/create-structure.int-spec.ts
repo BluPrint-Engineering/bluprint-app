@@ -11,10 +11,12 @@ import {
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	problemDetailsSchema,
+	ROOM_ID_TAKEN,
 	structureSchema,
 	UNIT_TYPE_ID_TAKEN,
 	UNIT_TYPE_NAME_TAKEN,
 	UNIT_TYPE_NOT_FOUND,
+	UNIT_TYPE_ROOM_NOT_FOUND,
 	unitTypeListSchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
@@ -1078,5 +1080,231 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		expect(refused.status).toBe(409);
 		expect(problemOf(refused.body).code).toBe(PROJECT_DELIVERED);
 		expect(await readUnitTypes(delivered)).toEqual([]);
+	});
+});
+
+describe("POST /api/projects/:id/structure with rooms", () => {
+	const roomOf = (name: string, extra = {}) => ({
+		id: randomUUID(),
+		name,
+		...extra,
+	});
+
+	function floorWith() {
+		const tower = entry(null, "tower", "Torre A");
+		const floor = entry(tower.id, "floor", "1º andar");
+		return { tower, floor };
+	}
+
+	it("gives a unit exactly the rooms of the request, in their order", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+		const unit = {
+			...unitOf(floor.id, "101"),
+			rooms: [roomOf("Sala"), roomOf("Cozinha")],
+		};
+
+		const res = await create(manager, projectId, [tower, floor, unit]);
+
+		expect(res.status).toBe(201);
+		const detail = await readLocation(projectId, unit.id);
+		expect(detail.rooms).toEqual(
+			unit.rooms.map(({ id, name }) => ({
+				id,
+				name,
+				unitTypeRoomId: null,
+				renamed: false,
+			})),
+		);
+	});
+
+	it("gives a common area the rooms of the request", async () => {
+		const projectId = await newProject(10);
+		const { tower } = floorWith();
+		const hall = {
+			...entry(tower.id, "common_area", "Salão de festas", 1),
+			rooms: [roomOf("Cozinha"), roomOf("Banheiro")],
+		};
+
+		const res = await create(manager, projectId, [tower, hall]);
+
+		expect(res.status).toBe(201);
+		expect(
+			(await readLocation(projectId, hall.id)).rooms.map((room) => room.name),
+		).toEqual(["Cozinha", "Banheiro"]);
+	});
+
+	it("recreates a unit with the rooms of its unit type kept, renamed, only its own and taken out", async () => {
+		const projectId = await newProject(10);
+		const type = unitTypeOf("Tipologia A", ["Sala", "Cozinha", "Sacada"]);
+		const { tower, floor } = floorWith();
+		const [sala, cozinha, sacada] = type.rooms;
+		const unit = {
+			...unitOf(floor.id, "101", type.id),
+			rooms: [
+				roomOf("Estar", { unitTypeRoomId: sala!.id, renamed: true }),
+				roomOf("Cozinha", { unitTypeRoomId: cozinha!.id }),
+				roomOf("Lavanderia"),
+			],
+			droppedRooms: [sacada!.id],
+		};
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[type],
+			[tower, floor, unit],
+		);
+
+		expect(res.status).toBe(201);
+		const detail = await readLocation(projectId, unit.id);
+		expect(detail.rooms.map(({ name, renamed }) => [name, renamed])).toEqual([
+			["Estar", true],
+			["Cozinha", false],
+			["Lavanderia", false],
+		]);
+		expect(detail.rooms.map((room) => room.unitTypeRoomId)).toEqual([
+			sala!.id,
+			cozinha!.id,
+			null,
+		]);
+		expect(detail.droppedRooms).toEqual([
+			{ unitTypeRoomId: sacada!.id, name: "Sacada" },
+		]);
+		expect(detail.changes).toBe(3);
+	});
+
+	it("gives a unit no room at all when it asks for an empty list, instead of the rooms of its unit type", async () => {
+		const projectId = await newProject(10);
+		const type = unitTypeOf("Tipologia A", ["Sala"]);
+		const { tower, floor } = floorWith();
+		const unit = {
+			...unitOf(floor.id, "101", type.id),
+			rooms: [],
+			droppedRooms: [type.rooms[0]!.id],
+		};
+
+		await createWith(manager, projectId, [type], [tower, floor, unit]);
+
+		const detail = await readLocation(projectId, unit.id);
+		expect(detail.rooms).toEqual([]);
+		expect(detail.droppedRooms).toHaveLength(1);
+	});
+
+	it("answers the same and adds no room when the request is sent again", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+		const unit = { ...unitOf(floor.id, "101"), rooms: [roomOf("Sala")] };
+		const locations = [tower, floor, unit];
+		const first = await create(manager, projectId, locations);
+
+		const again = await create(manager, projectId, locations);
+
+		expect(again.status).toBe(201);
+		expect(again.body).toEqual(first.body);
+		expect(await readLocation(projectId, unit.id)).toMatchObject({
+			rooms: [{ name: "Sala" }],
+		});
+	});
+
+	it("answers 400 UNIT_TYPE_ROOM_NOT_FOUND for a room that follows a room its unit type does not have", async () => {
+		const projectId = await newProject(10);
+		const type = unitTypeOf("Tipologia A", ["Sala"]);
+		const other = unitTypeOf("Tipologia B", ["Cozinha"]);
+		const { tower, floor } = floorWith();
+		const stray = {
+			...unitOf(floor.id, "101", type.id),
+			rooms: [roomOf("Cozinha", { unitTypeRoomId: other.rooms[0]!.id })],
+		};
+		const strayDrop = {
+			...unitOf(floor.id, "102", type.id, 1),
+			droppedRooms: [randomUUID()],
+		};
+
+		for (const unit of [stray, strayDrop]) {
+			const res = await createWith(
+				manager,
+				projectId,
+				[type, other],
+				[tower, floor, unit],
+			);
+
+			expect(res.status).toBe(400);
+			expect(problemOf(res.body).code).toBe(UNIT_TYPE_ROOM_NOT_FOUND);
+		}
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("answers 409 ROOM_ID_TAKEN for a room id that belongs to another location, and creates nothing", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+		const first = { ...unitOf(floor.id, "101"), rooms: [roomOf("Sala")] };
+		await create(manager, projectId, [tower, floor, first]);
+		const second = {
+			...unitOf(floor.id, "102", undefined, 1),
+			rooms: [{ id: first.rooms[0]!.id, name: "Sala" }],
+		};
+
+		const res = await create(manager, projectId, [second]);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).code).toBe(ROOM_ID_TAKEN);
+		expect(await countLocations(projectId)).toBe(3);
+	});
+
+	it.each([
+		["rooms on a tower", () => ({ ...entry(null, "tower", "T"), rooms: [] })],
+		[
+			"rooms taken out of a unit without a unit type",
+			() => ({ ...unitOf(randomUUID(), "101"), droppedRooms: [randomUUID()] }),
+		],
+		[
+			"two rooms with the same name",
+			() => ({
+				...unitOf(randomUUID(), "101"),
+				rooms: [roomOf("Sala"), roomOf(" sala ")],
+			}),
+		],
+		[
+			"a room that follows the unit type in a unit without one",
+			() => ({
+				...unitOf(randomUUID(), "101"),
+				rooms: [roomOf("Sala", { unitTypeRoomId: randomUUID() })],
+			}),
+		],
+		[
+			"a renamed room that follows nothing",
+			() => ({
+				...unitOf(randomUUID(), "101"),
+				rooms: [roomOf("Sala", { renamed: true })],
+			}),
+		],
+	])("answers 400 for %s", async (_label, build) => {
+		const projectId = await newProject(10);
+
+		const res = await create(manager, projectId, [build()]);
+
+		expect(res.status).toBe(400);
+	});
+
+	it("answers 400 for a room of the unit type that is both kept and taken out", async () => {
+		const projectId = await newProject(10);
+		const type = unitTypeOf("Tipologia A", ["Sala"]);
+		const { tower, floor } = floorWith();
+		const roomId = type.rooms[0]!.id;
+		const unit = {
+			...unitOf(floor.id, "101", type.id),
+			rooms: [roomOf("Sala", { unitTypeRoomId: roomId })],
+			droppedRooms: [roomId],
+		};
+
+		const res = await createWith(
+			manager,
+			projectId,
+			[type],
+			[tower, floor, unit],
+		);
+
+		expect(res.status).toBe(400);
 	});
 });

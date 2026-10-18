@@ -168,8 +168,8 @@ describe("adding a unit on a floor", () => {
 			parentId: ninth.id,
 			type: "unit",
 			name: "905",
-			position: 5,
 		});
+		expect(sent).not.toHaveProperty("position");
 		expect(sent.id).toMatch(/^[0-9a-f-]{36}$/);
 		expect(
 			screen.queryByRole("textbox", { name: "Adicionar unidade" }),
@@ -422,8 +422,8 @@ describe("the reserva is over", () => {
 			parentId: ninth.id,
 			type: "common_area",
 			name: "Terraço",
-			position: 5,
 		});
+		expect(bodyOf(nth(api.created, 0))).not.toHaveProperty("position");
 		expect(
 			await screen.findByRole("link", { name: "Terraço" }),
 		).toBeInTheDocument();
@@ -588,8 +588,8 @@ describe("adding a common area", () => {
 			parentId: towerA.id,
 			type: "common_area",
 			name: "Academia",
-			position: 3,
 		});
+		expect(bodyOf(nth(api.created, 0))).not.toHaveProperty("position");
 		expect(
 			await within(sectionOf("Áreas comuns da torre")).findByRole("link", {
 				name: "Academia",

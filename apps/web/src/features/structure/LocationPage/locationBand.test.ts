@@ -58,6 +58,7 @@ const detail = (
 	id,
 	type,
 	name,
+	position: 0,
 	ancestors,
 	children,
 	unitType: null,

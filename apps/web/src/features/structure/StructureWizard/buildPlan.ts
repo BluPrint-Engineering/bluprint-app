@@ -72,12 +72,14 @@ export function buildPlan(
 		unitTypeKey: string | null = null,
 	) => {
 		const id = idFor(key);
+		const appended =
+			draft.extend !== undefined && parentId === draft.extend.towerId;
 		locations.push({
 			id,
 			parentId,
 			type,
 			name,
-			position,
+			...(!appended && { position }),
 			...(unitTypeKey !== null && { unitTypeId: unitTypeIdOf(unitTypeKey) }),
 		});
 		return id;
@@ -114,7 +116,7 @@ export function buildPlan(
 			draft.extend?.towerId ??
 			add(`tower:${towerIndex}`, null, "tower", name, towerIndex);
 		const floors: PlanFloor[] = [];
-		let position = draft.extend?.position ?? 0;
+		let position = 0;
 
 		if (tower.ground) {
 			const groundId = add(

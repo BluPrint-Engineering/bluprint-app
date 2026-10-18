@@ -114,6 +114,33 @@ test("a new account reserves units for a project, builds its structure with the 
 	await expect(rooms.getByText("Lavanderia")).toBeVisible();
 	await expect(rooms.getByText("Só desta unidade")).toBeVisible();
 	await expect(page.getByText("1 alteração")).toBeVisible();
+
+	await page.getByRole("link", { name: "Casa Moinhos" }).click();
+	await page
+		.getByRole("list", { name: "Fachada" })
+		.getByRole("link", { name: "3º andar" })
+		.click();
+	await expect(
+		page.getByRole("heading", { level: 1, name: "3º andar" }),
+	).toBeVisible();
+	await page.getByRole("button", { name: "Ações da unidade 304" }).click();
+	await page.getByRole("menuitem", { name: "Remover unidade" }).click();
+
+	await expect(page.getByText("Unidade 304 excluída.")).toBeVisible();
+	await expect(
+		page.getByRole("button", { name: "Ações da unidade 304" }),
+	).toHaveCount(0);
+
+	await page.getByRole("button", { name: "Desfazer" }).click();
+
+	await expect(
+		page.getByRole("button", { name: "Ações da unidade 304" }),
+	).toBeVisible();
+	await page.getByRole("link", { name: /^304/ }).click();
+	await expect(
+		page.getByRole("list", { name: "Cômodos" }).getByText("Lavanderia"),
+	).toBeVisible();
+	await expect(page.getByText("1 alteração")).toBeVisible();
 });
 
 test("a project whose reservation is smaller than the plan cannot be sent", async ({

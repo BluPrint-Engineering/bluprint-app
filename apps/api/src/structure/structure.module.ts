@@ -1,6 +1,7 @@
 import { Module } from "@nestjs/common";
 import { ProjectsModule } from "../projects/projects.module";
 import { UnitsModule } from "../units/units.module";
+import { LocationContent } from "./location-content";
 import { RoomsController } from "./rooms.controller";
 import { RoomsRepository } from "./rooms.repository";
 import { RoomsService } from "./rooms.service";
@@ -15,6 +16,7 @@ import { UnitTypesService } from "./unit-types.service";
 	imports: [ProjectsModule, UnitsModule],
 	controllers: [StructureController, UnitTypesController, RoomsController],
 	providers: [
+		LocationContent,
 		StructureService,
 		StructureRepository,
 		RoomsService,

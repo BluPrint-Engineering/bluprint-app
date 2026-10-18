@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { locationRoomNameSchema } from "./location-rooms.js";
 import { locationTypeSchema } from "./location-type.js";
 import { structureCountsSchema } from "./structure.js";
 import { roomNameSchema, unitTypeNameSchema } from "./unit-type-ref.js";
@@ -8,6 +9,7 @@ export const MAX_UNITS_PER_FLOOR = 30;
 export const LOCATION_NAME_MAX_LENGTH = 60;
 export const MAX_UNIT_TYPES_PER_REQUEST = 50;
 export const MAX_ROOMS_PER_UNIT_TYPE = 50;
+export const MAX_ROOMS_PER_LOCATION = 200;
 
 export const locationNameSchema = z
 	.string()
@@ -28,6 +30,23 @@ export const comparableLocationName = (name: string) =>
 export const sameLocationName = (a: string, b: string) =>
 	comparableLocationName(a) === comparableLocationName(b);
 
+export const newLocationRoomSchema = z.object({
+	id: z.uuid().meta({
+		description:
+			"The room's id, chosen by the client and kept across retries, so a location that comes back as it was keeps its rooms' ids.",
+		example: "0190a000-0000-7000-8000-0000000000b1",
+	}),
+	name: locationRoomNameSchema,
+	unitTypeRoomId: z.uuid().optional().meta({
+		description:
+			"The room of the unit's unit type this one came from. Left out for a room only this location has.",
+	}),
+	renamed: z.boolean().optional().meta({
+		description:
+			"Whether the room came from the unit type and was renamed in this unit. Needs `unitTypeRoomId`.",
+	}),
+});
+
 export const newLocationSchema = z.object({
 	id: z.uuid().meta({
 		description:
@@ -40,14 +59,25 @@ export const newLocationSchema = z.object({
 	}),
 	type: locationTypeSchema,
 	name: locationNameSchema,
-	position: z.int().nonnegative().meta({
+	position: z.int().nonnegative().optional().meta({
 		description:
-			"Where it sits among the locations under the same parent, counting from 0; the stored order is what the client reads back.",
+			"Where it sits among the locations under the same parent, in ascending order: a location already at that position moves one place later, with every location after it. Left out, it goes after the last one; the `position` of a location read back puts a removed one back in its place.",
 		example: 0,
 	}),
 	unitTypeId: z.uuid().optional().meta({
 		description:
-			"The unit type a unit follows: one that already exists in the project or one listed in `unitTypes` of this request. The unit is born with the rooms of that unit type. Only a unit takes one; left out, the unit has none.",
+			"The unit type a unit follows: one that already exists in the project or one listed in `unitTypes` of this request. Without `rooms`, the unit is born with the rooms of that unit type. Only a unit takes one; left out, the unit has none.",
+	}),
+	rooms: z
+		.array(newLocationRoomSchema)
+		.max(MAX_ROOMS_PER_LOCATION)
+		.optional()
+		.meta({
+			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION}, so a location removed by mistake comes back as it was. Given, even empty, they are the location's rooms exactly; left out, a unit is born with the rooms of its unit type and a common area with none.`,
+		}),
+	droppedRooms: z.array(z.uuid()).max(MAX_ROOMS_PER_LOCATION).optional().meta({
+		description:
+			"The rooms of the unit's unit type that the unit took out, by their id in the unit type. Only a unit with a `unitTypeId` takes them.",
 	}),
 });
 
@@ -128,6 +158,7 @@ export const createStructureSchema = z
 		});
 
 		const seen = new Set<string>();
+		const seenLocationRooms = new Set<string>();
 		const unitsPerFloor = new Map<string, number>();
 		locations.forEach((entry, index) => {
 			if (seen.has(entry.id)) {
@@ -144,6 +175,84 @@ export const createStructureSchema = z
 					code: "custom",
 					path: ["locations", index, "unitTypeId"],
 					message: "Only a unit follows a unit type.",
+				});
+			}
+
+			if (
+				entry.rooms !== undefined &&
+				entry.type !== "unit" &&
+				entry.type !== "common_area"
+			) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["locations", index, "rooms"],
+					message: "Only a unit or a common area holds rooms.",
+				});
+			}
+
+			if (entry.droppedRooms !== undefined && entry.unitTypeId === undefined) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["locations", index, "droppedRooms"],
+					message: "Only a unit that follows a unit type takes rooms out.",
+				});
+			}
+
+			const taken = new Set(entry.droppedRooms);
+			const roomNames = new Set<string>();
+			const typeRooms = new Set<string>();
+			entry.rooms?.forEach((room, roomIndex) => {
+				if (seenLocationRooms.has(room.id)) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["locations", index, "rooms", roomIndex, "id"],
+						message: "Two rooms in the request share an id.",
+					});
+				}
+				seenLocationRooms.add(room.id);
+
+				const comparable = comparableLocationName(room.name);
+				if (roomNames.has(comparable)) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["locations", index, "rooms", roomIndex, "name"],
+						message: "A location lists the same room name twice.",
+					});
+				}
+				roomNames.add(comparable);
+
+				const fromType = room.unitTypeRoomId !== undefined;
+				if (
+					(room.renamed && !fromType) ||
+					(fromType && entry.unitTypeId === undefined)
+				) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["locations", index, "rooms", roomIndex, "unitTypeRoomId"],
+						message:
+							"A room that follows the unit type needs a unit that follows one.",
+					});
+				}
+				if (room.unitTypeRoomId !== undefined) {
+					if (
+						typeRooms.has(room.unitTypeRoomId) ||
+						taken.has(room.unitTypeRoomId)
+					) {
+						ctx.addIssue({
+							code: "custom",
+							path: ["locations", index, "rooms", roomIndex, "unitTypeRoomId"],
+							message:
+								"A room of the unit type is either kept or taken out, once.",
+						});
+					}
+					typeRooms.add(room.unitTypeRoomId);
+				}
+			});
+			if (entry.droppedRooms && taken.size !== entry.droppedRooms.length) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["locations", index, "droppedRooms"],
+					message: "A room of the unit type is taken out once.",
 				});
 			}
 
@@ -167,6 +276,7 @@ export const createStructureResultSchema = z.object({
 	}),
 });
 
+export type NewLocationRoom = z.infer<typeof newLocationRoomSchema>;
 export type NewLocation = z.infer<typeof newLocationSchema>;
 export type NewUnitTypeRoom = z.infer<typeof newUnitTypeRoomSchema>;
 export type NewUnitType = z.infer<typeof newUnitTypeSchema>;

@@ -7,7 +7,6 @@ export interface TowerNow {
 	numbered: number[];
 	lastFloor: StructureFloor | undefined;
 	lettered: boolean;
-	position: number;
 }
 
 export function describeTower(tower: StructureTower): TowerNow {
@@ -27,7 +26,6 @@ export function describeTower(tower: StructureTower): TowerNow {
 		lettered: tower.floors.some((floor) =>
 			floor.units.some((unit) => /^\d+[A-Z]+$/i.test(unit.name)),
 		),
-		position: tower.floors.length + tower.commonAreas.length,
 	};
 }
 

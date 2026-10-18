@@ -1,4 +1,4 @@
-import type { LocationType, UnitTypeRef } from "@bluprint/shared";
+import type { LocationType, NewLocation, UnitTypeRef } from "@bluprint/shared";
 
 export interface LocationRow {
 	id: string;
@@ -10,3 +10,15 @@ export interface LocationRow {
 export interface StructureRow extends LocationRow {
 	unitType: UnitTypeRef | null;
 }
+
+export interface PlacedRow extends StructureRow {
+	position: number;
+}
+
+export interface SiblingRow {
+	id: string;
+	type: LocationType;
+	position: number;
+}
+
+export type PlacedLocation = NewLocation & { position: number };

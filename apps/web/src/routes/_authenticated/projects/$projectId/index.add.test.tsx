@@ -105,8 +105,10 @@ describe("a project with no structure (E1)", () => {
 			parentId: null,
 			type: "tower",
 			name: "Torre A",
-			position: 0,
 		});
+		expect(nth(nth(api.created, 0).locations, 0)).not.toHaveProperty(
+			"position",
+		);
 		expect(screen.queryByText("Torre A")).not.toBeInTheDocument();
 		await waitFor(() =>
 			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
@@ -212,8 +214,10 @@ describe("several towers (E2)", () => {
 			parentId: null,
 			type: "tower",
 			name: "Torre Verde",
-			position: 3,
 		});
+		expect(nth(nth(api.created, 0).locations, 0)).not.toHaveProperty(
+			"position",
+		);
 		expect(
 			screen.queryByRole("textbox", { name: "Nome da torre" }),
 		).not.toBeInTheDocument();
@@ -442,8 +446,10 @@ describe("a single tower (E3)", () => {
 		expect(nth(nth(api.created, 0).locations, 0)).toMatchObject({
 			type: "tower",
 			name: "Torre B",
-			position: 2,
 		});
+		expect(nth(nth(api.created, 0).locations, 0)).not.toHaveProperty(
+			"position",
+		);
 		await waitFor(() =>
 			expect(screen.getByRole("button", { name: "Adicionar" })).toHaveFocus(),
 		);

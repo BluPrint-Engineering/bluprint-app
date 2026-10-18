@@ -25,16 +25,8 @@ describe("describeTower", () => {
 	test("starts from nothing on a tower without floors", () => {
 		const now = describeTower(tower("Torre A"));
 
-		expect(now).toMatchObject({ floors: 0, numbered: [], position: 0 });
+		expect(now).toMatchObject({ floors: 0, numbered: [] });
 		expect(now.lastFloor).toBeUndefined();
-	});
-
-	test("sits the new floors after every floor and common area the tower has", () => {
-		const now = describeTower(
-			tower("Torre A", numberedFloors(1, 2, 2), ["Salão de festas"]),
-		);
-
-		expect(now.position).toBe(3);
 	});
 
 	test("reads the lettered numbering from the units", () => {
@@ -245,8 +237,8 @@ describe("buildPlan for added floors", () => {
 		expect(
 			floors.map(({ name, parentId, position }) => [name, parentId, position]),
 		).toEqual([
-			["3º andar", existing.id, 3],
-			["4º andar", existing.id, 4],
+			["3º andar", existing.id, undefined],
+			["4º andar", existing.id, undefined],
 		]);
 		expect(built.locations.some(({ type: kind }) => kind === "tower")).toBe(
 			false,

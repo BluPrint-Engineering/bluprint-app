@@ -5,10 +5,12 @@ import {
 	LOCATION_PARENT_INVALID,
 	type NewLocation,
 	type NewUnitType,
+	ROOM_ID_TAKEN,
 	type StructureCounts,
 	UNIT_TYPE_ID_TAKEN,
 	UNIT_TYPE_NAME_TAKEN,
 	UNIT_TYPE_NOT_FOUND,
+	UNIT_TYPE_ROOM_NOT_FOUND,
 } from "@bluprint/shared";
 import { ProblemException } from "../common/problems/problem.exception";
 import { nameKey } from "./location-names";
@@ -83,6 +85,8 @@ export interface CreationContext {
 	unitTypes: StoredUnitType[];
 	locationIdsElsewhere: ReadonlySet<string>;
 	unitTypeIdsInUse: UnitTypeIdsInUse;
+	storedUnitTypeRooms: ReadonlyMap<string, ReadonlySet<string>>;
+	roomIdsInUse: ReadonlySet<string>;
 }
 
 export function planCreation(
@@ -92,6 +96,8 @@ export function planCreation(
 		unitTypes: storedUnitTypes,
 		locationIdsElsewhere: takenElsewhere,
 		unitTypeIdsInUse,
+		storedUnitTypeRooms,
+		roomIdsInUse,
 	}: CreationContext,
 ): CreationPlan {
 	const stored = new Map(inProject.map((row) => [row.id, row]));
@@ -166,6 +172,42 @@ export function planCreation(
 			detail: "A name of the request is already in use where it would go.",
 			names: [...clashes],
 		});
+	}
+
+	const roomsOfUnitType = new Map<string, Set<string>>(
+		[...storedUnitTypeRooms].map(([id, rooms]) => [id, new Set(rooms)]),
+	);
+	for (const { id, rooms } of requestedUnitTypes) {
+		const known = roomsOfUnitType.get(id) ?? new Set<string>();
+		for (const room of rooms) known.add(room.id);
+		roomsOfUnitType.set(id, known);
+	}
+	for (const entry of fresh) {
+		for (const { id } of entry.rooms ?? []) {
+			if (roomIdsInUse.has(id)) {
+				throw new ProblemException({
+					status: 409,
+					code: ROOM_ID_TAKEN,
+					detail: "A room id of the request is already taken.",
+				});
+			}
+		}
+
+		const followed = roomsOfUnitType.get(entry.unitTypeId ?? "");
+		const followedIds = [
+			...(entry.rooms ?? []).flatMap(({ unitTypeRoomId }) =>
+				unitTypeRoomId === undefined ? [] : [unitTypeRoomId],
+			),
+			...(entry.droppedRooms ?? []),
+		];
+		if (followedIds.some((id) => !followed?.has(id))) {
+			throw new ProblemException({
+				status: 400,
+				code: UNIT_TYPE_ROOM_NOT_FOUND,
+				detail:
+					"A room of the request follows a room that its unit's unit type does not have.",
+			});
+		}
 	}
 
 	const count = (type: NewLocation["type"]) =>

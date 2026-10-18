@@ -34,7 +34,6 @@ export interface AddRowProps {
 	kind: AddKind;
 	type: Exclude<LocationType, "floor">;
 	parentId: string | null;
-	position: number;
 	label: string;
 	fieldLabel?: string;
 	suggestion: string;
@@ -51,7 +50,6 @@ function AddForm({
 	adding,
 	type,
 	parentId,
-	position,
 	label,
 	fieldLabel,
 	suggestion,
@@ -92,9 +90,7 @@ function AddForm({
 		create.mutate(
 			{
 				unitTypes: [],
-				locations: [
-					{ id: id.current, parentId, type, name: name.trim(), position },
-				],
+				locations: [{ id: id.current, parentId, type, name: name.trim() }],
 			},
 			{ onSuccess: adding.close },
 		);
