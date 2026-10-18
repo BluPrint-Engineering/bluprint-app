@@ -1,4 +1,5 @@
 import {
+	comparableLocationName,
 	MAX_UNITS_PER_FLOOR,
 	type StructureTower,
 	sameLocationName,
@@ -402,10 +403,14 @@ function clashingUnit(
 ): string | undefined {
 	const range = parseTower(tower);
 	if (!range) return undefined;
+	const taken = new Map(
+		takenUnits.map((name) => [comparableLocationName(name), name]),
+	);
 	for (let floor = range.first; floor <= range.last; floor++) {
 		for (let at = 0; at < range.perFloor; at++) {
-			const name = unitName(floor, at, numbering);
-			const clash = takenUnits.find((taken) => sameLocationName(taken, name));
+			const clash = taken.get(
+				comparableLocationName(unitName(floor, at, numbering)),
+			);
 			if (clash !== undefined) return clash;
 		}
 	}
