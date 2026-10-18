@@ -101,7 +101,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 
 	await page.setViewportSize({ width: page.viewportSize().width, height: 1600 });
 	await menu("Ações da torre").click();
-	await items(["Renomear torre", "Adicionar área comum", "Remover torre"]);
+	await items(["Renomear torre", "Adicionar andares", "Adicionar área comum", "Remover torre"]);
 	await settle();
 	await shot("t2-tower-menu-remove");
 	await page.getByRole("menuitem", { name: "Remover torre" }).click();
