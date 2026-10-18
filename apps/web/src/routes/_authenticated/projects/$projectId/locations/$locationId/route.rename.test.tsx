@@ -61,7 +61,7 @@ describe("the page menu", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("offers renaming and adding a common area on a tower (T2)", async () => {
+	test("offers renaming, adding a common area and removing on a tower (T2)", async () => {
 		const { towerA, several } = build();
 		stubApi(signedIn, { api: writableApi(obra(), several).handler });
 		renderAt(pathOf(towerA.id));
@@ -74,28 +74,52 @@ describe("the page menu", () => {
 		expect(items.map((item) => item.textContent)).toEqual([
 			"Renomear torre",
 			"Adicionar área comum",
+			"Remover torre",
 		]);
 	});
 
 	test.each([
-		["a floor", "ninth", "Ações do andar", "Renomear andar"],
-		["a unit", "unit", "Ações da unidade", "Renomear"],
-		["a common area of a floor", "hall", "Ações da área comum", "Renomear"],
-	] as const)("offers renaming on %s", async (_label, which, menu, item) => {
-		const { ninth, several } = build();
-		const target = {
-			ninth,
-			unit: nth(ninth.units, 0),
-			hall: nth(ninth.commonAreas, 0),
-		}[which];
-		stubApi(signedIn, { api: writableApi(obra(), several).handler });
-		renderAt(pathOf(target.id));
+		[
+			"a floor",
+			"ninth",
+			"Ações do andar",
+			[
+				"Renomear andar",
+				"Mover para cima",
+				"Mover para baixo",
+				"Remover andar",
+			],
+		],
+		[
+			"a unit",
+			"unit",
+			"Ações da unidade",
+			["Renomear", "Mover para cima", "Mover para baixo", "Remover unidade"],
+		],
+		[
+			"a common area of a floor",
+			"hall",
+			"Ações da área comum",
+			["Renomear", "Remover área comum"],
+		],
+	] as const)(
+		"offers renaming, moving and removing on %s",
+		async (_label, which, menu, labels) => {
+			const { ninth, several } = build();
+			const target = {
+				ninth,
+				unit: nth(ninth.units, 0),
+				hall: nth(ninth.commonAreas, 0),
+			}[which];
+			stubApi(signedIn, { api: writableApi(obra(), several).handler });
+			renderAt(pathOf(target.id));
 
-		await user.click(await screen.findByRole("button", { name: menu }));
+			await user.click(await screen.findByRole("button", { name: menu }));
 
-		expect(await screen.findAllByRole("menuitem")).toHaveLength(1);
-		expect(screen.getByRole("menuitem", { name: item })).toBeInTheDocument();
-	});
+			const items = await screen.findAllByRole("menuitem");
+			expect(items.map((item) => item.textContent)).toEqual(labels);
+		},
+	);
 
 	test("sits in the back-link row on the phone and beside the title on the desktop", async () => {
 		const { towerA, several } = build();

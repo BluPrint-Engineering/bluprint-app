@@ -8,10 +8,12 @@ import {
 	type LocationDetail,
 	locationDetailSchema,
 	locationRefSchema,
+	type MoveDirection,
 	PROJECT_NOT_FOUND,
 	projectUnitsBalanceSchema,
 	ROOM_NAME_TAKEN,
 	ROOM_NOT_FOUND,
+	removeLocationResultSchema,
 	type Structure,
 	structureSchema,
 	UNIT_TYPE_IN_USE,
@@ -26,6 +28,7 @@ import {
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { ApiError, apiFetch } from "@/lib/api";
 import { organizationUnitsQueryOptions } from "../account/api";
 import {
@@ -33,6 +36,7 @@ import {
 	isProjectDelivered,
 	projectQueryOptions,
 } from "../projects/api";
+import { moveFailedText } from "./removeText";
 
 export function isNotFound(error: unknown) {
 	return (
@@ -165,6 +169,50 @@ export function useRenameLocationMutation(projectId: string) {
 			}
 		},
 	});
+}
+
+export function useMoveLocationMutation(projectId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: ({
+			locationId,
+			direction,
+		}: {
+			locationId: string;
+			direction: MoveDirection;
+		}) =>
+			apiFetch(
+				`/projects/${projectId}/locations/${locationId}/move`,
+				locationRefSchema,
+				{
+					method: "POST",
+					headers: { "content-type": "application/json" },
+					body: JSON.stringify({ direction }),
+				},
+			),
+		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: ["projects"] });
+			return queryClient.invalidateQueries({
+				queryKey: ["structure", projectId],
+			});
+		},
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+			toast.error(moveFailedText);
+		},
+	});
+}
+
+export function deleteLocation(projectId: string, locationId: string) {
+	return apiFetch(
+		`/projects/${projectId}/locations/${locationId}`,
+		removeLocationResultSchema,
+		{ method: "DELETE" },
+	);
 }
 
 export function unitTypesQueryOptions(projectId: string) {

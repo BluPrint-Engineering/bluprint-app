@@ -394,12 +394,15 @@ and:
 - `POST /api/projects/:id/structure` (the wizard, idempotent by ids), served, carries **every creation of units**: the wizard,
   "Adicionar unidade", "Adicionar andares", Duplicar and Desfazer. When the obra's reserva does not cover the new units
   it answers `409 NO_UNITS_LEFT` with `requested` (new units in the request) and `available` (what remains in the
-  obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist; it also creates the request's tipologias with their rooms (client ids, `409 UNIT_TYPE_NAME_TAKEN` for a name in use), and a unit that names a tipologia is born with its rooms;
+  obra), and creates nothing; only new units count, so the idempotent retry skips ids that already exist; it also creates the request's tipologias with their rooms (client ids, `409 UNIT_TYPE_NAME_TAKEN` for a name in use), and a unit that names a tipologia is born with its rooms, unless the request lists the `rooms` of the unit or common area itself (and the `droppedRooms` of a unit) so Desfazer recreates it as it was;
 - `GET /api/projects/:id/units` → `{ reserved, used, remaining }`, for anyone linked to the obra, is served (the
   admin's `PATCH /api/projects/:id/units` lives in `../obra/`);
 - `PATCH /api/projects/:id/locations/:locationId` with `{ name }` (rename), served;
-- `POST` / `DELETE` on locations and rooms, `PATCH` on rooms, `PATCH` for order, unit types CRUD. A `DELETE` that
-  deletes (no content) gives the units of the subtree back to the obra's reserva; one that archives keeps them spent;
+- `POST /api/projects/:id/locations/:locationId/move` with `{ direction }` swaps a floor or a unit with its neighbour of
+  the same kind (for a floor, `up` is a floor higher), and `DELETE /api/projects/:id/locations/:locationId` removes a
+  location with its subtree and answers `{ outcome: "deleted", removed }`, both served. The location answer carries its
+  `position`, which Desfazer sends back. A `DELETE` that deletes (no content) gives the units of the subtree back to the
+  obra's reserva; one that archives keeps them spent;
 - every write refuses a delivered obra with `409 PROJECT_DELIVERED` and moves `last_activity_at`;
 - `DELETE` answers whether it deleted or archived; until plans exist (#7) it always deletes (ADR 0073).
 

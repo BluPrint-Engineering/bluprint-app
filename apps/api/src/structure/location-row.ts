@@ -10,3 +10,13 @@ export interface LocationRow {
 export interface StructureRow extends LocationRow {
 	unitType: UnitTypeRef | null;
 }
+
+export interface PlacedRow extends StructureRow {
+	position: number;
+}
+
+export interface SiblingRow {
+	id: string;
+	type: LocationType;
+	position: number;
+}

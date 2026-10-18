@@ -4,8 +4,10 @@ import {
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	type LocationRef,
+	type MoveDirection,
 	type OrganizationUnits,
 	type ProjectSummary,
+	type RemovedCounts,
 	type Room,
 	type Structure,
 	type StructureFloor,
@@ -156,6 +158,7 @@ export function locationIn(
 		own: Partial<LocationDetail> = {},
 	): LocationDetail => ({
 		...ref(type, node),
+		position: 0,
 		ancestors,
 		children,
 		unitType: null,
@@ -314,9 +317,84 @@ function applyCreation(structure: Structure, body: CreateStructure) {
 	recount(structure);
 }
 
+function removeNode(
+	structure: Structure,
+	id: string,
+): RemovedCounts | undefined {
+	const counts = { floors: 0, units: 0, commonAreas: 0 };
+	const area = () => {
+		counts.commonAreas += 1;
+	};
+	const unit = () => {
+		counts.units += 1;
+	};
+	const floorOf = (node: { id: string }) => {
+		const f = node as StructureFloor;
+		counts.floors += 1;
+		counts.units += f.units.length;
+		counts.commonAreas += f.commonAreas.length;
+	};
+	const towerOf = (node: { id: string }) => {
+		const t = node as StructureTower;
+		t.floors.forEach(floorOf);
+		counts.commonAreas += t.commonAreas.length;
+	};
+	const holders: { list: { id: string }[]; tally: (node: never) => void }[] = [
+		{ list: structure.towers, tally: towerOf },
+		{ list: structure.commonAreas, tally: area },
+		...structure.towers.flatMap((t) => [
+			{ list: t.floors, tally: floorOf },
+			{ list: t.commonAreas, tally: area },
+			...t.floors.flatMap((f) => [
+				{ list: f.units, tally: unit },
+				{ list: f.commonAreas, tally: area },
+			]),
+		]),
+	];
+
+	for (const { list, tally } of holders) {
+		const at = list.findIndex((node) => node.id === id);
+		if (at < 0) continue;
+		(tally as (node: { id: string }) => void)(list[at] as { id: string });
+		list.splice(at, 1);
+		recount(structure);
+		return counts;
+	}
+	return undefined;
+}
+
+function moveNode(structure: Structure, id: string, direction: MoveDirection) {
+	const lists: { id: string }[][] = [
+		structure.towers,
+		structure.commonAreas,
+		...structure.towers.flatMap((t) => [
+			t.floors,
+			t.commonAreas,
+			...t.floors.flatMap((f) => [f.units, f.commonAreas]),
+		]),
+	];
+	const list = lists.find((candidate) => candidate.some((n) => n.id === id));
+	if (!list) return;
+	const at = list.findIndex((n) => n.id === id);
+	const isFloor = structure.towers.some((t) => t.floors === list);
+	const to = at + ((direction === "up") === isFloor ? 1 : -1);
+	const other = list[to];
+	const node = list[at];
+	if (!other || !node) return;
+	list[to] = node;
+	list[at] = other;
+}
+
 export interface WritableApiOptions {
 	remaining?: number;
 	organization?: OrganizationUnits;
+	details?: Record<string, Partial<LocationDetail>>;
+	remove?: (locationId: string, attempt: number) => Reply | undefined;
+	move?: (
+		locationId: string,
+		direction: MoveDirection,
+		attempt: number,
+	) => Reply | undefined;
 	create?: (body: CreateStructure, attempt: number) => Reply | undefined;
 	rename?: (
 		locationId: string,
@@ -339,6 +417,8 @@ export function writableApi(
 	};
 	const created: CreateStructure[] = [];
 	const renamed: { locationId: string; name: string }[] = [];
+	const removed: string[] = [];
+	const moved: { locationId: string; direction: MoveDirection }[] = [];
 	const base = `/api/projects/${initial.id}`;
 	const balance = () => ({
 		reserved: state.units.reserved,
@@ -385,9 +465,46 @@ export function writableApi(
 				).length;
 				return json({ counts: structure.counts }, 201);
 			}
+			const moveTarget = new RegExp(`^${base}/locations/([^/]+)/move$`).exec(
+				url.pathname,
+			);
+			if (moveTarget && init?.method === "POST") {
+				const locationId = moveTarget[1] ?? "";
+				const { direction } = JSON.parse(String(init.body)) as {
+					direction: MoveDirection;
+				};
+				moved.push({ locationId, direction });
+				const answered = options.move?.(locationId, direction, moved.length);
+				if (answered) return answered;
+				moveNode(structure, locationId, direction);
+				const node = everyNode(structure).find((n) => n.id === locationId);
+				return (
+					node && json({ id: locationId, type: node.type, name: node.name })
+				);
+			}
 			const target = new RegExp(`^${base}/locations/([^/]+)$`).exec(
 				url.pathname,
 			);
+			if (target && init?.method === "DELETE") {
+				const locationId = target[1] ?? "";
+				removed.push(locationId);
+				const answered = options.remove?.(locationId, removed.length);
+				if (answered) return answered;
+				const counts = removeNode(structure, locationId);
+				if (!counts) {
+					return json(
+						{
+							type: "about:blank",
+							title: "Not Found",
+							status: 404,
+							code: LOCATION_NOT_FOUND,
+						},
+						404,
+					);
+				}
+				state.units.remaining += counts.units;
+				return json({ outcome: "deleted", removed: counts });
+			}
 			if (target && init?.method === "PATCH") {
 				const locationId = target[1] ?? "";
 				const { name } = JSON.parse(String(init.body)) as { name: string };
@@ -409,10 +526,10 @@ export function writableApi(
 			}
 			return undefined;
 		},
-		structureApi(initial.id, structure),
+		structureApi(initial.id, structure, options.details),
 	);
 
-	return { handler, state, created, renamed };
+	return { handler, state, created, renamed, removed, moved };
 }
 
 export function unitTypeOf(

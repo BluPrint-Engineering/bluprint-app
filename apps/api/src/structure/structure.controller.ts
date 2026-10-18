@@ -2,9 +2,19 @@ import type {
 	CreateStructureResult,
 	LocationDetail,
 	LocationRef,
+	RemoveLocationResult,
 	Structure,
 } from "@bluprint/shared";
-import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
+import {
+	Body,
+	Controller,
+	Delete,
+	Get,
+	HttpCode,
+	Param,
+	Patch,
+	Post,
+} from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
@@ -15,6 +25,8 @@ import { CreateStructureDto } from "./dto/create-structure.dto";
 import { LocationDetailDto } from "./dto/location-detail.dto";
 import { LocationParamsDto } from "./dto/location-params.dto";
 import { LocationRefDto } from "./dto/location-ref.dto";
+import { MoveLocationDto } from "./dto/move-location.dto";
+import { RemoveLocationResultDto } from "./dto/remove-location-result.dto";
 import { RenameLocationDto } from "./dto/rename-location.dto";
 import { StructureDto } from "./dto/structure.dto";
 import { StructureService } from "./structure.service";
@@ -109,5 +121,50 @@ export class StructureController {
 			params.locationId,
 			body,
 		);
+	}
+
+	@Post("locations/:locationId/move")
+	@HttpCode(200)
+	@ApiOperation({
+		summary: "Move a location among its siblings",
+		description:
+			"Swaps a location with its neighbour of the same kind under the same parent and answers the location's id, kind and name. For a floor, `up` is one floor higher; for any other kind, `up` is one place earlier in the list, passing over the locations of other kinds between them. At the top or at the end it does nothing and still answers `200`. Anyone linked to the project may write, and the admin of its organization; a project that cannot be seen answers `404 PROJECT_NOT_FOUND`, a location that does not exist or belongs to another project `404 LOCATION_NOT_FOUND`, and a delivered project `409 PROJECT_DELIVERED`. One structure write at a time runs per project, and it moves the project's last activity.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The location, in its new place.",
+		type: LocationRefDto,
+	})
+	@ApiErrorResponses(400, 401, 404, 409)
+	moveLocation(
+		@Session() session: UserSession,
+		@Param() params: LocationParamsDto,
+		@Body() body: MoveLocationDto,
+	): Promise<LocationRef> {
+		return this.structure.move(
+			session.user.id,
+			params.id,
+			params.locationId,
+			body,
+		);
+	}
+
+	@Delete("locations/:locationId")
+	@ApiOperation({
+		summary: "Remove a location",
+		description:
+			"One action for every location: the server decides by what the location holds. A location with nothing in it is deleted with everything below it, a floor with its units and common areas, a tower with its floors, and the answer says what went: `{ outcome: \"deleted\", removed }`, with the counts of floors, units and common areas removed, the location itself included. Nothing a project holds counts as content yet, so every removal deletes. Each unit removed gives its place back to the project's reservation. Sending it again for a location that is already gone answers `404 LOCATION_NOT_FOUND`. Anyone linked to the project may write, and the admin of its organization; a project that cannot be seen answers `404 PROJECT_NOT_FOUND`, a location that does not exist or belongs to another project `404 LOCATION_NOT_FOUND`, and a delivered project `409 PROJECT_DELIVERED`. One structure write at a time runs per project, and it moves the project's last activity.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "What the removal did.",
+		type: RemoveLocationResultDto,
+	})
+	@ApiErrorResponses(400, 401, 404, 409)
+	removeLocation(
+		@Session() session: UserSession,
+		@Param() params: LocationParamsDto,
+	): Promise<RemoveLocationResult> {
+		return this.structure.remove(session.user.id, params.id, params.locationId);
 	}
 }

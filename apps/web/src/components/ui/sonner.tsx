@@ -1,6 +1,8 @@
 import { CircleAlert, CircleCheck, Info } from "lucide-react";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
+import { buttonVariants } from "@/components/ui/button";
 import { useIsDesktop } from "@/lib/useIsDesktop";
+import { cn } from "@/lib/utils";
 
 const Toaster = (props: ToasterProps) => {
 	const desktop = useIsDesktop();
@@ -28,6 +30,10 @@ const Toaster = (props: ToasterProps) => {
 					error: "[&_[data-icon]]:text-destructive",
 					success: "[&_[data-icon]]:text-success",
 					content: "min-w-0 flex-1 py-px",
+					actionButton: cn(
+						buttonVariants({ variant: "outline", size: "sm" }),
+						"self-center",
+					),
 					closeButton:
 						"order-last -my-2.5 -mr-0.5 grid size-(--icon-tap) shrink-0 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground [&_svg]:size-4.5",
 				},

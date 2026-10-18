@@ -449,6 +449,7 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 			id: ninth,
 			type: "floor",
 			name: "9º andar",
+			position: 1,
 			ancestors: [{ id: towerA, type: "tower", name: "Torre A" }],
 			children: [
 				{ id: unit901, type: "unit", name: "901" },
