@@ -1,3 +1,4 @@
+import { MAX_LOCATIONS_PER_REQUEST } from "@bluprint/shared";
 import type { DuplicateKind } from "./duplicate";
 import { placeOf } from "./naming";
 import { listOfNames } from "./reserveText";
@@ -55,4 +56,8 @@ export function copiedUnitsTakenText(
 		? `Já existem as unidades ${listOfNames(names)}`
 		: `Já existe a unidade ${listOfNames(names)}`;
 	return `${taken} ${place}. Troque o número do andar e tente de novo.`;
+}
+
+export function duplicateTooLargeText(locations: number): string {
+	return `Esta cópia tem ${locations.toLocaleString("pt-BR")} locais e o limite é ${MAX_LOCATIONS_PER_REQUEST.toLocaleString("pt-BR")} por vez. Duplique os andares um a um.`;
 }

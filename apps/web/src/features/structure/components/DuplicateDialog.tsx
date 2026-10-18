@@ -1,3 +1,4 @@
+import { MAX_LOCATIONS_PER_REQUEST } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Copy } from "lucide-react";
 import { type RefObject, useId, useRef, useState } from "react";
@@ -11,6 +12,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
 import {
@@ -30,6 +32,7 @@ import {
 	type DuplicateKind,
 	type DuplicateSource,
 	findDuplicateSource,
+	locationsCopied,
 	renumberedUnitNames,
 	sourceName,
 	suggestedCopyName,
@@ -39,6 +42,7 @@ import {
 	copiedUnitsTakenText,
 	duplicatedToast,
 	duplicateTitle,
+	duplicateTooLargeText,
 } from "../duplicateText";
 import { nameProblem, type Scope, takenText, uniqueHint } from "../naming";
 import { duplicateLine, duplicateOverText } from "../reserveText";
@@ -46,6 +50,9 @@ import { NameDialogFrame, NameDialogLayout } from "./NameDialog";
 
 const DUPLICATE_FAILED =
 	"Não foi possível duplicar. Confira sua conexão e tente de novo.";
+
+const DUPLICATE_REFUSED =
+	"A estrutura mudou enquanto você duplicava. Recarregue a página e tente de novo.";
 
 const SCOPES: Record<DuplicateKind, Scope> = {
 	tower: "project",
@@ -101,6 +108,8 @@ function DuplicateContent({
 	const toCreate = unitsCopied(source);
 	const remaining = units.data?.remaining;
 	const over = remaining !== undefined && toCreate > remaining;
+	const locations = locationsCopied(source);
+	const tooLarge = locations > MAX_LOCATIONS_PER_REQUEST;
 
 	const taken = namesTakenOf(duplicate.error);
 	const nameTaken =
@@ -114,6 +123,8 @@ function DuplicateContent({
 		duplicate.isError &&
 		taken === undefined &&
 		availableUnitsOf(duplicate.error) === undefined;
+	const refused =
+		duplicate.error instanceof ApiError && duplicate.error.status === 400;
 
 	function idFor(key: string) {
 		let id = ids.current.get(key);
@@ -185,7 +196,9 @@ function DuplicateContent({
 		>
 			{failed && (
 				<Alert variant="destructive">
-					<AlertDescription>{DUPLICATE_FAILED}</AlertDescription>
+					<AlertDescription>
+						{refused ? DUPLICATE_REFUSED : DUPLICATE_FAILED}
+					</AlertDescription>
 				</Alert>
 			)}
 			{otherNames && (
@@ -228,6 +241,13 @@ function DuplicateContent({
 				)}
 			</Field>
 			{count}
+			{tooLarge && (
+				<Alert variant="destructive">
+					<AlertDescription>
+						{duplicateTooLargeText(locations)}
+					</AlertDescription>
+				</Alert>
+			)}
 		</form>
 	);
 
@@ -242,7 +262,7 @@ function DuplicateContent({
 				submitLabel="Duplicar"
 				pendingLabel="Duplicando…"
 				SubmitIcon={Copy}
-				submitDisabled={over}
+				submitDisabled={over || tooLarge}
 				onCancel={onDone}
 			/>
 			{admin && project.data && (

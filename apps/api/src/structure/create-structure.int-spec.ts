@@ -1302,6 +1302,42 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		expect(detail.droppedRooms).toHaveLength(1);
 	});
 
+	it("takes a copy with more than 30 units under one floor", async () => {
+		const projectId = await newProject(100);
+		const { tower, floor } = floorWith();
+		const units = Array.from({ length: 31 }, (_, i) =>
+			unitOf(floor.id, `1${String(i + 1).padStart(2, "0")}`, undefined, i),
+		);
+
+		const res = await manager.agent
+			.post(structurePath(projectId))
+			.send({ locations: [tower, floor, ...units], copy: true });
+
+		expect(res.status).toBe(201);
+		expect(await countLocations(projectId)).toBe(33);
+	});
+
+	it("takes a copy of a location with more than 200 rooms and refuses one that is not a copy", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+		const garage = (name: string): NewLocation => ({
+			...entry(floor.id, "common_area", name),
+			rooms: Array.from({ length: 201 }, (_, i) => roomOf(`Vaga ${i + 1}`)),
+		});
+		const refused = garage("Garagem");
+		const copied = garage("Garagem 2");
+
+		const plain = await create(manager, projectId, [tower, floor, refused]);
+		const copy = await manager.agent
+			.post(structurePath(projectId))
+			.send({ locations: [tower, floor, copied], copy: true });
+
+		expect(plain.status).toBe(400);
+		expect(problemOf(plain.body).code).toBe("VALIDATION_FAILED");
+		expect(copy.status).toBe(201);
+		expect((await readLocation(projectId, copied.id)).rooms).toHaveLength(201);
+	});
+
 	it("refuses a room that belongs to another unit type and creates nothing", async () => {
 		const projectId = await newProject(10);
 		const type = typeA();

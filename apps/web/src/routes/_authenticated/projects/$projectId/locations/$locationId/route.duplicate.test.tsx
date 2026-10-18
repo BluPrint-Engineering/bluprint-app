@@ -2,6 +2,7 @@ import {
 	LOCATION_NAME_TAKEN,
 	NO_UNITS_LEFT,
 	type ProjectAccessRole,
+	UNIT_TYPE_ROOM_INVALID,
 } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -180,6 +181,7 @@ describe("duplicating a floor", () => {
 			["unit", "1304", expect.any(String)],
 			["common_area", "Hall", expect.any(String)],
 		]);
+		expect(sent?.copy).toBe(true);
 		expect(sent?.locations[1]?.unitTypeId).toBe(
 			nth(ninth.units, 0).unitType?.id,
 		);
@@ -489,6 +491,31 @@ describe("duplicating a unit", () => {
 			await within(dialog).findByText("Informe o nome."),
 		).toBeInTheDocument();
 		expect(api.created).toHaveLength(0);
+	});
+
+	test("says the structure changed when the API refuses the copy", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra(), several, {
+			remaining: 12,
+			create: () => problem(400, UNIT_TYPE_ROOM_INVALID),
+		});
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(ninth.id));
+		const dialog = await openDuplicate(
+			"Ações da unidade 903",
+			"Duplicar unidade",
+		);
+
+		await submit(dialog);
+
+		expect(
+			await within(dialog).findByText(
+				"A estrutura mudou enquanto você duplicava. Recarregue a página e tente de novo.",
+			),
+		).toBeInTheDocument();
+		expect(
+			within(dialog).queryByText(/Confira sua conexão/),
+		).not.toBeInTheDocument();
 	});
 
 	test("shows a failure in the dialog and keeps the copy retryable with the same ids", async () => {

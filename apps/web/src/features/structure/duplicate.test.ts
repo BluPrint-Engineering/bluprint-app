@@ -1,5 +1,8 @@
 import {
+	createStructureSchema,
 	LOCATION_NAME_MAX_LENGTH,
+	MAX_ROOMS_PER_LOCATION,
+	MAX_UNITS_PER_FLOOR,
 	type Structure,
 	type SubtreeRooms,
 } from "@bluprint/shared";
@@ -11,6 +14,7 @@ import {
 	copiedUnitName,
 	type DuplicateSource,
 	findDuplicateSource,
+	locationsCopied,
 	renumberedUnitNames,
 	suggestedCopyName,
 	unitsCopied,
@@ -20,6 +24,7 @@ import {
 	duplicatedToast,
 	duplicateMenuLabel,
 	duplicateTitle,
+	duplicateTooLargeText,
 } from "./duplicateText";
 import { duplicateLine, duplicateOverText } from "./reserveText";
 
@@ -31,6 +36,18 @@ function sequentialIds() {
 		let id = issued.get(key);
 		if (!id) {
 			id = `new-${issued.size + 1}`;
+			issued.set(key, id);
+		}
+		return id;
+	};
+}
+
+function uuidIds() {
+	const issued = new Map<string, string>();
+	return (key: string) => {
+		let id = issued.get(key);
+		if (!id) {
+			id = `0190e000-0000-7000-8000-${String(issued.size + 1).padStart(12, "0")}`;
 			issued.set(key, id);
 		}
 		return id;
@@ -152,6 +169,78 @@ describe("unitsCopied", () => {
 		expect(unitsCopied(sourceOf(structure, "unit", unit.id))).toBe(1);
 		expect(unitsCopied(sourceOf(structure, "floor", ninth.id))).toBe(4);
 		expect(unitsCopied(sourceOf(structure, "tower", towerA.id))).toBe(6);
+	});
+});
+
+describe("locationsCopied", () => {
+	test("counts every location the copy sends", () => {
+		const { ninth, towerA, structure } = scene();
+		const unit = nth(ninth.units, 0);
+
+		for (const source of [
+			sourceOf(structure, "unit", unit.id),
+			sourceOf(structure, "floor", ninth.id),
+			sourceOf(structure, "tower", towerA.id),
+		]) {
+			expect(locationsCopied(source)).toBe(
+				buildDuplicate(source, "Cópia", noRooms, uuidIds()).locations.length,
+			);
+		}
+	});
+});
+
+describe("a copy the API takes", () => {
+	test("passes the units-per-floor limit when the floor already has more", () => {
+		const crowded = floor(
+			"Térreo",
+			Array.from(
+				{ length: MAX_UNITS_PER_FLOOR + 1 },
+				(_, i) => `Loja ${i + 1}`,
+			),
+		);
+		const structure = structureOf([tower("Torre A", [crowded])]);
+
+		const request = buildDuplicate(
+			sourceOf(structure, "floor", crowded.id),
+			"Mezanino",
+			noRooms,
+			uuidIds(),
+		);
+
+		expect(createStructureSchema.safeParse(request).success).toBe(true);
+		expect(
+			createStructureSchema.safeParse({ ...request, copy: undefined }).success,
+		).toBe(false);
+	});
+
+	test("passes the rooms-per-location limit when the unit already has more", () => {
+		const { ninth, structure } = scene();
+		const unit = nth(ninth.units, 2);
+		const below: SubtreeRooms = {
+			locations: [
+				roomsOf(
+					unit.id,
+					Array.from({ length: MAX_ROOMS_PER_LOCATION + 1 }, (_, i) => ({
+						id: `0190d000-0000-7000-8000-${String(i).padStart(12, "0")}`,
+						name: `Sala ${i + 1}`,
+						unitTypeRoomId: null,
+						renamed: false,
+					})),
+				),
+			],
+		};
+
+		const request = buildDuplicate(
+			sourceOf(structure, "unit", unit.id),
+			"905",
+			below,
+			uuidIds(),
+		);
+
+		expect(createStructureSchema.safeParse(request).success).toBe(true);
+		expect(
+			createStructureSchema.safeParse({ ...request, copy: undefined }).success,
+		).toBe(false);
 	});
 });
 
@@ -572,6 +661,12 @@ describe("duplicate texts", () => {
 		);
 		expect(copiedUnitsTakenText(["1401", "1402"], true, "Torre A")).toBe(
 			"Já existem as unidades “1401” e “1402” na Torre A. Troque o número do andar e tente de novo.",
+		);
+	});
+
+	test("says a copy past the locations per request limit is too large", () => {
+		expect(plain(duplicateTooLargeText(5112))).toBe(
+			"Esta cópia tem 5.112 locais e o limite é 5.000 por vez. Duplique os andares um a um.",
 		);
 	});
 

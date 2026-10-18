@@ -65,6 +65,22 @@ export function unitsCopied(source: DuplicateSource): number {
 	}
 }
 
+export function locationsCopied(source: DuplicateSource): number {
+	const ofFloor = (floor: StructureFloor) =>
+		1 + floor.units.length + floor.commonAreas.length;
+	switch (source.type) {
+		case "tower":
+			return source.tower.floors.reduce(
+				(sum, floor) => sum + ofFloor(floor),
+				1 + source.tower.commonAreas.length,
+			);
+		case "floor":
+			return ofFloor(source.floor);
+		case "unit":
+			return 1;
+	}
+}
+
 export function suggestedCopyName(
 	source: DuplicateSource,
 	structure: Structure,
@@ -265,5 +281,5 @@ export function buildDuplicate(
 		}
 	}
 
-	return { unitTypes: [], locations };
+	return { unitTypes: [], locations, copy: true };
 }
