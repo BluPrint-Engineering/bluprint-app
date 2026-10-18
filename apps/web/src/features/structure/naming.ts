@@ -117,3 +117,12 @@ const RENAME_LABELS: Record<LocationType, string> = {
 };
 
 export const renameLabel = (type: LocationType) => RENAME_LABELS[type];
+
+const REMOVE_LABELS: Record<LocationType, string> = {
+	tower: "Remover torre",
+	floor: "Remover andar",
+	unit: "Remover unidade",
+	common_area: "Remover área comum",
+};
+
+export const removeLabel = (type: LocationType) => REMOVE_LABELS[type];

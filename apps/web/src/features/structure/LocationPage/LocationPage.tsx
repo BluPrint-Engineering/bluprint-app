@@ -5,7 +5,7 @@ import {
 	type Structure,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { ListPlus, MapPinOff, Plus } from "lucide-react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
@@ -30,6 +30,7 @@ import { LocationMenu } from "../components/LocationMenu";
 import { useAdding } from "../components/useAdding";
 import { STRUCTURE_LOCKED } from "../lockedText";
 import type { Scope } from "../naming";
+import { floorChildCounts, NO_CHILDREN, towerChildCounts } from "../removeText";
 import { CommonAreaBody } from "./CommonAreaBody";
 import { FloorBody } from "./FloorBody";
 import { describeLocation } from "./locationBand";
@@ -94,6 +95,7 @@ function LocationView({
 }) {
 	const desktop = useIsDesktop();
 	const adding = useAdding();
+	const navigate = useNavigate();
 	const projectId = project.id;
 	const canEdit = project.status !== "delivered";
 	const band = describeLocation(location, structure, from);
@@ -123,11 +125,31 @@ function LocationView({
 				location.ancestors.find((ancestor) => ancestor.type === "tower")?.name)
 			: undefined;
 
+	const { parent } = band;
+	const leaveRemoved = () =>
+		navigate(
+			parent.kind === "project"
+				? { to: "/projects/$projectId", params: { projectId } }
+				: {
+						to: "/projects/$projectId/locations/$locationId",
+						params: { projectId, locationId: parent.id },
+					},
+		);
+
 	const menu = canEdit && (
 		<LocationMenu
 			projectId={projectId}
 			variant="outline"
 			label={PAGE_MENU_LABELS[location.type]}
+			movable={location.type === "floor" || location.type === "unit"}
+			removal={{
+				counts: tower
+					? towerChildCounts(tower)
+					: floor
+						? floorChildCounts(floor)
+						: NO_CHILDREN,
+				afterRemoval: leaveRemoved,
+			}}
 			onCloseAutoFocus={(event) => {
 				if (adding.is("tower-area")) event.preventDefault();
 			}}

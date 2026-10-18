@@ -5,6 +5,8 @@ import {
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	type LocationRef,
+	type MoveLocation,
+	type RemoveLocationResult,
 	type RenameLocation,
 	type Structure,
 } from "@bluprint/shared";
@@ -13,8 +15,10 @@ import { Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
 import { UnitsService } from "../units/units.service";
+import { LocationContent } from "./location-content";
 import { nameKey } from "./location-names";
 import type { LocationRow } from "./location-row";
+import { planMove } from "./move-order";
 import { planCreation } from "./plan-creation";
 import { buildStructure } from "./structure-tree";
 import { StructureRepository } from "./structure.repository";
@@ -36,6 +40,7 @@ export class StructureService {
 		private readonly units: UnitsService,
 		private readonly locations: StructureRepository,
 		private readonly unitTypes: UnitTypesRepository,
+		private readonly content: LocationContent,
 	) {}
 
 	@Transactional()
@@ -60,23 +65,116 @@ export class StructureService {
 		const storedRooms = await this.unitTypes.findRoomIds(
 			unitTypes.flatMap(({ rooms }) => rooms.map(({ id }) => id)),
 		);
+		const storedUnitTypeRooms = new Map<string, Set<string>>();
+		for (const { id, unitTypeId } of await this.unitTypes.listRooms(
+			projectId,
+		)) {
+			storedUnitTypeRooms.set(
+				unitTypeId,
+				(storedUnitTypeRooms.get(unitTypeId) ?? new Set()).add(id),
+			);
+		}
+		const roomIdsInUse = await this.locations.findRoomIds(
+			locations.flatMap(({ rooms }) => rooms?.map(({ id }) => id) ?? []),
+		);
 		const { freshUnitTypes, fresh, newUnits, counts } = planCreation(request, {
 			locations: inProject,
 			unitTypes: storedUnitTypes,
 			locationIdsElsewhere,
 			unitTypeIdsInUse: { typesElsewhere, storedRooms },
+			storedUnitTypeRooms,
+			roomIdsInUse,
 		});
 
 		await this.units.assertAvailable(projectId, newUnits);
 		await this.unitTypes.insertAll(projectId, freshUnitTypes);
 		await this.locations.insertAll(projectId, fresh);
 		await this.unitTypes.giveUnitsTheirRooms(
-			fresh.flatMap(({ id, unitTypeId }) =>
-				unitTypeId === undefined ? [] : [{ id, unitTypeId }],
+			fresh.flatMap(({ id, unitTypeId, rooms }) =>
+				unitTypeId === undefined || rooms !== undefined
+					? []
+					: [{ id, unitTypeId }],
+			),
+		);
+		await this.locations.insertRooms(
+			fresh.flatMap(({ id: locationId, rooms }) =>
+				(rooms ?? []).map((entry, position) => ({
+					id: entry.id,
+					locationId,
+					name: entry.name,
+					position,
+					unitTypeRoomId: entry.unitTypeRoomId ?? null,
+					renamed: entry.renamed ?? false,
+				})),
+			),
+		);
+		await this.locations.insertDroppedRooms(
+			fresh.flatMap(({ id: locationId, droppedRooms }) =>
+				(droppedRooms ?? []).map((unitTypeRoomId) => ({
+					locationId,
+					unitTypeRoomId,
+				})),
 			),
 		);
 
 		return { counts };
+	}
+
+	@Transactional()
+	async move(
+		userId: string,
+		projectId: string,
+		locationId: string,
+		{ direction }: MoveLocation,
+	): Promise<LocationRef> {
+		await this.projects.beginStructureWrite(userId, projectId);
+		await this.units.lockEditable(projectId);
+
+		const found = await this.locations.find(projectId, locationId);
+		if (!found) throw locationNotFound();
+
+		const siblings = await this.locations.listSiblings(
+			projectId,
+			found.parentId,
+		);
+		for (const { id, position } of planMove(siblings, found.id, direction)) {
+			await this.locations.setPosition(id, position);
+		}
+
+		return toRef(found);
+	}
+
+	@Transactional()
+	async remove(
+		userId: string,
+		projectId: string,
+		locationId: string,
+	): Promise<RemoveLocationResult> {
+		await this.projects.beginStructureWrite(userId, projectId);
+		await this.units.lockEditable(projectId);
+
+		const found = await this.locations.find(projectId, locationId);
+		if (!found) throw locationNotFound();
+
+		const subtree = await this.locations.listSubtree(projectId, found.id);
+		const subtreeIds = subtree.map(({ id }) => id);
+		if (await this.content.hasContent(subtreeIds)) {
+			// TODO(#7): archive a subtree with content instead of failing here
+			throw new Error("A location with content is archived, not deleted.");
+		}
+		await this.locations.delete(found.id);
+
+		const count = (type: LocationRow["type"]) =>
+			subtree.filter((row) => row.type === type).length;
+
+		return {
+			outcome: "deleted",
+			removed: {
+				floors: count("floor"),
+				units: count("unit"),
+				commonAreas: count("common_area"),
+			},
+		};
 	}
 
 	@Transactional()
@@ -149,6 +247,7 @@ export class StructureService {
 
 		return {
 			...toRef(found),
+			position: found.position,
 			ancestors: ancestors.map(toRef),
 			children: children.map(toRef),
 			unitType: found.unitType,

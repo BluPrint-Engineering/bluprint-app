@@ -36,6 +36,7 @@ import {
 } from "../components/useAdding";
 import { PROJECT_ORIGIN } from "../LocationPage/origin";
 import { nextTowerName } from "../naming";
+import { NO_CHILDREN } from "../removeText";
 import { TowerCards } from "./TowerCards";
 
 function AddMenu({
@@ -123,6 +124,7 @@ function areaItems(
 			<LocationMenu
 				projectId={projectId}
 				label={`Ações da área comum ${area.name}`}
+				removal={{ counts: NO_CHILDREN }}
 				target={{
 					id: area.id,
 					type: "common_area",

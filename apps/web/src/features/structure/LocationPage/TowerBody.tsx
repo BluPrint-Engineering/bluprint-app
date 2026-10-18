@@ -11,6 +11,7 @@ import { Facade, FacadeCard } from "../components/Facade";
 import { LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
 import type { Adding } from "../components/useAdding";
+import { NO_CHILDREN } from "../removeText";
 
 export function TowerBody({
 	projectId,
@@ -37,6 +38,7 @@ export function TowerBody({
 					<LocationMenu
 						projectId={projectId}
 						label={`Ações da área comum ${area.name}`}
+						removal={{ counts: NO_CHILDREN }}
 						target={{
 							id: area.id,
 							type: "common_area",

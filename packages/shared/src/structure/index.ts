@@ -4,6 +4,8 @@ export * from "./location-errors.js";
 export * from "./location-params.js";
 export * from "./location-rooms.js";
 export * from "./location-type.js";
+export * from "./move-location.js";
+export * from "./remove-location.js";
 export * from "./rename-location.js";
 export * from "./structure.js";
 export * from "./unit-type-ref.js";
