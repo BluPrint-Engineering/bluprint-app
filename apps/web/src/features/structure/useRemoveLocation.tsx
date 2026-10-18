@@ -94,7 +94,9 @@ export function useRemoveLocation(projectId: string) {
 		}
 	}
 
-	return async function remove(request: RemoveRequest): Promise<void> {
+	return async function remove(
+		request: RemoveRequest,
+	): Promise<"confirm" | undefined> {
 		const { id, type, name } = request;
 		try {
 			const removed = request.undoable
@@ -103,6 +105,12 @@ export function useRemoveLocation(projectId: string) {
 						staleTime: 0,
 					})
 				: undefined;
+			if (removed && removed.children.length > 0) {
+				await queryClient.invalidateQueries({
+					queryKey: structureQueryOptions(projectId).queryKey,
+				});
+				return "confirm";
+			}
 			await deleteLocation(projectId, id);
 			await request.afterRemoval?.();
 

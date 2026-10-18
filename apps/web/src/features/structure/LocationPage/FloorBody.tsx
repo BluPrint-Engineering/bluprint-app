@@ -65,7 +65,6 @@ export function FloorBody({
 			/>
 		),
 	}));
-	const position = floor.units.length + floor.commonAreas.length;
 
 	return (
 		<div className="grid gap-(--space-6) md:grid-cols-2 md:items-start md:gap-(--space-8)">
@@ -81,7 +80,6 @@ export function FloorBody({
 							project={project}
 							adding={adding}
 							parentId={floor.id}
-							position={position}
 							towerName={towerName}
 							suggestion={nextUnitName(
 								floor.name,
@@ -107,7 +105,6 @@ export function FloorBody({
 								kind="floor-area"
 								type="common_area"
 								parentId={floor.id}
-								position={position}
 								label="Adicionar área comum"
 								suggestion=""
 								scope="floor"

@@ -57,7 +57,6 @@ export function TowerBody({
 						kind="tower-area"
 						type="common_area"
 						parentId={tower.id}
-						position={tower.floors.length + tower.commonAreas.length}
 						label="Adicionar área comum"
 						suggestion=""
 						scope="tower"

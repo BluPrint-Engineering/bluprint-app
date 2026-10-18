@@ -105,7 +105,9 @@ export function LocationMenu({
 						onSelect={() =>
 							hasChildren(removal.counts)
 								? setConfirming(true)
-								: void removeNow(true)
+								: void removeNow(true).then((outcome) => {
+										if (outcome === "confirm") setConfirming(true);
+									})
 						}
 					>
 						<Trash2 className="size-4.5" aria-hidden="true" />
@@ -126,7 +128,9 @@ export function LocationMenu({
 				counts={removal.counts}
 				open={confirming}
 				onOpenChange={setConfirming}
-				onConfirm={() => removeNow(false)}
+				onConfirm={async () => {
+					await removeNow(false);
+				}}
 				returnFocus={trigger}
 			/>
 		</>

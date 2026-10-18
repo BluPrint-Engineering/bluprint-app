@@ -376,6 +376,28 @@ describe("removing a location with children (R2)", () => {
 		).not.toBeInTheDocument();
 	});
 
+	test("asks to confirm a floor that looked empty when someone added a unit to it meanwhile", async () => {
+		const { tenth, several } = build();
+		const api = writableApi(obra(), several);
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(tenth.id));
+		expect(
+			await screen.findByRole("heading", { level: 1, name: "10º andar" }),
+		).toBeInTheDocument();
+		tenth.units.push(...floor("10º andar", ["1001"]).units);
+
+		await pick("Ações do andar", "Remover andar");
+
+		const dialog = await screen.findByRole("alertdialog");
+		expect(
+			within(dialog).getByRole("heading", { name: "Excluir o 10º andar?" }),
+		).toBeInTheDocument();
+		expect(
+			within(dialog).getByText("A unidade volta para a reserva da obra."),
+		).toBeInTheDocument();
+		expect(api.removed).toEqual([]);
+	});
+
 	test("deletes after Excluir, goes up to the tower and says so without offering Desfazer", async () => {
 		const { ninth, towerA, several } = build();
 		const api = writableApi(obra(), several);

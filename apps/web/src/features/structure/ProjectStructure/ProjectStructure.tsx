@@ -100,7 +100,6 @@ function TowerForm({
 					kind="tower"
 					type="tower"
 					parentId={null}
-					position={structure.towers.length + structure.commonAreas.length}
 					label="Adicionar torre"
 					fieldLabel="Nome da torre"
 					suggestion={nextTowerName(structure.towers.map(({ name }) => name))}
@@ -138,14 +137,12 @@ function areaItems(
 
 function ProjectAreas({
 	projectId,
-	structure,
 	title,
 	items,
 	adding,
 	canEdit,
 }: {
 	projectId: string;
-	structure: Structure;
 	title: string;
 	items: ReturnType<typeof areaItems>;
 	adding: Adding;
@@ -165,7 +162,6 @@ function ProjectAreas({
 						kind="project-area"
 						type="common_area"
 						parentId={null}
-						position={structure.towers.length + structure.commonAreas.length}
 						label="Adicionar área comum"
 						suggestion=""
 						scope="project"
@@ -266,7 +262,6 @@ function SingleTower({
 			</section>
 			<ProjectAreas
 				projectId={projectId}
-				structure={structure}
 				title="Áreas comuns"
 				items={items}
 				adding={adding}
@@ -318,7 +313,6 @@ function SeveralTowers({
 			)}
 			<ProjectAreas
 				projectId={projectId}
-				structure={structure}
 				title="Áreas comuns da obra"
 				items={areaItems(projectId, structure.commonAreas, "project", canEdit)}
 				adding={adding}

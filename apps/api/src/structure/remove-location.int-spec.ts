@@ -392,12 +392,13 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 	});
 
 	describe("the order of what stays", () => {
-		async function ninthFloor(projectId: string) {
+		async function ninthFloor(
+			projectId: string,
+			names = ["901", "902", "903", "904"],
+		) {
 			const tower = entry(null, "tower", "Torre A");
 			const floor = entry(tower.id, "floor", "9º andar");
-			const units = ["901", "902", "903", "904"].map((name, at) =>
-				entry(floor.id, "unit", name, at),
-			);
+			const units = names.map((name, at) => entry(floor.id, "unit", name, at));
 			expect(
 				(await create(manager, projectId, [tower, floor, ...units])).status,
 			).toBe(201);
@@ -413,14 +414,19 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 			return rows.map(({ name, position }) => `${position}:${name}`);
 		}
 
-		it("closes the gap, so a unit added at the end after two removals lands last", async () => {
+		it("keeps the place of what stays and puts a unit added without a position last", async () => {
 			const projectId = await newProject(100);
 			const { floor, units } = await ninthFloor(projectId);
 			await remove(manager, projectId, units[0]!.id);
 			await remove(manager, projectId, units[1]!.id);
-			expect(await positionsUnder(floor.id)).toEqual(["0:903", "1:904"]);
+			expect(await positionsUnder(floor.id)).toEqual(["2:903", "3:904"]);
 
-			const added = entry(floor.id, "unit", "905", 2);
+			const added = {
+				id: randomUUID(),
+				parentId: floor.id,
+				type: "unit" as const,
+				name: "905",
+			};
 			expect((await create(manager, projectId, [added])).status).toBe(201);
 
 			expect(unitNames(await readStructure(projectId))).toEqual([
@@ -429,16 +435,23 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 				"905",
 			]);
 			expect(await positionsUnder(floor.id)).toEqual([
-				"0:903",
-				"1:904",
-				"2:905",
+				"2:903",
+				"3:904",
+				"4:905",
 			]);
 		});
 
-		it("closes the gap among the towers and common areas of the project", async () => {
+		it("puts what is added to the project without a position after the last tower and common area", async () => {
 			const projectId = await newProject(100);
 			const { a } = await twoTowers(projectId);
 			await remove(manager, projectId, a.tower.id);
+			const added = {
+				id: randomUUID(),
+				parentId: null,
+				type: "tower" as const,
+				name: "Torre C",
+			};
+			expect((await create(manager, projectId, [added])).status).toBe(201);
 
 			const roots = await db
 				.select({ name: location.name, position: location.position })
@@ -448,8 +461,9 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 				)
 				.orderBy(location.position);
 			expect(roots).toEqual([
-				{ name: "Torre B", position: 0 },
-				{ name: "Guarita", position: 1 },
+				{ name: "Torre B", position: 1 },
+				{ name: "Guarita", position: 2 },
+				{ name: "Torre C", position: 3 },
 			]);
 		});
 
@@ -468,6 +482,46 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 				"4:904",
 			]);
 		});
+
+		it.each([
+			["in the order they were removed", ["902", "904"]],
+			["in the reverse order", ["904", "902"]],
+		])(
+			"brings back two removed units of the same floor, undone %s, to their places",
+			async (_label, undoOrder) => {
+				const projectId = await newProject(100);
+				const { units } = await ninthFloor(projectId, [
+					"901",
+					"902",
+					"903",
+					"904",
+					"905",
+				]);
+				const removed = new Map<string, NewLocation>();
+				for (const name of ["902", "904"]) {
+					const unit = units.find((each) => each.name === name)!;
+					const { position } = locationDetailSchema.parse(
+						(await manager.agent.get(locationPath(projectId, unit.id))).body,
+					);
+					expect((await remove(manager, projectId, unit.id)).status).toBe(200);
+					removed.set(name, { ...unit, position });
+				}
+
+				for (const name of undoOrder) {
+					expect(
+						(await create(manager, projectId, [removed.get(name)!])).status,
+					).toBe(201);
+				}
+
+				expect(unitNames(await readStructure(projectId))).toEqual([
+					"901",
+					"902",
+					"903",
+					"904",
+					"905",
+				]);
+			},
+		);
 	});
 
 	describe("undoing a removal", () => {

@@ -304,8 +304,8 @@ describe("adding floors to a tower (W9)", () => {
 					.filter(({ type }) => type === "floor")
 					.map(({ name, parentId, position }) => [name, parentId, position]),
 			).toEqual([
-				["11º andar", towerB.id, 11],
-				["12º andar", towerB.id, 12],
+				["11º andar", towerB.id, undefined],
+				["12º andar", towerB.id, undefined],
 			]);
 			expect(
 				body.locations

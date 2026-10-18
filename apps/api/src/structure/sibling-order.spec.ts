@@ -1,5 +1,5 @@
 import type { SiblingRow } from "./location-row";
-import { planCompaction, planInsertion, planMove } from "./sibling-order";
+import { planInsertion, planMove } from "./sibling-order";
 
 const sibling = (
 	id: string,
@@ -72,56 +72,45 @@ describe("planMove", () => {
 		]);
 	});
 
-	it("writes distinct positions over a tie or a gap", () => {
-		const tied = [
-			sibling("a", "unit", 1),
-			sibling("b", "unit", 2),
-			sibling("c", "unit", 2),
-		];
-		const moved = applied(tied, planMove(tied, "c", "up"));
-
-		expect(moved.map(({ id }) => id)).toEqual(["a", "c", "b"]);
-		expect(moved.map(({ position }) => position)).toEqual([0, 1, 2]);
-	});
-});
-
-describe("planCompaction", () => {
-	it("closes the gaps and keeps the order", () => {
+	it("swaps the stored positions, leaving the gaps of a removal where they are", () => {
 		const gapped = [
-			sibling("c", "unit", 2),
-			sibling("hall", "common_area", 3),
-			sibling("d", "unit", 5),
+			sibling("a", "unit", 0),
+			sibling("b", "unit", 2),
+			sibling("c", "unit", 5),
 		];
-		const compacted = applied(gapped, planCompaction(gapped));
 
-		expect(compacted.map(({ id }) => id)).toEqual(["c", "hall", "d"]);
-		expect(compacted.map(({ position }) => position)).toEqual([0, 1, 2]);
-	});
-
-	it("changes nothing in a list without gaps", () => {
-		expect(planCompaction(units)).toEqual([]);
+		expect(planMove(gapped, "c", "up")).toEqual([
+			{ id: "c", position: 2 },
+			{ id: "b", position: 5 },
+		]);
 	});
 });
 
 describe("planInsertion", () => {
 	const placed = (
 		siblings: SiblingRow[],
-		inserted: { id: string; position: number }[],
+		inserted: { id: string; position?: number }[],
 	) => {
-		const rows = [
-			...siblings,
-			...inserted.map(({ id, position }) => sibling(id, "unit", position)),
-		];
-		return applied(rows, planInsertion(siblings, inserted)).map(
-			({ id, position }) => `${position}:${id}`,
-		);
+		const plan = planInsertion(siblings, inserted);
+		return applied(
+			[
+				...siblings,
+				...plan.placed.map(({ id, position }) => sibling(id, "unit", position)),
+			],
+			plan.shifted,
+		).map(({ id, position }) => `${position}:${id}`);
 	};
 
-	it("appends at the end without moving anyone", () => {
-		expect(planInsertion(units, [{ id: "d", position: 3 }])).toEqual([]);
+	it("puts a location at a free position without moving anyone", () => {
+		const gapped = [sibling("a", "unit", 0), sibling("c", "unit", 2)];
+
+		expect(planInsertion(gapped, [{ id: "b", position: 1 }])).toEqual({
+			shifted: [],
+			placed: [{ id: "b", position: 1 }],
+		});
 	});
 
-	it("moves the siblings from a taken place on one place later", () => {
+	it("moves the siblings from a taken position on one place later", () => {
 		expect(placed(units, [{ id: "x", position: 1 }])).toEqual([
 			"0:a",
 			"1:x",
@@ -130,13 +119,19 @@ describe("planInsertion", () => {
 		]);
 	});
 
-	it("puts a position past the end last", () => {
-		expect(placed(units, [{ id: "x", position: 9 }])).toEqual([
+	it("puts a location without a position after the last one, past any gap", () => {
+		const gapped = [sibling("a", "unit", 0), sibling("c", "unit", 4)];
+
+		expect(placed(gapped, [{ id: "x" }, { id: "y" }])).toEqual([
 			"0:a",
-			"1:b",
-			"2:c",
-			"3:x",
+			"4:c",
+			"5:x",
+			"6:y",
 		]);
+	});
+
+	it("starts at 0 when there is nothing under the parent", () => {
+		expect(placed([], [{ id: "x" }])).toEqual(["0:x"]);
 	});
 
 	it("gives each of several inserted the place it asked for", () => {

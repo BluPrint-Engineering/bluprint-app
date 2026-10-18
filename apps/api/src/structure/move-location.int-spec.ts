@@ -373,7 +373,12 @@ describe("POST /api/projects/:id/locations/:locationId/move", () => {
 			const removed = await manager.agent.delete(
 				locationPath(projectId, byName("101", "unit", floor.id).id),
 			);
-			const added = entry(floor.id, "unit", "103", 1);
+			const added = {
+				id: randomUUID(),
+				parentId: floor.id,
+				type: "unit" as const,
+				name: "103",
+			};
 			expect(removed.status).toBe(200);
 			expect((await create(manager, projectId, [added])).status).toBe(201);
 

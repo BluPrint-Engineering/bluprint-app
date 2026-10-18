@@ -37,7 +37,6 @@ export interface ExtendDraft {
 	towerId: string;
 	towerName: string;
 	named: boolean;
-	position: number;
 	takenFloors: number[];
 	takenUnits: string[];
 	lead: string;
@@ -169,7 +168,6 @@ export function extendedDraft(
 			towerId: tower.id,
 			towerName: tower.name,
 			named,
-			position: now.position,
 			takenFloors: now.numbered,
 			takenUnits: tower.floors.flatMap((floor) =>
 				floor.units.map((unit) => unit.name),

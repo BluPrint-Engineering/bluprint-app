@@ -6,12 +6,9 @@ export interface PositionChange {
 	position: number;
 }
 
-export function planCompaction(
-	ordered: readonly PositionChange[],
-): PositionChange[] {
-	return ordered.flatMap(({ id, position: stored }, position) =>
-		stored === position ? [] : [{ id, position }],
-	);
+export interface Insertion {
+	id: string;
+	position?: number | undefined;
 }
 
 export function planMove(
@@ -29,31 +26,59 @@ export function planMove(
 	while (siblings[neighbour] && siblings[neighbour]?.type !== moved.type) {
 		neighbour += step;
 	}
-	if (!siblings[neighbour]) return [];
+	const other = siblings[neighbour];
+	if (!other) return [];
 
-	const reordered = [...siblings];
-	[reordered[index], reordered[neighbour]] = [
-		reordered[neighbour]!,
-		reordered[index]!,
+	return [
+		{ id: moved.id, position: other.position },
+		{ id: other.id, position: moved.position },
 	];
-
-	return planCompaction(reordered);
 }
 
-export function planInsertion(
+export function planInsertion<T extends Insertion>(
 	siblings: readonly PositionChange[],
-	inserted: readonly PositionChange[],
-): PositionChange[] {
-	const ordered = [...siblings];
-	const byPosition = [...inserted].sort(
-		(left, right) => left.position - right.position,
-	);
+	inserted: readonly T[],
+): { shifted: PositionChange[]; placed: (T & { position: number })[] } {
+	const taken = siblings.map((sibling) => ({ ...sibling }));
+	const shifted = new Map<string, number>();
+	const placed: (T & { position: number })[] = [];
+	const place = (entry: T, position: number) => {
+		if (taken.some((each) => each.position === position)) {
+			for (const each of taken) {
+				if (each.position < position) continue;
+				each.position += 1;
+				shifted.set(each.id, each.position);
+			}
+		}
+		const at = { ...entry, position };
+		taken.push(at);
+		placed.push(at);
+	};
+
+	const explicit = inserted
+		.flatMap((entry) =>
+			entry.position === undefined ? [] : [{ entry, position: entry.position }],
+		)
+		.sort((left, right) => left.position - right.position);
 	let earliest = 0;
-	for (const entry of byPosition) {
-		const index = Math.max(Math.min(entry.position, ordered.length), earliest);
-		ordered.splice(index, 0, entry);
-		earliest = index + 1;
+	for (const { entry, position } of explicit) {
+		const at = Math.max(position, earliest);
+		place(entry, at);
+		earliest = at + 1;
+	}
+	for (const entry of inserted) {
+		if (entry.position !== undefined) continue;
+		place(
+			entry,
+			taken.reduce((end, each) => Math.max(end, each.position + 1), 0),
+		);
 	}
 
-	return planCompaction(ordered);
+	const insertedIds = new Set(inserted.map(({ id }) => id));
+	return {
+		shifted: [...shifted]
+			.filter(([id]) => !insertedIds.has(id))
+			.map(([id, position]) => ({ id, position })),
+		placed,
+	};
 }

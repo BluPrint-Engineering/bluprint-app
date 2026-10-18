@@ -1,11 +1,12 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import type { DroppedRoom, NewLocation, Room } from "@bluprint/shared";
+import type { DroppedRoom, Room } from "@bluprint/shared";
 import { and, asc, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import type {
 	LocationRow,
+	PlacedLocation,
 	PlacedRow,
 	SiblingRow,
 	StructureRow,
@@ -80,7 +81,10 @@ export class StructureRepository {
 		return new Set(rows.map((row) => row.id));
 	}
 
-	async insertAll(projectId: string, locations: NewLocation[]): Promise<void> {
+	async insertAll(
+		projectId: string,
+		locations: PlacedLocation[],
+	): Promise<void> {
 		for (let start = 0; start < locations.length; start += INSERT_CHUNK) {
 			await this.txHost.tx.insert(location).values(
 				locations
