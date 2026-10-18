@@ -41,7 +41,7 @@ export const locationDetailSchema = z.object({
 	name: z.string().meta({ example: "903" }),
 	position: z.int().nonnegative().meta({
 		description:
-			"Where the location sits among the locations under the same parent, counting from 0, as it was created. Positions can have gaps after a removal; the order is what counts.",
+			"Where the location sits among the locations under the same parent, counting from 0 without gaps: a move, a removal or an insertion before it changes it. Sent back as `position` on creation, it puts the location back in the same place.",
 		example: 2,
 	}),
 	ancestors: z.array(locationRefSchema).meta({
