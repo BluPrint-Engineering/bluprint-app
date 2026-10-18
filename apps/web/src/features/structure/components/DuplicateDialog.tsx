@@ -32,12 +32,14 @@ import {
 	useDuplicateLocationMutation,
 } from "../api";
 import {
+	assertCopyMatches,
 	buildDuplicate,
 	type DuplicateKind,
 	type DuplicateSource,
 	findDuplicateSource,
 	locationsCopied,
 	renumberedUnitNames,
+	StaleCopyError,
 	sourceName,
 	suggestedCopyName,
 	unitsCopied,
@@ -55,6 +57,9 @@ import { NameDialogFrame, NameDialogLayout } from "./NameDialog";
 
 const DUPLICATE_FAILED =
 	"Não foi possível duplicar. Confira sua conexão e tente de novo.";
+
+const DUPLICATE_STALE =
+	"Outra pessoa mudou as unidades ou áreas comuns enquanto você duplicava. A estrutura foi atualizada: confira e tente de novo.";
 
 const DUPLICATE_REFUSED =
 	"A estrutura mudou enquanto você duplicava. Recarregue a página e tente de novo.";
@@ -161,7 +166,10 @@ function DuplicateContent({
 		duplicate.mutate(
 			{
 				locationId: locationOf(source),
-				build: (below) => buildDuplicate(source, finalName, below, idFor),
+				build: (below) => {
+					assertCopyMatches(source, below);
+					return buildDuplicate(source, finalName, below, idFor);
+				},
 			},
 			{
 				onSuccess: () => {
@@ -170,6 +178,11 @@ function DuplicateContent({
 				},
 				onError: (failure) => {
 					if (isProjectDelivered(failure)) onDone();
+					if (failure instanceof StaleCopyError) {
+						void queryClient.invalidateQueries({
+							queryKey: ["structure", projectId],
+						});
+					}
 				},
 			},
 		);
@@ -218,9 +231,11 @@ function DuplicateContent({
 					<AlertDescription>
 						{gone
 							? duplicateGoneText(source.type, sourceName(source))
-							: refused
-								? DUPLICATE_REFUSED
-								: DUPLICATE_FAILED}
+							: duplicate.error instanceof StaleCopyError
+								? DUPLICATE_STALE
+								: refused
+									? DUPLICATE_REFUSED
+									: DUPLICATE_FAILED}
 					</AlertDescription>
 				</Alert>
 			)}

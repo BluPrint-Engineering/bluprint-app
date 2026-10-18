@@ -65,6 +65,41 @@ export function unitsCopied(source: DuplicateSource): number {
 	}
 }
 
+export class StaleCopyError extends Error {
+	constructor() {
+		super("The structure read for the copy no longer matches the cached one.");
+	}
+}
+
+export function holderIdsCopied(source: DuplicateSource): string[] {
+	const ofFloor = (floor: StructureFloor) => [
+		...floor.units.map(({ id }) => id),
+		...floor.commonAreas.map(({ id }) => id),
+	];
+	switch (source.type) {
+		case "tower":
+			return [
+				...source.tower.floors.flatMap(ofFloor),
+				...source.tower.commonAreas.map(({ id }) => id),
+			];
+		case "floor":
+			return ofFloor(source.floor);
+		case "unit":
+			return [source.unit.id];
+	}
+}
+
+export function assertCopyMatches(
+	source: DuplicateSource,
+	below: SubtreeRooms,
+): void {
+	const expected = new Set(holderIdsCopied(source));
+	const read = below.locations.map(({ id }) => id);
+	if (read.length !== expected.size || read.some((id) => !expected.has(id))) {
+		throw new StaleCopyError();
+	}
+}
+
 export function locationsCopied(source: DuplicateSource): number {
 	const ofFloor = (floor: StructureFloor) =>
 		1 + floor.units.length + floor.commonAreas.length;

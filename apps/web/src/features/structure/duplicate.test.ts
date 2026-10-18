@@ -10,12 +10,15 @@ import { describe, expect, test } from "vitest";
 import { nth } from "@/test/nth";
 import { floor, structureOf, tower } from "@/test/structureApi";
 import {
+	assertCopyMatches,
 	buildDuplicate,
 	copiedUnitName,
 	type DuplicateSource,
 	findDuplicateSource,
+	holderIdsCopied,
 	locationsCopied,
 	renumberedUnitNames,
+	StaleCopyError,
 	suggestedCopyName,
 	unitsCopied,
 } from "./duplicate";
@@ -187,6 +190,37 @@ describe("locationsCopied", () => {
 				buildDuplicate(source, "Cópia", noRooms, uuidIds()).locations.length,
 			);
 		}
+	});
+});
+
+describe("assertCopyMatches", () => {
+	const blank = (ids: string[]): SubtreeRooms => ({
+		locations: ids.map((id) => roomsOf(id, [])),
+	});
+
+	test("lets through rooms read for exactly the units and areas of the copy", () => {
+		const { ninth, structure } = scene();
+		const source = sourceOf(structure, "floor", ninth.id);
+
+		expect(() =>
+			assertCopyMatches(source, blank([...holderIdsCopied(source)].reverse())),
+		).not.toThrow();
+	});
+
+	test("refuses rooms read for a unit or area missing from the cache, or without one it has", () => {
+		const { ninth, structure } = scene();
+		const source = sourceOf(structure, "floor", ninth.id);
+		const ids = holderIdsCopied(source);
+
+		expect(() => assertCopyMatches(source, blank(ids.slice(1)))).toThrow(
+			StaleCopyError,
+		);
+		expect(() =>
+			assertCopyMatches(
+				source,
+				blank([...ids, "0190f000-0000-7000-8000-000000000001"]),
+			),
+		).toThrow(StaleCopyError);
 	});
 });
 

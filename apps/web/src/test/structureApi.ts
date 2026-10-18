@@ -17,6 +17,10 @@ import {
 	type UnitType,
 	type UnitTypeList,
 } from "@bluprint/shared";
+import {
+	findDuplicateSource,
+	holderIdsCopied,
+} from "@/features/structure/duplicate";
 import { type ApiHandler, json } from "@/test/renderApp";
 
 let sequence = 0;
@@ -485,7 +489,17 @@ export function writableApi(
 			).exec(url.pathname);
 			if (below) {
 				roomsRead.push(below[1] ?? "");
-				return json({ locations: options.subtreeRooms ?? [] });
+				const source = (["tower", "floor", "unit"] as const)
+					.map((type) => findDuplicateSource(structure, type, below[1] ?? ""))
+					.find((found) => found !== undefined);
+				const given = new Map(
+					(options.subtreeRooms ?? []).map((entry) => [entry.id, entry]),
+				);
+				return json({
+					locations: (source ? holderIdsCopied(source) : []).map(
+						(id) => given.get(id) ?? { id, rooms: [], droppedRooms: [] },
+					),
+				});
 			}
 			const moveTarget = new RegExp(`^${base}/locations/([^/]+)/move$`).exec(
 				url.pathname,

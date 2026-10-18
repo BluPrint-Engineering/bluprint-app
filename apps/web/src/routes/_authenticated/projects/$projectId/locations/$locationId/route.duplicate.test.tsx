@@ -254,6 +254,49 @@ describe("duplicating a floor", () => {
 	});
 });
 
+describe("duplicating a floor someone else just changed", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("refreshes the structure and sends nothing when the floor's units changed", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra(), several, { remaining: 12 });
+		let reads = 0;
+		stubApi(signedIn, {
+			api: (url, init) => {
+				if (url.pathname.endsWith("/subtree-rooms") && ++reads === 1) {
+					ninth.units.splice(2, 1);
+				}
+				return api.handler(url, init);
+			},
+		});
+		renderAt(pathOf(ninth.id));
+		const dialog = await openDuplicate("Ações do andar", "Duplicar andar");
+
+		await submit(dialog);
+
+		expect(
+			await within(dialog).findByText(
+				"Outra pessoa mudou as unidades ou áreas comuns enquanto você duplicava. A estrutura foi atualizada: confira e tente de novo.",
+			),
+		).toBeInTheDocument();
+		expect(api.created).toHaveLength(0);
+		expect(
+			await within(dialog).findByText(/^Cria 3 unidades/),
+		).toBeInTheDocument();
+
+		await submit(dialog);
+
+		expect(await screen.findByText("11º andar criado.")).toBeInTheDocument();
+		expect(
+			api.created[0]?.locations
+				.filter(({ type }) => type === "unit")
+				.map(({ name }) => name),
+		).toEqual(["1101", "1102", "1104"]);
+	});
+});
+
 describe("duplicating a floor whose units clash", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
@@ -415,6 +458,7 @@ describe("duplicating a unit", () => {
 				type: "unit",
 				name: "905",
 				unitTypeId: nth(ninth.units, 0).unitType?.id,
+				rooms: [],
 			},
 		]);
 		expect(
