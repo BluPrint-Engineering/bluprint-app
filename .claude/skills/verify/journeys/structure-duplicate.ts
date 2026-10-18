@@ -17,7 +17,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await page.goto(`/projects/${jardins}/locations/${tenthB}`);
 	await expect(page.getByRole("heading", { level: 1, name: "10º andar" })).toBeVisible();
 	await pageMenu("Ações do andar").click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Renomear andar", "Duplicar andar"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Renomear andar", "Mover para cima", "Mover para baixo", "Duplicar andar", "Remover andar"]);
 	await settle();
 	await shot("floor-menu");
 	await page.keyboard.press("Escape");
@@ -54,7 +54,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 		(await query("SELECT r.name, r.renamed, r.unit_type_room_id IS NOT NULL AS from_type FROM room r JOIN location l ON l.id = r.location_id WHERE l.name = $1 AND l.parent_id = $2 ORDER BY r.name", [name, ninthA]));
 	const source = await rooms("903");
 	await page.getByRole("button", { name: "Ações da unidade 903" }).click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Renomear", "Duplicar unidade"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Renomear", "Mover para cima", "Mover para baixo", "Duplicar unidade", "Remover unidade"]);
 	await settle();
 	await shot("unit-menu");
 	await page.keyboard.press("Escape");
@@ -75,7 +75,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await expect(page.getByText("Unidade 905 criada.")).toBeHidden({ timeout: 10000 });
 	await page.getByRole("link", { name: "Torre A", exact: true }).click();
 	await pageMenu("Ações da torre").click();
-	await expect(page.getByRole("menuitem")).toHaveText(["Renomear torre", "Adicionar andares", "Adicionar área comum", "Duplicar torre"]);
+	await expect(page.getByRole("menuitem")).toHaveText(["Renomear torre", "Adicionar andares", "Adicionar área comum", "Duplicar torre", "Remover torre"]);
 	await settle();
 	await shot("t2-tower-menu");
 	await page.keyboard.press("Escape");

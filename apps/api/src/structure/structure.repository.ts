@@ -139,54 +139,6 @@ export class StructureRepository {
 		}
 	}
 
-	async listRoomsOf(
-		locationIds: string[],
-	): Promise<Map<string, { rooms: Room[]; droppedRooms: DroppedRoom[] }>> {
-		const byLocation = new Map(
-			locationIds.map((id) => [
-				id,
-				{ rooms: [] as Room[], droppedRooms: [] as DroppedRoom[] },
-			]),
-		);
-		if (locationIds.length === 0) return byLocation;
-
-		const rooms = await this.txHost.tx
-			.select({
-				locationId: room.locationId,
-				id: room.id,
-				name: room.name,
-				unitTypeRoomId: room.unitTypeRoomId,
-				renamed: room.renamed,
-			})
-			.from(room)
-			.leftJoin(unitTypeRoom, eq(unitTypeRoom.id, room.unitTypeRoomId))
-			.where(inArray(room.locationId, locationIds))
-			.orderBy(
-				sql`(${room.unitTypeRoomId} is null)`,
-				sql`coalesce(${unitTypeRoom.position}, ${room.position})`,
-				asc(room.id),
-			);
-		for (const { locationId, ...entry } of rooms) {
-			byLocation.get(locationId)?.rooms.push(entry);
-		}
-
-		const dropped = await this.txHost.tx
-			.select({
-				locationId: droppedRoom.locationId,
-				unitTypeRoomId: droppedRoom.unitTypeRoomId,
-				name: unitTypeRoom.name,
-			})
-			.from(droppedRoom)
-			.innerJoin(unitTypeRoom, eq(unitTypeRoom.id, droppedRoom.unitTypeRoomId))
-			.where(inArray(droppedRoom.locationId, locationIds))
-			.orderBy(asc(unitTypeRoom.position), asc(unitTypeRoom.id));
-		for (const { locationId, ...entry } of dropped) {
-			byLocation.get(locationId)?.droppedRooms.push(entry);
-		}
-
-		return byLocation;
-	}
-
 	async listSubtree(projectId: string, rootId: string): Promise<LocationRow[]> {
 		const { rows } = await this.txHost.tx.execute<{
 			id: string;
@@ -280,9 +232,12 @@ export class StructureRepository {
 		return new Map(rows.map((row) => [row.unit_id, row.n]));
 	}
 
-	listRooms(locationId: string): Promise<Room[]> {
-		return this.txHost.tx
+	async roomsByLocation(locationIds: string[]): Promise<Map<string, Room[]>> {
+		const byLocation = new Map(locationIds.map((id) => [id, [] as Room[]]));
+		if (locationIds.length === 0) return byLocation;
+		const rows = await this.txHost.tx
 			.select({
+				locationId: room.locationId,
 				id: room.id,
 				name: room.name,
 				unitTypeRoomId: room.unitTypeRoomId,
@@ -290,24 +245,51 @@ export class StructureRepository {
 			})
 			.from(room)
 			.leftJoin(unitTypeRoom, eq(unitTypeRoom.id, room.unitTypeRoomId))
-			.where(eq(room.locationId, locationId))
+			.where(inArray(room.locationId, locationIds))
 			.orderBy(
 				sql`(${room.unitTypeRoomId} is null)`,
 				sql`coalesce(${unitTypeRoom.position}, ${room.position})`,
 				asc(room.id),
 			);
+		for (const { locationId, ...entry } of rows) {
+			byLocation.get(locationId)?.push(entry);
+		}
+
+		return byLocation;
 	}
 
-	listDroppedRooms(locationId: string): Promise<DroppedRoom[]> {
-		return this.txHost.tx
+	async droppedRoomsByLocation(
+		locationIds: string[],
+	): Promise<Map<string, DroppedRoom[]>> {
+		const byLocation = new Map(
+			locationIds.map((id) => [id, [] as DroppedRoom[]]),
+		);
+		if (locationIds.length === 0) return byLocation;
+		const rows = await this.txHost.tx
 			.select({
+				locationId: droppedRoom.locationId,
 				unitTypeRoomId: droppedRoom.unitTypeRoomId,
 				name: unitTypeRoom.name,
 			})
 			.from(droppedRoom)
 			.innerJoin(unitTypeRoom, eq(unitTypeRoom.id, droppedRoom.unitTypeRoomId))
-			.where(eq(droppedRoom.locationId, locationId))
+			.where(inArray(droppedRoom.locationId, locationIds))
 			.orderBy(asc(unitTypeRoom.position), asc(unitTypeRoom.id));
+		for (const { locationId, ...entry } of rows) {
+			byLocation.get(locationId)?.push(entry);
+		}
+
+		return byLocation;
+	}
+
+	async listRooms(locationId: string): Promise<Room[]> {
+		return (await this.roomsByLocation([locationId])).get(locationId) ?? [];
+	}
+
+	async listDroppedRooms(locationId: string): Promise<DroppedRoom[]> {
+		return (
+			(await this.droppedRoomsByLocation([locationId])).get(locationId) ?? []
+		);
 	}
 
 	listChildren(parentId: string): Promise<LocationRow[]> {

@@ -264,12 +264,16 @@ export class StructureService {
 			(row) => row.type === "unit" || row.type === "common_area",
 		);
 
-		const found = await this.locations.listRoomsOf(holders.map(({ id }) => id));
+		const ids = holders.map(({ id }) => id);
+		const [rooms, droppedRooms] = await Promise.all([
+			this.locations.roomsByLocation(ids),
+			this.locations.droppedRoomsByLocation(ids),
+		]);
 		return {
-			locations: holders.map(({ id }) => ({
+			locations: ids.map((id) => ({
 				id,
-				rooms: found.get(id)?.rooms ?? [],
-				droppedRooms: found.get(id)?.droppedRooms ?? [],
+				rooms: rooms.get(id) ?? [],
+				droppedRooms: droppedRooms.get(id) ?? [],
 			})),
 		};
 	}
