@@ -6,6 +6,7 @@ import {
 	type LocationDetail,
 	type LocationRef,
 	type MoveLocation,
+	type NewLocation,
 	type RemoveLocationResult,
 	type RenameLocation,
 	type Structure,
@@ -18,7 +19,7 @@ import { UnitsService } from "../units/units.service";
 import { LocationContent } from "./location-content";
 import { nameKey } from "./location-names";
 import type { LocationRow } from "./location-row";
-import { planMove } from "./move-order";
+import { planCompaction, planInsertion, planMove } from "./sibling-order";
 import { planCreation } from "./plan-creation";
 import { buildStructure } from "./structure-tree";
 import { StructureRepository } from "./structure.repository";
@@ -88,7 +89,10 @@ export class StructureService {
 
 		await this.units.assertAvailable(projectId, newUnits);
 		await this.unitTypes.insertAll(projectId, freshUnitTypes);
-		await this.locations.insertAll(projectId, fresh);
+		await this.locations.insertAll(
+			projectId,
+			await this.placeAmongSiblings(projectId, inProject, fresh),
+		);
 		await this.unitTypes.giveUnitsTheirRooms(
 			fresh.flatMap(({ id, unitTypeId, rooms }) =>
 				unitTypeId === undefined || rooms !== undefined
@@ -118,6 +122,37 @@ export class StructureService {
 		);
 
 		return { counts };
+	}
+
+	private async placeAmongSiblings(
+		projectId: string,
+		inProject: LocationRow[],
+		fresh: NewLocation[],
+	): Promise<NewLocation[]> {
+		const storedIds = new Set(inProject.map(({ id }) => id));
+		const freshByParent = new Map<string | null, NewLocation[]>();
+		for (const entry of fresh) {
+			const children = freshByParent.get(entry.parentId);
+			if (children) children.push(entry);
+			else freshByParent.set(entry.parentId, [entry]);
+		}
+
+		const freshPositions = new Map<string, number>();
+		for (const [parentId, children] of freshByParent) {
+			const siblings =
+				parentId === null || storedIds.has(parentId)
+					? await this.locations.listSiblings(projectId, parentId)
+					: [];
+			for (const { id, position } of planInsertion(siblings, children)) {
+				if (storedIds.has(id)) await this.locations.setPosition(id, position);
+				else freshPositions.set(id, position);
+			}
+		}
+
+		return fresh.map((entry) => ({
+			...entry,
+			position: freshPositions.get(entry.id) ?? entry.position,
+		}));
 	}
 
 	@Transactional()
@@ -163,6 +198,13 @@ export class StructureService {
 			throw new Error("A location with content is archived, not deleted.");
 		}
 		await this.locations.delete(found.id);
+		const siblings = await this.locations.listSiblings(
+			projectId,
+			found.parentId,
+		);
+		for (const { id, position } of planCompaction(siblings)) {
+			await this.locations.setPosition(id, position);
+		}
 
 		const count = (type: LocationRow["type"]) =>
 			subtree.filter((row) => row.type === type).length;

@@ -366,7 +366,7 @@ describe("POST /api/projects/:id/locations/:locationId/move", () => {
 			).toEqual(["102", "101"]);
 		});
 
-		it("still moves after a removal left two units in the same place", async () => {
+		it("moves a unit added at the end after a removal", async () => {
 			const projectId = await newProject(100);
 			const { a, byName } = await twoTowers(projectId);
 			const floor = byName("1º andar", "floor", a.tower.id);

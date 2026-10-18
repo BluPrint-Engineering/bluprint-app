@@ -6,6 +6,14 @@ export interface PositionChange {
 	position: number;
 }
 
+export function planCompaction(
+	ordered: readonly PositionChange[],
+): PositionChange[] {
+	return ordered.flatMap(({ id, position: stored }, position) =>
+		stored === position ? [] : [{ id, position }],
+	);
+}
+
 export function planMove(
 	siblings: readonly SiblingRow[],
 	id: string,
@@ -29,7 +37,23 @@ export function planMove(
 		reordered[index]!,
 	];
 
-	return reordered.flatMap(({ id: siblingId, position: stored }, position) =>
-		stored === position ? [] : [{ id: siblingId, position }],
+	return planCompaction(reordered);
+}
+
+export function planInsertion(
+	siblings: readonly PositionChange[],
+	inserted: readonly PositionChange[],
+): PositionChange[] {
+	const ordered = [...siblings];
+	const byPosition = [...inserted].sort(
+		(left, right) => left.position - right.position,
 	);
+	let earliest = 0;
+	for (const entry of byPosition) {
+		const index = Math.max(Math.min(entry.position, ordered.length), earliest);
+		ordered.splice(index, 0, entry);
+		earliest = index + 1;
+	}
+
+	return planCompaction(ordered);
 }

@@ -15,7 +15,7 @@ import {
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
@@ -391,7 +391,122 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 		});
 	});
 
+	describe("the order of what stays", () => {
+		async function ninthFloor(projectId: string) {
+			const tower = entry(null, "tower", "Torre A");
+			const floor = entry(tower.id, "floor", "9º andar");
+			const units = ["901", "902", "903", "904"].map((name, at) =>
+				entry(floor.id, "unit", name, at),
+			);
+			expect(
+				(await create(manager, projectId, [tower, floor, ...units])).status,
+			).toBe(201);
+			return { floor, units };
+		}
+
+		async function positionsUnder(parentId: string) {
+			const rows = await db
+				.select({ name: location.name, position: location.position })
+				.from(location)
+				.where(eq(location.parentId, parentId))
+				.orderBy(location.position);
+			return rows.map(({ name, position }) => `${position}:${name}`);
+		}
+
+		it("closes the gap, so a unit added at the end after two removals lands last", async () => {
+			const projectId = await newProject(100);
+			const { floor, units } = await ninthFloor(projectId);
+			await remove(manager, projectId, units[0]!.id);
+			await remove(manager, projectId, units[1]!.id);
+			expect(await positionsUnder(floor.id)).toEqual(["0:903", "1:904"]);
+
+			const added = entry(floor.id, "unit", "905", 2);
+			expect((await create(manager, projectId, [added])).status).toBe(201);
+
+			expect(unitNames(await readStructure(projectId))).toEqual([
+				"903",
+				"904",
+				"905",
+			]);
+			expect(await positionsUnder(floor.id)).toEqual([
+				"0:903",
+				"1:904",
+				"2:905",
+			]);
+		});
+
+		it("closes the gap among the towers and common areas of the project", async () => {
+			const projectId = await newProject(100);
+			const { a } = await twoTowers(projectId);
+			await remove(manager, projectId, a.tower.id);
+
+			const roots = await db
+				.select({ name: location.name, position: location.position })
+				.from(location)
+				.where(
+					and(eq(location.projectId, projectId), isNull(location.parentId)),
+				)
+				.orderBy(location.position);
+			expect(roots).toEqual([
+				{ name: "Torre B", position: 0 },
+				{ name: "Guarita", position: 1 },
+			]);
+		});
+
+		it("puts a location created at a taken place before the ones from there on", async () => {
+			const projectId = await newProject(100);
+			const { floor } = await ninthFloor(projectId);
+
+			const added = entry(floor.id, "unit", "900", 1);
+			expect((await create(manager, projectId, [added])).status).toBe(201);
+
+			expect(await positionsUnder(floor.id)).toEqual([
+				"0:901",
+				"1:900",
+				"2:902",
+				"3:903",
+				"4:904",
+			]);
+		});
+	});
+
 	describe("undoing a removal", () => {
+		it("brings a unit from the middle of the floor back to its exact place", async () => {
+			const projectId = await newProject(100);
+			const tower = entry(null, "tower", "Torre A");
+			const floor = entry(tower.id, "floor", "9º andar");
+			const units = ["901", "902", "903", "904"].map((name, at) =>
+				entry(floor.id, "unit", name, at),
+			);
+			await create(manager, projectId, [tower, floor, ...units]);
+			const middle = units[1]!;
+			const before = locationDetailSchema.parse(
+				(await manager.agent.get(locationPath(projectId, middle.id))).body,
+			);
+
+			expect((await remove(manager, projectId, middle.id)).status).toBe(200);
+			expect(unitNames(await readStructure(projectId))).toEqual([
+				"901",
+				"903",
+				"904",
+			]);
+			const undone = await create(manager, projectId, [
+				{ ...middle, position: before.position },
+			]);
+
+			expect(undone.status).toBe(201);
+			expect(unitNames(await readStructure(projectId))).toEqual([
+				"901",
+				"902",
+				"903",
+				"904",
+			]);
+			const after = locationDetailSchema.parse(
+				(await manager.agent.get(locationPath(projectId, middle.id))).body,
+			);
+			expect(after.position).toBe(before.position);
+		});
+
 		it("brings a unit back as it was, with its id, place, unit type, rooms and changes", async () => {
 			const projectId = await newProject(100);
 			const tower = entry(null, "tower", "Torre A");
