@@ -99,10 +99,10 @@ Nothing else was invented. There is no Tabs or Table here, because no screen ask
 
 **How the band ends is themed, because the band sits at a different distance from the page in each theme:**
 
-- **Dark** — band bottom `#07182E` against page `#081830`: neighbours. `--brand-band-bleed` dissolves the seam over the last 36px, measured from the bottom edge so it always clears the wordmark.
+- **Dark** — band bottom `#07182E` against page `#081830`: neighbours. `--brand-band-bleed` dissolves the seam over the last 36px, measured from the bottom edge.
 - **Light** — saturated blue against white: opposites. Fading between them travels through a washed-out pale blue that reads as a printing error, so light mode does **not** fade: the band ends on a straight edge and the corner-to-corner gradient carries the depth on its own.
 
-`--brand-band-pad` carries the extra bottom room the fade needs (40px dark, 24px light). Never start a fade high enough to cross the wordmark — white type on a washed-out ground fails contrast. The horizontal lockup is a desktop-only asset.
+`--brand-band-pad` is 24px in both themes, so the band is the same height and the form never moves when the theme toggles. In dark the last 12px of the 36px fade sits under the wordmark's bottom edge; that is accepted because band and page are near-identical, so the type keeps its contrast. The horizontal lockup is a desktop-only asset.
 
 **Touch.** 44px is the floor for anything tappable (`--tap-min`), 52px for the primary action, 44px square for icon buttons. This is the one rule that overrides visual density anywhere a gloved hand is involved (RNF-06).
 
