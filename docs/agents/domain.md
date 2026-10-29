@@ -52,4 +52,6 @@ If your output contradicts an existing ADR, surface it explicitly rather than si
 
 ## This repo
 
+`CONTEXT.md` is this repo's glossary: wherever a skill says `GLOSSARY.md` (or `GLOSSARY-MAP.md`), read and write `CONTEXT.md` (`CONTEXT-MAP.md`) instead. ADRs live in `docs/adr/`.
+
 Single-context: one vocabulary shared by `apps/web`, `apps/api` and `packages/shared`, which the shared Zod schemas already enforce. Split into a `CONTEXT-MAP.md` only when a term genuinely means two different things in two subsystems: a domain split, not a web/api split.
