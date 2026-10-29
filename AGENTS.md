@@ -22,13 +22,13 @@ A decision, the architecture or the spec changes by **pull request**, in the sam
 
 - **Language.** English everywhere — code, comments, docs, commit subjects, API error messages. pt-BR only for strings a user reads and for `docs/requisitos.md`. Commits are Conventional Commits: `feat(api): connect local Postgres via Drizzle`.
 - **DTOs are value imports, not type imports** — see `.claude/rules/api.md` for why this breaks at runtime, not compile time.
-- **Only `organization`, `member`, `license`, `project`, `project_member`, `location`, `unit_type`, `unit_type_room`, `room` and `dropped_room` exist beyond Better Auth's four**; the rest of `docs/data-model.md` is designed but not migrated — see `.claude/rules/db-schema.md` before touching an `*.entity.ts`, `apps/api/src/db/` or a migration.
+- **Only part of `docs/data-model.md` is migrated**; `apps/api/src/db/schema.ts` and the migrations list what exists, the rest is designed only — see `.claude/rules/db-schema.md` before touching an `*.entity.ts`, `apps/api/src/db/` or a migration.
 - **Issue labels and the board are manual.** Each issue gets exactly one `tipo:`, exactly one `prio:`, at least one `area:`, then `gh project item-add 3 --owner BluPrint-Engineering --url <url>`.
 - **`gh pr create` skips the PR template.** Build the body from `.github/pull_request_template.md` — it's the checklist for what CI cannot verify. A block that doesn't apply is marked `n/a` and kept, never deleted. An interface change carries its captures: `.claude/rules/web.md`.
 
 ## Conventions for one area
 
-`.claude/rules/{api,web,db-schema}.md` load themselves when you read a file under their paths. Read one directly when writing a new file from scratch there, or after a compaction. `.claude/rules/code-comments.md` has no path scope and is always loaded: it governs every comment you write, in any file.
+Before touching an area, read its rules: `.claude/rules/api.md` (`apps/api`), `web.md` (`apps/web`), `db-schema.md` (`*.entity.ts`, `apps/api/src/db/`, migrations). Claude Code loads them itself when you read a file under their paths; other agents must open them. `.claude/rules/code-comments.md` governs every comment you write, in any file: read it first.
 
 ## Commands
 
@@ -40,7 +40,7 @@ bun run lint                 # Biome everywhere except apps/api; ESLint + Pretti
 bun run typecheck            # also: build, lint:fix, format
 bun run --filter @bluprint/api <script>              # one workspace; db:generate, db:migrate and db:seed live here
 bun run --filter @bluprint/api test -- -t "<name>"   # single test; web uses bunx vitest run -t "<name>"
-bun run e2e                  # Playwright on :3100/:5273 against bluprint_e2e; builds first
+bun run e2e                  # Playwright on :3100/:5273 by default (a worktree gets its own from .env.local) against bluprint_e2e; builds first
 ```
 
 Every root script builds `packages/shared` first, because both apps consume it from `dist/`; run `bun run --filter @bluprint/shared build` once before a bare `bunx vitest` or `tsc` inside a workspace, or `@bluprint/shared` fails to resolve and reads like a broken import path. One `.env` at the repo root serves both apps — copy `.env.example`; only `VITE_`-prefixed vars reach the browser.
