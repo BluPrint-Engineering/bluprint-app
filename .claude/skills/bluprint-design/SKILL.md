@@ -4,18 +4,14 @@ description: Use this skill to design or build BluPrint interfaces, for producti
 user-invocable: true
 ---
 
-Read the readme.md file within this skill, and explore the other available files. HANDOFF.md explains how each piece maps to `apps/web`.
-This skill holds the design system. Screen designs live in `docs/design/screens/<screen>/` and load the system from here.
-If creating visual artifacts (mocks, prototypes), copy assets out and create static HTML files for the user to view. If working on production code, rebuild the primitives with shadcn and follow the rules here.
-If the user invokes this skill without other guidance, ask what they want to build and act as an expert designer who outputs HTML artifacts or production code, depending on the need.
+Read `readme.md` for the design rules and `HANDOFF.md` for the mapping to `apps/web`. This skill holds the design system; screen specs live on GitHub issue artifacts (ADR 0076). Production primitives are rebuilt with shadcn.
 
 ## Designing a screen
 
-A screen is written straight into `docs/design/screens/<screen>/`: a `README.md` spec (pt-BR) and the `*.dc.html` prototypes, loading `styles.css` and `_ds_bundle.js` from this skill. A primitive, variant or glyph the screen needs is added here first, never drawn inside the screen.
+1. Read `docs/agents/issue-tracker.md`. Use a parent issue per screen for the complete spec, handoff and prototypes. Each implementation ticket is a native sub-issue with artifacts containing only its slice. Work in a scratch directory outside the repository: `README.md`, `HANDOFF.md`, `*.dc.html` and a QA prototype with frozen key states. Give each QA row `data-screen-label="{{ row.id }}"`; its state id is letters followed by a number and an optional alphanumeric suffix, such as `N3a` or `C7a2`.
+2. Add missing primitives, variants and glyphs to this skill first. After changing `components/**/*.jsx`, rebuild with `bun .claude/skills/bluprint-design/build-bundle.ts`. Module-level code must not touch React: the bundle also loads before React in existing authoring tools.
+3. Build a self-contained bundle with `bun .claude/skills/bluprint-design/screen-artifacts.ts build <scratch-screen-dir>`. The command prints a temporary directory. It embeds the app's installed Geist fonts, pinned React/ReactDOM/Babel, the runtime, the design system and sibling prototypes. Run only trusted, reviewed prototypes. Cross-screen demo navigation is frozen; use the spec's issue links to move between screens.
+4. Run `bun .claude/skills/bluprint-design/screen-artifacts.ts snapshot <temp-bundle-dir> '<Screen> QA.dc.html'`. Requires `chrome-devtools-axi` and Chrome. It pre-renders every QA state, then exports script-free HTML grouped by state prefix. Each group has state anchors, mobile/desktop and light/dark frames; desktop frames scroll horizontally in the narrow issue panel. Open the resulting `*-static.html` files and the interactive prototypes locally. Check every state, no console errors, no placeholder frames and empty `window.BluPrintDesignSystem_d4fa62.__errors` on interactive pages.
+5. Verify each spec claim about the current API, files and session against the code. List mismatches in the implementation PR. Publish with `bun .claude/skills/bluprint-design/screen-artifacts.ts publish <full-issue-url> <temp-bundle-dir>`. It rejects literal Unicode escapes/control characters before upload, creates artifacts or versions same-named artifacts, and checks each download byte-for-byte. Keep the printed artifact URLs in the issue/PR handoff. Rebuild after changing any output; the manifest rejects altered files.
 
-After any change to `components/**/*.jsx`, rebuild the bundle with `bun .claude/skills/bluprint-design/build-bundle.ts`. Module-level code must not touch React: the prototypes load the bundle before React, and the build fails when a module does.
-
-Before the PR:
-
-1. Open each changed prototype (`bunx serve -l <free port> .` from the repo root, then `docs/design/screens/<screen>/<Screen>.dc.html`). It renders with no console error and an empty `window.BluPrintDesignSystem_d4fa62.__errors`; a missing favicon is the only accepted console line.
-2. Check every claim the spec makes about the repo today (what the API serves, where files land, what the session carries) against the code. List each mismatch in the PR description, for the implementation refinement to settle.
+Scripts did not run in GitHub's **default preview as of 2026-10-29**. Static artifacts are the preview; interactive `*.dc.html` artifacts are source plus download-and-open-locally references. Download with plain `gh issue artifact download`; commands and version selection are in `docs/agents/issue-tracker.md`. Keep all screen sources, generated bundles and captures outside the repository. Only design-system changes and decisions belong in the PR.

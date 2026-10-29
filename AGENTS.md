@@ -16,7 +16,7 @@ Most of the product is specified but not built, so the code will not always tell
 | Creating, labelling or closing an issue; the project board | `docs/agents/issue-tracker.md` |
 | The product spec (pt-BR, `RF-xxx`/`RNF-xx` ids) | `docs/requisitos.md` — only when refining or breaking down tickets, or when an issue cites an id |
 
-A decision, the architecture or the spec changes by **pull request**, in the same PR as the code it governs — a new ADR, never an issue.
+Decisions, architecture and product requirements change by **pull request**, in the same PR as the code they govern, with a new ADR. Visual screen specs live as issue artifacts.
 
 ## Five things that go wrong quietly
 

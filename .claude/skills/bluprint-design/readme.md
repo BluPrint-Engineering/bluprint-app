@@ -23,7 +23,7 @@ One product, one codebase: a **mobile-first React web app** (Vite + TanStack Rou
 2. **Office app** — dashboards (unit map by status, common-area strip), project structure, people, contractors. *Specified in RF-8xx / RF-2xx, not built.*
 3. **Worker report** — the PDF, the only artifact that leaves the platform. Carries BluPrint's brand, must stay legible printed in black and white (ADR-0034, RF-704).
 
-This skill holds the design system; screens live in `docs/design/screens/<screen>/` and load it from here. When a screen needs a primitive that is missing, it is added here, not in the screen.
+This skill holds the design system; screens live as artifacts on their parent GitHub issues (ADR 0076). `SKILL.md` describes the scratch-directory, bundle, static QA and publish workflow. When a screen needs a missing primitive, add it here first.
 
 ## Index
 
@@ -40,6 +40,7 @@ This skill holds the design system; screens live in `docs/design/screens/<screen
 | `components/navigation/` | **Pagination**, **SegmentedControl** |
 | `components/brand/` | **Logo** |
 | `guidelines/` | The foundation specimen cards, one `*.card.html` per token group or brand asset |
+| `screen-artifacts.ts` | Build self-contained interactive artifacts, pre-render static QA states and publish with download verification; see `SKILL.md` |
 | `SKILL.md` | Agent-skill front matter, so this folder works as a Claude Code skill |
 | `HANDOFF.md` | What to do with this system in `apps/web`: where each piece lands, what transfers verbatim, what gets rebuilt |
 

@@ -14,7 +14,7 @@ Requirements: RF-215, RF-216, RF-217
 - **The project records who delivered it and when**, shown on its configuration ("Entregue em 14/10/2026 por Rafael Souza."): two columns on `project`, `delivered_by` and `delivered_at`.
 - **Support reopens through the platform, not the app.** It changes status metadata only, so it stays within [0021](0021-platform-admin-sees-only-metadata.md); the log names who asked and who reopened.
 - **A pendency found after delivery is no longer solved by reopening.** It waits for support, or a post-delivery status enters through a new RF, as 0056 already foresaw for a third status.
-- **The confirmation is the design system's `AlertDialog`** (the bottom sheet below 768px); the screen is in `docs/design/screens/obra/`.
+- **The confirmation is the design system's `AlertDialog`** (the bottom sheet below 768px); the screen is in the [Obra parent issue artifacts](https://github.com/BluPrint-Engineering/bluprint-app/issues/46) (ADR 0076).
 - 0056 still governs the freeze of operational content and its error; 0067 still governs who configures.
 
 ## Considered Options

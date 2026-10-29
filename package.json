@@ -13,7 +13,7 @@
 		"test": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test",
 		"test:unit": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test:unit",
 		"test:int": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test:int",
-		"typecheck": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present typecheck",
+		"typecheck": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present typecheck && tsc -p .claude/skills/bluprint-design/tsconfig.json",
 		"e2e": "bun run --filter @bluprint/shared build && bun run --filter @bluprint/api build && VITE_ALLOW_SELF_SIGNUP=true bun run --filter @bluprint/web build && bun run --filter @bluprint/e2e e2e",
 		"lint": "bun run --filter @bluprint/shared build && biome check . && bun run --filter @bluprint/api lint",
 		"lint:fix": "bun run --filter @bluprint/shared build && biome check --write . && bun run --filter @bluprint/api lint:fix",
@@ -23,7 +23,9 @@
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.5.11",
+		"@types/bun": "^1.4.4",
 		"lefthook": "2.1.12",
-		"typescript": "7.0.2"
+		"typescript": "7.0.2",
+		"zod": "^4.5.4"
 	}
 }

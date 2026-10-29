@@ -12,7 +12,6 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 │   └── e2e/              Playwright, run through the root `e2e` script
 ├── packages/shared/      Zod schemas and types both apps agree on; built to dist/ before anything else
 ├── docs/                 ARCHITECTURE.md, data-model.md, requisitos.md (pt-BR product spec), adr/, agents/
-│   └── design/screens/   one folder per screen: README spec + HTML prototypes
 ├── docker/postgres/      init script that creates the test database
 ├── .github/              CI and deploy workflows, PR template
 ├── CONTEXT.md            domain glossary
@@ -23,7 +22,7 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 
 A Bun workspaces monorepo; Bun runs scripts, the API runs on Node ([0001](adr/0001-bun-workspaces-node-runtime.md)).
 
-A screen's handoff in `docs/design/screens/<screen>/` is a high-fidelity reference to rebuild in `apps/web` with its own stack, never code to import; its `README.md` is the spec. The prototypes load the design system from `.claude/skills/bluprint-design/`, so serve the repo root to open them. A screen is written straight into its folder with `.claude/skills/bluprint-design/`, which is also where a design-system addition goes; that skill says how to rebuild `_ds_bundle.js` and what to check before the PR.
+A screen's parent GitHub issue holds its full spec, handoff, static QA snapshots and self-contained interactive prototypes; implementation sub-issues hold only their slice ([0076](adr/0076-screen-specs-live-as-issue-artifacts.md)). These are high-fidelity references to rebuild in `apps/web`, never production code to import. `.claude/skills/bluprint-design/` holds the design system and the bundle/publish script; screen sources and generated output stay in temporary directories. Reading and versioning artifacts: [`agents/issue-tracker.md`](agents/issue-tracker.md).
 
 ### `apps/web/functions`
 
