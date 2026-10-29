@@ -2,8 +2,7 @@
 
 This folder is the BluPrint design system: tokens, the `.bp-*` component styles, the primitives and the brand
 assets. It covers the **visual foundation** of issue
-[#41](https://github.com/BluPrint-Engineering/bluprint-app/issues/41). Screens are not here; they live in
-`docs/design/screens/`, each with its own handoff.
+[#41](https://github.com/BluPrint-Engineering/bluprint-app/issues/41). Screens live as artifacts on their parent GitHub issues, each with its spec, handoff, static QA states and downloadable interactive prototypes. See `docs/agents/issue-tracker.md` and ADR 0076.
 
 Read `readme.md` first: it is the rulebook (voice, color, type, spacing, touch, motion, iconography,
 brand assets) and every decision in it is traced back to the repo or to a requirement id.

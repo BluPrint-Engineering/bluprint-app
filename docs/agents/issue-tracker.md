@@ -34,6 +34,22 @@ gh project item-add 3 --owner BluPrint-Engineering --url <issue-url>
 
 When a skill creates several issues at once (`/to-tickets` breaking down an epic), add each of them.
 
+## Screen specs and implementation slices
+
+A parent issue per screen holds the complete visual spec (`README.md`), handoff, static key-state HTML and self-contained interactive `*.dc.html` artifacts (ADR 0076). Reuse the original screen issue when it fits; otherwise create `Tela: <name>`, label it normally and add it to project 3. Implementation tickets are native sub-issues; each ticket has its own artifacts containing **only the part it implements**, including the relevant states. A link to the complete parent is context, not a substitute for the slice. Preserve existing historical ticket relationships when migrating shipped screens.
+
+Read the ticket's artifacts first, then the parent for context. Plain `gh` >= 2.103 supports issue artifacts; these are separate from Actions artifacts. Use explicit repository selection outside a clone:
+
+```bash
+gh issue artifact list <issue> -R BluPrint-Engineering/bluprint-app
+gh issue artifact view <issue> <artifact> -R BluPrint-Engineering/bluprint-app --json body --jq .body
+gh issue artifact download <issue> -R BluPrint-Engineering/bluprint-app --dir /tmp/screen
+```
+
+`*-static.html` renders in Preview. Scripts did not run in the default GitHub preview on 2026-10-29; download interactive `*.dc.html` and open it in a local browser. Each downloaded file is standalone, including its sibling components and Geist fonts. Templates and props remain readable; `data-encoded-logic` contains the primary logic as base64 UTF-8, restored before runtime boot. Decode that attribute when inspecting the logic. Downloaded filenames have an artifact-number prefix; no renaming or repo server is needed. Static QA groups have state anchors; desktop frames scroll horizontally in the issue panel.
+
+When implementing, put the exact parent/slice artifact URLs and version numbers in the PR body so later edits cannot silently change the reviewed reference. `gh issue artifact view <issue> <artifact> --json versions` lists history; `view` and `download` accept `--version <n>`. Publish and update through `.claude/skills/bluprint-design/SKILL.md`; an edit creates a version, while deletion loses history. Keep product requirements and decisions in their repository docs and review changes in the implementation PR. An artifact edit alone does not change an approved product rule.
+
 ## Pull requests as a triage surface
 
 **PRs as a request surface: no.** _(Set to `yes` if this repo treats external PRs as feature requests; `/triage` reads this flag.)_
