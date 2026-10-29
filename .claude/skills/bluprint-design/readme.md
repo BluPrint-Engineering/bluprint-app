@@ -8,7 +8,7 @@ This design system was built for [issue #41 — *1.6 Fundação visual: tokens, 
 
 | Source | What came from it |
 | --- | --- |
-| [`BluPrint-Engineering/bluprint-app`](https://github.com/BluPrint-Engineering/bluprint-app) (`main`) | The whole system. `apps/web/src/styles/globals.css` (shadcn **radix-nova**, Geist, `--radius:0.625rem`), `apps/web/src/components/ui/{button,card}.tsx`, `components.json` (lucide icons), `CLAUDE.md`, `CONTEXT.md`, `docs/requisitos.md`, `docs/data-model.md`, `docs/adr/` |
+| [`BluPrint-Engineering/bluprint-app`](https://github.com/BluPrint-Engineering/bluprint-app) (`main`) | The whole system. `apps/web/src/styles/globals.css` (shadcn **radix-nova**, Geist, `--radius:0.625rem`), `apps/web/src/components/ui/{button,card}.tsx`, `components.json` (lucide icons), `AGENTS.md`, `CONTEXT.md`, `docs/requisitos.md`, `docs/data-model.md`, `docs/adr/` |
 | Issues [#41](https://github.com/BluPrint-Engineering/bluprint-app/issues/41), [#42](https://github.com/BluPrint-Engineering/bluprint-app/issues/42), [#43](https://github.com/BluPrint-Engineering/bluprint-app/issues/43) | Acceptance criteria for the foundation and the two auth screens |
 | `assets/bluprint-lockup-original.webp`, `assets/bluprint-mark-original.webp` (the raster originals) | The brand. Colors were sampled pixel-by-pixel from these files; the vector marks in `assets/` are traced from them |
 | [Miro board](https://miro.com/app/board/uXjVHrUOxfg=/) (referenced in `docs/data-model.md`) | **Not read** — no access. If it holds screen designs, it should be reviewed against this system |
@@ -65,7 +65,7 @@ Nothing else was invented. There is no Tabs or Table here, because no screen ask
 
 ## Content fundamentals
 
-**Two languages, one rule.** Interface text is **pt-BR**; code, comments, docs and API messages are English (`CLAUDE.md`). So every label, button and message a user reads is Portuguese, and every prop name and token is English. Never mix the two in one string.
+**Two languages, one rule.** Interface text is **pt-BR**; code, comments, docs and API messages are English (`AGENTS.md`). So every label, button and message a user reads is Portuguese, and every prop name and token is English. Never mix the two in one string.
 
 **The API never returns display text.** `message` and `detail` are English developer text; the client branches on `error.problem.code` and writes the pt-BR sentence itself (ADR-0047, `.claude/rules/web.md`).
 
