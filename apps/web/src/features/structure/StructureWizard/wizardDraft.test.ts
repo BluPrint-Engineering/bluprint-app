@@ -454,8 +454,10 @@ describe("a draft restored after the tab reloaded", () => {
 		new Set(items.map(({ key }) => key)).size === items.length;
 
 	test("gives new towers, typologies and rules keys it does not already hold", async () => {
+		vi.resetModules();
+		const firstPage = await import("./wizardDraft");
 		const stored: unknown = JSON.parse(
-			JSON.stringify(withNewRule(initialDraft())),
+			JSON.stringify(firstPage.withNewRule(firstPage.initialDraft())),
 		);
 		vi.resetModules();
 		const reloaded = await import("./wizardDraft");
