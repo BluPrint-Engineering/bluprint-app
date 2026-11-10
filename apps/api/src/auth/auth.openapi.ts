@@ -2,6 +2,7 @@ import {
 	PASSWORD_MAX_LENGTH,
 	PASSWORD_MIN_LENGTH,
 	PASSWORD_TOO_GUESSABLE_CODE,
+	SESSION_IDLE_SECONDS,
 } from "@bluprint/shared";
 import {
 	ComponentsObject,
@@ -132,8 +133,7 @@ export const authPaths: PathsObject = {
 						"Account created; the tenant is seeded and the session cookie is set.",
 					headers: {
 						"Set-Cookie": {
-							description:
-								"`better-auth.session_token`, `httpOnly`, `SameSite=Lax`, `Max-Age=7776000` (90 days).",
+							description: `\`better-auth.session_token\`, \`httpOnly\`, \`SameSite=Lax\`, \`Max-Age=${SESSION_IDLE_SECONDS}\` (8 hours).`,
 							schema: { type: "string" },
 						},
 					},

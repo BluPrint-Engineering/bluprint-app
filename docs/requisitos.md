@@ -228,7 +228,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RNF-01 | **Aplicação web mobile-first**: o uso principal é em campo, no celular, dentro do apartamento em obra. App nativo instalável fica para depois de produção | M |
 | RNF-02 | A mesma aplicação no desktop, com layout mais denso para configuração da obra e dashboards | M |
 | RNF-03 | Isolamento de dados em três níveis: super admin vê só metadados de organização e licença; admin vê a organização inteira; gerente e assistente veem só as obras a que estão vinculados, com o papel daquele vínculo | M |
-| RNF-04 | Autenticação segura e sessão persistente (o usuário não reloga a cada visita em campo) | M |
+| RNF-04 | Autenticação segura e sessão persistente: a sessão se renova com o uso e cai após 8 h sem uso (o usuário não reloga durante a jornada em campo, mas não fica logado de um dia para o outro sem uso) | M |
 | RNF-05 | Interface em **português (pt-BR)** | M |
 | RNF-06 | Criar um pin em poucos toques, usável com uma mão, com luva e sob sol forte (contraste alto, alvos de toque grandes) | M |
 | RNF-07 | Status e disciplina nunca comunicados **só por cor** — sempre com rótulo, ícone ou legenda junto (daltonismo, impressão em P&B) | M |
