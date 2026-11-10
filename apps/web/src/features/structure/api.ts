@@ -116,11 +116,11 @@ function postStructure(projectId: string, body: CreateStructure) {
 function useStructureCreation<Variables>(
 	projectId: string,
 	send: (variables: Variables) => Promise<CreateStructureResult>,
-	kind: "create-structure" | "duplicate-location",
+	kind?: "create-structure" | "duplicate-location",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
-		meta: { sessionDraft: kind },
+		...(kind && { meta: { sessionDraft: kind } }),
 		mutationFn: send,
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -166,6 +166,12 @@ export function useCreateStructureMutation(projectId: string) {
 			return postStructure(projectId, plan);
 		},
 		"create-structure",
+	);
+}
+
+export function useRecreateStructureMutation(projectId: string) {
+	return useStructureCreation(projectId, (body: CreateStructure) =>
+		postStructure(projectId, body),
 	);
 }
 

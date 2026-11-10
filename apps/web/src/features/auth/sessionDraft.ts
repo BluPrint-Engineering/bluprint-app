@@ -78,6 +78,16 @@ export function forgetFailedSubmission({
 	localStorage.removeItem(storageKey(accountId, path));
 }
 
+export function forgetScreenDraft({
+	accountId,
+	path,
+}: {
+	accountId: string;
+	path: string;
+}): void {
+	localStorage.removeItem(storageKey(accountId, path));
+}
+
 export function readSessionDraft(
 	accountId: string,
 	path: string,

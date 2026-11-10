@@ -13,6 +13,7 @@ export { SignupPage } from "./SignupPage/SignupPage";
 export {
 	dropDraftsOfOtherAccounts,
 	forgetFailedSubmission,
+	forgetScreenDraft,
 	rememberFailedSubmission,
 	screenPath,
 } from "./sessionDraft";

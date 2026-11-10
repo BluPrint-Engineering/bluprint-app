@@ -433,6 +433,28 @@ describe("session draft", () => {
 		).toHaveValue("");
 	});
 
+	test("forgets the draft once the restored form is left for another screen", async () => {
+		const api = newProjectApi(signedIn);
+		const { router } = renderAt("/projects/new");
+		await fillNewProject("Casa Moinhos", "12");
+		api.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await screen.findByDisplayValue("Casa Moinhos");
+
+		await userEvent.click(screen.getByRole("link", { name: "Obras" }));
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/projects");
+		});
+		await router.navigate({ to: "/projects/new" });
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("");
+		expect(api.posts).toHaveLength(1);
+	});
+
 	test("keeps the draft when the same account signs out and comes back", async () => {
 		const api = newProjectApi(signedIn);
 		const { router } = renderAt("/projects/new");
@@ -792,6 +814,35 @@ describe("actions that must not come back", () => {
 		expect(
 			screen.queryByRole("textbox", { name: "Nome" }),
 		).not.toBeInTheDocument();
+	});
+
+	test("does not open the add form for an undone removal after signing back in", async () => {
+		const ninth = floor("9º andar", ["901", "902"]);
+		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
+		const api = writableApi(obra, structureOf([tower("Torre A", [ninth])]), {
+			create: () => json({}, 401),
+		});
+		const stub = stubApi(signedIn, { api: api.handler });
+		renderAt(`/projects/${obra.id}/locations/${ninth.id}`);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Ações da unidade 902" }),
+		);
+		await userEvent.click(
+			screen.getByRole("menuitem", { name: "Remover unidade" }),
+		);
+		const undo = await screen.findByRole("button", { name: "Desfazer" });
+		stub.setSession(null);
+		await userEvent.click(undo);
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		expect(
+			await screen.findByRole("button", { name: "Adicionar unidade" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("textbox", { name: "Adicionar unidade" }),
+		).not.toBeInTheDocument();
+		expect(api.created).toHaveLength(1);
 	});
 
 	test("does not reopen delivery or send it again after signing back in", async () => {

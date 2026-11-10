@@ -3,6 +3,7 @@ import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import {
 	discardSession,
 	forgetFailedSubmission,
+	forgetScreenDraft,
 	rememberFailedSubmission,
 	screenPath,
 } from "@/features/auth";
@@ -56,6 +57,13 @@ export function createApp({ history }: { history?: RouterHistory } = {}) {
 		routeTree,
 		context: { queryClient },
 		...(history && { history }),
+	});
+	router.subscribe("onResolved", ({ fromLocation, toLocation }) => {
+		const accountId = signedInAccountId();
+		if (!fromLocation || !accountId) return;
+		const left = screenPath(fromLocation);
+		if (left === screenPath(toLocation)) return;
+		forgetScreenDraft({ accountId, path: left });
 	});
 
 	return { queryClient, router };
