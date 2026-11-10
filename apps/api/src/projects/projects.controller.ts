@@ -13,6 +13,7 @@ import {
 	Patch,
 	Post,
 	Query,
+	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
@@ -27,6 +28,7 @@ import { ProjectParamsDto } from "./dto/project-params.dto";
 import { ProjectSummaryDto } from "./dto/project-summary.dto";
 import { ProjectUnitsDto } from "./dto/project-units.dto";
 import { RenameProjectDto } from "./dto/rename-project.dto";
+import { ProjectUseInterceptor } from "./project-use.interceptor";
 import { ProjectsService } from "./projects.service";
 
 @ApiTags("Projects")
@@ -70,6 +72,7 @@ export class ProjectsController {
 	}
 
 	@Get(":id")
+	@UseInterceptors(ProjectUseInterceptor)
 	@ApiOperation({
 		summary: "One project",
 		description:
@@ -89,6 +92,7 @@ export class ProjectsController {
 	}
 
 	@Get(":id/units")
+	@UseInterceptors(ProjectUseInterceptor)
 	@ApiOperation({
 		summary: "A project's units",
 		description:
@@ -120,14 +124,17 @@ export class ProjectsController {
 		type: ProjectSummaryDto,
 	})
 	@ApiErrorResponses(400, 401, 403, 409)
-	create(
+	async create(
 		@Session() session: UserSession,
 		@Body() body: CreateProjectDto,
 	): Promise<ProjectSummary> {
-		return this.projects.create(session.user.id, body);
+		const created = await this.projects.create(session.user.id, body);
+		await this.projects.recordUse(session.user.id, [created.id]);
+		return created;
 	}
 
 	@Patch(":id")
+	@UseInterceptors(ProjectUseInterceptor)
 	@ApiOperation({
 		summary: "Rename a project",
 		description:
@@ -148,6 +155,7 @@ export class ProjectsController {
 	}
 
 	@Patch(":id/units")
+	@UseInterceptors(ProjectUseInterceptor)
 	@ApiOperation({
 		summary: "Change a project's reservation",
 		description:
@@ -168,6 +176,7 @@ export class ProjectsController {
 	}
 
 	@Post(":id/delivery")
+	@UseInterceptors(ProjectUseInterceptor)
 	@HttpCode(200)
 	@ApiOperation({
 		summary: "Deliver a project",

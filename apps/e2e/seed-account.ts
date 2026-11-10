@@ -1,4 +1,6 @@
 export const ADMIN_EMAIL = "ana@horizonte.test";
+export const PHONE_RECENT_USE_ADMIN_EMAIL = "bruno@horizonte.test";
+export const DESKTOP_RECENT_USE_ADMIN_EMAIL = "marina@horizonte.test";
 export const SEED_PASSWORD = "canteiro-de-obras-azul";
 export const NO_UNITS_ADMIN_EMAIL = "igor@vertice.test";
 export const MANAGER_EMAIL = "carla@horizonte.test";

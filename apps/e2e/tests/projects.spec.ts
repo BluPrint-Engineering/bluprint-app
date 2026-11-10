@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { SEED_PASSWORD } from "../seed-account";
+import {
+	DESKTOP_RECENT_USE_ADMIN_EMAIL,
+	PHONE_RECENT_USE_ADMIN_EMAIL,
+	SEED_PASSWORD,
+} from "../seed-account";
 
 test.describe("project list", () => {
 	test("opening the app lands on the admin's projects", async ({ page }) => {
@@ -99,7 +103,13 @@ test.describe("project list", () => {
 	}) => {
 		await page.context().clearCookies();
 		await page.goto("/login");
-		await page.getByLabel("E-mail").fill("bruno@horizonte.test");
+		await page
+			.getByLabel("E-mail")
+			.fill(
+				isMobile
+					? PHONE_RECENT_USE_ADMIN_EMAIL
+					: DESKTOP_RECENT_USE_ADMIN_EMAIL,
+			);
 		await page.getByLabel("Senha", { exact: true }).fill(SEED_PASSWORD);
 		await page.getByRole("button", { name: "Entrar" }).click();
 		await expect(page).toHaveURL("/projects");

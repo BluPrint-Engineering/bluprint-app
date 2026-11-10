@@ -8,6 +8,7 @@ import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
+import { ProjectsService } from "../projects/projects.service";
 import { OrganizationDto } from "./dto/organization.dto";
 import { OrganizationReservationsDto } from "./dto/organization-reservations.dto";
 import { OrganizationUnitsDto } from "./dto/organization-units.dto";
@@ -17,7 +18,10 @@ import { OrganizationsService } from "./organizations.service";
 @ApiTags("Organization")
 @Controller("organization")
 export class OrganizationsController {
-	constructor(private readonly organizations: OrganizationsService) {}
+	constructor(
+		private readonly organizations: OrganizationsService,
+		private readonly projects: ProjectsService,
+	) {}
 
 	@Get()
 	@ApiOperation({
@@ -81,10 +85,18 @@ export class OrganizationsController {
 		type: OrganizationReservationsDto,
 	})
 	@ApiErrorResponses(400, 401, 403, 404, 409)
-	changeMyReservations(
+	async changeMyReservations(
 		@Session() session: UserSession,
 		@Body() body: UpdateReservationsDto,
 	): Promise<OrganizationReservations> {
-		return this.organizations.changeMyReservations(session.user.id, body);
+		const reservations = await this.organizations.changeMyReservations(
+			session.user.id,
+			body,
+		);
+		await this.projects.recordUse(
+			session.user.id,
+			body.items.map((item) => item.projectId),
+		);
+		return reservations;
 	}
 }

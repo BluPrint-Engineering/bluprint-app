@@ -789,7 +789,11 @@ describe("my recent use", () => {
 	test("a change by someone else does not move my order", async () => {
 		await forget(admin.userId);
 		await forget(linked.userId);
+		expect((await admin.agent.get(`${PROJECTS}/${projectTwo}`)).status).toBe(
+			200,
+		);
 		const before = await ids(admin.agent, "pageSize=100");
+		expect(before[0]).toBe(projectTwo);
 
 		const renamed = await linked.agent
 			.patch(`${PROJECTS}/${projectOne}`)

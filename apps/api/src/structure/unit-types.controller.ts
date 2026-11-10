@@ -11,11 +11,13 @@ import {
 	Param,
 	Patch,
 	Post,
+	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
+import { ProjectUseInterceptor } from "../projects/project-use.interceptor";
 import { ProjectParamsDto } from "../projects/dto/project-params.dto";
 import { CreateUnitTypeDto } from "./dto/create-unit-type.dto";
 import { UnitTypeListDto } from "./dto/unit-type-list.dto";
@@ -30,6 +32,7 @@ const WRITERS =
 
 @ApiTags("Structure")
 @Controller("projects/:id")
+@UseInterceptors(ProjectUseInterceptor)
 export class UnitTypesController {
 	constructor(private readonly unitTypes: UnitTypesService) {}
 
