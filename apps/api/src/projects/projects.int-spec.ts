@@ -809,6 +809,10 @@ describe("my recent use", () => {
 
 	test("creating a project counts as my use of it", async () => {
 		await forget(paginated.userId);
+		const oldest = paginatedIdsByActivity.at(-1)!;
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
 		const id = randomUUID();
 
 		const created = await paginated.agent
@@ -816,7 +820,7 @@ describe("my recent use", () => {
 			.send({ id, name: "Obra Acabada de Criar", units: 2 });
 
 		expect(created.status).toBe(201);
-		expect((await ids(paginated.agent))[0]).toBe(id);
+		expect((await ids(paginated.agent)).slice(0, 2)).toEqual([id, oldest]);
 		await db.delete(project).where(eq(project.id, id));
 	});
 
@@ -834,6 +838,10 @@ describe("my recent use", () => {
 
 	test("the project list, the managers list and the units screens do not count", async () => {
 		await forget(paginated.userId);
+		const oldest = paginatedIdsByActivity.at(-1)!;
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
 
 		expect((await paginated.agent.get(PROJECTS)).status).toBe(200);
 		expect((await paginated.agent.get(`${PROJECTS}/managers`)).status).toBe(
@@ -846,13 +854,18 @@ describe("my recent use", () => {
 			(await paginated.agent.get("/api/organization/units/reservations"))
 				.status,
 		).toBe(200);
-		expect(await ids(paginated.agent)).toEqual(paginatedIdsByActivity);
+		expect(await ids(paginated.agent)).toEqual([
+			oldest,
+			...paginatedIdsByActivity.filter((id) => id !== oldest),
+		]);
 	});
 
 	test("a refused request does not count", async () => {
 		await forget(paginated.userId);
 		await forget(linked.userId);
-		const linkedBefore = await ids(linked.agent, "pageSize=100");
+		expect((await linked.agent.get(`${PROJECTS}/${projectOne}`)).status).toBe(
+			200,
+		);
 		const missing = randomUUID();
 
 		expect((await paginated.agent.get(`${PROJECTS}/${missing}`)).status).toBe(
@@ -870,7 +883,9 @@ describe("my recent use", () => {
 				await paginated.agent
 					.patch("/api/organization/units/reservations")
 					.send({
-						items: [{ projectId: paginatedIdsByActivity[0], reserved: 10000 }],
+						items: [
+							{ projectId: paginatedIdsByActivity.at(-1)!, reserved: 10000 },
+						],
 					})
 			).status,
 		).toBe(409);
@@ -882,7 +897,10 @@ describe("my recent use", () => {
 			).status,
 		).toBe(403);
 		expect(await ids(paginated.agent)).toEqual(paginatedIdsByActivity);
-		expect(await ids(linked.agent, "pageSize=100")).toEqual(linkedBefore);
+		expect(await ids(linked.agent, "pageSize=100")).toEqual([
+			projectOne,
+			projectTwo,
+		]);
 	});
 
 	test("opening again within 5 minutes does not pass the project opened after it", async () => {

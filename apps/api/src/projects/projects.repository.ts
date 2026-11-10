@@ -246,13 +246,10 @@ export class ProjectsRepository {
 		userId: string,
 		projectIds: readonly string[],
 	): Promise<void> {
-		const unique = [...new Set(projectIds)];
-		if (unique.length === 0) return;
-
 		await this.txHost.tx
 			.insert(projectUse)
 			.values(
-				unique.map((projectId) => ({
+				projectIds.map((projectId) => ({
 					userId,
 					projectId,
 					lastUsedAt: sql`now()`,
