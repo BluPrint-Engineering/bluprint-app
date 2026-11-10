@@ -1,6 +1,6 @@
 import type { OrganizationUnits } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
-import { act, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
@@ -768,17 +768,15 @@ describe("actions that must not come back", () => {
 		expect(api.created).toHaveLength(1);
 	});
 
-	test("does not reopen a restored rename once it is dismissed", async () => {
+	test("does not reopen a restored rename after a reload once it is dismissed", async () => {
 		const ninth = floor("9º andar", ["901", "902"]);
-		const tenth = floor("10º andar", ["1001"]);
 		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
-		const api = writableApi(
-			obra,
-			structureOf([tower("Torre A", [ninth, tenth])]),
-			{ rename: () => json({}, 401) },
-		);
+		const api = writableApi(obra, structureOf([tower("Torre A", [ninth])]), {
+			rename: () => json({}, 401),
+		});
 		const stub = stubApi(signedIn, { api: api.handler });
-		const { router } = renderAt(`/projects/${obra.id}/locations/${ninth.id}`);
+		const path = `/projects/${obra.id}/locations/${ninth.id}`;
+		renderAt(path);
 		await userEvent.click(
 			await screen.findByRole("button", { name: "Ações da unidade 902" }),
 		);
@@ -800,20 +798,55 @@ describe("actions that must not come back", () => {
 				screen.queryByRole("textbox", { name: "Nome" }),
 			).not.toBeInTheDocument();
 		});
-		await router.navigate({
-			to: "/projects/$projectId/locations/$locationId",
-			params: { projectId: obra.id, locationId: tenth.id },
-		});
-		await screen.findByRole("button", { name: "Ações da unidade 1001" });
-		await router.navigate({
-			to: "/projects/$projectId/locations/$locationId",
-			params: { projectId: obra.id, locationId: ninth.id },
-		});
+		cleanup();
+		renderAt(path);
 		await screen.findByRole("button", { name: "Ações da unidade 902" });
 
 		expect(
 			screen.queryByRole("textbox", { name: "Nome" }),
 		).not.toBeInTheDocument();
+	});
+
+	test("does not reopen a restored duplicate after a reload once it is dismissed", async () => {
+		const towerA = tower("Torre A", [floor("1º andar", ["101", "102"])]);
+		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
+		const api = writableApi(obra, structureOf([towerA]), {
+			create: () => json({}, 401),
+		});
+		const stub = stubApi(signedIn, { api: api.handler });
+		const path = `/projects/${obra.id}/locations/${towerA.id}`;
+		renderAt(path);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Ações da torre" }),
+		);
+		await userEvent.click(
+			screen.getByRole("menuitem", { name: "Duplicar torre" }),
+		);
+		const field = await screen.findByRole("textbox", { name: "Nome" });
+		await userEvent.clear(field);
+		await userEvent.type(field, "Torre Z");
+		stub.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Duplicar" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		expect(await screen.findByRole("textbox", { name: "Nome" })).toHaveValue(
+			"Torre Z",
+		);
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => {
+			expect(
+				screen.queryByRole("textbox", { name: "Nome" }),
+			).not.toBeInTheDocument();
+		});
+		cleanup();
+		renderAt(path);
+		await screen.findByRole("button", { name: "Ações da torre" });
+
+		expect(
+			screen.queryByRole("textbox", { name: "Nome" }),
+		).not.toBeInTheDocument();
+		expect(api.created).toHaveLength(1);
 	});
 
 	test("does not open the add form for an undone removal after signing back in", async () => {
