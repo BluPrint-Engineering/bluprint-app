@@ -355,7 +355,13 @@ describe("session cookie", () => {
 			.send({});
 
 		expect(out.status).toBe(200);
-		expect(setCookieLines(out).some((line) => line.includes("Max-Age=0"))).toBe(
+		const cleared = setCookieLines(out).filter((line) =>
+			line.includes("Max-Age=0"),
+		);
+		expect(cleared.some((line) => line.startsWith(`${SESSION_TOKEN}=`))).toBe(
+			true,
+		);
+		expect(cleared.some((line) => line.startsWith(`${SESSION_DATA}=`))).toBe(
 			true,
 		);
 
@@ -371,61 +377,63 @@ describe("session cookie", () => {
 		expect(probeIdentitySchema.parse(still.body).userId).toBe(signed.userId);
 	});
 
-	test("ends every existing session when the deploy migration runs, and a later boot keeps a new session cookie", async () => {
+	test("ends every existing session once when the deploy migration runs", async () => {
 		const journal = JSON.parse(
 			readFileSync(join(migrationsFolder, "meta/_journal.json"), "utf8"),
-		) as { entries: { tag: string }[] };
-		const wipes = journal.entries.filter((entry) => {
-			const text = readFileSync(
-				join(migrationsFolder, `${entry.tag}.sql`),
-				"utf8",
-			).trim();
-			return text === 'DELETE FROM "session";';
-		});
-		expect(wipes).toHaveLength(1);
-		const wipeSql = readFileSync(
-			join(migrationsFolder, `${wipes[0]!.tag}.sql`),
-			"utf8",
+		) as { entries: { tag: string; when: number }[] };
+		const wipe = journal.entries.find(
+			(entry) => entry.tag === "0012_end_existing_sessions",
 		);
+		expect(wipe).toBeDefined();
 
 		const scratch = `bluprint_session_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
 		const url = new URL(process.env.DATABASE_URL!);
 		url.pathname = `/${scratch}`;
+		const scratchUrl = url.toString();
 		await withClient("postgres", (client) =>
 			client.query(`CREATE DATABASE "${scratch}"`),
 		);
 		try {
-			await applyMigrations(url.toString());
-			const first = await boot(url.toString());
-			const email = `${randomUUID()}@example.com`;
-			const signed = await request(first.server)
-				.post(SIGN_UP)
-				.set("X-Forwarded-For", freshIp())
-				.send({ email, password: PASSWORD, name: "Sessão Antiga" });
-			expect(signed.status).toBe(200);
-			const token = cookieHeader(signed, false);
-			expect(
-				(await request(first.server).get("/api/probe").set("Cookie", token))
-					.status,
-			).toBe(200);
-			await first.close();
-
-			const second = await boot(url.toString());
+			await applyMigrations(scratchUrl);
+			const booted = await boot(scratchUrl);
 			try {
-				expect(
-					(await request(second.server).get("/api/probe").set("Cookie", token))
-						.status,
-				).toBe(200);
-				await withClient(scratch, (client) => client.query(wipeSql));
-				const after = await request(second.server)
-					.get("/api/probe")
-					.set("Cookie", token);
-				expect(after.status).toBe(401);
-				expect(problemDetailsSchema.parse(after.body).code).toBe(
+				const signUpOn = async (name: string) => {
+					const res = await request(booted.server)
+						.post(SIGN_UP)
+						.set("X-Forwarded-For", freshIp())
+						.send({
+							email: `${randomUUID()}@example.com`,
+							password: PASSWORD,
+							name,
+						});
+					expect(res.status).toBe(200);
+					return cookieHeader(res, false);
+				};
+				const probe = (cookie: string) =>
+					request(booted.server).get("/api/probe").set("Cookie", cookie);
+
+				const before = await signUpOn("Sessão Antiga");
+				expect((await probe(before)).status).toBe(200);
+
+				await withClient(scratch, (client) =>
+					client.query(
+						"DELETE FROM drizzle.__drizzle_migrations WHERE created_at = $1",
+						[wipe!.when],
+					),
+				);
+				await applyMigrations(scratchUrl);
+
+				const ended = await probe(before);
+				expect(ended.status).toBe(401);
+				expect(problemDetailsSchema.parse(ended.body).code).toBe(
 					"UNAUTHORIZED",
 				);
+
+				const after = await signUpOn("Sessão Nova");
+				await applyMigrations(scratchUrl);
+				expect((await probe(after)).status).toBe(200);
 			} finally {
-				await second.close();
+				await booted.close();
 			}
 		} finally {
 			await withClient("postgres", (client) =>
