@@ -1,6 +1,12 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
-import { discardSession } from "@/features/auth";
+import {
+	cachedAccountId,
+	discardSession,
+	forgetFailedSubmission,
+	rememberFailedSubmission,
+	screenPath,
+} from "@/features/auth";
 import { routeTree } from "@/routeTree.gen";
 import { ApiError } from "./api";
 
@@ -21,7 +27,26 @@ export function createApp({ history }: { history?: RouterHistory } = {}) {
 
 	const queryClient = new QueryClient({
 		queryCache: new QueryCache({ onError: onUnauthorized }),
-		mutationCache: new MutationCache({ onError: onUnauthorized }),
+		mutationCache: new MutationCache({
+			onError: (error, variables, _result, mutation) => {
+				if (error instanceof ApiError && error.status === 401) {
+					rememberFailedSubmission({
+						accountId: cachedAccountId(queryClient),
+						path: screenPath(router.state.location),
+						kind: mutation.options.meta?.sessionDraft,
+						variables,
+					});
+				}
+				if (error instanceof Error) onUnauthorized(error);
+			},
+			onSuccess: (_data, _variables, _result, mutation) => {
+				forgetFailedSubmission({
+					accountId: cachedAccountId(queryClient),
+					path: screenPath(router.state.location),
+					kind: mutation.options.meta?.sessionDraft,
+				});
+			},
+		}),
 	});
 	const router = createRouter({
 		routeTree,

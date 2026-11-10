@@ -15,6 +15,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSessionDraft } from "@/features/auth";
 import { useMoveLocationMutation } from "../api";
 import { duplicateMenuLabel } from "../duplicateText";
 import { removeLabel, renameLabel } from "../naming";
@@ -27,6 +28,21 @@ import { RenameDialog, type RenameTarget } from "./RenameDialog";
 export interface Removal {
 	counts: ChildCounts;
 	afterRemoval?: () => void | Promise<void>;
+}
+
+function locationDraft(
+	variables: unknown,
+	locationId: string,
+): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("locationId" in variables) || !("name" in variables)) return undefined;
+	if (
+		variables.locationId !== locationId ||
+		typeof variables.name !== "string"
+	) {
+		return undefined;
+	}
+	return variables.name;
 }
 
 export function LocationMenu({
@@ -50,8 +66,16 @@ export function LocationMenu({
 	onCloseAutoFocus?: (event: Event) => void;
 	children?: ReactNode;
 }) {
-	const [renaming, setRenaming] = useState(false);
-	const [duplicating, setDuplicating] = useState(false);
+	const restoredRename = useSessionDraft("rename-location", (variables) =>
+		locationDraft(variables, target.id),
+	);
+	const restoredDuplicate = useSessionDraft("duplicate-location", (variables) =>
+		locationDraft(variables, target.id),
+	);
+	const [renaming, setRenaming] = useState(restoredRename !== undefined);
+	const [duplicating, setDuplicating] = useState(
+		restoredDuplicate !== undefined,
+	);
 	const [confirming, setConfirming] = useState(false);
 	const trigger = useRef<HTMLButtonElement>(null);
 	const move = useMoveLocationMutation(projectId);

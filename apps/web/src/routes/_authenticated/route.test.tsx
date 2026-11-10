@@ -1,10 +1,27 @@
+import type { OrganizationUnits } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
 import { apiFetch } from "@/lib/api";
-import { renderAt, signedIn, stubApi } from "@/test/renderApp";
+import { project } from "@/test/projectsApi";
+import {
+	json,
+	organization,
+	renderAt,
+	signedIn,
+	stubApi,
+} from "@/test/renderApp";
+import {
+	combine,
+	configurationSectionsApi,
+	floor,
+	structureOf,
+	tower,
+	unitTypeOf,
+	writableApi,
+} from "@/test/structureApi";
 
 describe("protected layout", () => {
 	afterEach(() => {
@@ -196,5 +213,521 @@ describe("protected layout", () => {
 
 		expect(router.state.location.pathname).toBe("/login");
 		expect(router.state.location.search).toEqual({});
+	});
+});
+
+const UNITS: OrganizationUnits = {
+	contracted: 400,
+	reserved: 100,
+	free: 300,
+	reclaimable: 100,
+};
+const ADMIN = { ...organization, role: "admin" as const };
+const OTHER_ACCOUNT = {
+	session: { id: "s2" },
+	user: {
+		id: "u2",
+		name: "Bruno Lima",
+		email: "bruno@horizonte.test",
+		image: null,
+	},
+};
+
+type Account = typeof signedIn;
+
+function newProjectApi(initial: Account) {
+	let session: Account | null = initial;
+	let nextAccount = initial;
+	let rejectCreate = true;
+	const posts: { name: string; units: number }[] = [];
+	const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+		const url = new URL(String(input), "http://localhost");
+		if (url.pathname.endsWith("/get-session")) return json(session);
+		if (url.pathname.endsWith("/sign-in/email")) {
+			session = nextAccount;
+			return json({ token: "t", user: nextAccount.user });
+		}
+		if (url.pathname.endsWith("/sign-out")) {
+			session = null;
+			return json({ success: true });
+		}
+		if (url.pathname === "/api/organization") return json(ADMIN);
+		if (url.pathname === "/api/organization/units") return json(UNITS);
+		if (url.pathname === "/api/projects" && init?.method === "POST") {
+			const body = JSON.parse(String(init.body)) as {
+				name: string;
+				units: number;
+			};
+			posts.push(body);
+			if (rejectCreate) return json({}, 401);
+			return json(
+				{
+					...project(1),
+					name: body.name,
+					units: { reserved: body.units, used: 0 },
+				},
+				201,
+			);
+		}
+		if (url.pathname === "/api/projects") {
+			return json({
+				items: [],
+				total: 0,
+				counts: { active: 0, delivered: 0 },
+			});
+		}
+		return json({});
+	});
+	vi.stubGlobal("fetch", fetchMock);
+	return {
+		posts,
+		setSession(next: Account | null) {
+			session = next;
+		},
+		signInNext(account: Account) {
+			nextAccount = account;
+		},
+		allowCreate() {
+			rejectCreate = false;
+		},
+	};
+}
+
+async function fillNewProject(name: string, units: string) {
+	const nameField = await screen.findByRole("textbox", {
+		name: "Nome da obra",
+	});
+	await userEvent.type(nameField, name);
+	await userEvent.type(
+		screen.getByRole("textbox", { name: "Unidades reservadas" }),
+		units,
+	);
+}
+
+async function signInAs(email: string) {
+	await userEvent.type(await screen.findByLabelText("E-mail"), email);
+	await userEvent.type(screen.getByLabelText("Senha"), "senha-da-conta");
+	await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
+}
+
+describe("session draft", () => {
+	afterEach(() => {
+		localStorage.clear();
+		vi.unstubAllGlobals();
+		onlineManager.setOnline(true);
+	});
+
+	test("keeps what was sent when the session is gone, and does not send it again", async () => {
+		const api = newProjectApi(signedIn);
+		const { posts } = api;
+
+		const { router } = renderAt("/projects/new");
+		await fillNewProject("Casa Moinhos", "12");
+		api.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/login");
+		});
+		expect(router.state.location.search).toEqual({
+			redirect: "/projects/new",
+		});
+		expect(posts).toEqual([
+			expect.objectContaining({ name: "Casa Moinhos", units: 12 }),
+		]);
+
+		await signInAs("ana@horizonte.test");
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("Casa Moinhos");
+		expect(
+			screen.getByRole("textbox", { name: "Unidades reservadas" }),
+		).toHaveValue("12");
+		expect(posts).toHaveLength(1);
+		expect(router.state.location.pathname).toBe("/projects/new");
+	});
+
+	test("drops the draft when a different account signs in, before the screen is shown", async () => {
+		const api = newProjectApi(signedIn);
+		const { router } = renderAt("/projects/new");
+		await fillNewProject("Casa Moinhos", "12");
+		api.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+		await screen.findByLabelText("E-mail");
+
+		api.signInNext(OTHER_ACCOUNT);
+		await signInAs("bruno@horizonte.test");
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("");
+		expect(
+			screen.getByRole("textbox", { name: "Unidades reservadas" }),
+		).toHaveValue("");
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Conta de Bruno Lima" }),
+		);
+		await userEvent.click(screen.getByRole("menuitem", { name: "Sair" }));
+		await screen.findByLabelText("E-mail");
+		api.signInNext(signedIn);
+		await signInAs("ana@horizonte.test");
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/projects");
+		});
+		await router.navigate({ to: "/projects/new" });
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("");
+	});
+
+	test("forgets the draft after the same form saves", async () => {
+		const api = newProjectApi(signedIn);
+		const { router } = renderAt("/projects/new");
+		await fillNewProject("Casa Moinhos", "12");
+		api.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await screen.findByDisplayValue("Casa Moinhos");
+
+		api.allowCreate();
+		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+		await waitFor(() => {
+			expect(router.state.location.pathname).toMatch(/\/configuration$/);
+		});
+		await router.navigate({ to: "/projects/new" });
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("");
+	});
+
+	test("keeps the draft when the same account signs out and comes back", async () => {
+		const api = newProjectApi(signedIn);
+		const { router } = renderAt("/projects/new");
+		await fillNewProject("Casa Moinhos", "12");
+		api.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await screen.findByDisplayValue("Casa Moinhos");
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Conta de Ana Ribeiro" }),
+		);
+		await userEvent.click(screen.getByRole("menuitem", { name: "Sair" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/projects");
+		});
+		await router.navigate({ to: "/projects/new" });
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("Casa Moinhos");
+		expect(api.posts).toHaveLength(1);
+	});
+});
+
+function setDocumentHidden(hidden: boolean) {
+	Object.defineProperty(document, "visibilityState", {
+		configurable: true,
+		get: () => (hidden ? "hidden" : "visible"),
+	});
+	document.dispatchEvent(new Event("visibilitychange"));
+}
+
+function sessionChecks(fetchMock: ReturnType<typeof stubApi>["fetchMock"]) {
+	return fetchMock.mock.calls.filter(([url]) =>
+		String(url).includes("/get-session"),
+	).length;
+}
+
+describe("return from the background", () => {
+	afterEach(() => {
+		setDocumentHidden(false);
+		vi.restoreAllMocks();
+		vi.unstubAllGlobals();
+		onlineManager.setOnline(true);
+	});
+
+	test("hides the screen and checks the session after more than 5 minutes away", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const { fetchMock } = stubApi(signedIn);
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obras");
+		const before = sessionChecks(fetchMock);
+
+		setDocumentHidden(true);
+		now += 5 * 60 * 1000 + 1;
+		expect(sessionChecks(fetchMock)).toBe(before);
+
+		let release: (response: Response) => void = () => {};
+		const pending = new Promise<Response>((resolve) => {
+			release = resolve;
+		});
+		const original = fetchMock.getMockImplementation();
+		fetchMock.mockImplementation(
+			(input: RequestInfo | URL, init?: RequestInit) => {
+				if (String(input).includes("/get-session")) return pending;
+				return original?.(input, init) ?? json({});
+			},
+		);
+		setDocumentHidden(false);
+
+		expect(await screen.findByText("Verificando sua sessão…")).toBeVisible();
+		expect(screen.queryByText("Obras")).not.toBeInTheDocument();
+		expect(sessionChecks(fetchMock)).toBeGreaterThan(before);
+
+		release(new Response(JSON.stringify(signedIn), { status: 200 }));
+		expect(await screen.findByText("Obras")).toBeVisible();
+		expect(router.state.location.pathname).toBe("/projects");
+	});
+
+	test("leaves the screen in place when the absence was under 5 minutes", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const { fetchMock } = stubApi(signedIn);
+		renderAt("/projects");
+		await screen.findByText("Obras");
+
+		setDocumentHidden(true);
+		now += 5 * 60 * 1000 - 1;
+		setDocumentHidden(false);
+
+		expect(screen.getByText("Obras")).toBeVisible();
+		expect(
+			screen.queryByText("Verificando sua sessão…"),
+		).not.toBeInTheDocument();
+		expect(sessionChecks(fetchMock)).toBe(1);
+	});
+
+	test("shows the connection error, not the login, when the return check has no network", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		stubApi(signedIn);
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obras");
+		setDocumentHidden(true);
+		now += 6 * 60 * 1000;
+		onlineManager.setOnline(false);
+		setDocumentHidden(false);
+
+		expect(await screen.findByText("Sem conexão.")).toBeVisible();
+		expect(screen.queryByLabelText("E-mail")).not.toBeInTheDocument();
+		expect(router.state.location.pathname).toBe("/projects");
+	});
+
+	test("sends a dead session to the login, remembering the screen", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const { fetchMock } = stubApi(signedIn);
+		const { router } = renderAt("/projects");
+		await screen.findByText("Obras");
+		setDocumentHidden(true);
+		now += 6 * 60 * 1000;
+		fetchMock.mockImplementation((input: RequestInfo | URL) =>
+			String(input).includes("/get-session") ? json(null) : json({}),
+		);
+		setDocumentHidden(false);
+
+		await waitFor(() => {
+			expect(router.state.location.pathname).toBe("/login");
+		});
+		expect(router.state.location.search).toEqual({ redirect: "/projects" });
+	});
+
+	test("does not ask the server while the tab stays hidden, even an hour later", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const { fetchMock } = stubApi(signedIn);
+		renderAt("/projects");
+		await screen.findByText("Obras");
+		const before = fetchMock.mock.calls.length;
+		setDocumentHidden(true);
+		now += 60 * 60 * 1000;
+		await act(async () => {
+			await new Promise((resolve) => setTimeout(resolve, 30));
+		});
+
+		expect(fetchMock.mock.calls.length).toBe(before);
+		expect(screen.getByText("Obras")).toBeVisible();
+	});
+});
+
+const OBRA = { ...project(7), name: "Casa Moinhos" };
+const CONFIG = `/projects/${OBRA.id}/configuration`;
+
+describe("actions that must not come back", () => {
+	afterEach(() => {
+		localStorage.clear();
+		vi.unstubAllGlobals();
+		onlineManager.setOnline(true);
+	});
+
+	test("forgets a restored form when it is cancelled", async () => {
+		const handler = (url: URL, init?: RequestInit) => {
+			if (
+				url.pathname === `/api/projects/${OBRA.id}` &&
+				init?.method === "PATCH"
+			) {
+				return json({}, 401);
+			}
+			if (url.pathname === `/api/projects/${OBRA.id}`) return json(OBRA);
+			if (url.pathname === "/api/projects") {
+				return json({
+					items: [OBRA],
+					total: 1,
+					counts: { active: 1, delivered: 0 },
+				});
+			}
+			return undefined;
+		};
+		const api = stubApi(signedIn, {
+			api: combine(handler, configurationSectionsApi(OBRA.id)),
+		});
+		renderAt(CONFIG);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Renomear" }),
+		);
+		const field = screen.getByRole("textbox", { name: "Nome da obra" });
+		await userEvent.clear(field);
+		await userEvent.type(field, "Casa Nova");
+		api.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		expect(
+			await screen.findByRole("textbox", { name: "Nome da obra" }),
+		).toHaveValue("Casa Nova");
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+		await userEvent.click(screen.getByRole("button", { name: "Renomear" }));
+		expect(screen.getByRole("textbox", { name: "Nome da obra" })).toHaveValue(
+			"Casa Moinhos",
+		);
+	});
+
+	test("does not reopen delivery or send it again after signing back in", async () => {
+		const posts: string[] = [];
+		const handler = (url: URL, init?: RequestInit) => {
+			if (url.pathname === `/api/projects/${OBRA.id}/delivery`) {
+				posts.push(init?.method ?? "GET");
+				return json({}, 401);
+			}
+			if (url.pathname === `/api/projects/${OBRA.id}`) return json(OBRA);
+			if (url.pathname === "/api/projects") {
+				return json({
+					items: [OBRA],
+					total: 1,
+					counts: { active: 1, delivered: 0 },
+				});
+			}
+			return undefined;
+		};
+		const api = stubApi(signedIn, {
+			api: combine(handler, configurationSectionsApi(OBRA.id)),
+		});
+		renderAt(CONFIG);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Entregar obra" }),
+		);
+		await userEvent.click(
+			screen.getByRole("checkbox", {
+				name: "Entendi que a obra não poderá ser reaberta.",
+			}),
+		);
+		api.setSession(null);
+		await userEvent.click(
+			screen.getByRole("button", { name: "Entregar obra" }),
+		);
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await screen.findByRole("heading", { level: 1, name: "Casa Moinhos" });
+
+		expect(
+			screen.queryByRole("checkbox", {
+				name: "Entendi que a obra não poderá ser reaberta.",
+			}),
+		).not.toBeInTheDocument();
+		expect(posts).toEqual(["POST"]);
+	});
+
+	test("does not move a location again after signing back in", async () => {
+		const ninth = floor("9º andar", ["901", "902"]);
+		const towerA = tower("Torre A", [ninth]);
+		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
+		const api = writableApi(obra, structureOf([towerA, tower("Torre B")]), {
+			move: () => json({}, 401),
+		});
+		const stub = stubApi(signedIn, { api: api.handler });
+		renderAt(`/projects/${obra.id}/locations/${ninth.id}`);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Ações da unidade 902" }),
+		);
+		stub.setSession(null);
+		await userEvent.click(
+			screen.getByRole("menuitem", { name: "Mover para cima" }),
+		);
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await screen.findByRole("button", { name: "Ações da unidade 902" });
+
+		expect(api.moved).toHaveLength(1);
+		expect(
+			screen.queryByRole("menuitem", { name: "Mover para cima" }),
+		).not.toBeInTheDocument();
+	});
+
+	test("does not delete a typology again or reopen its menu after signing back in", async () => {
+		const tipologia = unitTypeOf("Tipologia A", ["Sala"]);
+		const deletes: string[] = [];
+		const handler = (url: URL, init?: RequestInit) => {
+			if (
+				url.pathname.endsWith(`/unit-types/${tipologia.id}`) &&
+				init?.method === "DELETE"
+			) {
+				deletes.push(tipologia.id);
+				return json({}, 401);
+			}
+			if (url.pathname === `/api/projects/${OBRA.id}`) return json(OBRA);
+			if (url.pathname === "/api/projects") {
+				return json({
+					items: [OBRA],
+					total: 1,
+					counts: { active: 1, delivered: 0 },
+				});
+			}
+			return undefined;
+		};
+		const api = stubApi(signedIn, {
+			api: combine(
+				handler,
+				configurationSectionsApi(OBRA.id, undefined, {
+					unitTypes: [tipologia],
+				}),
+			),
+		});
+		renderAt(CONFIG);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Ações da Tipologia A" }),
+		);
+		api.setSession(null);
+		await userEvent.click(
+			screen.getByRole("menuitem", { name: "Excluir tipologia" }),
+		);
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+		await screen.findByText("Tipologia A");
+
+		expect(deletes).toEqual([tipologia.id]);
+		expect(
+			screen.queryByRole("menuitem", { name: "Excluir tipologia" }),
+		).not.toBeInTheDocument();
 	});
 });

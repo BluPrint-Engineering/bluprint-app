@@ -1,6 +1,6 @@
 import type { DroppedRoom, LocationDetail, Room } from "@bluprint/shared";
 import { Ellipsis, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
-import { type ReactNode, useId, useRef, useState } from "react";
+import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import {
 	isRoomNameTaken,
@@ -72,12 +73,21 @@ function AddRoomRow({
 }) {
 	const fieldId = useId();
 	const add = useAddRoomMutation(projectId, location.id);
-	const [adding, setAdding] = useState(false);
-	const [name, setName] = useState("");
+	const restored = useSessionDraft("add-room", (variables) => {
+		if (typeof variables !== "object" || variables === null) return undefined;
+		if (!("name" in variables) || typeof variables.name !== "string") {
+			return undefined;
+		}
+		return variables.name;
+	});
+	const clearDraft = useClearSessionDraft();
+	const [adding, setAdding] = useState(restored !== undefined);
+	const [name, setName] = useState(restored ?? "");
 	const [error, setError] = useState<string>();
 	const attempt = useRef<{ id: string; name: string }>(undefined);
 
 	function close() {
+		clearDraft();
 		setAdding(false);
 		setName("");
 		setError(undefined);
@@ -229,7 +239,22 @@ export function RoomsCard({
 }) {
 	const { rooms, droppedRooms, unitType } = location;
 	const holder: RoomHolder = location.type === "unit" ? "unit" : "common_area";
+	const restoredRename = useSessionDraft("rename-room", (variables) => {
+		if (typeof variables !== "object" || variables === null) return undefined;
+		if (!("roomId" in variables) || typeof variables.roomId !== "string") {
+			return undefined;
+		}
+		return variables.roomId;
+	});
 	const [renaming, setRenaming] = useState<Room>();
+	const openedRename = useRef(false);
+	useEffect(() => {
+		if (openedRename.current || !restoredRename) return;
+		const room = location.rooms.find((item) => item.id === restoredRename);
+		if (!room) return;
+		openedRename.current = true;
+		setRenaming(room);
+	}, [location.rooms, restoredRename]);
 	const remove = useRemoveRoomMutation(projectId, location.id);
 	const giveBack = useGiveRoomBackMutation(projectId, location.id);
 

@@ -1,10 +1,11 @@
 import type { ProjectSummary, UnitType } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
+import { useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
 import {
 	isUnitTypeInUse,
@@ -22,6 +23,31 @@ import {
 } from "./UnitTypeNameDialog";
 import { UnitTypeRow } from "./UnitTypeRow";
 
+function unitTypeDraft(
+	variables: unknown,
+	mode: "create" | "update",
+): { unitTypeId?: string; rooms?: true } | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (mode === "create") {
+		return "name" in variables && typeof variables.name === "string"
+			? {}
+			: undefined;
+	}
+	if (
+		!("unitTypeId" in variables) ||
+		typeof variables.unitTypeId !== "string"
+	) {
+		return undefined;
+	}
+	const rooms =
+		"rooms" in variables &&
+		Array.isArray(variables.rooms) &&
+		variables.rooms.length > 0;
+	return rooms
+		? { unitTypeId: variables.unitTypeId, rooms: true }
+		: { unitTypeId: variables.unitTypeId };
+}
+
 const LEAD =
 	"Cada unidade acompanha a sua tipologia; o que for mudado numa unidade continua só nela.";
 const EMPTY =
@@ -30,8 +56,27 @@ const EMPTY =
 export function UnitTypesSection({ project }: { project: ProjectSummary }) {
 	const query = useQuery(unitTypesQueryOptions(project.id));
 	const remove = useDeleteUnitTypeMutation(project.id);
+	const created = useSessionDraft("create-unit-type", (variables) =>
+		unitTypeDraft(variables, "create"),
+	);
+	const updated = useSessionDraft("update-unit-type", (variables) =>
+		unitTypeDraft(variables, "update"),
+	);
 	const [editingId, setEditingId] = useState<string>();
-	const [naming, setNaming] = useState<NameDialogTarget>();
+	const [naming, setNaming] = useState<NameDialogTarget | undefined>(
+		created ? { mode: "create" } : undefined,
+	);
+	const opened = useRef(false);
+	useEffect(() => {
+		if (opened.current || !updated || !query.data) return;
+		const unitType = query.data.unitTypes.find(
+			(item) => item.id === updated.unitTypeId,
+		);
+		if (!unitType) return;
+		opened.current = true;
+		if (updated.rooms) setEditingId(unitType.id);
+		else setNaming({ mode: "rename", unitType });
+	}, [query.data, updated]);
 	const editable = project.status === "active";
 
 	function deleteUnitType({ id, name }: UnitType) {

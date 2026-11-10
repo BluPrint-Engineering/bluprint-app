@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { useSessionDraft } from "@/features/auth";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { uuidV7 } from "@/lib/uuidV7";
 import { organizationUnitsQueryOptions } from "../../account/api";
@@ -33,6 +34,16 @@ const BACK_LINK =
 
 const FLAT_CARD =
 	"max-md:gap-(--space-5) max-md:rounded-none max-md:bg-transparent max-md:py-0 max-md:ring-0";
+
+function createProjectFields(
+	variables: unknown,
+): { name: string; units: string } | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("name" in variables) || !("units" in variables)) return undefined;
+	const { name, units } = variables;
+	if (typeof name !== "string" || typeof units !== "number") return undefined;
+	return { name, units: String(units) };
+}
 
 function livres(count: number) {
 	return `${count} ${plural(count, "livre", "livres")} na construtora.`;
@@ -88,6 +99,7 @@ export function NewProjectPage() {
 	const free = units.data?.free;
 	const exhausted = free === 0;
 
+	const restored = useSessionDraft("create-project", createProjectFields);
 	const {
 		control,
 		register,
@@ -97,7 +109,7 @@ export function NewProjectPage() {
 		formState: { errors },
 	} = useForm<NewProjectFormValues>({
 		resolver: zodResolver(newProjectFormSchema(free)),
-		defaultValues: { name: "", units: "" },
+		defaultValues: restored ?? { name: "", units: "" },
 	});
 	const typed = watch("units");
 	const disabled = create.isPending || exhausted;

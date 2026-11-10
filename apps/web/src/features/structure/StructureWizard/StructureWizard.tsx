@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useSessionDraft } from "@/features/auth";
 import { useBottomBarHeight } from "@/lib/useBottomBarHeight";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,7 @@ import {
 	type DraftErrors,
 	firstInvalidField,
 	initialDraft,
+	readWizardDraft,
 	validateDraft,
 	type WizardDraft,
 } from "./wizardDraft";
@@ -66,6 +68,12 @@ const LAST_STEP = STEP_TITLES.length - 1;
 const BLOCKER_ID = "wizard-blocker";
 const TYPES_DESCRIPTION =
 	"A lista de cômodos de cada tipo de unidade, e onde cada tipo se aplica: por final (a posição da unidade no andar: 01, 02…) e por andar.";
+
+function wizardFields(variables: unknown): WizardDraft | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("draft" in variables)) return undefined;
+	return readWizardDraft(variables.draft);
+}
 
 const identity = (key: string) => key;
 
@@ -150,14 +158,23 @@ export function StructureWizard({
 	const navigate = useNavigate();
 	const create = useCreateStructureMutation(project.id);
 	const units = useQuery(projectUnitsQueryOptions(project.id));
-	const [draft, setDraft] = useState<WizardDraft>(start ?? initialDraft);
+	const restored = useSessionDraft("create-structure", wizardFields);
+	const restoredReservation = useSessionDraft(
+		"change-reservation",
+		(variables) => (typeof variables === "number" ? variables : undefined),
+	);
+	const [draft, setDraft] = useState<WizardDraft>(
+		restored ?? start ?? initialDraft,
+	);
 	const extend = draft.extend;
 	const stepTitles = extend ? EXTEND_STEP_TITLES : STEP_TITLES;
 	const [errors, setErrors] = useState<DraftErrors>({});
 	const [step, setStep] = useState(0);
 	const [floorArea, setFloorArea] = useState<FloorAreaInput>();
 	const [reveal, setReveal] = useState<string>();
-	const [reservationOpen, setReservationOpen] = useState(false);
+	const [reservationOpen, setReservationOpen] = useState(
+		restoredReservation !== undefined,
+	);
 	const reservationButton = useRef<HTMLButtonElement>(null);
 	const createButtonRef = useRef<HTMLButtonElement>(null);
 	const ids = useRef(new Map<string, string>());
@@ -234,7 +251,7 @@ export function StructureWizard({
 		if (create.isPending || blocked || !validate()) return;
 		const { unitTypes, locations } = buildPlan(draft, idFor);
 		create.mutate(
-			{ unitTypes, locations },
+			{ unitTypes, locations, draft },
 			{
 				onSuccess: ({ counts }) => {
 					if (extend) {

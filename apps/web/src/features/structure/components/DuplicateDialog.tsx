@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
@@ -105,7 +106,11 @@ function DuplicateContent({
 	const units = useQuery(projectUnitsQueryOptions(projectId));
 	const duplicate = useDuplicateLocationMutation(projectId);
 	const ids = useRef(new Map<string, string>());
-	const [name, setName] = useState(suggestion);
+	const restored = useSessionDraft("duplicate-location", (variables) =>
+		duplicateName(variables, locationOf(source)),
+	);
+	const clearDraft = useClearSessionDraft();
+	const [name, setName] = useState(restored ?? suggestion);
 	const [problem, setProblem] = useState<string>();
 	const [reserving, setReserving] = useState(false);
 	const alterReservation = useRef<HTMLButtonElement>(null);
@@ -150,6 +155,11 @@ function DuplicateContent({
 		};
 	}, [gone, queryClient, projectId]);
 
+	function finish() {
+		clearDraft();
+		onDone();
+	}
+
 	function idFor(key: string) {
 		let id = ids.current.get(key);
 		if (!id) {
@@ -166,6 +176,7 @@ function DuplicateContent({
 		duplicate.mutate(
 			{
 				locationId: locationOf(source),
+				name: finalName,
 				build: (below) => {
 					assertCopyMatches(source, below);
 					return buildDuplicate(source, finalName, below, idFor);
@@ -174,10 +185,10 @@ function DuplicateContent({
 			{
 				onSuccess: () => {
 					toast.success(duplicatedToast(source.type, finalName));
-					onDone();
+					finish();
 				},
 				onError: (failure) => {
-					if (isProjectDelivered(failure)) onDone();
+					if (isProjectDelivered(failure)) finish();
 					if (failure instanceof StaleCopyError) {
 						void queryClient.invalidateQueries({
 							queryKey: ["structure", projectId],
@@ -301,7 +312,7 @@ function DuplicateContent({
 				pendingLabel="Duplicando…"
 				SubmitIcon={Copy}
 				submitDisabled={over || tooLarge}
-				onCancel={onDone}
+				onCancel={finish}
 			/>
 			{admin && project.data && (
 				<ChangeReservationDialog
@@ -314,6 +325,21 @@ function DuplicateContent({
 			)}
 		</>
 	);
+}
+
+function duplicateName(
+	variables: unknown,
+	locationId: string,
+): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("locationId" in variables) || !("name" in variables)) return undefined;
+	if (
+		variables.locationId !== locationId ||
+		typeof variables.name !== "string"
+	) {
+		return undefined;
+	}
+	return variables.name;
 }
 
 function locationOf(source: DuplicateSource): string {

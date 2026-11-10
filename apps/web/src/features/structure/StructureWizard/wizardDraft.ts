@@ -67,6 +67,161 @@ const nextRuleKey = () => `rule-${++ruleKeys}`;
 
 export const FIRST_UNIT_TYPE_NAME = "Tipologia A";
 
+function record(value: unknown): Record<string, unknown> | undefined {
+	if (typeof value !== "object" || value === null || Array.isArray(value)) {
+		return undefined;
+	}
+	const entries = Object.entries(value);
+	return Object.fromEntries(entries);
+}
+
+function strings(value: unknown): string[] | undefined {
+	return Array.isArray(value) && value.every((item) => typeof item === "string")
+		? value
+		: undefined;
+}
+
+export function readWizardDraft(value: unknown): WizardDraft | undefined {
+	const draft = record(value);
+	if (!draft) return undefined;
+	if (draft.numbering !== "digits" && draft.numbering !== "letters") {
+		return undefined;
+	}
+	const projectAreas = strings(draft.projectAreas);
+	const towerAreas = strings(draft.towerAreas);
+	if (!projectAreas || !towerAreas || !Array.isArray(draft.towers)) {
+		return undefined;
+	}
+	const towers: TowerDraft[] = [];
+	for (const item of draft.towers) {
+		const tower = record(item);
+		if (
+			!tower ||
+			typeof tower.key !== "string" ||
+			typeof tower.name !== "string" ||
+			typeof tower.first !== "string" ||
+			typeof tower.last !== "string" ||
+			typeof tower.perFloor !== "string" ||
+			typeof tower.ground !== "boolean" ||
+			typeof tower.hall !== "boolean"
+		) {
+			return undefined;
+		}
+		towers.push({
+			key: tower.key,
+			name: tower.name,
+			first: tower.first,
+			last: tower.last,
+			perFloor: tower.perFloor,
+			ground: tower.ground,
+			hall: tower.hall,
+		});
+	}
+	if (!Array.isArray(draft.floorAreas) || !Array.isArray(draft.unitTypes)) {
+		return undefined;
+	}
+	if (!Array.isArray(draft.rules)) return undefined;
+	const floorAreas: FloorAreaDraft[] = [];
+	for (const item of draft.floorAreas) {
+		const area = record(item);
+		if (
+			!area ||
+			typeof area.key !== "string" ||
+			typeof area.tower !== "number" ||
+			typeof area.floor !== "string" ||
+			typeof area.name !== "string"
+		) {
+			return undefined;
+		}
+		floorAreas.push({
+			key: area.key,
+			tower: area.tower,
+			floor: area.floor,
+			name: area.name,
+		});
+	}
+	const unitTypes: UnitTypeDraft[] = [];
+	for (const item of draft.unitTypes) {
+		const unitType = record(item);
+		const rooms = unitType && strings(unitType.rooms);
+		if (
+			!unitType ||
+			!rooms ||
+			typeof unitType.key !== "string" ||
+			typeof unitType.name !== "string"
+		) {
+			return undefined;
+		}
+		unitTypes.push({
+			key: unitType.key,
+			name: unitType.name,
+			rooms,
+			...(unitType.existing === true ? { existing: true } : {}),
+		});
+	}
+	const rules: RuleDraft[] = [];
+	for (const item of draft.rules) {
+		const rule = record(item);
+		if (
+			!rule ||
+			typeof rule.key !== "string" ||
+			typeof rule.tower !== "number" ||
+			typeof rule.finals !== "string" ||
+			typeof rule.from !== "string" ||
+			typeof rule.to !== "string" ||
+			typeof rule.unitType !== "string"
+		) {
+			return undefined;
+		}
+		rules.push({
+			key: rule.key,
+			tower: rule.tower,
+			finals: rule.finals,
+			from: rule.from,
+			to: rule.to,
+			unitType: rule.unitType,
+		});
+	}
+	const extend = readExtend(draft.extend);
+	if (draft.extend !== undefined && !extend) return undefined;
+	return {
+		...(extend ? { extend } : {}),
+		numbering: draft.numbering,
+		towers,
+		projectAreas,
+		towerAreas,
+		floorAreas,
+		unitTypes,
+		rules,
+	};
+}
+
+function readExtend(value: unknown): ExtendDraft | undefined {
+	const extend = record(value);
+	if (!extend) return undefined;
+	const takenFloors = extend.takenFloors;
+	const takenUnits = strings(extend.takenUnits);
+	if (
+		typeof extend.towerId !== "string" ||
+		typeof extend.towerName !== "string" ||
+		typeof extend.named !== "boolean" ||
+		typeof extend.lead !== "string" ||
+		!takenUnits ||
+		!Array.isArray(takenFloors) ||
+		!takenFloors.every((floor) => typeof floor === "number")
+	) {
+		return undefined;
+	}
+	return {
+		towerId: extend.towerId,
+		towerName: extend.towerName,
+		named: extend.named,
+		takenFloors,
+		takenUnits,
+		lead: extend.lead,
+	};
+}
+
 export function initialDraft(): WizardDraft {
 	const unitType: UnitTypeDraft = {
 		key: nextUnitTypeKey(),

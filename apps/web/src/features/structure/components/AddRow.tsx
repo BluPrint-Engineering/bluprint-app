@@ -17,6 +17,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
 import { availableUnitsOf } from "../../projects/api";
@@ -59,8 +60,12 @@ function AddForm({
 	hintLoading,
 }: AddRowProps) {
 	const create = useCreateStructureMutation(projectId);
+	const restored = useSessionDraft("create-structure", (variables) =>
+		addedName(variables, parentId, type),
+	);
+	const clearDraft = useClearSessionDraft();
 	const id = useRef(uuidV7());
-	const [name, setName] = useState(suggestion);
+	const [name, setName] = useState(restored ?? suggestion);
 	const [problem, setProblem] = useState<string>();
 	const field = useRef<HTMLInputElement>(null);
 	const saving = create.isPending;
@@ -150,7 +155,10 @@ function AddForm({
 					type="button"
 					variant="outline"
 					disabled={saving}
-					onClick={adding.close}
+					onClick={() => {
+						clearDraft();
+						adding.close();
+					}}
 				>
 					Cancelar
 				</Button>
@@ -159,9 +167,40 @@ function AddForm({
 	);
 }
 
+function addedName(
+	variables: unknown,
+	parentId: string | null,
+	type: AddRowProps["type"],
+): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if ("draft" in variables) return undefined;
+	if (!("locations" in variables) || !Array.isArray(variables.locations)) {
+		return undefined;
+	}
+	if (variables.locations.length !== 1) return undefined;
+	const location = variables.locations[0];
+	if (typeof location !== "object" || location === null) return undefined;
+	if (
+		!("parentId" in location) ||
+		!("type" in location) ||
+		!("name" in location)
+	) {
+		return undefined;
+	}
+	if (location.parentId !== parentId || location.type !== type)
+		return undefined;
+	return typeof location.name === "string" ? location.name : undefined;
+}
+
 export function AddRow(props: AddRowProps) {
 	const { adding, kind, label, blocked, buttonRef } = props;
+	const restored = useSessionDraft("create-structure", (variables) =>
+		addedName(variables, props.parentId, props.type),
+	);
 	const open = adding.is(kind);
+	useEffect(() => {
+		if (restored !== undefined && !open) adding.open(kind);
+	}, [adding, kind, open, restored]);
 	const button = useFocusOnClose(open, buttonRef);
 
 	if (open) return <AddForm {...props} />;

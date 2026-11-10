@@ -7,6 +7,7 @@ import { LockLine } from "@/components/LockLine";
 import { BackLink } from "@/components/PageBand";
 import { StateBlock } from "@/components/StateBlock";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { organizationUnitsQueryOptions } from "../../account/api";
@@ -38,6 +39,26 @@ type Failure =
 	| { kind: "generic" }
 	| { kind: "over-contracted"; excess: number }
 	| { kind: "delivered"; name: string };
+
+function reservationFields(variables: unknown): Drafts | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("items" in variables) || !Array.isArray(variables.items)) {
+		return undefined;
+	}
+	const drafts: Record<string, string> = {};
+	for (const item of variables.items) {
+		if (typeof item !== "object" || item === null) return undefined;
+		if (!("projectId" in item) || !("reserved" in item)) return undefined;
+		if (
+			typeof item.projectId !== "string" ||
+			typeof item.reserved !== "number"
+		) {
+			return undefined;
+		}
+		drafts[item.projectId] = String(item.reserved);
+	}
+	return drafts;
+}
 
 function deliveredMessage(name: string) {
 	return `A obra “${name}” foi entregue enquanto você editava e saiu da lista. As outras reservas continuam aqui: confira e salve de novo.`;
@@ -78,7 +99,9 @@ export function UnitsPage() {
 	const reservations = useQuery(organizationReservationsQueryOptions);
 	const units = useQuery(organizationUnitsQueryOptions);
 	const update = useUpdateReservationsMutation();
-	const [drafts, setDrafts] = useState<Drafts>({});
+	const restored = useSessionDraft("update-reservations", reservationFields);
+	const clearDraft = useClearSessionDraft();
+	const [drafts, setDrafts] = useState<Drafts>(restored ?? {});
 	const [touched, setTouched] = useState<Touched>({});
 	const [failure, setFailure] = useState<Failure>();
 
@@ -137,6 +160,7 @@ export function UnitsPage() {
 	}
 
 	function discard() {
+		clearDraft();
 		setDrafts({});
 		setTouched({});
 		setFailure(undefined);

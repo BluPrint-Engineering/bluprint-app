@@ -8,6 +8,7 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import { isProjectDelivered } from "../../projects/api";
 import { namesTakenOf, useRenameLocationMutation } from "../api";
@@ -54,7 +55,11 @@ function RenameContent({
 }) {
 	const formId = useId();
 	const rename = useRenameLocationMutation(projectId);
-	const [name, setName] = useState(target.name);
+	const restored = useSessionDraft("rename-location", (variables) =>
+		renamed(variables, target.id),
+	);
+	const clearDraft = useClearSessionDraft();
+	const [name, setName] = useState(restored ?? target.name);
 	const [problem, setProblem] = useState<string>();
 	const saving = rename.isPending;
 	const mono = target.type === "unit";
@@ -67,16 +72,21 @@ function RenameContent({
 			: takenText(target.type, name.trim(), target.scope, target.towerName));
 	const failed = rename.isError && taken === undefined;
 
+	function finish() {
+		clearDraft();
+		onDone();
+	}
+
 	function submit() {
 		const found = nameProblem(name);
 		if (found) return setProblem(found);
-		if (name.trim() === target.name) return onDone();
+		if (name.trim() === target.name) return finish();
 		rename.mutate(
 			{ locationId: target.id, name },
 			{
-				onSuccess: onDone,
+				onSuccess: finish,
 				onError: (failure) => {
-					if (isProjectDelivered(failure)) onDone();
+					if (isProjectDelivered(failure)) finish();
 				},
 			},
 		);
@@ -137,9 +147,21 @@ function RenameContent({
 			saving={saving}
 			submitLabel="Salvar"
 			pendingLabel="Salvando…"
-			onCancel={onDone}
+			onCancel={finish}
 		/>
 	);
+}
+
+function renamed(variables: unknown, locationId: string): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("locationId" in variables) || !("name" in variables)) return undefined;
+	if (
+		variables.locationId !== locationId ||
+		typeof variables.name !== "string"
+	) {
+		return undefined;
+	}
+	return variables.name;
 }
 
 export function RenameDialog({

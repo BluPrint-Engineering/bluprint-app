@@ -1,3 +1,4 @@
+import { SESSION_CACHE_SECONDS } from "@bluprint/shared";
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth";
 
@@ -10,8 +11,8 @@ export const sessionQueryOptions = queryOptions({
 		if (error) throw new Error(error.message ?? "Session check failed");
 		return data;
 	},
-	// a revoked session can go unnoticed for this long on navigation; any 401 closes the window
-	staleTime: 5 * 60 * 1000,
+	// a revoked session can go unnoticed for this long: the API trusts the cookie cache until it expires (ADR 0077)
+	staleTime: SESSION_CACHE_SECONDS * 1000,
 	// queryClient.query() retries 0 times unless told otherwise, which would fail on the first flicker of signal
 	retry: 3,
 });
