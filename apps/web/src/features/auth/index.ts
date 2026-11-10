@@ -6,6 +6,7 @@ export {
 } from "./api";
 export { AuthShell } from "./components/AuthShell";
 export { SessionCheckFailed } from "./components/SessionCheckFailed";
+export { SessionCover } from "./components/SessionCover";
 export { SessionSplash } from "./components/SessionSplash";
 export { LoginPage } from "./LoginPage/LoginPage";
 export { SignupPage } from "./SignupPage/SignupPage";

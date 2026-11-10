@@ -490,6 +490,33 @@ describe("return from the background", () => {
 		expect(router.state.location.pathname).toBe("/projects");
 	});
 
+	test("hides an open menu with the screen while the session is checked", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const { fetchMock } = stubApi(signedIn);
+		renderAt("/projects");
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Conta de Ana Ribeiro" }),
+		);
+		const signOut = await screen.findByRole("menuitem", { name: "Sair" });
+
+		setDocumentHidden(true);
+		now += 6 * 60 * 1000;
+		const original = fetchMock.getMockImplementation();
+		fetchMock.mockImplementation(
+			(input: RequestInfo | URL, init?: RequestInit) => {
+				if (String(input).includes("/get-session")) {
+					return new Promise<Response>(() => {});
+				}
+				return original?.(input, init) ?? json({});
+			},
+		);
+		setDocumentHidden(false);
+
+		expect(await screen.findByText("Verificando sua sessão…")).toBeVisible();
+		expect(signOut).not.toBeVisible();
+	});
+
 	test("leaves the screen in place when the absence was under 5 minutes", async () => {
 		let now = 1_700_000_000_000;
 		vi.spyOn(Date, "now").mockImplementation(() => now);
@@ -549,11 +576,20 @@ describe("return from the background", () => {
 	])(
 		"does not ask the server while the tab stays %s, even an hour later",
 		async (_state, hidden) => {
-			const { fetchMock } = stubApi(signedIn);
-			renderAt("/projects");
-			await screen.findByText("Obras");
-			vi.useFakeTimers({ toFake: ["Date", "setTimeout", "setInterval"] });
+			vi.useFakeTimers({
+				shouldAdvanceTime: true,
+				toFake: [
+					"Date",
+					"setTimeout",
+					"clearTimeout",
+					"setInterval",
+					"clearInterval",
+				],
+			});
 			try {
+				const { fetchMock } = stubApi(signedIn);
+				renderAt("/projects");
+				await screen.findByText("Obras");
 				const before = fetchMock.mock.calls.length;
 				if (hidden) setDocumentHidden(true);
 				await act(() => vi.advanceTimersByTimeAsync(60 * 60 * 1000));

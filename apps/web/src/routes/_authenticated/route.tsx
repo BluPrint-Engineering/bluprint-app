@@ -3,6 +3,7 @@ import { AppLayout } from "@/features/account";
 import {
 	dropDraftsOfOtherAccounts,
 	SessionCheckFailed,
+	SessionCover,
 	SessionSplash,
 	sessionQueryOptions,
 	useReturnSessionCheck,
@@ -29,18 +30,20 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
 	const { session } = Route.useRouteContext();
 	const returned = useReturnSessionCheck();
-	const covered = returned.phase !== "shown";
 	return (
 		<>
-			{returned.phase === "checking" && <SessionSplash />}
-			{returned.phase === "failed" && (
-				<SessionCheckFailed onRetry={returned.retry} />
+			{returned.phase !== "shown" && (
+				<SessionCover>
+					{returned.phase === "checking" ? (
+						<SessionSplash />
+					) : (
+						<SessionCheckFailed onRetry={returned.retry} />
+					)}
+				</SessionCover>
 			)}
-			<div className="contents" hidden={covered} inert={covered}>
-				<AppLayout user={session.user}>
-					<Outlet />
-				</AppLayout>
-			</div>
+			<AppLayout user={session.user}>
+				<Outlet />
+			</AppLayout>
 		</>
 	);
 }
