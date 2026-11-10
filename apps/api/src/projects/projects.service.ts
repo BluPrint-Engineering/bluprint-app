@@ -223,6 +223,19 @@ export class ProjectsService {
 		return found;
 	}
 
+	@Transactional(Propagation.NotSupported)
+	async recordUse(
+		userId: string | undefined,
+		projectIds: readonly string[],
+	): Promise<void> {
+		if (!userId || projectIds.length === 0) return;
+		try {
+			await this.projects.recordUse(userId, projectIds);
+		} catch {
+			// A failed use write must not fail the request (ADR 0078).
+		}
+	}
+
 	async listManagers(userId: string): Promise<ProjectManager[]> {
 		const membership = await this.members.findByUser(userId);
 		if (membership?.role !== "admin") {

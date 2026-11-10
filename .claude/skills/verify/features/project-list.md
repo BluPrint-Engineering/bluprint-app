@@ -1,6 +1,6 @@
 # Project list
 
-`/projects` (Obras) is the home screen: a card per project the user can see, each one a link to the project's home, with a total such as `14 obras`. The organization's admin also sees the free units and `Nova obra`: beside the title on the desktop, in a fixed bar at the bottom on the phone, inside the empty block when there is no project. On the phone the list is one column and loads more as it scrolls; on the desktop it is paged, with the page in the address and a pager at the bottom.
+`/projects` (Obras) is the home screen: a card per project the user can see, each one a link to the project's home, with a total such as `14 obras`. It opens in `Meu uso recente` (the label on `Ordenar:`): the project that person last entered or changed is first, projects they never entered follow by the project's last activity, and the choice is absent from the address. Opening a project and coming back puts that project first on the phone and the desktop. The organization's admin also sees the free units and `Nova obra`: beside the title on the desktop, in a fixed bar at the bottom on the phone, inside the empty block when there is no project. On the phone the list is one column and loads more as it scrolls; on the desktop it is paged, with the page in the address and a pager at the bottom.
 
 ## Sub-features
 

@@ -4,7 +4,7 @@ import { projectStatusFilterSchema } from "./project-status.js";
 export const PROJECT_PAGE_SIZE = 12;
 export const MAX_PROJECT_PAGE_SIZE = 100;
 
-export const projectSorts = ["recent", "name", "activity"] as const;
+export const projectSorts = ["myUse", "recent", "name", "activity"] as const;
 
 export const projectSortSchema = z.enum(projectSorts);
 
@@ -33,10 +33,10 @@ export const projectListQuerySchema = z.object({
 			"`active`: projects in progress. `delivered`: handed over. `all`: both. `total` and `items` follow it; `counts` does not.",
 		example: "delivered",
 	}),
-	sort: projectSortSchema.default("recent").meta({
+	sort: projectSortSchema.default("myUse").meta({
 		description:
-			"`recent`: newest first. `name`: alphabetical in pt-BR, where accents and case never move a name out of its letter. `activity`: most recent last activity first. Ties break by id, so pages never overlap.",
-		example: "name",
+			"`myUse`: the caller's recent use first; projects they never used come after, by the project's last activity. `recent`: newest first. `name`: alphabetical in pt-BR, where accents and case never move a name out of its letter. `activity`: most recent last activity first. Ties break by id, so pages never overlap.",
+		example: "myUse",
 	}),
 	manager: z.string().min(1).optional().meta({
 		description:

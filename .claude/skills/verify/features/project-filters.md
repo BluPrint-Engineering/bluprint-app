@@ -1,6 +1,6 @@
 # Project filters, search and sort
 
-On `/projects` a user narrows the list by name, by status (`Em andamento`, `Entregue`, `Todas`) and, as an admin, by manager, and orders it (`Mais recentes`, `Nome A–Z`, `Atividade recente`). Every choice is written to the address, so a filtered list can be reloaded or shared. The desktop has these controls in a toolbar; the phone keeps search on screen and the rest in a `Filtros` sheet.
+On `/projects` a user narrows the list by name, by status (`Em andamento`, `Entregue`, `Todas`) and, as an admin, by manager, and orders it (`Meu uso recente`, `Mais recentes`, `Nome A–Z`, `Atividade recente`). `Meu uso recente` is the default: the projects that person last entered or changed come first, and it is left out of the address, like the other defaults. `Atividade recente` still means the project's last change by anyone. Every choice that is not a default is written to the address, so a filtered list can be reloaded or shared. The desktop has these controls in a toolbar; the phone keeps search on screen and the rest in a `Filtros` sheet.
 
 ## Sub-features
 
@@ -29,7 +29,7 @@ Preconditions:
 - **Desktop manager.** `page.getByRole("button", { name: "Gerente: Todos" }).click()`, then `page.getByRole("menuitemradio", { name: "Diego Almeida" }).click()`. The address matches `/projects?manager=`, `2 obras` is visible with `Edifício Aurora` and `Condomínio Porto Belo`, and `Residencial Jardins` is hidden.
 - **Desktop clear.** `page.getByRole("button", { name: "Limpar filtros" }).click()`. The address is `/projects` and `14 obras` is back.
 - **Desktop status.** `page.getByRole("radio", { name: "Entregue" }).click()`. The address gains `status=delivered` and the delivered projects (`Residencial Vila Nova`, `Edifício Lagoa Azul`, `Condomínio Bela Vista`) are listed.
-- **Desktop sort.** `page.getByRole("button", { name: /^Ordenar:/ }).click()`, then `page.getByRole("menuitemradio", { name: "Nome A–Z" }).click()`. The address gains `sort=name` and the first card is `Condomínio Porto Belo`.
+- **Desktop sort.** The trigger reads `Ordenar: Meu uso recente` and the address has no `sort`. `page.getByRole("button", { name: /^Ordenar:/ }).click()`, then `page.getByRole("menuitemradio", { name: "Nome A–Z" }).click()`. The address gains `sort=name` and the first card is `Condomínio Porto Belo`. `Atividade recente` stays in the menu.
 - **Phone sheet.** `page.getByRole("button", { name: "Filtros" }).click()`; in `page.getByRole("dialog", { name: "Filtros" })` click `getByRole("radio", { name: "Diego Almeida" })`, then `getByRole("button", { name: "Ver 2 obras" })`. The address matches `/projects?manager=` and `page.getByText("2 obras", { exact: true })` is visible. With a filter active the button is named `Filtros, 1 ativo`.
 - **No match.** Search `zzz`. `Nenhuma obra encontrada` is visible.
 
