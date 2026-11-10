@@ -42,6 +42,10 @@ _Avoid_: settings, setup
 **Last activity** (pt-BR: *última atividade*):
 When anyone last changed a project's operational content: pins, photos, plans or structure. Reading and exporting are not activity.
 
+**My recent use** (pt-BR: *meu uso recente*):
+When a person last entered a project or changed it. Per person and per project. Opening the project list does not count. Another person's change does not move it.
+_Avoid_: histórico, atividade recente
+
 **Organization membership** (pt-BR: *vínculo com a organização*; table `member`):
 A person's link to an organization; holds their default role. A person has at most one, and joins only projects of that organization.
 _Avoid_: vínculo

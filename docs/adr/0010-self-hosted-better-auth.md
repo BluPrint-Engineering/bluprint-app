@@ -4,7 +4,7 @@ Authentication is Better Auth running inside the API with the Drizzle adapter, m
 
 `src/auth/auth.ts` builds the instance from the injected Drizzle database, `src/auth/auth.module.ts` hands it to the Nest package through `forRootAsync`, and `auth.config.ts` at the workspace root is what the Better Auth CLI reads to generate the schema (same place and reason as `drizzle.config.ts`).
 
-The session travels as an `httpOnly`, `SameSite=Lax` cookie (`Secure` in production), valid for **90 days and renewed after each day of use**, so people in the field are not asked to log in on every visit.
+The session travels as an `httpOnly`, `SameSite=Lax` cookie (`Secure` in production). How long it lasts is [0077](0077-sessions-end-after-8-hours-without-use.md): it ends after 8 hours without use and has no absolute cap.
 
 ## Consequences
 

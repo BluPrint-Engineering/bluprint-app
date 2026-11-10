@@ -144,7 +144,7 @@ No third-party API is called at runtime yet: Better Auth is a library inside the
 
 ## 7. Security Considerations
 
-- **Authentication**: email and password through Better Auth; `httpOnly`, `SameSite=Lax` session cookie valid 90 days, renewed per day of use ([0010](adr/0010-self-hosted-better-auth.md)). Self-signup is scaffolding, off by default ([0011](adr/0011-self-signup-is-scaffolding.md)).
+- **Authentication**: email and password through Better Auth; `httpOnly`, `SameSite=Lax` session cookie that ends after 8 hours without use ([0077](adr/0077-sessions-end-after-8-hours-without-use.md), mounted as in [0010](adr/0010-self-hosted-better-auth.md)). Self-signup is scaffolding, off by default ([0011](adr/0011-self-signup-is-scaffolding.md)).
 - **Authorization**: a global `AuthGuard` protects every route; `@AllowAnonymous()` opts one out, and only `health` does. Roles are read from the project membership ([0022](adr/0022-roles-live-on-project-membership.md)); response DTOs strip fields outside the contract ([0004](adr/0004-response-dto-on-every-route.md)).
 - **Defenses**: `helmet`; `trustedOrigins` against CSRF; Better Auth's rate limit written out as 5 sign-in attempts per minute per IP, keyed on the `X-Client-IP` the Pages proxy sets, behind the `PROXY_SECRET` gate that only lets that proxy through ([0066](adr/0066-api-only-answers-the-pages-proxy.md)); `BETTER_AUTH_SECRET` required by `envSchema`, so the API refuses to boot without it, and `PROXY_SECRET` too when `NODE_ENV=production`.
 - **Platform admin** never sees project content ([0021](adr/0021-platform-admin-sees-only-metadata.md)).
