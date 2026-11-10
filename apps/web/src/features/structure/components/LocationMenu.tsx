@@ -52,6 +52,7 @@ export function LocationMenu({
 	duplicate,
 	variant = "ghost",
 	movable = false,
+	reopensReservation = false,
 	removal,
 	onCloseAutoFocus,
 	children,
@@ -62,6 +63,7 @@ export function LocationMenu({
 	duplicate?: DuplicateTarget;
 	variant?: "ghost" | "outline";
 	movable?: boolean;
+	reopensReservation?: boolean;
 	removal: Removal;
 	onCloseAutoFocus?: (event: Event) => void;
 	children?: ReactNode;
@@ -73,8 +75,15 @@ export function LocationMenu({
 		locationDraft(variables, target.id),
 	);
 	const [renaming, setRenaming] = useState(restoredRename !== undefined);
+	const restoredReservation = useSessionDraft(
+		"change-reservation",
+		(variables) => (typeof variables === "number" ? variables : undefined),
+	);
 	const [duplicating, setDuplicating] = useState(
-		restoredDuplicate !== undefined,
+		restoredDuplicate !== undefined ||
+			(reopensReservation &&
+				duplicate !== undefined &&
+				restoredReservation !== undefined),
 	);
 	const [confirming, setConfirming] = useState(false);
 	const trigger = useRef<HTMLButtonElement>(null);

@@ -6,6 +6,10 @@ export function SessionCover({ children }: { children: ReactNode }) {
 		const element = document.createElement("div");
 		// a modal Radix dialog sets pointer-events: none on the body, which would leave the retry button dead
 		element.style.pointerEvents = "auto";
+		// Radix dismisses an open dialog on any pointerdown or focusin that reaches the document outside it
+		for (const type of ["pointerdown", "focusin"]) {
+			element.addEventListener(type, (event) => event.stopPropagation());
+		}
 		return element;
 	});
 

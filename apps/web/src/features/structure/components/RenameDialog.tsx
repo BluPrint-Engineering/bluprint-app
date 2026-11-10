@@ -58,7 +58,6 @@ function RenameContent({
 	const restored = useSessionDraft("rename-location", (variables) =>
 		renamed(variables, target.id),
 	);
-	const clearDraft = useClearSessionDraft("rename-location");
 	const [name, setName] = useState(restored ?? target.name);
 	const [problem, setProblem] = useState<string>();
 	const saving = rename.isPending;
@@ -72,21 +71,16 @@ function RenameContent({
 			: takenText(target.type, name.trim(), target.scope, target.towerName));
 	const failed = rename.isError && taken === undefined;
 
-	function finish() {
-		clearDraft();
-		onDone();
-	}
-
 	function submit() {
 		const found = nameProblem(name);
 		if (found) return setProblem(found);
-		if (name.trim() === target.name) return finish();
+		if (name.trim() === target.name) return onDone();
 		rename.mutate(
 			{ locationId: target.id, name },
 			{
-				onSuccess: finish,
+				onSuccess: onDone,
 				onError: (failure) => {
-					if (isProjectDelivered(failure)) finish();
+					if (isProjectDelivered(failure)) onDone();
 				},
 			},
 		);
@@ -147,7 +141,7 @@ function RenameContent({
 			saving={saving}
 			submitLabel="Salvar"
 			pendingLabel="Salvando…"
-			onCancel={finish}
+			onCancel={onDone}
 		/>
 	);
 }
@@ -172,11 +166,17 @@ export function RenameDialog({
 	returnFocus,
 }: RenameDialogProps) {
 	const field = useRef<HTMLInputElement>(null);
+	const clearDraft = useClearSessionDraft("rename-location");
+
+	function changeOpen(next: boolean) {
+		if (!next) clearDraft();
+		onOpenChange(next);
+	}
 
 	return (
 		<NameDialogFrame
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={changeOpen}
 			returnFocus={returnFocus}
 			field={field}
 		>
@@ -186,7 +186,7 @@ export function RenameDialog({
 					target={target}
 					desktop={desktop}
 					field={field}
-					onDone={() => onOpenChange(false)}
+					onDone={() => changeOpen(false)}
 				/>
 			)}
 		</NameDialogFrame>

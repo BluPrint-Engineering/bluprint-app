@@ -383,6 +383,34 @@ describe("session draft", () => {
 		).toHaveValue("");
 	});
 
+	test("keeps what was sent when the save comes long after the screen opened", async () => {
+		vi.useFakeTimers({
+			shouldAdvanceTime: true,
+			toFake: [
+				"Date",
+				"setTimeout",
+				"clearTimeout",
+				"setInterval",
+				"clearInterval",
+			],
+		});
+		try {
+			const api = newProjectApi(signedIn);
+			renderAt("/projects/new");
+			await fillNewProject("Casa Moinhos", "12");
+			await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
+			api.setSession(null);
+			await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
+			await signInAs("ana@horizonte.test");
+
+			expect(
+				await screen.findByRole("textbox", { name: "Nome da obra" }),
+			).toHaveValue("Casa Moinhos");
+		} finally {
+			vi.useRealTimers();
+		}
+	});
+
 	test("forgets the draft after the same form saves", async () => {
 		const api = newProjectApi(signedIn);
 		const { router } = renderAt("/projects/new");
@@ -515,6 +543,36 @@ describe("return from the background", () => {
 
 		expect(await screen.findByText("Verificando sua sessão…")).toBeVisible();
 		expect(signOut).not.toBeVisible();
+	});
+
+	test("keeps an open menu when the waiting screen is tapped", async () => {
+		let now = 1_700_000_000_000;
+		vi.spyOn(Date, "now").mockImplementation(() => now);
+		const { fetchMock } = stubApi(signedIn);
+		renderAt("/projects");
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Conta de Ana Ribeiro" }),
+		);
+		const signOut = await screen.findByRole("menuitem", { name: "Sair" });
+
+		setDocumentHidden(true);
+		now += 6 * 60 * 1000;
+		let release: (response: Response) => void = () => {};
+		const pending = new Promise<Response>((resolve) => {
+			release = resolve;
+		});
+		const original = fetchMock.getMockImplementation();
+		fetchMock.mockImplementation(
+			(input: RequestInfo | URL, init?: RequestInit) => {
+				if (String(input).includes("/get-session")) return pending;
+				return original?.(input, init) ?? json({});
+			},
+		);
+		setDocumentHidden(false);
+		await userEvent.click(await screen.findByText("Verificando sua sessão…"));
+		release(new Response(JSON.stringify(signedIn), { status: 200 }));
+
+		await waitFor(() => expect(signOut).toBeVisible());
 	});
 
 	test("leaves the screen in place when the absence was under 5 minutes", async () => {
@@ -686,6 +744,54 @@ describe("actions that must not come back", () => {
 			screen.queryByRole("textbox", { name: "Adicionar unidade" }),
 		).not.toBeInTheDocument();
 		expect(api.created).toHaveLength(1);
+	});
+
+	test("does not reopen a restored rename once it is dismissed", async () => {
+		const ninth = floor("9º andar", ["901", "902"]);
+		const tenth = floor("10º andar", ["1001"]);
+		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
+		const api = writableApi(
+			obra,
+			structureOf([tower("Torre A", [ninth, tenth])]),
+			{ rename: () => json({}, 401) },
+		);
+		const stub = stubApi(signedIn, { api: api.handler });
+		const { router } = renderAt(`/projects/${obra.id}/locations/${ninth.id}`);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Ações da unidade 902" }),
+		);
+		await userEvent.click(screen.getByRole("menuitem", { name: "Renomear" }));
+		const field = await screen.findByRole("textbox", { name: "Nome" });
+		await userEvent.clear(field);
+		await userEvent.type(field, "950");
+		stub.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		expect(await screen.findByRole("textbox", { name: "Nome" })).toHaveValue(
+			"950",
+		);
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() => {
+			expect(
+				screen.queryByRole("textbox", { name: "Nome" }),
+			).not.toBeInTheDocument();
+		});
+		await router.navigate({
+			to: "/projects/$projectId/locations/$locationId",
+			params: { projectId: obra.id, locationId: tenth.id },
+		});
+		await screen.findByRole("button", { name: "Ações da unidade 1001" });
+		await router.navigate({
+			to: "/projects/$projectId/locations/$locationId",
+			params: { projectId: obra.id, locationId: ninth.id },
+		});
+		await screen.findByRole("button", { name: "Ações da unidade 902" });
+
+		expect(
+			screen.queryByRole("textbox", { name: "Nome" }),
+		).not.toBeInTheDocument();
 	});
 
 	test("does not reopen delivery or send it again after signing back in", async () => {

@@ -56,14 +56,26 @@ export interface WizardDraft {
 export const SINGLE_TOWER_NAME = "Torre A";
 export const FLOOR_HALL = "Hall";
 
+const TOWER_KEY = "tower-";
 let towerKeys = 0;
-const nextTowerKey = () => `tower-${++towerKeys}`;
+const nextTowerKey = () => `${TOWER_KEY}${++towerKeys}`;
 
+const UNIT_TYPE_KEY = "unit-type-";
 let typeKeys = 0;
-const nextUnitTypeKey = () => `unit-type-${++typeKeys}`;
+const nextUnitTypeKey = () => `${UNIT_TYPE_KEY}${++typeKeys}`;
 
+const RULE_KEY = "rule-";
 let ruleKeys = 0;
-const nextRuleKey = () => `rule-${++ruleKeys}`;
+const nextRuleKey = () => `${RULE_KEY}${++ruleKeys}`;
+
+function highestKey(items: { key: string }[], prefix: string): number {
+	return Math.max(
+		0,
+		...items.map(({ key }) =>
+			key.startsWith(prefix) ? Number(key.slice(prefix.length)) || 0 : 0,
+		),
+	);
+}
 
 export const FIRST_UNIT_TYPE_NAME = "Tipologia A";
 
@@ -184,6 +196,9 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 	}
 	const extend = readExtend(draft.extend);
 	if (draft.extend !== undefined && !extend) return undefined;
+	towerKeys = Math.max(towerKeys, highestKey(towers, TOWER_KEY));
+	typeKeys = Math.max(typeKeys, highestKey(unitTypes, UNIT_TYPE_KEY));
+	ruleKeys = Math.max(ruleKeys, highestKey(rules, RULE_KEY));
 	return {
 		...(extend ? { extend } : {}),
 		numbering: draft.numbering,

@@ -109,10 +109,13 @@ function DuplicateContent({
 	const restored = useSessionDraft("duplicate-location", (variables) =>
 		duplicateName(variables, locationOf(source)),
 	);
-	const clearDraft = useClearSessionDraft("duplicate-location");
 	const [name, setName] = useState(restored ?? suggestion);
 	const [problem, setProblem] = useState<string>();
-	const [reserving, setReserving] = useState(false);
+	const restoredReservation = useSessionDraft(
+		"change-reservation",
+		(variables) => (typeof variables === "number" ? variables : undefined),
+	);
+	const [reserving, setReserving] = useState(restoredReservation !== undefined);
 	const alterReservation = useRef<HTMLButtonElement>(null);
 	const saving = duplicate.isPending;
 	const mono = source.type === "unit";
@@ -155,11 +158,6 @@ function DuplicateContent({
 		};
 	}, [gone, queryClient, projectId]);
 
-	function finish() {
-		clearDraft();
-		onDone();
-	}
-
 	function idFor(key: string) {
 		let id = ids.current.get(key);
 		if (!id) {
@@ -185,10 +183,10 @@ function DuplicateContent({
 			{
 				onSuccess: () => {
 					toast.success(duplicatedToast(source.type, finalName));
-					finish();
+					onDone();
 				},
 				onError: (failure) => {
-					if (isProjectDelivered(failure)) finish();
+					if (isProjectDelivered(failure)) onDone();
 					if (failure instanceof StaleCopyError) {
 						void queryClient.invalidateQueries({
 							queryKey: ["structure", projectId],
@@ -312,7 +310,7 @@ function DuplicateContent({
 				pendingLabel="Duplicando…"
 				SubmitIcon={Copy}
 				submitDisabled={over || tooLarge}
-				onCancel={finish}
+				onCancel={onDone}
 			/>
 			{admin && project.data && (
 				<ChangeReservationDialog
@@ -362,16 +360,22 @@ export function DuplicateDialog({
 }: DuplicateDialogProps) {
 	const structure = useQuery(structureQueryOptions(projectId));
 	const field = useRef<HTMLInputElement>(null);
+	const clearDraft = useClearSessionDraft("duplicate-location");
 	const source =
 		structure.data &&
 		findDuplicateSource(structure.data, target.type, target.id);
 
 	if (!source || !structure.data) return null;
 
+	function changeOpen(next: boolean) {
+		if (!next) clearDraft();
+		onOpenChange(next);
+	}
+
 	return (
 		<NameDialogFrame
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={changeOpen}
 			returnFocus={returnFocus}
 			field={field}
 		>
@@ -383,7 +387,7 @@ export function DuplicateDialog({
 					suggestion={suggestedCopyName(source, structure.data)}
 					desktop={desktop}
 					field={field}
-					onDone={() => onOpenChange(false)}
+					onDone={() => changeOpen(false)}
 				/>
 			)}
 		</NameDialogFrame>

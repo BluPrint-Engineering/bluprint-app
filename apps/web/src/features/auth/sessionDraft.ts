@@ -1,6 +1,3 @@
-import type { QueryClient } from "@tanstack/react-query";
-import { sessionQueryOptions } from "./api";
-
 export const sessionDraftKinds = [
 	"create-project",
 	"rename-project",
@@ -110,10 +107,6 @@ export function dropDraftsOfOtherAccounts(accountId: string): void {
 			localStorage.removeItem(key);
 		}
 	}
-}
-
-export function cachedAccountId(queryClient: QueryClient): string | undefined {
-	return queryClient.getQueryData(sessionQueryOptions.queryKey)?.user.id;
 }
 
 function storageKey(accountId: string, path: string): string {

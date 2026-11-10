@@ -1,7 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { createRouter, type RouterHistory } from "@tanstack/react-router";
 import {
-	cachedAccountId,
 	discardSession,
 	forgetFailedSubmission,
 	rememberFailedSubmission,
@@ -25,13 +24,18 @@ export function createApp({ history }: { history?: RouterHistory } = {}) {
 		});
 	}
 
+	function signedInAccountId() {
+		return router.state.matches.find((m) => m.routeId === "/_authenticated")
+			?.context.session?.user.id;
+	}
+
 	const queryClient = new QueryClient({
 		queryCache: new QueryCache({ onError: onUnauthorized }),
 		mutationCache: new MutationCache({
 			onError: (error, variables, _result, mutation) => {
 				if (error instanceof ApiError && error.status === 401) {
 					rememberFailedSubmission({
-						accountId: cachedAccountId(queryClient),
+						accountId: signedInAccountId(),
 						path: screenPath(router.state.location),
 						kind: mutation.options.meta?.sessionDraft,
 						variables,
@@ -41,7 +45,7 @@ export function createApp({ history }: { history?: RouterHistory } = {}) {
 			},
 			onSuccess: (_data, _variables, _result, mutation) => {
 				forgetFailedSubmission({
-					accountId: cachedAccountId(queryClient),
+					accountId: signedInAccountId(),
 					path: screenPath(router.state.location),
 					kind: mutation.options.meta?.sessionDraft,
 				});
