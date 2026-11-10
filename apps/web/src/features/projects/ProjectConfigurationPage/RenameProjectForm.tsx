@@ -24,7 +24,7 @@ export function RenameProjectForm({ project, onDone }: RenameProjectFormProps) {
 	const restored = useSessionDraft("rename-project", (variables) =>
 		typeof variables === "string" ? variables : undefined,
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("rename-project");
 	const {
 		register,
 		handleSubmit,

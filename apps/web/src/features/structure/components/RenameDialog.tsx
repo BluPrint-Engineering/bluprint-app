@@ -58,7 +58,7 @@ function RenameContent({
 	const restored = useSessionDraft("rename-location", (variables) =>
 		renamed(variables, target.id),
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("rename-location");
 	const [name, setName] = useState(restored ?? target.name);
 	const [problem, setProblem] = useState<string>();
 	const saving = rename.isPending;

@@ -100,7 +100,7 @@ export function UnitsPage() {
 	const units = useQuery(organizationUnitsQueryOptions);
 	const update = useUpdateReservationsMutation();
 	const restored = useSessionDraft("update-reservations", reservationFields);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("update-reservations");
 	const [drafts, setDrafts] = useState<Drafts>(restored ?? {});
 	const [touched, setTouched] = useState<Touched>({});
 	const [failure, setFailure] = useState<Failure>();

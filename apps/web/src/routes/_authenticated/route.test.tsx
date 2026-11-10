@@ -460,7 +460,7 @@ describe("return from the background", () => {
 		vi.spyOn(Date, "now").mockImplementation(() => now);
 		const { fetchMock } = stubApi(signedIn);
 		const { router } = renderAt("/projects");
-		await screen.findByText("Obras");
+		const heading = await screen.findByText("Obras");
 		const before = sessionChecks(fetchMock);
 
 		setDocumentHidden(true);
@@ -481,11 +481,12 @@ describe("return from the background", () => {
 		setDocumentHidden(false);
 
 		expect(await screen.findByText("Verificando sua sessão…")).toBeVisible();
-		expect(screen.queryByText("Obras")).not.toBeInTheDocument();
+		expect(heading).not.toBeVisible();
 		expect(sessionChecks(fetchMock)).toBeGreaterThan(before);
 
 		release(new Response(JSON.stringify(signedIn), { status: 200 }));
-		expect(await screen.findByText("Obras")).toBeVisible();
+		await waitFor(() => expect(heading).toBeVisible());
+		expect(screen.getByText("Obras")).toBe(heading);
 		expect(router.state.location.pathname).toBe("/projects");
 	});
 
@@ -542,22 +543,27 @@ describe("return from the background", () => {
 		expect(router.state.location.search).toEqual({ redirect: "/projects" });
 	});
 
-	test("does not ask the server while the tab stays hidden, even an hour later", async () => {
-		let now = 1_700_000_000_000;
-		vi.spyOn(Date, "now").mockImplementation(() => now);
-		const { fetchMock } = stubApi(signedIn);
-		renderAt("/projects");
-		await screen.findByText("Obras");
-		const before = fetchMock.mock.calls.length;
-		setDocumentHidden(true);
-		now += 60 * 60 * 1000;
-		await act(async () => {
-			await new Promise((resolve) => setTimeout(resolve, 30));
-		});
+	test.each([
+		["hidden", true],
+		["visible", false],
+	])(
+		"does not ask the server while the tab stays %s, even an hour later",
+		async (_state, hidden) => {
+			const { fetchMock } = stubApi(signedIn);
+			renderAt("/projects");
+			await screen.findByText("Obras");
+			vi.useFakeTimers({ toFake: ["Date", "setTimeout", "setInterval"] });
+			try {
+				const before = fetchMock.mock.calls.length;
+				if (hidden) setDocumentHidden(true);
+				await act(() => vi.advanceTimersByTimeAsync(60 * 60 * 1000));
 
-		expect(fetchMock.mock.calls.length).toBe(before);
-		expect(screen.getByText("Obras")).toBeVisible();
-	});
+				expect(fetchMock.mock.calls.length).toBe(before);
+			} finally {
+				vi.useRealTimers();
+			}
+		},
+	);
 });
 
 const OBRA = { ...project(7), name: "Casa Moinhos" };
@@ -611,6 +617,39 @@ describe("actions that must not come back", () => {
 		expect(screen.getByRole("textbox", { name: "Nome da obra" })).toHaveValue(
 			"Casa Moinhos",
 		);
+	});
+
+	test("keeps a restored add form closed once it is cancelled", async () => {
+		const ninth = floor("9º andar", ["901", "902"]);
+		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
+		const api = writableApi(obra, structureOf([tower("Torre A", [ninth])]), {
+			create: () => json({}, 401),
+		});
+		const stub = stubApi(signedIn, { api: api.handler });
+		renderAt(`/projects/${obra.id}/locations/${ninth.id}`);
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Adicionar unidade" }),
+		);
+		const field = screen.getByRole("textbox", { name: "Adicionar unidade" });
+		await userEvent.clear(field);
+		await userEvent.type(field, "950");
+		stub.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		expect(
+			await screen.findByRole("textbox", { name: "Adicionar unidade" }),
+		).toHaveValue("950");
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+		expect(
+			await screen.findByRole("button", { name: "Adicionar unidade" }),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("textbox", { name: "Adicionar unidade" }),
+		).not.toBeInTheDocument();
+		expect(api.created).toHaveLength(1);
 	});
 
 	test("does not reopen delivery or send it again after signing back in", async () => {

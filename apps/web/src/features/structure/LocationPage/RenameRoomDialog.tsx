@@ -32,7 +32,7 @@ export function RenameRoomDialog({
 		}
 		return variables.name;
 	});
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("rename-room");
 	const [name, setName] = useState(restored ?? room.name);
 	const [error, setError] = useState<string>();
 

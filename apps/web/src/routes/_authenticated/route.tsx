@@ -29,13 +29,18 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthenticatedLayout() {
 	const { session } = Route.useRouteContext();
 	const returned = useReturnSessionCheck();
-	if (returned.phase === "checking") return <SessionSplash />;
-	if (returned.phase === "failed") {
-		return <SessionCheckFailed onRetry={returned.retry} />;
-	}
+	const covered = returned.phase !== "shown";
 	return (
-		<AppLayout user={session.user}>
-			<Outlet />
-		</AppLayout>
+		<>
+			{returned.phase === "checking" && <SessionSplash />}
+			{returned.phase === "failed" && (
+				<SessionCheckFailed onRetry={returned.retry} />
+			)}
+			<div className="contents" hidden={covered} inert={covered}>
+				<AppLayout user={session.user}>
+					<Outlet />
+				</AppLayout>
+			</div>
+		</>
 	);
 }

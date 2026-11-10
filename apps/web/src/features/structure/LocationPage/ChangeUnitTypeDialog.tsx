@@ -31,7 +31,7 @@ export function ChangeUnitTypeDialog({
 	const restored = useSessionDraft("change-unit-type", (variables) =>
 		variables === null || typeof variables === "string" ? variables : undefined,
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("change-unit-type");
 	const [choice, setChoice] = useState(
 		restored === null ? NONE : (restored ?? current),
 	);

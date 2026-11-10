@@ -1,7 +1,7 @@
 import { useRouteContext, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
 import {
-	clearSessionDraft,
+	forgetFailedSubmission,
 	readSessionDraft,
 	type SessionDraftKind,
 	screenPath,
@@ -23,10 +23,11 @@ export function useSessionDraft<T>(
 	return value;
 }
 
-export function useClearSessionDraft(): () => void {
+export function useClearSessionDraft(kind: SessionDraftKind): () => void {
 	const { session } = useRouteContext({ from: "/_authenticated" });
 	const path = useRouterState({
 		select: (state) => screenPath(state.location),
 	});
-	return () => clearSessionDraft(session.user.id, path);
+	return () =>
+		forgetFailedSubmission({ accountId: session.user.id, path, kind });
 }

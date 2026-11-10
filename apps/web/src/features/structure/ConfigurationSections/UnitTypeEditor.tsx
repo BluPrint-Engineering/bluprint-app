@@ -72,7 +72,7 @@ export function UnitTypeEditor({
 	const restored = useSessionDraft("update-unit-type", (variables) =>
 		restoredRooms(variables, unitType.id),
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("update-unit-type");
 	const [rooms, setRooms] = useState<DraftRoom[]>(restored ?? unitType.rooms);
 	const stored = new Set(unitType.rooms.map(({ id }) => id));
 	const isNew = (name: string) =>
@@ -90,8 +90,13 @@ export function UnitTypeEditor({
 		return true;
 	}
 
+	function close() {
+		clearDraft();
+		onClose();
+	}
+
 	function save() {
-		if (sameRooms(rooms, unitType.rooms)) return onClose();
+		if (sameRooms(rooms, unitType.rooms)) return close();
 		update.mutate(
 			{ unitTypeId: unitType.id, rooms },
 			{
@@ -139,10 +144,7 @@ export function UnitTypeEditor({
 					type="button"
 					variant="outline"
 					disabled={update.isPending}
-					onClick={() => {
-						clearDraft();
-						onClose();
-					}}
+					onClick={close}
 				>
 					Cancelar
 				</Button>

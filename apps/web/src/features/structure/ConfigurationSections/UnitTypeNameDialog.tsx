@@ -59,11 +59,12 @@ export function UnitTypeNameDialog({
 	const create = useCreateUnitTypeMutation(projectId);
 	const update = useUpdateUnitTypeMutation(projectId);
 	const [newId] = useState(uuidV7);
-	const restored = useSessionDraft(
-		target.mode === "create" ? "create-unit-type" : "update-unit-type",
-		(variables) => unitTypeName(variables, target),
+	const draftKind =
+		target.mode === "create" ? "create-unit-type" : "update-unit-type";
+	const restored = useSessionDraft(draftKind, (variables) =>
+		unitTypeName(variables, target),
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft(draftKind);
 	const current = target.mode === "rename" ? target.unitType.name : "";
 	const [name, setName] = useState(restored ?? current);
 	const [error, setError] = useState<string>();

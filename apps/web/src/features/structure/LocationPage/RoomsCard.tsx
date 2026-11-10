@@ -80,7 +80,7 @@ function AddRoomRow({
 		}
 		return variables.name;
 	});
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("add-room");
 	const [adding, setAdding] = useState(restored !== undefined);
 	const [name, setName] = useState(restored ?? "");
 	const [error, setError] = useState<string>();

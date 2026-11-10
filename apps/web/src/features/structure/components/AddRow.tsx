@@ -63,7 +63,7 @@ function AddForm({
 	const restored = useSessionDraft("create-structure", (variables) =>
 		addedName(variables, parentId, type),
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("create-structure");
 	const id = useRef(uuidV7());
 	const [name, setName] = useState(restored ?? suggestion);
 	const [problem, setProblem] = useState<string>();
@@ -89,6 +89,11 @@ function AddForm({
 					: undefined;
 	const error = problem ?? refusal;
 
+	function cancel() {
+		clearDraft();
+		adding.close();
+	}
+
 	function submit() {
 		const found = nameProblem(name);
 		if (found) return setProblem(found);
@@ -112,7 +117,7 @@ function AddForm({
 			onKeyDown={(event) => {
 				if (event.key === "Escape" && !saving) {
 					event.stopPropagation();
-					adding.close();
+					cancel();
 				}
 			}}
 		>
@@ -155,10 +160,7 @@ function AddForm({
 					type="button"
 					variant="outline"
 					disabled={saving}
-					onClick={() => {
-						clearDraft();
-						adding.close();
-					}}
+					onClick={cancel}
 				>
 					Cancelar
 				</Button>
@@ -198,9 +200,12 @@ export function AddRow(props: AddRowProps) {
 		addedName(variables, props.parentId, props.type),
 	);
 	const open = adding.is(kind);
+	const reopened = useRef(false);
 	useEffect(() => {
-		if (restored !== undefined && !open) adding.open(kind);
-	}, [adding, kind, open, restored]);
+		if (reopened.current || restored === undefined) return;
+		reopened.current = true;
+		adding.open(kind);
+	}, [adding, kind, restored]);
 	const button = useFocusOnClose(open, buttonRef);
 
 	if (open) return <AddForm {...props} />;

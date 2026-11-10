@@ -33,22 +33,11 @@ declare module "@tanstack/react-query" {
 	}
 }
 
-export function isSessionDraftKind(value: unknown): value is SessionDraftKind {
+function isSessionDraftKind(value: unknown): value is SessionDraftKind {
 	return (
 		typeof value === "string" &&
 		sessionDraftKinds.some((kind) => kind === value)
 	);
-}
-
-export function accountIdFromSession(value: unknown): string | undefined {
-	if (typeof value !== "object" || value === null || !("user" in value)) {
-		return undefined;
-	}
-	const { user } = value;
-	if (typeof user !== "object" || user === null || !("id" in user)) {
-		return undefined;
-	}
-	return typeof user.id === "string" ? user.id : undefined;
 }
 
 export function screenPath(location: {
@@ -66,10 +55,10 @@ export function rememberFailedSubmission({
 }: {
 	accountId: string | undefined;
 	path: string;
-	kind: unknown;
+	kind: SessionDraftKind | undefined;
 	variables: unknown;
 }): void {
-	if (!accountId || !isSessionDraftKind(kind) || containsPassword(variables)) {
+	if (!accountId || !kind || containsPassword(variables)) {
 		return;
 	}
 	const body = JSON.stringify({ kind, variables } satisfies StoredDraft);
@@ -84,9 +73,9 @@ export function forgetFailedSubmission({
 }: {
 	accountId: string | undefined;
 	path: string;
-	kind: unknown;
+	kind: SessionDraftKind | undefined;
 }): void {
-	if (!accountId || !isSessionDraftKind(kind)) return;
+	if (!accountId || !kind) return;
 	const stored = readSessionDraft(accountId, path);
 	if (stored?.kind !== kind) return;
 	localStorage.removeItem(storageKey(accountId, path));
@@ -110,10 +99,6 @@ export function readSessionDraft(
 	return { kind: parsed.kind, variables: parsed.variables };
 }
 
-export function clearSessionDraft(accountId: string, path: string): void {
-	localStorage.removeItem(storageKey(accountId, path));
-}
-
 export function dropDraftsOfOtherAccounts(accountId: string): void {
 	const keys: string[] = [];
 	for (let index = 0; index < localStorage.length; index++) {
@@ -128,9 +113,7 @@ export function dropDraftsOfOtherAccounts(accountId: string): void {
 }
 
 export function cachedAccountId(queryClient: QueryClient): string | undefined {
-	return accountIdFromSession(
-		queryClient.getQueryData(sessionQueryOptions.queryKey),
-	);
+	return queryClient.getQueryData(sessionQueryOptions.queryKey)?.user.id;
 }
 
 function storageKey(accountId: string, path: string): string {

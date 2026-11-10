@@ -104,7 +104,7 @@ export function ChangeReservationDialog({
 	const restored = useSessionDraft("change-reservation", (variables) =>
 		typeof variables === "number" ? String(variables) : undefined,
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("change-reservation");
 	const [typed, setTyped] = useState(restored ?? String(reserved));
 	const [touched, setTouched] = useState(false);
 	const [refused, setRefused] = useState<string>();
@@ -140,16 +140,15 @@ export function ChangeReservationDialog({
 	const saving = change.isPending;
 
 	const { reset } = change;
-	const wasOpen = useRef(open);
+	const opened = useRef(open);
 	useEffect(() => {
-		const closing = wasOpen.current && !open && !saving;
-		wasOpen.current = open;
-		if (!closing) return;
+		if (open) opened.current = true;
+		if (open || saving || (restored !== undefined && !opened.current)) return;
 		setTyped(String(reserved));
 		setTouched(false);
 		setRefused(undefined);
 		reset();
-	}, [open, saving, reserved, reset]);
+	}, [open, saving, reserved, reset, restored]);
 
 	const wanted = parseUnits(typed);
 	const invalid = reservationError(figures, wanted);

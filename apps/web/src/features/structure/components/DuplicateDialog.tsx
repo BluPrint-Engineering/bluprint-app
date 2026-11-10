@@ -109,7 +109,7 @@ function DuplicateContent({
 	const restored = useSessionDraft("duplicate-location", (variables) =>
 		duplicateName(variables, locationOf(source)),
 	);
-	const clearDraft = useClearSessionDraft();
+	const clearDraft = useClearSessionDraft("duplicate-location");
 	const [name, setName] = useState(restored ?? suggestion);
 	const [problem, setProblem] = useState<string>();
 	const [reserving, setReserving] = useState(false);
