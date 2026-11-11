@@ -27,6 +27,7 @@ import { SignupProvisioningModule } from "./signup/signup-provisioning.module";
 					checkBreachedPasswords: config.get("PASSWORD_BREACH_CHECK", {
 						infer: true,
 					}),
+					rateLimitEnabled: config.get("AUTH_RATE_LIMIT", { infer: true }),
 					clientIpHeader: config.get("PROXY_SECRET", { infer: true })
 						? CLIENT_IP_HEADER
 						: undefined,
