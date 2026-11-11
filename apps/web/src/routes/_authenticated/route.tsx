@@ -1,9 +1,12 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppLayout } from "@/features/account";
 import {
+	dropDraftsOfOtherAccounts,
 	SessionCheckFailed,
+	SessionCover,
 	SessionSplash,
 	sessionQueryOptions,
+	useReturnSessionCheck,
 } from "@/features/auth";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -15,6 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
 				search: { redirect: location.pathname + location.searchStr },
 			});
 		}
+		dropDraftsOfOtherAccounts(session.user.id);
 		return { session };
 	},
 	pendingComponent: SessionSplash,
@@ -25,9 +29,21 @@ export const Route = createFileRoute("/_authenticated")({
 
 function AuthenticatedLayout() {
 	const { session } = Route.useRouteContext();
+	const returned = useReturnSessionCheck();
 	return (
-		<AppLayout user={session.user}>
-			<Outlet />
-		</AppLayout>
+		<>
+			{returned.phase !== "shown" && (
+				<SessionCover>
+					{returned.phase === "checking" ? (
+						<SessionSplash />
+					) : (
+						<SessionCheckFailed onRetry={returned.retry} />
+					)}
+				</SessionCover>
+			)}
+			<AppLayout user={session.user}>
+				<Outlet />
+			</AppLayout>
+		</>
 	);
 }

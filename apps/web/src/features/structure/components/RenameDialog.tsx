@@ -8,6 +8,7 @@ import {
 	FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { cn } from "@/lib/utils";
 import { isProjectDelivered } from "../../projects/api";
 import { namesTakenOf, useRenameLocationMutation } from "../api";
@@ -54,7 +55,10 @@ function RenameContent({
 }) {
 	const formId = useId();
 	const rename = useRenameLocationMutation(projectId);
-	const [name, setName] = useState(target.name);
+	const restored = useSessionDraft("rename-location", (variables) =>
+		renamed(variables, target.id),
+	);
+	const [name, setName] = useState(restored ?? target.name);
 	const [problem, setProblem] = useState<string>();
 	const saving = rename.isPending;
 	const mono = target.type === "unit";
@@ -142,6 +146,18 @@ function RenameContent({
 	);
 }
 
+function renamed(variables: unknown, locationId: string): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("locationId" in variables) || !("name" in variables)) return undefined;
+	if (
+		variables.locationId !== locationId ||
+		typeof variables.name !== "string"
+	) {
+		return undefined;
+	}
+	return variables.name;
+}
+
 export function RenameDialog({
 	projectId,
 	target,
@@ -150,11 +166,17 @@ export function RenameDialog({
 	returnFocus,
 }: RenameDialogProps) {
 	const field = useRef<HTMLInputElement>(null);
+	const clearDraft = useClearSessionDraft("rename-location");
+
+	function changeOpen(next: boolean) {
+		if (!next) clearDraft();
+		onOpenChange(next);
+	}
 
 	return (
 		<NameDialogFrame
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={changeOpen}
 			returnFocus={returnFocus}
 			field={field}
 		>
@@ -164,7 +186,7 @@ export function RenameDialog({
 					target={target}
 					desktop={desktop}
 					field={field}
-					onDone={() => onOpenChange(false)}
+					onDone={() => changeOpen(false)}
 				/>
 			)}
 		</NameDialogFrame>

@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import { isProjectDelivered } from "../../projects/api";
 import {
@@ -13,6 +14,31 @@ import {
 } from "../api";
 import { FormDialog } from "../components/FormDialog";
 import { unitTypeNameError, unitTypeNameTakenText } from "./unitTypeNames";
+
+function unitTypeName(
+	variables: unknown,
+	target: NameDialogTarget,
+): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("name" in variables) || typeof variables.name !== "string") {
+		return undefined;
+	}
+	if (
+		"rooms" in variables &&
+		Array.isArray(variables.rooms) &&
+		variables.rooms.length > 0
+	) {
+		return undefined;
+	}
+	if (target.mode === "create") return variables.name;
+	if (
+		!("unitTypeId" in variables) ||
+		variables.unitTypeId !== target.unitType.id
+	) {
+		return undefined;
+	}
+	return variables.name;
+}
 
 export type NameDialogTarget =
 	| { mode: "create" }
@@ -33,23 +59,34 @@ export function UnitTypeNameDialog({
 	const create = useCreateUnitTypeMutation(projectId);
 	const update = useUpdateUnitTypeMutation(projectId);
 	const [newId] = useState(uuidV7);
+	const draftKind =
+		target.mode === "create" ? "create-unit-type" : "update-unit-type";
+	const restored = useSessionDraft(draftKind, (variables) =>
+		unitTypeName(variables, target),
+	);
+	const clearDraft = useClearSessionDraft(draftKind);
 	const current = target.mode === "rename" ? target.unitType.name : "";
-	const [name, setName] = useState(current);
+	const [name, setName] = useState(restored ?? current);
 	const [error, setError] = useState<string>();
 	const mutation = target.mode === "create" ? create : update;
+
+	function close() {
+		clearDraft();
+		onClose();
+	}
 
 	function submit() {
 		const invalid = unitTypeNameError(name);
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
-		if (target.mode === "rename" && trimmed === current) return onClose();
+		if (target.mode === "rename" && trimmed === current) return close();
 
 		const handlers = {
 			onError: (failure: unknown) => {
 				if (unitTypeNamesTakenOf(failure)) {
 					setError(unitTypeNameTakenText(trimmed));
 				} else if (isProjectDelivered(failure)) {
-					onClose();
+					close();
 				}
 			},
 		};
@@ -59,7 +96,7 @@ export function UnitTypeNameDialog({
 				{
 					...handlers,
 					onSuccess: (created) => {
-						onClose();
+						close();
 						onCreated(created);
 					},
 				},
@@ -67,7 +104,7 @@ export function UnitTypeNameDialog({
 		} else {
 			update.mutate(
 				{ unitTypeId: target.unitType.id, name: trimmed },
-				{ ...handlers, onSuccess: onClose },
+				{ ...handlers, onSuccess: close },
 			);
 		}
 	}
@@ -92,7 +129,7 @@ export function UnitTypeNameDialog({
 			pending={mutation.isPending}
 			formId={fieldId}
 			onSubmit={submit}
-			onClose={onClose}
+			onClose={close}
 		>
 			{failed && (
 				<Alert variant="destructive">

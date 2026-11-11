@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { ApiError } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
@@ -105,9 +106,16 @@ function DuplicateContent({
 	const units = useQuery(projectUnitsQueryOptions(projectId));
 	const duplicate = useDuplicateLocationMutation(projectId);
 	const ids = useRef(new Map<string, string>());
-	const [name, setName] = useState(suggestion);
+	const restored = useSessionDraft("duplicate-location", (variables) =>
+		duplicateName(variables, locationOf(source)),
+	);
+	const [name, setName] = useState(restored ?? suggestion);
 	const [problem, setProblem] = useState<string>();
-	const [reserving, setReserving] = useState(false);
+	const restoredReservation = useSessionDraft(
+		"change-reservation",
+		(variables) => (typeof variables === "number" ? variables : undefined),
+	);
+	const [reserving, setReserving] = useState(restoredReservation !== undefined);
 	const alterReservation = useRef<HTMLButtonElement>(null);
 	const saving = duplicate.isPending;
 	const mono = source.type === "unit";
@@ -166,6 +174,7 @@ function DuplicateContent({
 		duplicate.mutate(
 			{
 				locationId: locationOf(source),
+				name: finalName,
 				build: (below) => {
 					assertCopyMatches(source, below);
 					return buildDuplicate(source, finalName, below, idFor);
@@ -316,6 +325,21 @@ function DuplicateContent({
 	);
 }
 
+function duplicateName(
+	variables: unknown,
+	locationId: string,
+): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("locationId" in variables) || !("name" in variables)) return undefined;
+	if (
+		variables.locationId !== locationId ||
+		typeof variables.name !== "string"
+	) {
+		return undefined;
+	}
+	return variables.name;
+}
+
 function locationOf(source: DuplicateSource): string {
 	switch (source.type) {
 		case "tower":
@@ -336,16 +360,22 @@ export function DuplicateDialog({
 }: DuplicateDialogProps) {
 	const structure = useQuery(structureQueryOptions(projectId));
 	const field = useRef<HTMLInputElement>(null);
+	const clearDraft = useClearSessionDraft("duplicate-location");
 	const source =
 		structure.data &&
 		findDuplicateSource(structure.data, target.type, target.id);
 
 	if (!source || !structure.data) return null;
 
+	function changeOpen(next: boolean) {
+		if (!next) clearDraft();
+		onOpenChange(next);
+	}
+
 	return (
 		<NameDialogFrame
 			open={open}
-			onOpenChange={onOpenChange}
+			onOpenChange={changeOpen}
 			returnFocus={returnFocus}
 			field={field}
 		>
@@ -357,7 +387,7 @@ export function DuplicateDialog({
 					suggestion={suggestedCopyName(source, structure.data)}
 					desktop={desktop}
 					field={field}
-					onDone={() => onOpenChange(false)}
+					onDone={() => changeOpen(false)}
 				/>
 			)}
 		</NameDialogFrame>

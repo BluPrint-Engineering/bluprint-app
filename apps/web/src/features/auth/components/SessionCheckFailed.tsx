@@ -2,7 +2,7 @@ import { useRouter } from "@tanstack/react-router";
 import { CircleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export function SessionCheckFailed() {
+export function SessionCheckFailed({ onRetry }: { onRetry?: () => void }) {
 	const router = useRouter();
 
 	return (
@@ -21,7 +21,10 @@ export function SessionCheckFailed() {
 						Confira sua conexão e tente de novo.
 					</p>
 				</div>
-				<Button size="lg" onClick={() => router.invalidate()}>
+				<Button
+					size="lg"
+					onClick={() => (onRetry ? onRetry() : router.invalidate())}
+				>
 					Tentar de novo
 				</Button>
 			</div>

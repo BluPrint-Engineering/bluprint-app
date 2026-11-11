@@ -13,6 +13,7 @@ export const envSchema = z
 		// stringbool, not coerce.boolean: coercion turns "false" into true and opens self-signup in production
 		ALLOW_SELF_SIGNUP: z.stringbool().default(false),
 		PASSWORD_BREACH_CHECK: z.stringbool().default(true),
+		AUTH_RATE_LIMIT: z.stringbool().default(true),
 		// no default: apiDocsEnabled derives one from NODE_ENV (ADR 0046)
 		API_DOCS_ENABLED: z.stringbool().optional(),
 		PROXY_SECRET: z

@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useSessionDraft } from "@/features/auth";
 import { useResetUnitTypeMutation } from "../api";
 import { ChangeUnitTypeDialog } from "./ChangeUnitTypeDialog";
 import { RoomsCard } from "./RoomsCard";
@@ -20,7 +21,10 @@ export function UnitBody({
 	editable: boolean;
 }) {
 	const { unitType, changes } = unit;
-	const [changingType, setChangingType] = useState(false);
+	const restoredType = useSessionDraft("change-unit-type", (variables) =>
+		variables === null || typeof variables === "string" ? variables : undefined,
+	);
+	const [changingType, setChangingType] = useState(restoredType !== undefined);
 	const reset = useResetUnitTypeMutation(projectId, unit.id);
 
 	function returnToUnitType() {

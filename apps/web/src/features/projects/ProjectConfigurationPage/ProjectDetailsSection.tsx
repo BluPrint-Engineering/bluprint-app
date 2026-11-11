@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useSessionDraft } from "@/features/auth";
 import { ChangeReservationDialog } from "../components/ChangeReservationDialog";
 import { plural } from "../components/plural";
 import { RenameProjectForm } from "./RenameProjectForm";
@@ -38,7 +39,10 @@ export function ProjectDetailsSection({
 	const canChangeReservation =
 		project.role === "admin" && project.status === "active";
 	const note = lockNote(project);
-	const [editing, setEditing] = useState(false);
+	const restoredName = useSessionDraft("rename-project", (variables) =>
+		typeof variables === "string" ? variables : undefined,
+	);
+	const [editing, setEditing] = useState(restoredName !== undefined);
 	const renameButton = useRef<HTMLButtonElement>(null);
 	const returnFocus = useRef(false);
 	const reservationButton = useRef<HTMLButtonElement>(null);

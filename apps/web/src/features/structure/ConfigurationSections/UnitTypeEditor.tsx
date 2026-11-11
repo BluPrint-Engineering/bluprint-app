@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import { roomNamesTakenOf, useUpdateUnitTypeMutation } from "../api";
 import { AddTag, Tags } from "../components/Tags";
@@ -16,6 +17,28 @@ import { savedText, unitsChangedText } from "./unitTypeSaveText";
 interface DraftRoom {
 	id: string;
 	name: string;
+}
+
+function restoredRooms(
+	variables: unknown,
+	unitTypeId: string,
+): DraftRoom[] | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("unitTypeId" in variables) || variables.unitTypeId !== unitTypeId) {
+		return undefined;
+	}
+	if (!("rooms" in variables) || !Array.isArray(variables.rooms))
+		return undefined;
+	const rooms: DraftRoom[] = [];
+	for (const room of variables.rooms) {
+		if (typeof room !== "object" || room === null) return undefined;
+		if (!("id" in room) || !("name" in room)) return undefined;
+		if (typeof room.id !== "string" || typeof room.name !== "string") {
+			return undefined;
+		}
+		rooms.push({ id: room.id, name: room.name });
+	}
+	return rooms;
 }
 
 function sameRooms(a: DraftRoom[], b: DraftRoom[]) {
@@ -46,7 +69,11 @@ export function UnitTypeEditor({
 	onClose: () => void;
 }) {
 	const update = useUpdateUnitTypeMutation(projectId);
-	const [rooms, setRooms] = useState<DraftRoom[]>(unitType.rooms);
+	const restored = useSessionDraft("update-unit-type", (variables) =>
+		restoredRooms(variables, unitType.id),
+	);
+	const clearDraft = useClearSessionDraft("update-unit-type");
+	const [rooms, setRooms] = useState<DraftRoom[]>(restored ?? unitType.rooms);
 	const stored = new Set(unitType.rooms.map(({ id }) => id));
 	const isNew = (name: string) =>
 		rooms.some((room) => room.name === name && !stored.has(room.id));
@@ -63,8 +90,13 @@ export function UnitTypeEditor({
 		return true;
 	}
 
+	function close() {
+		clearDraft();
+		onClose();
+	}
+
 	function save() {
-		if (sameRooms(rooms, unitType.rooms)) return onClose();
+		if (sameRooms(rooms, unitType.rooms)) return close();
 		update.mutate(
 			{ unitTypeId: unitType.id, rooms },
 			{
@@ -112,7 +144,7 @@ export function UnitTypeEditor({
 					type="button"
 					variant="outline"
 					disabled={update.isPending}
-					onClick={onClose}
+					onClick={close}
 				>
 					Cancelar
 				</Button>

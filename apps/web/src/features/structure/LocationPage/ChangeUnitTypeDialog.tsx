@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { isProjectDelivered } from "../../projects/api";
 import { unitTypesQueryOptions, useChangeUnitTypeMutation } from "../api";
@@ -27,11 +28,22 @@ export function ChangeUnitTypeDialog({
 	const unitTypes = useQuery(unitTypesQueryOptions(projectId));
 	const change = useChangeUnitTypeMutation(projectId, unit.id);
 	const current = unit.unitType?.id ?? NONE;
-	const [choice, setChoice] = useState(current);
+	const restored = useSessionDraft("change-unit-type", (variables) =>
+		variables === null || typeof variables === "string" ? variables : undefined,
+	);
+	const clearDraft = useClearSessionDraft("change-unit-type");
+	const [choice, setChoice] = useState(
+		restored === null ? NONE : (restored ?? current),
+	);
 	const loadFailed = !unitTypes.data && firstLoadState(unitTypes) === "failed";
 
+	function close() {
+		clearDraft();
+		onClose();
+	}
+
 	function submit() {
-		if (choice === current) return onClose();
+		if (choice === current) return close();
 		change.mutate(choice === NONE ? null : choice, {
 			onSuccess: (changed) => {
 				toast.success(
@@ -39,10 +51,10 @@ export function ChangeUnitTypeDialog({
 						? `A unidade ${unit.name} agora segue a tipologia ${changed.unitType.name}.`
 						: `A unidade ${unit.name} ficou sem tipologia.`,
 				);
-				onClose();
+				close();
 			},
 			onError: (failure) => {
-				if (isProjectDelivered(failure)) onClose();
+				if (isProjectDelivered(failure)) close();
 			},
 		});
 	}
@@ -59,7 +71,7 @@ export function ChangeUnitTypeDialog({
 			submitDisabled={!unitTypes.data || choice === current}
 			formId={formId}
 			onSubmit={submit}
-			onClose={onClose}
+			onClose={close}
 		>
 			{saveFailed && (
 				<Alert variant="destructive">

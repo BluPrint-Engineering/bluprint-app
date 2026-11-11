@@ -19,7 +19,7 @@ import {
 	isNotFound,
 	locationQueryOptions,
 	structureQueryOptions,
-	useCreateStructureMutation,
+	useRecreateStructureMutation,
 } from "./api";
 import {
 	removedText,
@@ -83,7 +83,7 @@ function undoFailure(error: unknown): UndoFailure {
 
 export function useRemoveLocation(projectId: string) {
 	const queryClient = useQueryClient();
-	const create = useCreateStructureMutation(projectId);
+	const create = useRecreateStructureMutation(projectId);
 
 	async function undo({ type, name }: LocationDetail, body: CreateStructure) {
 		try {

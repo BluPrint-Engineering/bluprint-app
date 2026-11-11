@@ -52,6 +52,7 @@ export default defineConfig({
 				BETTER_AUTH_URL: API_BASE_URL,
 				ALLOW_SELF_SIGNUP: "true",
 				PASSWORD_BREACH_CHECK: "false",
+				AUTH_RATE_LIMIT: "false",
 			},
 		},
 		{

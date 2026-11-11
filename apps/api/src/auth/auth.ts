@@ -21,6 +21,7 @@ export interface AuthOptions {
 	trustedOrigins: string[];
 	allowSelfSignup: boolean;
 	checkBreachedPasswords: boolean;
+	rateLimitEnabled?: boolean;
 	/** Set only when the proxy gate guarantees the header (ADR 0066); otherwise a client could forge its IP. */
 	clientIpHeader?: string | undefined;
 	onUserCreated: (user: { id: string; name: string }) => Promise<void>;
@@ -89,7 +90,7 @@ export function createAuth(db: Database, options: AuthOptions) {
 		},
 		// enabled explicitly: the default is off outside production
 		rateLimit: {
-			enabled: true,
+			enabled: options.rateLimitEnabled ?? true,
 			window: MINUTE,
 			max: 100,
 			// spelled out: the library's own default for these paths is stricter and invisible (3/10s)
