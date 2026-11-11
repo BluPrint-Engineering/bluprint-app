@@ -1,4 +1,10 @@
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
+import {
+	DESKTOP_RECENT_USE_ADMIN_EMAIL,
+	PHONE_RECENT_USE_ADMIN_EMAIL,
+	SEED_PASSWORD,
+} from "../seed-account";
 
 test.describe("project list", () => {
 	test("opening the app lands on the admin's projects", async ({ page }) => {
@@ -90,6 +96,59 @@ test.describe("project list", () => {
 
 		await expect(page).toHaveURL("/projects");
 		await expect(page.getByText("14 obras")).toBeVisible();
+	});
+
+	test("opening a project from the end of the list puts it first", async ({
+		page,
+		isMobile,
+	}) => {
+		await page.context().setExtraHTTPHeaders({
+			"x-forwarded-for": `10.${[...randomBytes(3)].join(".")}`,
+		});
+		await page.context().clearCookies();
+		await page.goto("/login");
+		await page
+			.getByLabel("E-mail")
+			.fill(
+				isMobile
+					? PHONE_RECENT_USE_ADMIN_EMAIL
+					: DESKTOP_RECENT_USE_ADMIN_EMAIL,
+			);
+		await page.getByLabel("Senha", { exact: true }).fill(SEED_PASSWORD);
+		await page.getByRole("button", { name: "Entrar" }).click();
+		await expect(page).toHaveURL("/projects");
+		const cards = page
+			.getByRole("list", { name: "Obras" })
+			.getByRole("listitem");
+		if (isMobile) {
+			await cards.last().scrollIntoViewIfNeeded();
+			await expect(cards).toHaveCount(14);
+		} else {
+			await page.getByRole("button", { name: "Página 2" }).click();
+			await expect(page).toHaveURL("/projects?page=2");
+			await expect(cards).toHaveCount(2);
+		}
+		const name = await cards.last().getByRole("heading").innerText();
+
+		await cards.last().getByRole("link").click();
+		const back = page.getByRole("link", { name: "Obras", exact: true });
+		await expect(back).toBeVisible();
+		await back.click();
+
+		await expect(page).toHaveURL("/projects");
+		await expect(cards.first()).toContainText(name);
+		if (isMobile) {
+			await page.getByRole("button", { name: "Filtros" }).click();
+			await expect(
+				page.getByRole("dialog", { name: "Filtros" }).getByRole("radio", {
+					name: "Meu uso recente",
+				}),
+			).toBeChecked();
+		} else {
+			await expect(
+				page.getByRole("button", { name: "Ordenar: Meu uso recente" }),
+			).toBeVisible();
+		}
 	});
 
 	test("on the phone, the admin filters by manager from the sheet", async ({

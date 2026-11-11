@@ -382,7 +382,6 @@ describe("the delivery dialog", () => {
 		const { handler } = deliveryApi(OBRA);
 		const { fetchMock } = stubApi(signedIn, { api: handler });
 		const { queryClient } = renderAt(CONFIG_PATH);
-		queryClient.setQueryData(["projects", "probe"], {});
 		queryClient.setQueryData(organizationUnitsQueryOptions.queryKey, {
 			contracted: 700,
 			reserved: 550,
@@ -390,6 +389,7 @@ describe("the delivery dialog", () => {
 			reclaimable: 150,
 		});
 		const dialog = await openDialog();
+		queryClient.setQueryData(["projects", "probe"], {});
 
 		await confirmIn(dialog);
 

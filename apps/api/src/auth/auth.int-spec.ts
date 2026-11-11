@@ -1,5 +1,12 @@
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+	copyFileSync,
+	mkdirSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { Server } from "node:http";
 import { join } from "node:path";
 import {
@@ -11,6 +18,8 @@ import { Body, Controller, Get, INestApplication, Post } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
 import { Session, UserSession } from "@thallesp/nestjs-better-auth";
 import { eq } from "drizzle-orm";
+import { drizzle } from "drizzle-orm/node-postgres";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
 import { Client, Pool } from "pg";
 import request from "supertest";
 import { z } from "zod";
@@ -394,7 +403,35 @@ describe("session cookie", () => {
 			client.query(`CREATE DATABASE "${scratch}"`),
 		);
 		try {
-			await applyMigrations(scratchUrl);
+			const priorMigrations = mkdtempSync(
+				join(migrationsFolder, ".session-test-"),
+			);
+			try {
+				mkdirSync(join(priorMigrations, "meta"));
+				const entries = journal.entries.filter(
+					(entry) => entry.when < wipe!.when,
+				);
+				writeFileSync(
+					join(priorMigrations, "meta/_journal.json"),
+					JSON.stringify({ ...journal, entries }),
+				);
+				for (const entry of entries) {
+					copyFileSync(
+						join(migrationsFolder, `${entry.tag}.sql`),
+						join(priorMigrations, `${entry.tag}.sql`),
+					);
+				}
+				const pool = new Pool({ connectionString: scratchUrl });
+				try {
+					await migrate(drizzle({ client: pool }), {
+						migrationsFolder: priorMigrations,
+					});
+				} finally {
+					await pool.end();
+				}
+			} finally {
+				rmSync(priorMigrations, { recursive: true, force: true });
+			}
 			const booted = await boot(scratchUrl);
 			try {
 				const signUpOn = async (name: string) => {
@@ -415,12 +452,6 @@ describe("session cookie", () => {
 				const before = await signUpOn("Sessão Antiga");
 				expect((await probe(before)).status).toBe(200);
 
-				await withClient(scratch, (client) =>
-					client.query(
-						"DELETE FROM drizzle.__drizzle_migrations WHERE created_at = $1",
-						[wipe!.when],
-					),
-				);
 				await applyMigrations(scratchUrl);
 
 				const ended = await probe(before);

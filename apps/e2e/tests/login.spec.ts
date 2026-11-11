@@ -1,8 +1,14 @@
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { ADMIN_EMAIL, SEED_PASSWORD } from "../seed-account";
 
 test.describe("signed out", () => {
 	test.use({ storageState: { cookies: [], origins: [] } });
+	test.use({
+		extraHTTPHeaders: {
+			"x-forwarded-for": `10.${[...randomBytes(3)].join(".")}`,
+		},
+	});
 	test.describe.configure({ retries: 0 });
 
 	test("logs in through the screen and gets a real session", async ({

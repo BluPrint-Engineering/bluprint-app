@@ -18,11 +18,11 @@ describe("the projects address", () => {
 		expect(readSearch({})).toEqual({ page: 1, filters: DEFAULT_FILTERS });
 	});
 
-	test("the defaults are the API's: in progress, newest first, no search, every manager", () => {
+	test("the defaults are the API's: in progress, my recent use, no search, every manager", () => {
 		expect(DEFAULT_FILTERS).toEqual({
 			q: "",
 			status: "active",
-			sort: "recent",
+			sort: "myUse",
 			manager: undefined,
 		});
 	});
@@ -62,12 +62,18 @@ describe("the projects address", () => {
 		expect(readSearch({ page: "4" }).page).toBe(4);
 	});
 
-	test.each(["recent", "Name", "open-pins", ""])(
-		"falls back to the newest first for sort=%j",
+	test.each(["Name", "open-pins", ""])(
+		"falls back to my recent use for sort=%j",
 		(sort) => {
-			expect(readSearch({ sort }).filters.sort).toBe("recent");
+			expect(readSearch({ sort }).filters.sort).toBe("myUse");
 		},
 	);
+
+	test("keeps the other sorts, including newest first", () => {
+		expect(readSearch({ sort: "recent" }).filters.sort).toBe("recent");
+		expect(readSearch({ sort: "activity" }).filters.sort).toBe("activity");
+		expect(readSearch({ sort: "name" }).filters.sort).toBe("name");
+	});
 
 	test.each(["active", "Delivered", "done", ""])(
 		"falls back to the projects in progress for status=%j",

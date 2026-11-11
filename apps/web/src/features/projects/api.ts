@@ -97,10 +97,20 @@ function retryUnlessNotFound(failures: number, error: unknown) {
 	return !isProjectNotFound(error) && failures < 3;
 }
 
+const isListQuery = (query: Query) => query.queryKey[1] !== "detail";
+
 export function projectQueryOptions(id: string) {
 	return queryOptions({
 		queryKey: ["projects", "detail", id],
-		queryFn: () => apiFetch(`/projects/${id}`, projectSummarySchema),
+		queryFn: async ({ client }) => {
+			const project = await apiFetch(`/projects/${id}`, projectSummarySchema);
+			client.removeQueries({
+				queryKey: ["projects"],
+				type: "inactive",
+				predicate: isListQuery,
+			});
+			return project;
+		},
 		retry: retryUnlessNotFound,
 	});
 }
@@ -108,8 +118,6 @@ export function projectQueryOptions(id: string) {
 export function isProjectDelivered(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === PROJECT_DELIVERED;
 }
-
-const isListQuery = (query: Query) => query.queryKey[1] !== "detail";
 
 export function useRenameProjectMutation(projectId: string) {
 	const queryClient = useQueryClient();

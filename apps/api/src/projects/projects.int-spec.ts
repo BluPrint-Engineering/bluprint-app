@@ -9,7 +9,7 @@ import {
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
@@ -403,18 +403,18 @@ describe("GET /api/projects pagination", () => {
 	test("answers 12 projects by default, with the total across every page", async () => {
 		const { items, total } = await page("");
 
-		expect(items.map((p) => p.id)).toEqual(paginatedIds.slice(0, 12));
+		expect(items.map((p) => p.id)).toEqual(paginatedIdsByActivity.slice(0, 12));
 		expect(total).toBe(26);
 	});
 
-	test("walks every page newest first, ties broken by id, without repeating or skipping", async () => {
+	test("walks every page by my recent use, ties broken by id, without repeating or skipping", async () => {
 		const walked = [
 			...(await page("page=1")).items,
 			...(await page("page=2")).items,
 			...(await page("page=3")).items,
 		].map((p) => p.id);
 
-		expect(walked).toEqual(paginatedIds);
+		expect(walked).toEqual(paginatedIdsByActivity);
 	});
 
 	test("the last page holds the remainder", async () => {
@@ -435,14 +435,14 @@ describe("GET /api/projects pagination", () => {
 	test("honours a page size", async () => {
 		const { items } = await page("page=2&pageSize=5");
 
-		expect(items.map((p) => p.id)).toEqual(paginatedIds.slice(5, 10));
+		expect(items.map((p) => p.id)).toEqual(paginatedIdsByActivity.slice(5, 10));
 	});
 
 	test("no page reaches another organization's project, nor counts it", async () => {
 		const { items, total } = await page("pageSize=100");
 
 		expect(total).toBe(26);
-		expect(items.map((p) => p.id)).toEqual(paginatedIds);
+		expect(items.map((p) => p.id)).toEqual(paginatedIdsByActivity);
 
 		const other = projectListSchema.parse(
 			(await admin.agent.get(`${PROJECTS}?pageSize=100`)).body,
@@ -476,7 +476,7 @@ describe("GET /api/projects sort", () => {
 		];
 	}
 
-	test("recent is the default: newest first", async () => {
+	test("recent is newest first", async () => {
 		expect((await walk("recent")).map((p) => p.id)).toEqual(paginatedIds);
 	});
 
@@ -738,5 +738,244 @@ describe("GET /api/projects/managers", () => {
 		const res = await request(server).get(MANAGERS);
 
 		expect(res.status).toBe(401);
+	});
+});
+
+describe("my recent use", () => {
+	async function ids(
+		agent: ReturnType<typeof request.agent>,
+		query = "pageSize=100",
+	) {
+		const res = await agent.get(`${PROJECTS}?${query}`);
+		expect(res.status).toBe(200);
+		return projectListSchema.parse(res.body).items.map((item) => item.id);
+	}
+
+	async function forget(userId: string) {
+		await db.execute(sql`delete from project_use where user_id = ${userId}`);
+	}
+
+	test("myUse is the default, and an explicit sort=myUse matches it", async () => {
+		await forget(paginated.userId);
+		const res = await paginated.agent.get(`${PROJECTS}?pageSize=100`);
+
+		expect(res.status).toBe(200);
+		expect(
+			projectListSchema.parse(res.body).items.map((item) => item.id),
+		).toEqual(paginatedIdsByActivity);
+		expect(
+			projectListSchema
+				.parse(
+					(await paginated.agent.get(`${PROJECTS}?sort=myUse&pageSize=100`))
+						.body,
+				)
+				.items.map((item) => item.id),
+		).toEqual(paginatedIdsByActivity);
+	});
+
+	test("opening a project puts it first, and projects never used stay behind by last activity", async () => {
+		await forget(paginated.userId);
+		const oldest = paginatedIdsByActivity.at(-1)!;
+
+		const opened = await paginated.agent.get(`${PROJECTS}/${oldest}`);
+
+		expect(opened.status).toBe(200);
+		expect(await ids(paginated.agent)).toEqual([
+			oldest,
+			...paginatedIdsByActivity.filter((id) => id !== oldest),
+		]);
+	});
+
+	test("a change by someone else does not move my order", async () => {
+		await forget(admin.userId);
+		await forget(linked.userId);
+		expect((await admin.agent.get(`${PROJECTS}/${projectTwo}`)).status).toBe(
+			200,
+		);
+		const before = await ids(admin.agent, "pageSize=100");
+		expect(before[0]).toBe(projectTwo);
+
+		const renamed = await linked.agent
+			.patch(`${PROJECTS}/${projectOne}`)
+			.send({ name: "Casa Moinhos Renomeada" });
+
+		expect(renamed.status).toBe(200);
+		expect(await ids(admin.agent, "pageSize=100")).toEqual(before);
+		expect(await ids(linked.agent, "pageSize=100")).toEqual([
+			projectOne,
+			projectTwo,
+		]);
+	});
+
+	test("creating a project counts as my use of it", async () => {
+		await forget(paginated.userId);
+		const oldest = paginatedIdsByActivity.at(-1)!;
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
+		const id = randomUUID();
+
+		const created = await paginated.agent
+			.post(PROJECTS)
+			.send({ id, name: "Obra Acabada de Criar", units: 2 });
+
+		expect(created.status).toBe(201);
+		expect((await ids(paginated.agent)).slice(0, 2)).toEqual([id, oldest]);
+		await db.delete(project).where(eq(project.id, id));
+	});
+
+	test("changing a reservation from the units screen counts for that project", async () => {
+		await forget(paginated.userId);
+		const oldest = paginatedIdsByActivity.at(-1)!;
+
+		const changed = await paginated.agent
+			.patch("/api/organization/units/reservations")
+			.send({ items: [{ projectId: oldest, reserved: 1 }] });
+
+		expect(changed.status).toBe(200);
+		expect((await ids(paginated.agent))[0]).toBe(oldest);
+	});
+
+	test("the project list, the managers list and the units screens do not count", async () => {
+		await forget(paginated.userId);
+		const oldest = paginatedIdsByActivity.at(-1)!;
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
+
+		expect((await paginated.agent.get(PROJECTS)).status).toBe(200);
+		expect((await paginated.agent.get(`${PROJECTS}/managers`)).status).toBe(
+			200,
+		);
+		expect((await paginated.agent.get("/api/organization/units")).status).toBe(
+			200,
+		);
+		expect(
+			(await paginated.agent.get("/api/organization/units/reservations"))
+				.status,
+		).toBe(200);
+		expect(await ids(paginated.agent)).toEqual([
+			oldest,
+			...paginatedIdsByActivity.filter((id) => id !== oldest),
+		]);
+	});
+
+	test("a refused request does not count", async () => {
+		await forget(paginated.userId);
+		await forget(linked.userId);
+		expect((await linked.agent.get(`${PROJECTS}/${projectOne}`)).status).toBe(
+			200,
+		);
+		const missing = randomUUID();
+
+		expect((await paginated.agent.get(`${PROJECTS}/${missing}`)).status).toBe(
+			404,
+		);
+		expect(
+			(
+				await paginated.agent
+					.patch("/api/organization/units/reservations")
+					.send({ items: [{ projectId: missing, reserved: 1 }] })
+			).status,
+		).toBe(404);
+		expect(
+			(
+				await paginated.agent
+					.patch("/api/organization/units/reservations")
+					.send({
+						items: [
+							{ projectId: paginatedIdsByActivity.at(-1)!, reserved: 10000 },
+						],
+					})
+			).status,
+		).toBe(409);
+		expect(
+			(
+				await linked.agent
+					.patch(`${PROJECTS}/${projectTwo}`)
+					.send({ name: "Torre Recusada" })
+			).status,
+		).toBe(403);
+		expect(await ids(paginated.agent)).toEqual(paginatedIdsByActivity);
+		expect(await ids(linked.agent, "pageSize=100")).toEqual([
+			projectOne,
+			projectTwo,
+		]);
+	});
+
+	test("opening again within 5 minutes does not pass the project opened after it", async () => {
+		await forget(paginated.userId);
+		const newest = paginatedIdsByActivity[0]!;
+		const oldest = paginatedIdsByActivity.at(-1)!;
+
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
+		expect((await paginated.agent.get(`${PROJECTS}/${newest}`)).status).toBe(
+			200,
+		);
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
+
+		expect((await ids(paginated.agent)).slice(0, 2)).toEqual([newest, oldest]);
+
+		await db.execute(
+			sql`update project_use set last_used_at = now() - interval '6 minutes' where user_id = ${paginated.userId} and project_id = ${oldest}`,
+		);
+		expect((await paginated.agent.get(`${PROJECTS}/${oldest}`)).status).toBe(
+			200,
+		);
+
+		expect((await ids(paginated.agent)).slice(0, 2)).toEqual([oldest, newest]);
+	});
+
+	test("a tie in my use breaks by id, after unused projects ordered by last activity", async () => {
+		await forget(paginated.userId);
+		const unused = paginatedIdsByActivity[0]!;
+		const used = paginatedIdsByActivity.slice(-2);
+
+		for (const id of used) {
+			expect((await paginated.agent.get(`${PROJECTS}/${id}`)).status).toBe(200);
+		}
+		await db.execute(
+			sql`update project_use set last_used_at = '2026-01-01T00:00:00Z' where user_id = ${paginated.userId}`,
+		);
+
+		const tied = used.toSorted((a, b) => (a < b ? 1 : -1));
+		expect((await ids(paginated.agent)).slice(0, 3)).toEqual([
+			tied[0],
+			tied[1],
+			unused,
+		]);
+	});
+
+	test("my recent use keeps search, the status filter and stable pages", async () => {
+		await forget(paginated.userId);
+		const last = paginatedIdsByActivity.at(-1)!;
+
+		expect((await paginated.agent.get(`${PROJECTS}/${last}`)).status).toBe(200);
+		const firstPage = await ids(paginated.agent, "page=1");
+		const secondPage = await ids(paginated.agent, "page=2");
+		const thirdPage = await ids(paginated.agent, "page=3");
+		const walked = [...firstPage, ...secondPage, ...thirdPage];
+
+		expect(firstPage[0]).toBe(last);
+		expect(walked).toEqual([
+			last,
+			...paginatedIdsByActivity.filter((id) => id !== last),
+		]);
+		expect(new Set(walked).size).toBe(paginatedIdsByActivity.length);
+
+		const named = projectListSchema
+			.parse(
+				(await paginated.agent.get(`${PROJECTS}?sort=name&pageSize=100`)).body,
+			)
+			.items.find((item) => item.name === "Torre Ipê");
+		const found = await ids(
+			paginated.agent,
+			"q=Torre%20Ip%C3%AA&status=all&pageSize=100",
+		);
+		expect(found).toEqual([named!.id]);
 	});
 });

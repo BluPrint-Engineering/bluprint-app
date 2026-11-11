@@ -291,14 +291,20 @@ describe("projects page", () => {
 		renderAt("/projects");
 		await screen.findByText("Obra 1");
 		await userEvent.click(
-			screen.getByRole("button", { name: "Ordenar: Mais recentes" }),
+			screen.getByRole("button", { name: "Ordenar: Meu uso recente" }),
 		);
 
 		const menu = await screen.findByRole("menu");
 		expect(within(menu).getByText("Ordenar")).toBeInTheDocument();
 		expect(
-			within(menu).getByRole("menuitemradio", { name: "Mais recentes" }),
+			within(menu).getByRole("menuitemradio", { name: "Meu uso recente" }),
 		).toBeChecked();
+		expect(
+			within(menu).getByRole("menuitemradio", { name: "Mais recentes" }),
+		).toBeInTheDocument();
+		expect(
+			within(menu).getByRole("menuitemradio", { name: "Atividade recente" }),
+		).toBeInTheDocument();
 		await userEvent.click(
 			within(menu).getByRole("menuitemradio", { name: "Nome A–Z" }),
 		);
@@ -327,7 +333,7 @@ describe("projects page", () => {
 		renderAt("/projects");
 		await screen.findByText("Obra 1");
 		await userEvent.click(
-			screen.getByRole("button", { name: "Ordenar: Mais recentes" }),
+			screen.getByRole("button", { name: "Ordenar: Meu uso recente" }),
 		);
 		const menu = await screen.findByRole("menu");
 		await userEvent.click(
@@ -385,8 +391,11 @@ describe("projects page", () => {
 		expect(sheet).toHaveAccessibleDescription("Nenhum filtro ativo");
 		const sort = within(sheet).getByRole("radiogroup", { name: "Ordenar" });
 		expect(
-			within(sort).getByRole("radio", { name: "Mais recentes" }),
+			within(sort).getByRole("radio", { name: "Meu uso recente" }),
 		).toBeChecked();
+		expect(
+			within(sort).getByRole("radio", { name: "Atividade recente" }),
+		).toBeInTheDocument();
 		expect(
 			within(sheet).getByRole("button", { name: "Limpar filtros" }),
 		).toBeDisabled();
@@ -437,7 +446,7 @@ describe("projects page", () => {
 		await userEvent.click(screen.getByRole("button", { name: "Filtros" }));
 		expect(
 			within(await screen.findByRole("dialog")).getByRole("radio", {
-				name: "Mais recentes",
+				name: "Meu uso recente",
 			}),
 		).toBeChecked();
 	});

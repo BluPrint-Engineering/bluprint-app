@@ -8,11 +8,13 @@ import {
 	Patch,
 	Post,
 	Put,
+	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
+import { ProjectUseInterceptor } from "../projects/project-use.interceptor";
 import { AddRoomDto } from "./dto/add-room.dto";
 import { ChangeUnitTypeDto } from "./dto/change-unit-type.dto";
 import { DroppedRoomParamsDto } from "./dto/dropped-room-params.dto";
@@ -27,6 +29,7 @@ const WRITERS =
 
 @ApiTags("Structure")
 @Controller("projects/:id")
+@UseInterceptors(ProjectUseInterceptor)
 export class RoomsController {
 	constructor(private readonly rooms: RoomsService) {}
 

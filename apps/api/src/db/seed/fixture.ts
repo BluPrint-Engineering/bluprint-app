@@ -203,6 +203,7 @@ export const people: SeedPerson[] = [
 	platformAdmin,
 	{ name: "Ana Ribeiro", email: "ana@horizonte.test" },
 	{ name: "Bruno Costa", email: "bruno@horizonte.test" },
+	{ name: "Marina Teixeira", email: "marina@horizonte.test" },
 	{ name: "Carla Mendes", email: "carla@horizonte.test" },
 	{ name: "Diego Almeida", email: "diego@horizonte.test" },
 	{ name: "Elisa Rocha", email: "elisa@horizonte.test" },
@@ -223,6 +224,7 @@ export const organizations: SeedOrganization[] = [
 		members: [
 			{ email: "ana@horizonte.test", role: "admin" },
 			{ email: "bruno@horizonte.test", role: "admin" },
+			{ email: "marina@horizonte.test", role: "admin" },
 			{ email: "carla@horizonte.test", role: "manager" },
 			{ email: "diego@horizonte.test", role: "manager" },
 			{ email: "elisa@horizonte.test", role: "assistant" },

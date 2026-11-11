@@ -15,11 +15,13 @@ import {
 	Param,
 	Patch,
 	Post,
+	UseInterceptors,
 } from "@nestjs/common";
 import { ApiOperation, ApiTags } from "@nestjs/swagger";
 import { Session, type UserSession } from "@thallesp/nestjs-better-auth";
 import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
+import { ProjectUseInterceptor } from "../projects/project-use.interceptor";
 import { ProjectParamsDto } from "../projects/dto/project-params.dto";
 import { CreateStructureResultDto } from "./dto/create-structure-result.dto";
 import { CreateStructureDto } from "./dto/create-structure.dto";
@@ -35,6 +37,7 @@ import { StructureService } from "./structure.service";
 
 @ApiTags("Structure")
 @Controller("projects/:id")
+@UseInterceptors(ProjectUseInterceptor)
 export class StructureController {
 	constructor(private readonly structure: StructureService) {}
 

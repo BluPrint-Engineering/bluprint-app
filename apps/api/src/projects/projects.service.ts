@@ -16,7 +16,7 @@ import {
 	type RenameProject,
 } from "@bluprint/shared";
 import { Propagation, Transactional } from "@nestjs-cls/transactional";
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Injectable, Logger } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { MembersRepository } from "../members/members.repository";
 import { UnitsService } from "../units/units.service";
@@ -56,6 +56,8 @@ function toSummary(
 
 @Injectable()
 export class ProjectsService {
+	private readonly logger = new Logger(ProjectsService.name);
+
 	constructor(
 		private readonly projects: ProjectsRepository,
 		private readonly members: MembersRepository,
@@ -221,6 +223,20 @@ export class ProjectsService {
 		}
 
 		return found;
+	}
+
+	@Transactional(Propagation.NotSupported)
+	async recordUse(
+		userId: string,
+		projectIds: readonly string[],
+	): Promise<void> {
+		try {
+			await this.projects.recordUse(userId, projectIds);
+		} catch (error) {
+			this.logger.warn(
+				`Recording use of projects ${projectIds.join(", ")} by user ${userId} failed: ${String(error)}`,
+			);
+		}
 	}
 
 	async listManagers(userId: string): Promise<ProjectManager[]> {

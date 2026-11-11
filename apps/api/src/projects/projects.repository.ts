@@ -23,6 +23,7 @@ import { DatabaseAdapter } from "../db/database.module";
 import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
 import { project } from "./project.entity";
+import { projectUse } from "./project-use.entity";
 
 /** ilike reads `%`, `_` and `\` as wildcards or escapes, so `q` is escaped to match itself. */
 function nameContains(q: string) {
@@ -55,6 +56,7 @@ export class ProjectsRepository {
 					createdAt: project.createdAt,
 					status: project.status,
 					lastActivityAt: project.lastActivityAt,
+					lastUsedAt: projectUse.lastUsedAt,
 					reservedUnits: project.reservedUnits,
 					deliveredAt: project.deliveredAt,
 					deliveredByName: sql<string | null>`${deliverer.name}`.as(
@@ -79,6 +81,13 @@ export class ProjectsRepository {
 					),
 				)
 				.leftJoin(deliverer, eq(deliverer.id, project.deliveredBy))
+				.leftJoin(
+					projectUse,
+					and(
+						eq(projectUse.projectId, project.id),
+						eq(projectUse.userId, userId),
+					),
+				)
 				.where(
 					and(
 						or(isNotNull(projectMember.id), eq(member.role, "admin")),
@@ -136,6 +145,11 @@ export class ProjectsRepository {
 
 		// the id tiebreak keeps pages stable: rows created in one transaction share created_at, and names repeat
 		const order = {
+			myUse: [
+				sql`${visible.lastUsedAt} desc nulls last`,
+				desc(visible.lastActivityAt),
+				desc(visible.id),
+			],
 			recent: [desc(visible.createdAt), desc(visible.id)],
 			// ICU compares letters before accents and case, so "Árvore" and "árvore" sort among the A's
 			name: [asc(sql`${visible.name} collate "pt-BR-x-icu"`), asc(visible.id)],
@@ -226,6 +240,26 @@ export class ProjectsRepository {
 			.update(project)
 			.set({ reservedUnits })
 			.where(eq(project.id, projectId));
+	}
+
+	async recordUse(
+		userId: string,
+		projectIds: readonly string[],
+	): Promise<void> {
+		await this.txHost.tx
+			.insert(projectUse)
+			.values(
+				projectIds.map((projectId) => ({
+					userId,
+					projectId,
+					lastUsedAt: sql`now()`,
+				})),
+			)
+			.onConflictDoUpdate({
+				target: [projectUse.userId, projectUse.projectId],
+				set: { lastUsedAt: sql`now()` },
+				setWhere: sql`${projectUse.lastUsedAt} < now() - interval '5 minutes'`,
+			});
 	}
 
 	async touch(projectId: string): Promise<void> {

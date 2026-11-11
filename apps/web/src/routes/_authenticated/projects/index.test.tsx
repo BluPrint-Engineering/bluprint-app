@@ -97,7 +97,7 @@ describe("/projects route", () => {
 
 		const { router } = renderAt("/projects?page=3");
 		await userEvent.click(
-			await screen.findByRole("button", { name: "Ordenar: Mais recentes" }),
+			await screen.findByRole("button", { name: "Ordenar: Meu uso recente" }),
 		);
 		await userEvent.click(
 			within(await screen.findByRole("menu")).getByRole("menuitemradio", {

@@ -1,8 +1,14 @@
+import { randomBytes } from "node:crypto";
 import { expect, test as setup } from "@playwright/test";
 import { ADMIN_STORAGE_STATE } from "../auth-state";
 import { ADMIN_EMAIL, SEED_PASSWORD } from "../seed-account";
 
 setup.describe.configure({ retries: 0 });
+setup.use({
+	extraHTTPHeaders: {
+		"x-forwarded-for": `10.${[...randomBytes(3)].join(".")}`,
+	},
+});
 
 setup("authenticate as an org admin", async ({ page }) => {
 	await page.goto("/login");

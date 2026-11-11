@@ -1,7 +1,13 @@
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import { MANAGER_EMAIL, MANAGER_NAME, SEED_PASSWORD } from "../seed-account";
 
-test.use({ storageState: { cookies: [], origins: [] } });
+test.use({
+	storageState: { cookies: [], origins: [] },
+	extraHTTPHeaders: {
+		"x-forwarded-for": `10.${[...randomBytes(3)].join(".")}`,
+	},
+});
 test.describe.configure({ retries: 0 });
 
 test("signs out from the account menu, back to the login", async ({ page }) => {
