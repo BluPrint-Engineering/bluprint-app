@@ -15,6 +15,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useSessionDraft } from "@/features/auth";
 import { useMoveLocationMutation } from "../api";
 import { duplicateMenuLabel } from "../duplicateText";
 import { removeLabel, renameLabel } from "../naming";
@@ -29,6 +30,21 @@ export interface Removal {
 	afterRemoval?: () => void | Promise<void>;
 }
 
+function locationDraft(
+	variables: unknown,
+	locationId: string,
+): string | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("locationId" in variables) || !("name" in variables)) return undefined;
+	if (
+		variables.locationId !== locationId ||
+		typeof variables.name !== "string"
+	) {
+		return undefined;
+	}
+	return variables.name;
+}
+
 export function LocationMenu({
 	projectId,
 	target,
@@ -36,6 +52,7 @@ export function LocationMenu({
 	duplicate,
 	variant = "ghost",
 	movable = false,
+	reopensReservation = false,
 	removal,
 	onCloseAutoFocus,
 	children,
@@ -46,12 +63,28 @@ export function LocationMenu({
 	duplicate?: DuplicateTarget;
 	variant?: "ghost" | "outline";
 	movable?: boolean;
+	reopensReservation?: boolean;
 	removal: Removal;
 	onCloseAutoFocus?: (event: Event) => void;
 	children?: ReactNode;
 }) {
-	const [renaming, setRenaming] = useState(false);
-	const [duplicating, setDuplicating] = useState(false);
+	const restoredRename = useSessionDraft("rename-location", (variables) =>
+		locationDraft(variables, target.id),
+	);
+	const restoredDuplicate = useSessionDraft("duplicate-location", (variables) =>
+		locationDraft(variables, target.id),
+	);
+	const [renaming, setRenaming] = useState(restoredRename !== undefined);
+	const restoredReservation = useSessionDraft(
+		"change-reservation",
+		(variables) => (typeof variables === "number" ? variables : undefined),
+	);
+	const [duplicating, setDuplicating] = useState(
+		restoredDuplicate !== undefined ||
+			(reopensReservation &&
+				duplicate !== undefined &&
+				restoredReservation !== undefined),
+	);
 	const [confirming, setConfirming] = useState(false);
 	const trigger = useRef<HTMLButtonElement>(null);
 	const move = useMoveLocationMutation(projectId);

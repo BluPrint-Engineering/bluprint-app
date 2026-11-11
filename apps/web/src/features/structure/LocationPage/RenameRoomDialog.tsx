@@ -3,6 +3,7 @@ import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { isProjectDelivered } from "../../projects/api";
 import { isRoomNameTaken, useRenameRoomMutation } from "../api";
 import { FormDialog } from "../components/FormDialog";
@@ -23,24 +24,38 @@ export function RenameRoomDialog({
 }) {
 	const fieldId = useId();
 	const rename = useRenameRoomMutation(projectId, locationId);
-	const [name, setName] = useState(room.name);
+	const restored = useSessionDraft("rename-room", (variables) => {
+		if (typeof variables !== "object" || variables === null) return undefined;
+		if (!("roomId" in variables) || !("name" in variables)) return undefined;
+		if (variables.roomId !== room.id || typeof variables.name !== "string") {
+			return undefined;
+		}
+		return variables.name;
+	});
+	const clearDraft = useClearSessionDraft("rename-room");
+	const [name, setName] = useState(restored ?? room.name);
 	const [error, setError] = useState<string>();
+
+	function close() {
+		clearDraft();
+		onClose();
+	}
 
 	function submit() {
 		const invalid = roomNameError(name);
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
-		if (trimmed === room.name) return onClose();
+		if (trimmed === room.name) return close();
 
 		rename.mutate(
 			{ roomId: room.id, name: trimmed },
 			{
-				onSuccess: onClose,
+				onSuccess: close,
 				onError: (failure) => {
 					if (isRoomNameTaken(failure)) {
 						setError(roomNameTakenText(holder, trimmed));
 					} else if (isProjectDelivered(failure)) {
-						onClose();
+						close();
 					}
 				},
 			},
@@ -65,7 +80,7 @@ export function RenameRoomDialog({
 			pending={rename.isPending}
 			formId={fieldId}
 			onSubmit={submit}
-			onClose={onClose}
+			onClose={close}
 		>
 			{failed && (
 				<Alert variant="destructive">

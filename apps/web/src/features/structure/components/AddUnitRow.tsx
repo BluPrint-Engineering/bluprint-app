@@ -1,6 +1,7 @@
 import type { ProjectSummary } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { useSessionDraft } from "@/features/auth";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import { projectUnitsQueryOptions } from "../api";
 import { addUnitLine } from "../reserveText";
@@ -22,7 +23,13 @@ type AddUnitRowProps = Omit<
 export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const admin = project.role === "admin";
-	const [reserving, setReserving] = useState(false);
+	const restoredReservation = useSessionDraft(
+		"change-reservation",
+		(variables) => (typeof variables === "number" ? variables : undefined),
+	);
+	const [reserving, setReserving] = useState(
+		admin && restoredReservation !== undefined,
+	);
 	const alterReservation = useRef<HTMLButtonElement>(null);
 	const addButton = useRef<HTMLButtonElement>(null);
 	const remaining = units.data?.remaining;

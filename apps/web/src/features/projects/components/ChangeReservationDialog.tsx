@@ -25,6 +25,7 @@ import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { organizationUnitsQueryOptions } from "../../account/api";
@@ -100,7 +101,11 @@ export function ChangeReservationDialog({
 	const units = useQuery({ ...organizationUnitsQueryOptions, enabled: open });
 	const { used, reserved } = project.units;
 	const formId = useId();
-	const [typed, setTyped] = useState(String(reserved));
+	const restored = useSessionDraft("change-reservation", (variables) =>
+		typeof variables === "number" ? String(variables) : undefined,
+	);
+	const clearDraft = useClearSessionDraft("change-reservation");
+	const [typed, setTyped] = useState(restored ?? String(reserved));
 	const [touched, setTouched] = useState(false);
 	const [refused, setRefused] = useState<string>();
 	const shown = useRef(open);
@@ -135,13 +140,15 @@ export function ChangeReservationDialog({
 	const saving = change.isPending;
 
 	const { reset } = change;
+	const opened = useRef(open);
 	useEffect(() => {
-		if (open || saving) return;
+		if (open) opened.current = true;
+		if (open || saving || (restored !== undefined && !opened.current)) return;
 		setTyped(String(reserved));
 		setTouched(false);
 		setRefused(undefined);
 		reset();
-	}, [open, saving, reserved, reset]);
+	}, [open, saving, reserved, reset, restored]);
 
 	const wanted = parseUnits(typed);
 	const invalid = reservationError(figures, wanted);
@@ -155,7 +162,9 @@ export function ChangeReservationDialog({
 	}
 
 	function handleOpenChange(next: boolean) {
-		if (!saving) onOpenChange(next);
+		if (saving) return;
+		if (!next) clearDraft();
+		onOpenChange(next);
 	}
 
 	function submit() {

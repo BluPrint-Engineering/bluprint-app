@@ -49,6 +49,7 @@ export function deliveredMeanwhile(error: unknown) {
 export function useUpdateReservationsMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
+		meta: { sessionDraft: "update-reservations" },
 		mutationFn: (body: UpdateReservations) =>
 			apiFetch(
 				"/organization/units/reservations",

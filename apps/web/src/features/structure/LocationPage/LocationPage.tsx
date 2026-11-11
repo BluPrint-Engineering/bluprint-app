@@ -145,6 +145,7 @@ function LocationView({
 				duplicate: { type: location.type, id: location.id },
 			})}
 			movable={location.type === "floor" || location.type === "unit"}
+			reopensReservation={location.type !== "floor"}
 			removal={{
 				counts: tower
 					? towerChildCounts(tower)

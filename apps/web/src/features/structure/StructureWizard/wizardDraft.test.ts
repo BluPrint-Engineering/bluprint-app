@@ -448,3 +448,29 @@ describe("unit types in the draft", () => {
 		expect(validateDraft(filled)).toEqual({});
 	});
 });
+
+describe("a draft restored after the tab reloaded", () => {
+	const unique = (items: { key: string }[]) =>
+		new Set(items.map(({ key }) => key)).size === items.length;
+
+	test("gives new towers, typologies and rules keys it does not already hold", async () => {
+		vi.resetModules();
+		const firstPage = await import("./wizardDraft");
+		const stored: unknown = JSON.parse(
+			JSON.stringify(firstPage.withNewRule(firstPage.initialDraft())),
+		);
+		vi.resetModules();
+		const reloaded = await import("./wizardDraft");
+
+		const restored = reloaded.readWizardDraft(stored);
+		if (!restored) throw new Error("the stored draft did not read back");
+		const grown = reloaded.withTowerCount(
+			reloaded.withNewRule(reloaded.withNewUnitType(restored)),
+			restored.towers.length + 1,
+		);
+
+		expect(unique(grown.towers)).toBe(true);
+		expect(unique(grown.unitTypes)).toBe(true);
+		expect(unique(grown.rules)).toBe(true);
+	});
+});

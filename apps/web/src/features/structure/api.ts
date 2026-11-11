@@ -116,9 +116,11 @@ function postStructure(projectId: string, body: CreateStructure) {
 function useStructureCreation<Variables>(
 	projectId: string,
 	send: (variables: Variables) => Promise<CreateStructureResult>,
+	kind?: "create-structure" | "duplicate-location",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
+		...(kind && { meta: { sessionDraft: kind } }),
 		mutationFn: send,
 		onSuccess: () => {
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
@@ -157,6 +159,17 @@ function useStructureCreation<Variables>(
 }
 
 export function useCreateStructureMutation(projectId: string) {
+	return useStructureCreation(
+		projectId,
+		(body: CreateStructure & { draft?: unknown }) => {
+			const { draft: _draft, ...plan } = body;
+			return postStructure(projectId, plan);
+		},
+		"create-structure",
+	);
+}
+
+export function useRecreateStructureMutation(projectId: string) {
 	return useStructureCreation(projectId, (body: CreateStructure) =>
 		postStructure(projectId, body),
 	);
@@ -187,6 +200,7 @@ export function useDuplicateLocationMutation(projectId: string) {
 			build,
 		}: {
 			locationId: string;
+			name: string;
 			build: (below: SubtreeRooms) => CreateStructure;
 		}) => {
 			const below = await queryClient.fetchQuery(
@@ -194,12 +208,14 @@ export function useDuplicateLocationMutation(projectId: string) {
 			);
 			return postStructure(projectId, build(below));
 		},
+		"duplicate-location",
 	);
 }
 
 export function useRenameLocationMutation(projectId: string) {
 	const queryClient = useQueryClient();
 	return useMutation({
+		meta: { sessionDraft: "rename-location" },
 		mutationFn: ({ locationId, name }: { locationId: string; name: string }) =>
 			apiFetch(
 				`/projects/${projectId}/locations/${locationId}`,
@@ -307,9 +323,11 @@ function useLocationMutation<Variables>(
 	projectId: string,
 	locationId: string,
 	send: (variables: Variables) => Promise<LocationDetail>,
+	kind?: "add-room" | "rename-room" | "change-unit-type",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
+		...(kind && { meta: { sessionDraft: kind } }),
 		mutationFn: send,
 		onSuccess: (detail) => {
 			queryClient.setQueryData(
@@ -341,12 +359,20 @@ function useLocationMutation<Variables>(
 }
 
 export function useAddRoomMutation(projectId: string, locationId: string) {
-	return useLocationMutation(projectId, locationId, (body: AddRoom) =>
-		apiFetch(
-			`/projects/${projectId}/locations/${locationId}/rooms`,
-			locationDetailSchema,
-			{ method: "POST", headers: JSON_HEADERS, body: JSON.stringify(body) },
-		),
+	return useLocationMutation(
+		projectId,
+		locationId,
+		(body: AddRoom) =>
+			apiFetch(
+				`/projects/${projectId}/locations/${locationId}/rooms`,
+				locationDetailSchema,
+				{
+					method: "POST",
+					headers: JSON_HEADERS,
+					body: JSON.stringify(body),
+				},
+			),
+		"add-room",
 	);
 }
 
@@ -360,6 +386,7 @@ export function useRenameRoomMutation(projectId: string, locationId: string) {
 				headers: JSON_HEADERS,
 				body: JSON.stringify({ name }),
 			}),
+		"rename-room",
 	);
 }
 
@@ -382,16 +409,20 @@ export function useGiveRoomBackMutation(projectId: string, unitId: string) {
 }
 
 export function useChangeUnitTypeMutation(projectId: string, unitId: string) {
-	return useLocationMutation(projectId, unitId, (unitTypeId: string | null) =>
-		apiFetch(
-			`/projects/${projectId}/locations/${unitId}/unit-type`,
-			locationDetailSchema,
-			{
-				method: "PUT",
-				headers: JSON_HEADERS,
-				body: JSON.stringify({ unitTypeId }),
-			},
-		),
+	return useLocationMutation(
+		projectId,
+		unitId,
+		(unitTypeId: string | null) =>
+			apiFetch(
+				`/projects/${projectId}/locations/${unitId}/unit-type`,
+				locationDetailSchema,
+				{
+					method: "PUT",
+					headers: JSON_HEADERS,
+					body: JSON.stringify({ unitTypeId }),
+				},
+			),
+		"change-unit-type",
 	);
 }
 
@@ -408,9 +439,11 @@ export function useResetUnitTypeMutation(projectId: string, unitId: string) {
 function useUnitTypeMutation<Variables, Result>(
 	projectId: string,
 	send: (variables: Variables) => Promise<Result>,
+	kind?: "create-unit-type" | "update-unit-type",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
+		...(kind && { meta: { sessionDraft: kind } }),
 		mutationFn: send,
 		onSettled: () =>
 			Promise.all([
@@ -430,12 +463,15 @@ function useUnitTypeMutation<Variables, Result>(
 }
 
 export function useCreateUnitTypeMutation(projectId: string) {
-	return useUnitTypeMutation(projectId, (body: CreateUnitType) =>
-		apiFetch(`/projects/${projectId}/unit-types`, unitTypeSchema, {
-			method: "POST",
-			headers: JSON_HEADERS,
-			body: JSON.stringify(body),
-		}),
+	return useUnitTypeMutation(
+		projectId,
+		(body: CreateUnitType) =>
+			apiFetch(`/projects/${projectId}/unit-types`, unitTypeSchema, {
+				method: "POST",
+				headers: JSON_HEADERS,
+				body: JSON.stringify(body),
+			}),
+		"create-unit-type",
 	);
 }
 
@@ -452,6 +488,7 @@ export function useUpdateUnitTypeMutation(projectId: string) {
 					body: JSON.stringify(body),
 				},
 			),
+		"update-unit-type",
 	);
 }
 

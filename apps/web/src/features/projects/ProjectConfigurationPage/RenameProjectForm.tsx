@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { useRenameProjectMutation } from "../api";
 import {
 	type ProjectNameFormValues,
@@ -20,6 +21,10 @@ interface RenameProjectFormProps {
 
 export function RenameProjectForm({ project, onDone }: RenameProjectFormProps) {
 	const rename = useRenameProjectMutation(project.id);
+	const restored = useSessionDraft("rename-project", (variables) =>
+		typeof variables === "string" ? variables : undefined,
+	);
+	const clearDraft = useClearSessionDraft("rename-project");
 	const {
 		register,
 		handleSubmit,
@@ -27,22 +32,27 @@ export function RenameProjectForm({ project, onDone }: RenameProjectFormProps) {
 		formState: { errors },
 	} = useForm<ProjectNameFormValues>({
 		resolver: zodResolver(projectNameFormSchema),
-		defaultValues: { name: project.name },
+		defaultValues: { name: restored ?? project.name },
 	});
 
 	useEffect(() => {
 		setFocus("name", { shouldSelect: true });
 	}, [setFocus]);
 
+	function finish() {
+		clearDraft();
+		onDone();
+	}
+
 	return (
 		<form
 			noValidate
 			className="grid gap-(--space-3)"
 			onSubmit={handleSubmit(({ name }) =>
-				rename.mutate(name, { onSuccess: onDone }),
+				rename.mutate(name, { onSuccess: finish }),
 			)}
 			onKeyDown={(event) => {
-				if (event.key === "Escape" && !rename.isPending) onDone();
+				if (event.key === "Escape" && !rename.isPending) finish();
 			}}
 		>
 			{rename.isError && (
@@ -74,7 +84,7 @@ export function RenameProjectForm({ project, onDone }: RenameProjectFormProps) {
 					type="button"
 					variant="outline"
 					disabled={rename.isPending}
-					onClick={onDone}
+					onClick={finish}
 				>
 					Cancelar
 				</Button>

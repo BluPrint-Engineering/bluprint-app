@@ -115,6 +115,7 @@ export function useRenameProjectMutation(projectId: string) {
 	const queryClient = useQueryClient();
 	const { queryKey } = projectQueryOptions(projectId);
 	return useMutation({
+		meta: { sessionDraft: "rename-project" },
 		mutationFn: (name: string) =>
 			apiFetch(`/projects/${projectId}`, projectSummarySchema, {
 				method: "PATCH",
@@ -169,6 +170,7 @@ export function useChangeReservationMutation(
 	const queryClient = useQueryClient();
 	const { queryKey } = projectQueryOptions(projectId);
 	return useMutation({
+		meta: { sessionDraft: "change-reservation" },
 		mutationFn: (reserved: number) =>
 			apiFetch(`/projects/${projectId}/units`, projectSummarySchema, {
 				method: "PATCH",
@@ -232,6 +234,7 @@ export function useDeliverProjectMutation(
 export function useCreateProjectMutation() {
 	const queryClient = useQueryClient();
 	return useMutation({
+		meta: { sessionDraft: "create-project" },
 		mutationFn: (project: CreateProject) =>
 			apiFetch("/projects", projectSummarySchema, {
 				method: "POST",
