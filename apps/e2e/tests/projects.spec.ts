@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import {
 	DESKTOP_RECENT_USE_ADMIN_EMAIL,
@@ -101,6 +102,9 @@ test.describe("project list", () => {
 		page,
 		isMobile,
 	}) => {
+		await page.context().setExtraHTTPHeaders({
+			"x-forwarded-for": `10.${[...randomBytes(3)].join(".")}`,
+		});
 		await page.context().clearCookies();
 		await page.goto("/login");
 		await page
