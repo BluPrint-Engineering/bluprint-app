@@ -95,7 +95,7 @@ A room created from the unit's type carries `unit_type_room_id`, so renaming the
 
 ### `typology` and `typology_room`
 
-A project's typologies (*tipologias*) and their ordered room names, in one table for both catalogs: `typology.location_type` is `unit` or `common_area` ([0080](adr/0080-one-typology-table-for-units-and-common-areas.md)). Designed only: the migrated tables are still `unit_type` and `unit_type_room`, serving units, and the columns that point at them still carry that name. Names are unique per project, across both catalogs; a name of a location is unique within its tower (a common area's within its parent), among locations not archived ([0071](adr/0071-structure-is-edited-where-it-is-navigated.md)).
+A project's typologies (*tipologias*) and their ordered room names, in one table for both catalogs: `typology.location_type` is `unit` or `common_area` ([0080](adr/0080-one-typology-table-for-units-and-common-areas.md)). Designed only: the migrated tables are still `unit_type` and `unit_type_room`, serving units, and the columns that point at them still carry that name. Names are unique per project, across both catalogs; a name of a location is unique within its tower (a common area's within its parent), among locations not archived ([0071](adr/0071-structure-is-edited-where-it-is-navigated.md)). A typology's name and a room's name, in a typology and in a location, also ignore accents, which a location's name does not ([0083](adr/0083-room-and-typology-names-ignore-accents.md)). `typology.version` rises on every change to the name or the rooms, and an edit sent with a stale one is refused ([0084](adr/0084-a-typology-edit-on-a-stale-version-is-refused.md)). Both are designed only.
 
 ## 4. Disciplines and plans
 
