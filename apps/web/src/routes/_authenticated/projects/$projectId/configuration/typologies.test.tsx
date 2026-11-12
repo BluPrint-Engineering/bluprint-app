@@ -2,10 +2,10 @@ import {
 	PROJECT_DELIVERED,
 	type ProjectSummary,
 	ROOM_NAME_TAKEN,
-	UNIT_TYPE_IN_USE,
-	UNIT_TYPE_NAME_TAKEN,
-	type UnitType,
-	type UnitTypeList,
+	TYPOLOGY_IN_USE,
+	TYPOLOGY_NAME_TAKEN,
+	type Typology,
+	type TypologyList,
 } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -24,7 +24,7 @@ import {
 	combine,
 	configurationSectionsApi,
 	emptyStructure,
-	unitTypeOf,
+	typologyOf,
 } from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
 
@@ -33,16 +33,16 @@ const CONFIG_PATH = `/projects/${OBRA.id}/configuration`;
 const BASE = `/api/projects/${OBRA.id}`;
 const LOCKED = "A obra foi entregue: a estrutura não pode mais ser alterada.";
 
-const tipologiaA = unitTypeOf(
+const tipologiaA = typologyOf(
 	"Tipologia A",
 	["Sala", "Cozinha", "Sacada", "Quarto", "Banheiro", "Suíte", "Despensa"],
 	{ units: 44, changed: 1 },
 );
-const tipologiaB = unitTypeOf("Tipologia B", ["Sala", "Quarto"], {
+const tipologiaB = typologyOf("Tipologia B", ["Sala", "Quarto"], {
 	units: 1,
 	changed: 0,
 });
-const tipologiaC = unitTypeOf("Tipologia C", ["Sala"]);
+const tipologiaC = typologyOf("Tipologia C", ["Sala"]);
 
 interface Write {
 	method: string;
@@ -57,13 +57,13 @@ function problem(status: number, code: string, extra: object = {}) {
 	);
 }
 
-function unitTypesApi({
+function typologiesApi({
 	summary = OBRA,
-	list = { unitTypes: [tipologiaA, tipologiaB, tipologiaC] },
+	list = { typologies: [tipologiaA, tipologiaB, tipologiaC] },
 	answer,
 }: {
 	summary?: ProjectSummary;
-	list?: UnitTypeList;
+	list?: TypologyList;
 	answer?: (write: Write) => Promise<Response> | undefined;
 } = {}) {
 	const writes: Write[] = [];
@@ -72,7 +72,7 @@ function unitTypesApi({
 		(url, init) => {
 			const method = init?.method ?? "GET";
 			if (url.pathname === BASE) return json(summary);
-			if (!url.pathname.startsWith(`${BASE}/unit-types`)) return undefined;
+			if (!url.pathname.startsWith(`${BASE}/typologies`)) return undefined;
 			if (method === "GET") return json(current);
 			const write = {
 				method,
@@ -87,7 +87,7 @@ function unitTypesApi({
 	return {
 		handler,
 		writes,
-		replace(next: UnitTypeList) {
+		replace(next: TypologyList) {
 			current = next;
 		},
 	};
@@ -121,7 +121,7 @@ afterEach(() => {
 
 describe("Tipologias on the configuration (C1)", () => {
 	test("lists each tipologia with its rooms and units, and the way to add one", async () => {
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		expect(
@@ -138,7 +138,7 @@ describe("Tipologias on the configuration (C1)", () => {
 	});
 
 	test("explains where tipologias come from when there are none", async () => {
-		const { handler } = unitTypesApi({ list: { unitTypes: [] } });
+		const { handler } = typologiesApi({ list: { typologies: [] } });
 		stubApi(signedIn, { api: handler });
 
 		renderAt(CONFIG_PATH);
@@ -154,7 +154,7 @@ describe("Tipologias on the configuration (C1)", () => {
 	});
 
 	test("offers the menu, and disables the exclusion while units follow the tipologia", async () => {
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		await userEvent.click(
@@ -173,7 +173,7 @@ describe("Tipologias on the configuration (C1)", () => {
 	});
 
 	test("lets the assistant edit tipologias too", async () => {
-		const { handler } = unitTypesApi({
+		const { handler } = typologiesApi({
 			summary: { ...OBRA, role: "assistant" },
 		});
 		await openConfiguration(handler);
@@ -184,7 +184,7 @@ describe("Tipologias on the configuration (C1)", () => {
 	});
 
 	test("lists Tipologias in the side navigation", async () => {
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		const nav = screen.getByRole("navigation", {
@@ -200,10 +200,10 @@ describe("Tipologias on the configuration (C1)", () => {
 
 	test("keeps the frame while the tipologias load and offers another try when they fail", async () => {
 		let failing = true;
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		stubApi(signedIn, {
 			api: (url, init) =>
-				failing && url.pathname === `${BASE}/unit-types`
+				failing && url.pathname === `${BASE}/typologies`
 					? problem(500, "INTERNAL_ERROR")
 					: handler(url, init),
 		});
@@ -221,7 +221,7 @@ describe("Tipologias on the configuration (C1)", () => {
 
 describe("editing a tipologia in place (C2)", () => {
 	test("opens the row with its rooms, the field and how many units change", async () => {
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -243,10 +243,10 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("adds a room and sends the whole ordered list with an id for the new one", async () => {
-		const { handler, writes } = unitTypesApi({
+		const { handler, writes } = typologiesApi({
 			answer: () =>
 				json({
-					unitType: {
+					typology: {
 						...tipologiaA,
 						rooms: [...tipologiaA.rooms, { id: "x", name: "Lavanderia" }],
 					},
@@ -266,7 +266,7 @@ describe("editing a tipologia in place (C2)", () => {
 		const [write] = writes;
 		expect(write).toMatchObject({
 			method: "PATCH",
-			path: `/unit-types/${tipologiaA.id}`,
+			path: `/typologies/${tipologiaA.id}`,
 		});
 		const rooms = editedRooms(nth(writes, 0));
 		expect(rooms.map(({ name }) => name)).toEqual([
@@ -278,8 +278,8 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("toasts how many units were updated, and closes the row", async () => {
-		const { handler } = unitTypesApi({
-			answer: () => json({ unitType: tipologiaA, updatedUnitCount: 44 }),
+		const { handler } = typologiesApi({
+			answer: () => json({ typology: tipologiaA, updatedUnitCount: 44 }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -301,8 +301,8 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("takes a room out of the list that is sent", async () => {
-		const { handler, writes } = unitTypesApi({
-			answer: () => json({ unitType: tipologiaA, updatedUnitCount: 43 }),
+		const { handler, writes } = typologiesApi({
+			answer: () => json({ typology: tipologiaA, updatedUnitCount: 43 }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -324,8 +324,8 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("brings a room back with the id it had when the same name is added again", async () => {
-		const { handler, writes } = unitTypesApi({
-			answer: () => json({ unitType: tipologiaA, updatedUnitCount: 0 }),
+		const { handler, writes } = typologiesApi({
+			answer: () => json({ typology: tipologiaA, updatedUnitCount: 0 }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -346,7 +346,7 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("refuses a room the tipologia already has", async () => {
-		const { handler, writes } = unitTypesApi();
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
@@ -362,7 +362,7 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("closes without sending anything when nothing changed", async () => {
-		const { handler, writes } = unitTypesApi();
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
@@ -377,7 +377,7 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("drops the draft on Cancelar", async () => {
-		const { handler, writes } = unitTypesApi();
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 		await userEvent.click(screen.getByRole("button", { name: "Tirar Sala" }));
@@ -392,7 +392,7 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("keeps the draft and says so when saving fails", async () => {
-		const { handler } = unitTypesApi({
+		const { handler } = typologiesApi({
 			answer: () => problem(500, "INTERNAL_ERROR"),
 		});
 		await openConfiguration(handler);
@@ -412,7 +412,7 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("names the rooms a unit has that the tipologia cannot take over", async () => {
-		const { handler } = unitTypesApi({
+		const { handler } = typologiesApi({
 			answer: () =>
 				problem(409, ROOM_NAME_TAKEN, { names: ["Estar", "Varanda"] }),
 		});
@@ -433,7 +433,7 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("says only that nobody follows a tipologia without units", async () => {
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		await chooseFromMenu("Tipologia C", "Editar cômodos");
@@ -445,7 +445,7 @@ describe("editing a tipologia in place (C2)", () => {
 
 	test("shows the tipologia in a row full width on the phone", async () => {
 		setViewport("phone");
-		const { handler } = unitTypesApi();
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -456,10 +456,10 @@ describe("editing a tipologia in place (C2)", () => {
 
 describe("renaming a tipologia", () => {
 	test("sends the trimmed name and closes the dialog", async () => {
-		const { handler, writes } = unitTypesApi({
+		const { handler, writes } = typologiesApi({
 			answer: () =>
 				json({
-					unitType: { ...tipologiaB, name: "Tipologia Z" },
+					typology: { ...tipologiaB, name: "Tipologia Z" },
 					updatedUnitCount: 0,
 				}),
 		});
@@ -474,7 +474,7 @@ describe("renaming a tipologia", () => {
 		await waitFor(() => expect(writes).toHaveLength(1));
 		expect(writes[0]).toEqual({
 			method: "PATCH",
-			path: `/unit-types/${tipologiaB.id}`,
+			path: `/typologies/${tipologiaB.id}`,
 			body: { name: "Tipologia Z" },
 		});
 		await waitFor(() => {
@@ -483,9 +483,9 @@ describe("renaming a tipologia", () => {
 	});
 
 	test("says the name is taken, with the dialog still open", async () => {
-		const { handler } = unitTypesApi({
+		const { handler } = typologiesApi({
 			answer: () =>
-				problem(409, UNIT_TYPE_NAME_TAKEN, { names: ["Tipologia A"] }),
+				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia B", "Renomear");
@@ -501,7 +501,7 @@ describe("renaming a tipologia", () => {
 	});
 
 	test("asks for a name before sending", async () => {
-		const { handler, writes } = unitTypesApi();
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia B", "Renomear");
 		await userEvent.clear(screen.getByRole("textbox", { name: "Nome" }));
@@ -517,11 +517,11 @@ describe("renaming a tipologia", () => {
 
 describe("creating a tipologia", () => {
 	test("creates it empty with an id of the client's and opens its rooms to fill", async () => {
-		const created: UnitType = unitTypeOf("Tipologia D", []);
-		const api = unitTypesApi({
+		const created: Typology = typologyOf("Tipologia D", []);
+		const api = typologiesApi({
 			answer: () => {
 				api.replace({
-					unitTypes: [tipologiaA, tipologiaB, tipologiaC, created],
+					typologies: [tipologiaA, tipologiaB, tipologiaC, created],
 				});
 				return json(created, 201);
 			},
@@ -539,7 +539,7 @@ describe("creating a tipologia", () => {
 		await waitFor(() => expect(api.writes).toHaveLength(1));
 		expect(api.writes[0]).toMatchObject({
 			method: "POST",
-			path: "/unit-types",
+			path: "/typologies",
 			body: { name: "Tipologia D", rooms: [] },
 		});
 		expect((nth(api.writes, 0).body as { id: string }).id).toMatch(
@@ -551,9 +551,9 @@ describe("creating a tipologia", () => {
 	});
 
 	test("says the name is taken and keeps the dialog", async () => {
-		const { handler } = unitTypesApi({
+		const { handler } = typologiesApi({
 			answer: () =>
-				problem(409, UNIT_TYPE_NAME_TAKEN, { names: ["Tipologia A"] }),
+				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] }),
 		});
 		await openConfiguration(handler);
 		await userEvent.click(
@@ -573,8 +573,8 @@ describe("creating a tipologia", () => {
 
 describe("deleting a tipologia", () => {
 	test("deletes one without units and toasts it", async () => {
-		const { handler, writes } = unitTypesApi({
-			answer: () => json({ unitTypes: [tipologiaA, tipologiaB] }),
+		const { handler, writes } = typologiesApi({
+			answer: () => json({ typologies: [tipologiaA, tipologiaB] }),
 		});
 		await openConfiguration(handler);
 
@@ -584,13 +584,13 @@ describe("deleting a tipologia", () => {
 			await screen.findByText("Tipologia C excluída."),
 		).toBeInTheDocument();
 		expect(writes).toEqual([
-			{ method: "DELETE", path: `/unit-types/${tipologiaC.id}`, body: null },
+			{ method: "DELETE", path: `/typologies/${tipologiaC.id}`, body: null },
 		]);
 	});
 
 	test("says units began to follow it when the server refuses", async () => {
-		const { handler } = unitTypesApi({
-			answer: () => problem(409, UNIT_TYPE_IN_USE),
+		const { handler } = typologiesApi({
+			answer: () => problem(409, TYPOLOGY_IN_USE),
 		});
 		await openConfiguration(handler);
 
@@ -604,7 +604,7 @@ describe("deleting a tipologia", () => {
 	});
 
 	test("toasts a failure and keeps the row", async () => {
-		const { handler } = unitTypesApi({
+		const { handler } = typologiesApi({
 			answer: () => problem(500, "INTERNAL_ERROR"),
 		});
 		await openConfiguration(handler);
@@ -627,7 +627,7 @@ describe("Tipologias of a delivered project (C6)", () => {
 	};
 
 	test("lists them to read, with nothing to change and the reason why", async () => {
-		const { handler } = unitTypesApi({ summary: delivered });
+		const { handler } = typologiesApi({ summary: delivered });
 		await openConfiguration(handler);
 
 		expect(card().getByText("7 cômodos · 44 unidades")).toBeInTheDocument();
@@ -637,13 +637,13 @@ describe("Tipologias of a delivered project (C6)", () => {
 
 	test("reloads the project as closed when a save finds it delivered", async () => {
 		let closed = false;
-		const open = unitTypesApi({
+		const open = typologiesApi({
 			answer: () => {
 				closed = true;
 				return problem(409, PROJECT_DELIVERED);
 			},
 		});
-		const closedApi = unitTypesApi({ summary: delivered });
+		const closedApi = typologiesApi({ summary: delivered });
 		stubApi(signedIn, {
 			api: (url, init) =>
 				(closed ? closedApi.handler : open.handler)(url, init),

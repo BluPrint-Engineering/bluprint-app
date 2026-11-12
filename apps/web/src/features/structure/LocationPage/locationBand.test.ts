@@ -17,7 +17,7 @@ const tower = (
 					units: Array.from({ length: units }, (_, i) => ({
 						id: `${id}-u${i}`,
 						name: `10${i + 1}`,
-						unitType: null,
+						typology: null,
 						changes: 0,
 					})),
 					commonAreas: [],
@@ -61,7 +61,7 @@ const detail = (
 	position: 0,
 	ancestors,
 	children,
-	unitType: null,
+	typology: null,
 	changes: 0,
 	rooms: [],
 	droppedRooms: [],

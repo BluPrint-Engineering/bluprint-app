@@ -1,9 +1,9 @@
 import { location } from "../../structure/location.entity";
 import { droppedRoom, room } from "../../structure/room.entity";
-import { unitType, unitTypeRoom } from "../../structure/unit-type.entity";
+import { typology, typologyRoom } from "../../structure/typology.entity";
 import type { Database } from "../database.module";
 
-export interface SeedUnitType {
+export interface SeedTypology {
 	name: string;
 	rooms: string[];
 }
@@ -38,17 +38,17 @@ export interface SeedTower {
 export interface SeedStructure {
 	towers: SeedTower[];
 	commonAreas?: string[];
-	unitTypes?: SeedUnitType[];
-	unitTypeOf?: (unit: SeedUnitRef) => string | undefined;
+	typologies?: SeedTypology[];
+	typologyOf?: (unit: SeedUnitRef) => string | undefined;
 	unitChanges?: SeedUnitChange[];
 	commonAreaRooms?: Record<string, string[]>;
 }
 
-export function sameUnitType(
+export function sameTypology(
 	name: string,
 	rooms: string[],
-): Pick<SeedStructure, "unitTypes" | "unitTypeOf"> {
-	return { unitTypes: [{ name, rooms }], unitTypeOf: () => name };
+): Pick<SeedStructure, "typologies" | "typologyOf"> {
+	return { typologies: [{ name, rooms }], typologyOf: () => name };
 }
 
 export function countUnits(structure: SeedStructure | undefined): number {
@@ -165,7 +165,7 @@ export async function insertStructure(
 	const floorIds = await insertLevel(floorRows);
 	const towerAreaIds = await insertLevel(towerAreaRows);
 
-	const unitTypeIds = await insertUnitTypes(db, projectId, structure);
+	const typologyIds = await insertTypologies(db, projectId, structure);
 
 	const placed = structure.towers.flatMap((tower) =>
 		tower.floors.map((floor) => ({ tower: tower.name, floor })),
@@ -179,14 +179,14 @@ export async function insertStructure(
 		const parentId = floorIds[index]!;
 		floor.units.forEach((name, stack) => {
 			const ref = { tower, floor: floor.name, name, stack };
-			const typeName = structure.unitTypeOf?.(ref);
+			const typeName = structure.typologyOf?.(ref);
 			unitAndAreaRows.push({
 				projectId,
 				parentId,
 				type: "unit",
 				name,
 				position: stack,
-				unitTypeId: typeName ? unitTypeIds.get(typeName)!.id : null,
+				typologyId: typeName ? typologyIds.get(typeName)!.id : null,
 			} satisfies Insertable);
 			rowOwners.push({ kind: "unit", ref });
 		});
@@ -216,17 +216,17 @@ export async function insertStructure(
 			addAreaRooms(locationId, owner.name);
 			return;
 		}
-		const typeName = structure.unitTypeOf?.(owner.ref);
+		const typeName = structure.typologyOf?.(owner.ref);
 		const change = structure.unitChanges?.find(
 			(candidate) =>
 				candidate.tower === owner.ref.tower &&
 				candidate.unit === owner.ref.name,
 		);
-		const typed = typeName ? unitTypeIds.get(typeName) : undefined;
+		const typed = typeName ? typologyIds.get(typeName) : undefined;
 		let position = 0;
-		for (const [typeRoomName, unitTypeRoomId] of typed?.rooms ?? []) {
+		for (const [typeRoomName, typologyRoomId] of typed?.rooms ?? []) {
 			if (change?.droppedRooms?.includes(typeRoomName)) {
-				droppedRows.push({ locationId, unitTypeRoomId });
+				droppedRows.push({ locationId, typologyRoomId });
 				continue;
 			}
 			const renamedTo = change?.renamedRooms?.[typeRoomName];
@@ -234,7 +234,7 @@ export async function insertStructure(
 				locationId,
 				name: renamedTo ?? typeRoomName,
 				position: position++,
-				unitTypeRoomId,
+				typologyRoomId,
 				renamed: renamedTo !== undefined,
 			});
 		}
@@ -248,30 +248,30 @@ export async function insertStructure(
 	}
 }
 
-async function insertUnitTypes(
+async function insertTypologies(
 	db: Pick<Database, "insert">,
 	projectId: string,
 	structure: SeedStructure,
 ): Promise<Map<string, { id: string; rooms: Map<string, string> }>> {
 	const created = new Map<string, { id: string; rooms: Map<string, string> }>();
-	for (const seed of structure.unitTypes ?? []) {
+	for (const seed of structure.typologies ?? []) {
 		const [inserted] = await db
-			.insert(unitType)
+			.insert(typology)
 			.values({ projectId, name: seed.name })
-			.returning({ id: unitType.id });
+			.returning({ id: typology.id });
 		const insertedRooms =
 			seed.rooms.length === 0
 				? []
 				: await db
-						.insert(unitTypeRoom)
+						.insert(typologyRoom)
 						.values(
 							seed.rooms.map((name, position) => ({
-								unitTypeId: inserted!.id,
+								typologyId: inserted!.id,
 								name,
 								position,
 							})),
 						)
-						.returning({ id: unitTypeRoom.id });
+						.returning({ id: typologyRoom.id });
 		created.set(seed.name, {
 			id: inserted!.id,
 			rooms: new Map(

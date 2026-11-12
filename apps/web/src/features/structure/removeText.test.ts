@@ -144,7 +144,7 @@ describe("child counts", () => {
 	const unit = (name: string) => ({
 		id: name,
 		name,
-		unitType: null,
+		typology: null,
 		changes: 0,
 	});
 	const area = (name: string) => ({ id: name, name });

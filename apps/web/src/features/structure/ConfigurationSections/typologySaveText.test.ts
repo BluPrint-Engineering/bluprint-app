@@ -1,8 +1,8 @@
-import type { UnitType } from "@bluprint/shared";
+import type { Typology } from "@bluprint/shared";
 import { describe, expect, test } from "vitest";
-import { savedText, unitsChangedText } from "./unitTypeSaveText";
+import { savedText, unitsChangedText } from "./typologySaveText";
 
-function unitType(unitCount: number, changedUnitCount: number): UnitType {
+function typology(unitCount: number, changedUnitCount: number): Typology {
 	return {
 		id: "0190b000-0000-7000-8000-000000000001",
 		name: "Tipologia A",
@@ -14,25 +14,25 @@ function unitType(unitCount: number, changedUnitCount: number): UnitType {
 
 describe("unitsChangedText", () => {
 	test("says how many units change and that changed units keep their changes", () => {
-		expect(unitsChangedText(unitType(44, 1))).toBe(
+		expect(unitsChangedText(typology(44, 1))).toBe(
 			"Salvar muda as 44 unidades da Tipologia A. 1 unidade com alterações mantém o que foi mudado nela.",
 		);
-		expect(unitsChangedText(unitType(44, 3))).toBe(
+		expect(unitsChangedText(typology(44, 3))).toBe(
 			"Salvar muda as 44 unidades da Tipologia A. 3 unidades com alterações mantêm o que foi mudado nelas.",
 		);
 	});
 
 	test("leaves the changes out when no unit has any", () => {
-		expect(unitsChangedText(unitType(44, 0))).toBe(
+		expect(unitsChangedText(typology(44, 0))).toBe(
 			"Salvar muda as 44 unidades da Tipologia A.",
 		);
 	});
 
 	test("agrees with a single unit and with none", () => {
-		expect(unitsChangedText(unitType(1, 0))).toBe(
+		expect(unitsChangedText(typology(1, 0))).toBe(
 			"Salvar muda 1 unidade da Tipologia A.",
 		);
-		expect(unitsChangedText(unitType(0, 0))).toBe(
+		expect(unitsChangedText(typology(0, 0))).toBe(
 			"Nenhuma unidade usa a Tipologia A ainda.",
 		);
 	});

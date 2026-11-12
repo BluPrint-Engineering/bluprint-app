@@ -9,13 +9,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { isProjectDelivered } from "../../projects/api";
-import { unitTypesQueryOptions, useChangeUnitTypeMutation } from "../api";
+import { typologiesQueryOptions, useChangeTypologyMutation } from "../api";
 import { FormDialog } from "../components/FormDialog";
 import { plural } from "../plural";
 
 const NONE = "none";
 
-export function ChangeUnitTypeDialog({
+export function ChangeTypologyDialog({
 	projectId,
 	unit,
 	onClose,
@@ -25,17 +25,18 @@ export function ChangeUnitTypeDialog({
 	onClose: () => void;
 }) {
 	const formId = useId();
-	const unitTypes = useQuery(unitTypesQueryOptions(projectId));
-	const change = useChangeUnitTypeMutation(projectId, unit.id);
-	const current = unit.unitType?.id ?? NONE;
-	const restored = useSessionDraft("change-unit-type", (variables) =>
+	const typologies = useQuery(typologiesQueryOptions(projectId));
+	const change = useChangeTypologyMutation(projectId, unit.id);
+	const current = unit.typology?.id ?? NONE;
+	const restored = useSessionDraft("change-typology", (variables) =>
 		variables === null || typeof variables === "string" ? variables : undefined,
 	);
-	const clearDraft = useClearSessionDraft("change-unit-type");
+	const clearDraft = useClearSessionDraft("change-typology");
 	const [choice, setChoice] = useState(
 		restored === null ? NONE : (restored ?? current),
 	);
-	const loadFailed = !unitTypes.data && firstLoadState(unitTypes) === "failed";
+	const loadFailed =
+		!typologies.data && firstLoadState(typologies) === "failed";
 
 	function close() {
 		clearDraft();
@@ -47,8 +48,8 @@ export function ChangeUnitTypeDialog({
 		change.mutate(choice === NONE ? null : choice, {
 			onSuccess: (changed) => {
 				toast.success(
-					changed.unitType
-						? `A unidade ${unit.name} agora segue a tipologia ${changed.unitType.name}.`
+					changed.typology
+						? `A unidade ${unit.name} agora segue a tipologia ${changed.typology.name}.`
 						: `A unidade ${unit.name} ficou sem tipologia.`,
 				);
 				close();
@@ -68,7 +69,7 @@ export function ChangeUnitTypeDialog({
 			submitLabel="Trocar"
 			pendingLabel="Trocando…"
 			pending={change.isPending}
-			submitDisabled={!unitTypes.data || choice === current}
+			submitDisabled={!typologies.data || choice === current}
 			formId={formId}
 			onSubmit={submit}
 			onClose={close}
@@ -91,12 +92,12 @@ export function ChangeUnitTypeDialog({
 						type="button"
 						variant="outline"
 						className="mt-(--space-2) justify-self-start"
-						onClick={() => unitTypes.refetch()}
+						onClick={() => typologies.refetch()}
 					>
 						Tentar de novo
 					</Button>
 				</Alert>
-			) : !unitTypes.data ? (
+			) : !typologies.data ? (
 				<div
 					role="status"
 					aria-label="Carregando tipologias"
@@ -112,7 +113,7 @@ export function ChangeUnitTypeDialog({
 					disabled={change.isPending}
 					onValueChange={setChoice}
 				>
-					{unitTypes.data.unitTypes.map((type) => (
+					{typologies.data.typologies.map((type) => (
 						<RadioGroupItem key={type.id} value={type.id}>
 							<span className="grid">
 								<span>{type.name}</span>

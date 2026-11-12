@@ -16,14 +16,14 @@ export function unitChangesQuery(projectId: string, unitId?: string): SQL {
 			select r.location_id
 			from ${room} r
 			join ${location} l on l.id = r.location_id
-			where l.project_id = ${projectId} and l.unit_type_id is not null
-				and (r.unit_type_room_id is null or r.renamed)
+			where l.project_id = ${projectId} and l.typology_id is not null
+				and (r.typology_room_id is null or r.renamed)
 				${onlyThisUnit}
 			union all
 			select d.location_id
 			from ${droppedRoom} d
 			join ${location} l on l.id = d.location_id
-			where l.project_id = ${projectId} and l.unit_type_id is not null
+			where l.project_id = ${projectId} and l.typology_id is not null
 				${onlyThisUnit}
 		) changed
 		group by changed.location_id

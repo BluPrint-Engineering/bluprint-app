@@ -1,4 +1,4 @@
-export interface UnitTypeDraft {
+export interface TypologyDraft {
 	key: string;
 	name: string;
 	rooms: string[];
@@ -11,7 +11,7 @@ export interface RuleDraft {
 	finals: string;
 	from: string;
 	to: string;
-	unitType: string;
+	typology: string;
 }
 
 export type Finals = "all" | number[];
@@ -44,7 +44,7 @@ function ruleApplies(rule: RuleDraft, floor: number, final: number): boolean {
 	);
 }
 
-export function unitTypeKeyFor(
+export function typologyKeyFor(
 	rules: RuleDraft[],
 	tower: number,
 	floor: number,
@@ -53,6 +53,6 @@ export function unitTypeKeyFor(
 	return (
 		rules.find(
 			(rule) => rule.tower === tower && ruleApplies(rule, floor, final),
-		)?.unitType ?? null
+		)?.typology ?? null
 	);
 }

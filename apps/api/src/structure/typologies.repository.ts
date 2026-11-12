@@ -1,12 +1,12 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { comparableLocationName, type NewUnitType } from "@bluprint/shared";
+import { comparableLocationName, type NewTypology } from "@bluprint/shared";
 import { and, asc, count, eq, inArray, ne, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import { room } from "./room.entity";
 import { unitChangesQuery } from "./unit-changes";
-import { unitType, unitTypeRoom } from "./unit-type.entity";
+import { typology, typologyRoom } from "./typology.entity";
 
 const INSERT_CHUNK = 1000;
 
@@ -25,54 +25,54 @@ export interface TypeRoomValue {
 	position: number;
 }
 
-export interface UnitTypeUsageRow extends Record<string, unknown> {
-	unit_type_id: string;
+export interface TypologyUsageRow extends Record<string, unknown> {
+	typology_id: string;
 	units: number;
 	changed: number;
 }
 
 @Injectable()
-export class UnitTypesRepository {
+export class TypologiesRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
 	list(projectId: string): Promise<{ id: string; name: string }[]> {
 		return this.txHost.tx
-			.select({ id: unitType.id, name: unitType.name })
-			.from(unitType)
-			.where(eq(unitType.projectId, projectId))
-			.orderBy(asc(unitType.id));
+			.select({ id: typology.id, name: typology.name })
+			.from(typology)
+			.where(eq(typology.projectId, projectId))
+			.orderBy(asc(typology.id));
 	}
 
 	listRooms(
 		projectId: string,
-	): Promise<{ id: string; unitTypeId: string; name: string }[]> {
+	): Promise<{ id: string; typologyId: string; name: string }[]> {
 		return this.txHost.tx
 			.select({
-				id: unitTypeRoom.id,
-				unitTypeId: unitTypeRoom.unitTypeId,
-				name: unitTypeRoom.name,
+				id: typologyRoom.id,
+				typologyId: typologyRoom.typologyId,
+				name: typologyRoom.name,
 			})
-			.from(unitTypeRoom)
-			.innerJoin(unitType, eq(unitType.id, unitTypeRoom.unitTypeId))
-			.where(eq(unitType.projectId, projectId))
-			.orderBy(asc(unitTypeRoom.position), asc(unitTypeRoom.id));
+			.from(typologyRoom)
+			.innerJoin(typology, eq(typology.id, typologyRoom.typologyId))
+			.where(eq(typology.projectId, projectId))
+			.orderBy(asc(typologyRoom.position), asc(typologyRoom.id));
 	}
 
 	async countUnitsByType(
 		projectId: string,
 	): Promise<Map<string, { units: number; changed: number }>> {
-		const { rows } = await this.txHost.tx.execute<UnitTypeUsageRow>(sql`
+		const { rows } = await this.txHost.tx.execute<TypologyUsageRow>(sql`
 			with changes as (${unitChangesQuery(projectId)})
-			select u.unit_type_id, count(*)::int as units, count(changes.unit_id)::int as changed
+			select u.typology_id, count(*)::int as units, count(changes.unit_id)::int as changed
 			from ${location} u
 			left join changes on changes.unit_id = u.id
-			where u.project_id = ${projectId} and u.unit_type_id is not null
-			group by u.unit_type_id
+			where u.project_id = ${projectId} and u.typology_id is not null
+			group by u.typology_id
 		`);
 
 		return new Map(
 			rows.map((row) => [
-				row.unit_type_id,
+				row.typology_id,
 				{ units: row.units, changed: row.changed },
 			]),
 		);
@@ -84,9 +84,9 @@ export class UnitTypesRepository {
 	): Promise<Set<string>> {
 		if (ids.length === 0) return new Set();
 		const rows = await this.txHost.tx
-			.select({ id: unitType.id })
-			.from(unitType)
-			.where(and(inArray(unitType.id, ids), ne(unitType.projectId, projectId)));
+			.select({ id: typology.id })
+			.from(typology)
+			.where(and(inArray(typology.id, ids), ne(typology.projectId, projectId)));
 
 		return new Set(rows.map((row) => row.id));
 	}
@@ -94,60 +94,60 @@ export class UnitTypesRepository {
 	async findRoomIds(ids: string[]): Promise<Set<string>> {
 		if (ids.length === 0) return new Set();
 		const rows = await this.txHost.tx
-			.select({ id: unitTypeRoom.id })
-			.from(unitTypeRoom)
-			.where(inArray(unitTypeRoom.id, ids));
+			.select({ id: typologyRoom.id })
+			.from(typologyRoom)
+			.where(inArray(typologyRoom.id, ids));
 
 		return new Set(rows.map((row) => row.id));
 	}
 
-	async insertAll(projectId: string, unitTypes: NewUnitType[]): Promise<void> {
-		if (unitTypes.length === 0) return;
+	async insertAll(projectId: string, typologies: NewTypology[]): Promise<void> {
+		if (typologies.length === 0) return;
 		await this.txHost.tx
-			.insert(unitType)
-			.values(unitTypes.map(({ id, name }) => ({ id, projectId, name })));
+			.insert(typology)
+			.values(typologies.map(({ id, name }) => ({ id, projectId, name })));
 
-		const rooms = unitTypes.flatMap(({ id, rooms }) =>
+		const rooms = typologies.flatMap(({ id, rooms }) =>
 			rooms.map((entry, position) => ({
 				id: entry.id,
-				unitTypeId: id,
+				typologyId: id,
 				name: entry.name,
 				position,
 			})),
 		);
 		for (let start = 0; start < rooms.length; start += INSERT_CHUNK) {
 			await this.txHost.tx
-				.insert(unitTypeRoom)
+				.insert(typologyRoom)
 				.values(rooms.slice(start, start + INSERT_CHUNK));
 		}
 	}
 
 	async giveUnitsTheirRooms(
-		units: { id: string; unitTypeId: string }[],
+		units: { id: string; typologyId: string }[],
 	): Promise<void> {
 		if (units.length === 0) return;
 		const typeRooms = await this.txHost.tx
 			.select({
-				id: unitTypeRoom.id,
-				unitTypeId: unitTypeRoom.unitTypeId,
-				name: unitTypeRoom.name,
-				position: unitTypeRoom.position,
+				id: typologyRoom.id,
+				typologyId: typologyRoom.typologyId,
+				name: typologyRoom.name,
+				position: typologyRoom.position,
 			})
-			.from(unitTypeRoom)
+			.from(typologyRoom)
 			.where(
-				inArray(unitTypeRoom.unitTypeId, [
-					...new Set(units.map(({ unitTypeId }) => unitTypeId)),
+				inArray(typologyRoom.typologyId, [
+					...new Set(units.map(({ typologyId }) => typologyId)),
 				]),
 			);
 
-		const rows = units.flatMap(({ id, unitTypeId }) =>
+		const rows = units.flatMap(({ id, typologyId }) =>
 			typeRooms
-				.filter((typeRoom) => typeRoom.unitTypeId === unitTypeId)
+				.filter((typeRoom) => typeRoom.typologyId === typologyId)
 				.map((typeRoom) => ({
 					locationId: id,
 					name: typeRoom.name,
 					position: typeRoom.position,
-					unitTypeRoomId: typeRoom.id,
+					typologyRoomId: typeRoom.id,
 				})),
 		);
 		for (let start = 0; start < rows.length; start += INSERT_CHUNK) {
@@ -158,13 +158,13 @@ export class UnitTypesRepository {
 	}
 	async find(
 		projectId: string,
-		unitTypeId: string,
+		typologyId: string,
 	): Promise<{ id: string; name: string } | undefined> {
 		const [found] = await this.txHost.tx
-			.select({ id: unitType.id, name: unitType.name })
-			.from(unitType)
+			.select({ id: typology.id, name: typology.name })
+			.from(typology)
 			.where(
-				and(eq(unitType.id, unitTypeId), eq(unitType.projectId, projectId)),
+				and(eq(typology.id, typologyId), eq(typology.projectId, projectId)),
 			);
 
 		return found;
@@ -173,55 +173,55 @@ export class UnitTypesRepository {
 	async nameInUse(
 		projectId: string,
 		name: string,
-		exceptUnitTypeId?: string,
+		exceptTypologyId?: string,
 	): Promise<boolean> {
 		const [found] = await this.txHost.tx
-			.select({ id: unitType.id })
-			.from(unitType)
+			.select({ id: typology.id })
+			.from(typology)
 			.where(
 				and(
-					eq(unitType.projectId, projectId),
-					sql`${comparable(unitType.name)} = ${comparableLocationName(name)}`,
-					exceptUnitTypeId ? ne(unitType.id, exceptUnitTypeId) : undefined,
+					eq(typology.projectId, projectId),
+					sql`${comparable(typology.name)} = ${comparableLocationName(name)}`,
+					exceptTypologyId ? ne(typology.id, exceptTypologyId) : undefined,
 				),
 			);
 
 		return found !== undefined;
 	}
 
-	async rename(unitTypeId: string, name: string): Promise<void> {
+	async rename(typologyId: string, name: string): Promise<void> {
 		await this.txHost.tx
-			.update(unitType)
+			.update(typology)
 			.set({ name })
-			.where(eq(unitType.id, unitTypeId));
+			.where(eq(typology.id, typologyId));
 	}
 
-	async countUnits(unitTypeId: string): Promise<number> {
+	async countUnits(typologyId: string): Promise<number> {
 		const [found] = await this.txHost.tx
 			.select({ units: count() })
 			.from(location)
-			.where(eq(location.unitTypeId, unitTypeId));
+			.where(eq(location.typologyId, typologyId));
 
 		return found?.units ?? 0;
 	}
 
-	async delete(unitTypeId: string): Promise<void> {
-		await this.txHost.tx.delete(unitType).where(eq(unitType.id, unitTypeId));
+	async delete(typologyId: string): Promise<void> {
+		await this.txHost.tx.delete(typology).where(eq(typology.id, typologyId));
 	}
 
-	async roomsOf(unitTypeId: string): Promise<{ id: string; name: string }[]> {
+	async roomsOf(typologyId: string): Promise<{ id: string; name: string }[]> {
 		return this.txHost.tx
-			.select({ id: unitTypeRoom.id, name: unitTypeRoom.name })
-			.from(unitTypeRoom)
-			.where(eq(unitTypeRoom.unitTypeId, unitTypeId))
-			.orderBy(asc(unitTypeRoom.position), asc(unitTypeRoom.id));
+			.select({ id: typologyRoom.id, name: typologyRoom.name })
+			.from(typologyRoom)
+			.where(eq(typologyRoom.typologyId, typologyId))
+			.orderBy(asc(typologyRoom.position), asc(typologyRoom.id));
 	}
 
-	async unitIdsOf(unitTypeId: string): Promise<string[]> {
+	async unitIdsOf(typologyId: string): Promise<string[]> {
 		const rows = await this.txHost.tx
 			.select({ id: location.id })
 			.from(location)
-			.where(eq(location.unitTypeId, unitTypeId));
+			.where(eq(location.typologyId, typologyId));
 
 		return rows.map(({ id }) => id);
 	}
@@ -230,13 +230,13 @@ export class UnitTypesRepository {
 		if (removedIds.length === 0) return [];
 		await this.txHost.tx
 			.update(room)
-			.set({ unitTypeRoomId: null, renamed: false })
+			.set({ typologyRoomId: null, renamed: false })
 			.where(
-				and(inArray(room.unitTypeRoomId, removedIds), eq(room.renamed, true)),
+				and(inArray(room.typologyRoomId, removedIds), eq(room.renamed, true)),
 			);
 		const deleted = await this.txHost.tx
 			.delete(room)
-			.where(inArray(room.unitTypeRoomId, removedIds))
+			.where(inArray(room.typologyRoomId, removedIds))
 			.returning({ locationId: room.locationId });
 
 		return deleted.map(({ locationId }) => locationId);
@@ -245,19 +245,19 @@ export class UnitTypesRepository {
 	async deleteRooms(ids: string[]): Promise<void> {
 		if (ids.length === 0) return;
 		await this.txHost.tx
-			.delete(unitTypeRoom)
-			.where(inArray(unitTypeRoom.id, ids));
+			.delete(typologyRoom)
+			.where(inArray(typologyRoom.id, ids));
 	}
 
 	async updateRooms(rooms: TypeRoomValue[]): Promise<void> {
 		if (rooms.length === 0) return;
 		const ids = rooms.map(({ id }) => id);
 		await this.txHost.tx
-			.update(unitTypeRoom)
-			.set({ name: sql`${unitTypeRoom.id}::text` })
-			.where(inArray(unitTypeRoom.id, ids));
+			.update(typologyRoom)
+			.set({ name: sql`${typologyRoom.id}::text` })
+			.where(inArray(typologyRoom.id, ids));
 		await this.txHost.tx.execute(sql`
-			update ${unitTypeRoom} as t
+			update ${typologyRoom} as t
 			set name = v.name, position = v.position
 			from (values ${sql.join(
 				rooms.map(
@@ -270,35 +270,35 @@ export class UnitTypesRepository {
 		`);
 	}
 
-	async insertRooms(unitTypeId: string, rooms: TypeRoomValue[]): Promise<void> {
+	async insertRooms(typologyId: string, rooms: TypeRoomValue[]): Promise<void> {
 		if (rooms.length === 0) return;
 		await this.txHost.tx
-			.insert(unitTypeRoom)
-			.values(rooms.map((entry) => ({ ...entry, unitTypeId })));
+			.insert(typologyRoom)
+			.values(rooms.map((entry) => ({ ...entry, typologyId })));
 	}
 
 	async findNameClashes(
-		unitTypeId: string,
+		typologyId: string,
 		addedIds: string[],
 	): Promise<string[]> {
 		const { rows } = await this.txHost.tx.execute<{ name: string }>(sql`
 			with units as (
-				select id from ${location} where unit_type_id = ${unitTypeId}
+				select id from ${location} where typology_id = ${typologyId}
 			),
 			predicted as (
 				select r.location_id, tr.name
 				from ${room} r
-				join ${unitTypeRoom} tr on tr.id = r.unit_type_room_id
+				join ${typologyRoom} tr on tr.id = r.typology_room_id
 				where r.location_id in (select id from units) and not r.renamed
 				union all
 				select r.location_id, r.name
 				from ${room} r
 				where r.location_id in (select id from units)
-					and (r.renamed or r.unit_type_room_id is null)
+					and (r.renamed or r.typology_room_id is null)
 					and not (
-						r.unit_type_room_id is null
+						r.typology_room_id is null
 						and exists (
-							select 1 from ${unitTypeRoom} a
+							select 1 from ${typologyRoom} a
 							where a.id = any(${uuidList(addedIds)})
 								and ${comparable(sql`a.name`)} = ${comparable(sql`r.name`)}
 						)
@@ -306,7 +306,7 @@ export class UnitTypesRepository {
 				union all
 				select u.id, a.name
 				from units u
-				cross join ${unitTypeRoom} a
+				cross join ${typologyRoom} a
 				where a.id = any(${uuidList(addedIds)})
 			)
 			select min(name) as name
@@ -321,9 +321,9 @@ export class UnitTypesRepository {
 	async renameRoomsInUnits(renamedIds: string[]): Promise<string[]> {
 		if (renamedIds.length === 0) return [];
 		const stale = and(
-			inArray(room.unitTypeRoomId, renamedIds),
+			inArray(room.typologyRoomId, renamedIds),
 			eq(room.renamed, false),
-			sql`${room.name} <> (select t.name from ${unitTypeRoom} t where t.id = ${room.unitTypeRoomId})`,
+			sql`${room.name} <> (select t.name from ${typologyRoom} t where t.id = ${room.typologyRoomId})`,
 		);
 		await this.txHost.tx
 			.update(room)
@@ -332,11 +332,11 @@ export class UnitTypesRepository {
 		const updated = await this.txHost.tx
 			.update(room)
 			.set({
-				name: sql`(select t.name from ${unitTypeRoom} t where t.id = ${room.unitTypeRoomId})`,
+				name: sql`(select t.name from ${typologyRoom} t where t.id = ${room.typologyRoomId})`,
 			})
 			.where(
 				and(
-					inArray(room.unitTypeRoomId, renamedIds),
+					inArray(room.typologyRoomId, renamedIds),
 					eq(room.renamed, false),
 					sql`${room.name} = ${room.id}::text`,
 				),
@@ -347,18 +347,18 @@ export class UnitTypesRepository {
 	}
 
 	async adoptOwnRooms(
-		unitTypeId: string,
+		typologyId: string,
 		addedIds: string[],
 	): Promise<string[]> {
 		if (addedIds.length === 0) return [];
 		const { rows } = await this.txHost.tx.execute<{ location_id: string }>(sql`
 			update ${room} r
-			set unit_type_room_id = a.id, renamed = false, name = a.name, position = a.position
-			from ${unitTypeRoom} a, ${location} u
+			set typology_room_id = a.id, renamed = false, name = a.name, position = a.position
+			from ${typologyRoom} a, ${location} u
 			where a.id = any(${uuidList(addedIds)})
 				and u.id = r.location_id
-				and u.unit_type_id = ${unitTypeId}
-				and r.unit_type_room_id is null
+				and u.typology_id = ${typologyId}
+				and r.typology_room_id is null
 				and ${comparable(sql`r.name`)} = ${comparable(sql`a.name`)}
 			returning r.location_id
 		`);
@@ -367,18 +367,18 @@ export class UnitTypesRepository {
 	}
 
 	async addRoomsToUnits(
-		unitTypeId: string,
+		typologyId: string,
 		addedIds: string[],
 	): Promise<string[]> {
 		if (addedIds.length === 0) return [];
 		const { rows } = await this.txHost.tx.execute<{ location_id: string }>(sql`
-			insert into ${room} (location_id, name, position, unit_type_room_id)
+			insert into ${room} (location_id, name, position, typology_room_id)
 			select u.id, a.name, a.position, a.id
 			from ${location} u
-			join ${unitTypeRoom} a on a.id = any(${uuidList(addedIds)})
-			where u.unit_type_id = ${unitTypeId}
+			join ${typologyRoom} a on a.id = any(${uuidList(addedIds)})
+			where u.typology_id = ${typologyId}
 				and not exists (
-					select 1 from ${room} x where x.location_id = u.id and x.unit_type_room_id = a.id
+					select 1 from ${room} x where x.location_id = u.id and x.typology_room_id = a.id
 				)
 			returning location_id
 		`);

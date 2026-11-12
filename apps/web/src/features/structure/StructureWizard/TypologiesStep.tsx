@@ -1,6 +1,6 @@
 import {
-	MAX_ROOMS_PER_UNIT_TYPE,
-	MAX_UNIT_TYPES_PER_REQUEST,
+	MAX_ROOMS_PER_TYPOLOGY,
+	MAX_TYPOLOGIES_PER_REQUEST,
 } from "@bluprint/shared";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,17 +13,17 @@ import { SELECT } from "./fieldStyles";
 import {
 	ALL_FINALS,
 	type RuleDraft,
-	type UnitTypeDraft,
-} from "./unitTypeRules";
+	type TypologyDraft,
+} from "./typologyRules";
 import {
 	type DraftErrors,
 	type RuleField,
 	ruleFieldId,
-	unitTypeFieldId,
+	typologyFieldId,
 	type WizardDraft,
 	withNewRule,
-	withNewUnitType,
-	withoutUnitType,
+	withNewTypology,
+	withoutTypology,
 } from "./wizardDraft";
 
 type Edit = (
@@ -35,41 +35,41 @@ const RULE_GRID =
 	"grid-cols-[1fr_0.7fr_0.7fr_1.3fr_44px] items-start gap-(--space-2)";
 const RULE_GRID_WITH_TOWER = "grid-cols-[1.1fr_1fr_0.7fr_0.7fr_1.3fr_44px]";
 
-function ExistingUnitTypeCard({ unitType }: { unitType: UnitTypeDraft }) {
+function ExistingTypologyCard({ typology }: { typology: TypologyDraft }) {
 	return (
 		<div className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline)">
 			<div className="flex items-baseline justify-between gap-(--space-2)">
 				<span className="font-semibold [overflow-wrap:anywhere]">
-					{unitType.name}
+					{typology.name}
 				</span>
 				<span className="shrink-0 text-sm text-muted-foreground">
-					{plural(unitType.rooms.length, "cômodo", "cômodos")}
+					{plural(typology.rooms.length, "cômodo", "cômodos")}
 				</span>
 			</div>
-			<Tags items={unitType.rooms} />
+			<Tags items={typology.rooms} />
 		</div>
 	);
 }
 
-function UnitTypeCard({
-	unitType,
+function TypologyCard({
+	typology,
 	errors,
 	edit,
 }: {
-	unitType: UnitTypeDraft;
+	typology: TypologyDraft;
 	errors: DraftErrors;
 	edit: Edit;
 }) {
-	const id = unitTypeFieldId(unitType.key);
+	const id = typologyFieldId(typology.key);
 	const error = errors[id];
-	const change = (update: (current: UnitTypeDraft) => UnitTypeDraft) =>
+	const change = (update: (current: TypologyDraft) => TypologyDraft) =>
 		edit((draft) => ({
 			...draft,
-			unitTypes: draft.unitTypes.map((other) =>
-				other.key === unitType.key ? update(other) : other,
+			typologies: draft.typologies.map((other) =>
+				other.key === typology.key ? update(other) : other,
 			),
 		}));
-	const label = unitType.name.trim() || "tipologia";
+	const label = typology.name.trim() || "tipologia";
 
 	return (
 		<div className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline)">
@@ -82,14 +82,14 @@ function UnitTypeCard({
 						maxLength={60}
 						aria-invalid={error !== undefined}
 						aria-describedby={error ? `${id}-error` : undefined}
-						value={unitType.name}
+						value={typology.name}
 						onChange={(event) => {
 							const name = event.target.value;
 							edit(
 								(draft) => ({
 									...draft,
-									unitTypes: draft.unitTypes.map((other) =>
-										other.key === unitType.key ? { ...other, name } : other,
+									typologies: draft.typologies.map((other) =>
+										other.key === typology.key ? { ...other, name } : other,
 									),
 								}),
 								id,
@@ -103,16 +103,16 @@ function UnitTypeCard({
 					variant="ghost"
 					size="icon"
 					aria-label={`Tirar ${label}`}
-					onClick={() => edit((draft) => withoutUnitType(draft, unitType.key))}
+					onClick={() => edit((draft) => withoutTypology(draft, typology.key))}
 				>
 					<X className="size-5" aria-hidden="true" />
 				</Button>
 			</div>
 			<span className="text-sm text-muted-foreground">
-				{plural(unitType.rooms.length, "cômodo", "cômodos")}
+				{plural(typology.rooms.length, "cômodo", "cômodos")}
 			</span>
 			<Tags
-				items={unitType.rooms}
+				items={typology.rooms}
 				removeLabel={(room) => `Tirar ${room} da ${label}`}
 				onRemove={(index) =>
 					change((current) => ({
@@ -124,10 +124,10 @@ function UnitTypeCard({
 			<AddTag
 				label={`Novo cômodo da ${label}`}
 				placeholder="Novo cômodo"
-				existing={unitType.rooms}
+				existing={typology.rooms}
 				duplicateMessage="Esse cômodo já está na tipologia."
-				maxItems={MAX_ROOMS_PER_UNIT_TYPE}
-				maxMessage={`Uma tipologia tem até ${MAX_ROOMS_PER_UNIT_TYPE} cômodos.`}
+				maxItems={MAX_ROOMS_PER_TYPOLOGY}
+				maxMessage={`Uma tipologia tem até ${MAX_ROOMS_PER_TYPOLOGY} cômodos.`}
 				onAdd={(name) => {
 					change((current) => ({
 						...current,
@@ -221,12 +221,12 @@ function RuleRow({
 			id={`${rule.key}-type`}
 			aria-label={desktop ? `Tipologia da regra ${number}` : undefined}
 			className={SELECT}
-			value={rule.unitType}
-			onChange={(event) => set({ unitType: event.target.value })}
+			value={rule.typology}
+			onChange={(event) => set({ typology: event.target.value })}
 		>
-			{draft.unitTypes.map((unitType) => (
-				<option key={unitType.key} value={unitType.key}>
-					{unitType.name}
+			{draft.typologies.map((typology) => (
+				<option key={typology.key} value={typology.key}>
+					{typology.name}
 				</option>
 			))}
 		</select>
@@ -311,7 +311,7 @@ function RuleRow({
 	);
 }
 
-export function UnitTypesStep({
+export function TypologiesStep({
 	draft,
 	errors,
 	edit,
@@ -332,13 +332,13 @@ export function UnitTypesStep({
 						desktop && "grid-cols-[repeat(auto-fit,minmax(240px,1fr))]",
 					)}
 				>
-					{draft.unitTypes.map((unitType) =>
-						unitType.existing ? (
-							<ExistingUnitTypeCard key={unitType.key} unitType={unitType} />
+					{draft.typologies.map((typology) =>
+						typology.existing ? (
+							<ExistingTypologyCard key={typology.key} typology={typology} />
 						) : (
-							<UnitTypeCard
-								key={unitType.key}
-								unitType={unitType}
+							<TypologyCard
+								key={typology.key}
+								typology={typology}
 								errors={errors}
 								edit={edit}
 							/>
@@ -350,10 +350,10 @@ export function UnitTypesStep({
 					variant="outline"
 					className="justify-self-start"
 					disabled={
-						draft.unitTypes.filter(({ existing }) => !existing).length >=
-						MAX_UNIT_TYPES_PER_REQUEST
+						draft.typologies.filter(({ existing }) => !existing).length >=
+						MAX_TYPOLOGIES_PER_REQUEST
 					}
-					onClick={() => edit(withNewUnitType)}
+					onClick={() => edit(withNewTypology)}
 				>
 					<Plus className="size-5" aria-hidden="true" />
 					Nova tipologia
@@ -393,7 +393,7 @@ export function UnitTypesStep({
 					type="button"
 					variant="ghost"
 					className="justify-self-start text-primary"
-					disabled={draft.unitTypes.length === 0}
+					disabled={draft.typologies.length === 0}
 					onClick={() => edit(withNewRule)}
 				>
 					<Plus className="size-5" aria-hidden="true" />

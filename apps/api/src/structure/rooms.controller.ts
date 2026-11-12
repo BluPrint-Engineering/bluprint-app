@@ -16,7 +16,7 @@ import { ZodResponse } from "nestjs-zod";
 import { ApiErrorResponses } from "../common/problems/api-error-responses.decorator";
 import { ProjectUseInterceptor } from "../projects/project-use.interceptor";
 import { AddRoomDto } from "./dto/add-room.dto";
-import { ChangeUnitTypeDto } from "./dto/change-unit-type.dto";
+import { ChangeTypologyDto } from "./dto/change-typology.dto";
 import { DroppedRoomParamsDto } from "./dto/dropped-room-params.dto";
 import { LocationDetailDto } from "./dto/location-detail.dto";
 import { LocationParamsDto } from "./dto/location-params.dto";
@@ -55,7 +55,7 @@ export class RoomsController {
 	@Patch("rooms/:roomId")
 	@ApiOperation({
 		summary: "Rename a room",
-		description: `Renames a room in its own unit or common area. For a room that came from the unit type it changes only this unit, and counts as one of the unit's changes: a later rename in the unit type no longer reaches it. A name already in use in the location answers \`409 ROOM_NAME_TAKEN\`; a room that does not exist in the project, \`404 ROOM_NOT_FOUND\`. ${WRITERS}`,
+		description: `Renames a room in its own unit or common area. For a room that came from the typology it changes only this unit, and counts as one of the unit's changes: a later rename in the typology no longer reaches it. A name already in use in the location answers \`409 ROOM_NAME_TAKEN\`; a room that does not exist in the project, \`404 ROOM_NOT_FOUND\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
@@ -74,7 +74,7 @@ export class RoomsController {
 	@Delete("rooms/:roomId")
 	@ApiOperation({
 		summary: "Remove a room",
-		description: `Removes a room from its unit or common area. A room only the location has is deleted; a room that came from the unit type is recorded as taken out of this unit, so the unit type does not bring it back, and it can be given back. A room that does not exist in the project answers \`404 ROOM_NOT_FOUND\`. ${WRITERS}`,
+		description: `Removes a room from its unit or common area. A room only the location has is deleted; a room that came from the typology is recorded as taken out of this unit, so the typology does not bring it back, and it can be given back. A room that does not exist in the project answers \`404 ROOM_NOT_FOUND\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
@@ -89,10 +89,10 @@ export class RoomsController {
 		return this.rooms.remove(session.user.id, params.id, params.roomId);
 	}
 
-	@Delete("locations/:locationId/dropped-rooms/:unitTypeRoomId")
+	@Delete("locations/:locationId/dropped-rooms/:typologyRoomId")
 	@ApiOperation({
 		summary: "Give back a room taken out of a unit",
-		description: `Brings back a room of the unit type that this unit took out, with the name and place it has in the unit type. A room that the unit did not take out answers \`404 ROOM_NOT_FOUND\`; a name already in use in the unit, \`409 ROOM_NAME_TAKEN\`. Only a unit takes this: \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
+		description: `Brings back a room of the typology that this unit took out, with the name and place it has in the typology. A room that the unit did not take out answers \`404 ROOM_NOT_FOUND\`; a name already in use in the unit, \`409 ROOM_NAME_TAKEN\`. Only a unit takes this: \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
@@ -108,27 +108,27 @@ export class RoomsController {
 			session.user.id,
 			params.id,
 			params.locationId,
-			params.unitTypeRoomId,
+			params.typologyRoomId,
 		);
 	}
 
-	@Put("locations/:locationId/unit-type")
+	@Put("locations/:locationId/typology")
 	@ApiOperation({
-		summary: "Change a unit's unit type",
-		description: `Makes the unit follow another unit type of the project: the unit starts over on the rooms of the new one, and the changes it had against the old one are gone. A \`null\` unit type leaves the unit without one and keeps its current rooms as rooms only it has. Sending the unit type the unit already has changes nothing. A unit type that does not exist in the project answers \`400 UNIT_TYPE_NOT_FOUND\`; a location that is not a unit, \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
+		summary: "Change a unit's typology",
+		description: `Makes the unit follow another typology of the project: the unit starts over on the rooms of the new one, and the changes it had against the old one are gone. A \`null\` typology leaves the unit without one and keeps its current rooms as rooms only it has. Sending the typology the unit already has changes nothing. A typology that does not exist in the project answers \`400 TYPOLOGY_NOT_FOUND\`; a location that is not a unit, \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
-		description: "The unit with its unit type and rooms as they are now.",
+		description: "The unit with its typology and rooms as they are now.",
 		type: LocationDetailDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)
-	changeUnitType(
+	changeTypology(
 		@Session() session: UserSession,
 		@Param() params: LocationParamsDto,
-		@Body() body: ChangeUnitTypeDto,
+		@Body() body: ChangeTypologyDto,
 	): Promise<LocationDetail> {
-		return this.rooms.changeUnitType(
+		return this.rooms.changeTypology(
 			session.user.id,
 			params.id,
 			params.locationId,
@@ -136,11 +136,11 @@ export class RoomsController {
 		);
 	}
 
-	@Post("locations/:locationId/unit-type/reset")
+	@Post("locations/:locationId/typology/reset")
 	@HttpCode(200)
 	@ApiOperation({
-		summary: "Return a unit to its unit type",
-		description: `Undoes the three kinds of change a unit has against its unit type: the rooms only it has go, the rooms it took out come back and the rooms it renamed take the name of the unit type again. A unit without a unit type has nothing to return to and stays as it is. A location that is not a unit answers \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
+		summary: "Return a unit to its typology",
+		description: `Undoes the three kinds of change a unit has against its typology: the rooms only it has go, the rooms it took out come back and the rooms it renamed take the name of the typology again. A unit without a typology has nothing to return to and stays as it is. A location that is not a unit answers \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
@@ -148,11 +148,11 @@ export class RoomsController {
 		type: LocationDetailDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)
-	resetUnitType(
+	resetTypology(
 		@Session() session: UserSession,
 		@Param() params: LocationParamsDto,
 	): Promise<LocationDetail> {
-		return this.rooms.resetToUnitType(
+		return this.rooms.resetToTypology(
 			session.user.id,
 			params.id,
 			params.locationId,

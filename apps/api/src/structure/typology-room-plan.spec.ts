@@ -1,4 +1,4 @@
-import { planRoomChanges } from "./unit-type-room-plan";
+import { planRoomChanges } from "./typology-room-plan";
 
 const room = (id: string, name = id) => ({ id, name });
 

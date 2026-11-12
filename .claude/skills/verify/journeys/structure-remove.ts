@@ -40,7 +40,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 
 	const unit903 = (await query("SELECT id FROM location WHERE parent_id = $1 AND name = '903'", [ninthA]))[0].id;
 	const detail = async () =>
-		(await query("SELECT l.unit_type_id, l.position, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id) AS rooms, (SELECT count(*)::int FROM dropped_room d WHERE d.location_id = l.id) AS dropped, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id AND r.renamed) AS renamed FROM location l WHERE l.id = $1", [unit903]))[0];
+		(await query("SELECT l.typology_id, l.position, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id) AS rooms, (SELECT count(*)::int FROM dropped_room d WHERE d.location_id = l.id) AS dropped, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id AND r.renamed) AS renamed FROM location l WHERE l.id = $1", [unit903]))[0];
 	const before = await detail();
 	const used = await unitCount();
 	expect(before.dropped).toBe(1);

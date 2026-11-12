@@ -13,7 +13,7 @@ import type {
 } from "./location-row";
 import { droppedRoom, room } from "./room.entity";
 import { type UnitChangesRow, unitChangesQuery } from "./unit-changes";
-import { unitType, unitTypeRoom } from "./unit-type.entity";
+import { typology, typologyRoom } from "./typology.entity";
 
 const INSERT_CHUNK = 1000;
 
@@ -26,24 +26,24 @@ const columns = {
 
 const structureColumns = {
 	...columns,
-	unitTypeId: unitType.id,
-	unitTypeName: unitType.name,
+	typologyId: typology.id,
+	typologyName: typology.name,
 };
 
 function toStructureRow({
-	unitTypeId,
-	unitTypeName,
+	typologyId,
+	typologyName,
 	...row
 }: LocationRow & {
-	unitTypeId: string | null;
-	unitTypeName: string | null;
+	typologyId: string | null;
+	typologyName: string | null;
 }): StructureRow {
 	return {
 		...row,
-		unitType:
-			unitTypeId === null || unitTypeName === null
+		typology:
+			typologyId === null || typologyName === null
 				? null
-				: { id: unitTypeId, name: unitTypeName },
+				: { id: typologyId, name: typologyName },
 	};
 }
 
@@ -55,7 +55,7 @@ export class StructureRepository {
 		const rows = await this.txHost.tx
 			.select(structureColumns)
 			.from(location)
-			.leftJoin(unitType, eq(unitType.id, location.unitTypeId))
+			.leftJoin(typology, eq(typology.id, location.typologyId))
 			.where(eq(location.projectId, projectId))
 			.orderBy(asc(location.position), asc(location.id));
 
@@ -89,14 +89,14 @@ export class StructureRepository {
 			await this.txHost.tx.insert(location).values(
 				locations
 					.slice(start, start + INSERT_CHUNK)
-					.map(({ id, parentId, type, name, position, unitTypeId }) => ({
+					.map(({ id, parentId, type, name, position, typologyId }) => ({
 						id,
 						projectId,
 						parentId,
 						type,
 						name,
 						position,
-						unitTypeId: unitTypeId ?? null,
+						typologyId: typologyId ?? null,
 					})),
 			);
 		}
@@ -118,7 +118,7 @@ export class StructureRepository {
 			locationId: string;
 			name: string;
 			position: number;
-			unitTypeRoomId: string | null;
+			typologyRoomId: string | null;
 			renamed: boolean;
 		}[],
 	): Promise<void> {
@@ -130,7 +130,7 @@ export class StructureRepository {
 	}
 
 	async insertDroppedRooms(
-		dropped: { locationId: string; unitTypeRoomId: string }[],
+		dropped: { locationId: string; typologyRoomId: string }[],
 	): Promise<void> {
 		for (let start = 0; start < dropped.length; start += INSERT_CHUNK) {
 			await this.txHost.tx
@@ -213,7 +213,7 @@ export class StructureRepository {
 		const [found] = await this.txHost.tx
 			.select({ ...structureColumns, position: location.position })
 			.from(location)
-			.leftJoin(unitType, eq(unitType.id, location.unitTypeId))
+			.leftJoin(typology, eq(typology.id, location.typologyId))
 			.where(
 				and(eq(location.projectId, projectId), eq(location.id, locationId)),
 			);
@@ -240,15 +240,15 @@ export class StructureRepository {
 				locationId: room.locationId,
 				id: room.id,
 				name: room.name,
-				unitTypeRoomId: room.unitTypeRoomId,
+				typologyRoomId: room.typologyRoomId,
 				renamed: room.renamed,
 			})
 			.from(room)
-			.leftJoin(unitTypeRoom, eq(unitTypeRoom.id, room.unitTypeRoomId))
+			.leftJoin(typologyRoom, eq(typologyRoom.id, room.typologyRoomId))
 			.where(inArray(room.locationId, locationIds))
 			.orderBy(
-				sql`(${room.unitTypeRoomId} is null)`,
-				sql`coalesce(${unitTypeRoom.position}, ${room.position})`,
+				sql`(${room.typologyRoomId} is null)`,
+				sql`coalesce(${typologyRoom.position}, ${room.position})`,
 				asc(room.id),
 			);
 		for (const { locationId, ...entry } of rows) {
@@ -268,13 +268,13 @@ export class StructureRepository {
 		const rows = await this.txHost.tx
 			.select({
 				locationId: droppedRoom.locationId,
-				unitTypeRoomId: droppedRoom.unitTypeRoomId,
-				name: unitTypeRoom.name,
+				typologyRoomId: droppedRoom.typologyRoomId,
+				name: typologyRoom.name,
 			})
 			.from(droppedRoom)
-			.innerJoin(unitTypeRoom, eq(unitTypeRoom.id, droppedRoom.unitTypeRoomId))
+			.innerJoin(typologyRoom, eq(typologyRoom.id, droppedRoom.typologyRoomId))
 			.where(inArray(droppedRoom.locationId, locationIds))
-			.orderBy(asc(unitTypeRoom.position), asc(unitTypeRoom.id));
+			.orderBy(asc(typologyRoom.position), asc(typologyRoom.id));
 		for (const { locationId, ...entry } of rows) {
 			byLocation.get(locationId)?.push(entry);
 		}

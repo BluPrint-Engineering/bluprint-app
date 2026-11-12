@@ -6,7 +6,7 @@ import {
 	locationDetailSchema,
 	problemDetailsSchema,
 	structureSchema,
-	unitTypeListSchema,
+	typologyListSchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -24,7 +24,7 @@ import {
 } from "../db/schema";
 import { location } from "./location.entity";
 import { droppedRoom, room } from "./room.entity";
-import { unitType, unitTypeRoom } from "./unit-type.entity";
+import { typology, typologyRoom } from "./typology.entity";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const PASSWORD = "senha-de-obra-123";
@@ -67,7 +67,7 @@ let bigProjectId: string;
 const structurePath = (id: string) => `/api/projects/${id}/structure`;
 const locationPath = (id: string, locationId: string) =>
 	`/api/projects/${id}/locations/${locationId}`;
-const unitTypesPath = (id: string) => `/api/projects/${id}/unit-types`;
+const typologiesPath = (id: string) => `/api/projects/${id}/typologies`;
 
 async function signUp(name: string): Promise<Person> {
 	const agent = request.agent(server);
@@ -225,39 +225,39 @@ beforeAll(async () => {
 	hall = inside[5]!.id;
 
 	const types = await db
-		.insert(unitType)
+		.insert(typology)
 		.values([
 			{ projectId, name: "Tipologia A" },
 			{ projectId, name: "Tipologia B" },
 			{ projectId: otherProjectId, name: "Tipologia A" },
 		])
-		.returning({ id: unitType.id });
+		.returning({ id: typology.id });
 	typeA = types[0]!.id;
 	typeB = types[1]!.id;
 	otherProjectType = types[2]!.id;
 
 	const typeARooms = await db
-		.insert(unitTypeRoom)
+		.insert(typologyRoom)
 		.values([
-			{ unitTypeId: typeA, name: "Sala", position: 0 },
-			{ unitTypeId: typeA, name: "Cozinha", position: 1 },
-			{ unitTypeId: typeA, name: "Sacada", position: 2 },
+			{ typologyId: typeA, name: "Sala", position: 0 },
+			{ typologyId: typeA, name: "Cozinha", position: 1 },
+			{ typologyId: typeA, name: "Sacada", position: 2 },
 		])
-		.returning({ id: unitTypeRoom.id });
-	await db.insert(unitTypeRoom).values([
-		{ unitTypeId: typeB, name: "Sala", position: 0 },
-		{ unitTypeId: typeB, name: "Suíte", position: 1 },
-		{ unitTypeId: otherProjectType, name: "Sala", position: 0 },
+		.returning({ id: typologyRoom.id });
+	await db.insert(typologyRoom).values([
+		{ typologyId: typeB, name: "Sala", position: 0 },
+		{ typologyId: typeB, name: "Suíte", position: 1 },
+		{ typologyId: otherProjectType, name: "Sala", position: 0 },
 	]);
 	const [sala, cozinha, sacada] = typeARooms.map((typeRoom) => typeRoom.id);
 
 	await db
 		.update(location)
-		.set({ unitTypeId: typeA })
+		.set({ typologyId: typeA })
 		.where(eq(location.id, unit901));
 	await db
 		.update(location)
-		.set({ unitTypeId: typeA })
+		.set({ typologyId: typeA })
 		.where(eq(location.id, unit902));
 	await db.insert(room).values([
 		{ locationId: unit901, name: "Home office", position: 0 },
@@ -265,22 +265,22 @@ beforeAll(async () => {
 			locationId: unit901,
 			name: "Copa",
 			position: 7,
-			unitTypeRoomId: cozinha!,
+			typologyRoomId: cozinha!,
 			renamed: true,
 		},
-		{ locationId: unit901, name: "Sala", position: 9, unitTypeRoomId: sala! },
-		{ locationId: unit902, name: "Sala", position: 0, unitTypeRoomId: sala! },
+		{ locationId: unit901, name: "Sala", position: 9, typologyRoomId: sala! },
+		{ locationId: unit902, name: "Sala", position: 0, typologyRoomId: sala! },
 		{
 			locationId: unit902,
 			name: "Cozinha",
 			position: 1,
-			unitTypeRoomId: cozinha!,
+			typologyRoomId: cozinha!,
 		},
 		{
 			locationId: unit902,
 			name: "Sacada",
 			position: 2,
-			unitTypeRoomId: sacada!,
+			typologyRoomId: sacada!,
 		},
 		{ locationId: unit1001, name: "Quarto", position: 0 },
 		{ locationId: salao, name: "Cozinha", position: 0 },
@@ -288,7 +288,7 @@ beforeAll(async () => {
 	]);
 	await db
 		.insert(droppedRoom)
-		.values({ locationId: unit901, unitTypeRoomId: sacada! });
+		.values({ locationId: unit901, typologyRoomId: sacada! });
 
 	const [other] = await insert([
 		{ projectId: otherProjectId, type: "tower", name: "Torre A", position: 0 },
@@ -355,13 +355,13 @@ describe("GET /api/projects/:id/structure", () => {
 								{
 									id: unit901,
 									name: "901",
-									unitType: { id: typeA, name: "Tipologia A" },
+									typology: { id: typeA, name: "Tipologia A" },
 									changes: 3,
 								},
 								{
 									id: unit902,
 									name: "902",
-									unitType: { id: typeA, name: "Tipologia A" },
+									typology: { id: typeA, name: "Tipologia A" },
 									changes: 0,
 								},
 							],
@@ -371,7 +371,7 @@ describe("GET /api/projects/:id/structure", () => {
 							id: anyId,
 							name: "10º andar",
 							units: [
-								{ id: unit1001, name: "1001", unitType: null, changes: 0 },
+								{ id: unit1001, name: "1001", typology: null, changes: 0 },
 							],
 							commonAreas: [],
 						},
@@ -456,7 +456,7 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 				{ id: anyId, type: "unit", name: "902" },
 				{ id: hall, type: "common_area", name: "Hall" },
 			],
-			unitType: null,
+			typology: null,
 			changes: 0,
 			rooms: [],
 			droppedRooms: [],
@@ -479,17 +479,17 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 		});
 	});
 
-	test("a unit on its unit type lists the rooms of the type in the type's order and no changes", async () => {
+	test("a unit on its typology lists the rooms of the type in the type's order and no changes", async () => {
 		const res = await manager.agent.get(locationPath(projectId, unit902));
 
 		expect(res.status).toBe(200);
 		expect(locationDetailSchema.parse(res.body)).toMatchObject({
-			unitType: { id: typeA, name: "Tipologia A" },
+			typology: { id: typeA, name: "Tipologia A" },
 			changes: 0,
 			rooms: [
-				{ id: anyId, name: "Sala", unitTypeRoomId: anyId, renamed: false },
-				{ id: anyId, name: "Cozinha", unitTypeRoomId: anyId, renamed: false },
-				{ id: anyId, name: "Sacada", unitTypeRoomId: anyId, renamed: false },
+				{ id: anyId, name: "Sala", typologyRoomId: anyId, renamed: false },
+				{ id: anyId, name: "Cozinha", typologyRoomId: anyId, renamed: false },
+				{ id: anyId, name: "Sacada", typologyRoomId: anyId, renamed: false },
 			],
 			droppedRooms: [],
 		});
@@ -500,40 +500,40 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 
 		expect(res.status).toBe(200);
 		expect(locationDetailSchema.parse(res.body)).toMatchObject({
-			unitType: { id: typeA, name: "Tipologia A" },
+			typology: { id: typeA, name: "Tipologia A" },
 			changes: 3,
 			rooms: [
-				{ name: "Sala", unitTypeRoomId: anyId, renamed: false },
-				{ name: "Copa", unitTypeRoomId: anyId, renamed: true },
-				{ name: "Home office", unitTypeRoomId: null, renamed: false },
+				{ name: "Sala", typologyRoomId: anyId, renamed: false },
+				{ name: "Copa", typologyRoomId: anyId, renamed: true },
+				{ name: "Home office", typologyRoomId: null, renamed: false },
 			],
-			droppedRooms: [{ unitTypeRoomId: anyId, name: "Sacada" }],
+			droppedRooms: [{ typologyRoomId: anyId, name: "Sacada" }],
 		});
 	});
 
-	test("a unit without a unit type lists its rooms as its own and has no changes", async () => {
+	test("a unit without a typology lists its rooms as its own and has no changes", async () => {
 		const res = await admin.agent.get(locationPath(projectId, unit1001));
 
 		expect(res.status).toBe(200);
 		expect(locationDetailSchema.parse(res.body)).toMatchObject({
-			unitType: null,
+			typology: null,
 			changes: 0,
-			rooms: [{ name: "Quarto", unitTypeRoomId: null, renamed: false }],
+			rooms: [{ name: "Quarto", typologyRoomId: null, renamed: false }],
 			droppedRooms: [],
 		});
 	});
 
-	test("a common area lists its rooms and has no unit type", async () => {
+	test("a common area lists its rooms and has no typology", async () => {
 		const res = await manager.agent.get(locationPath(projectId, salao));
 
 		expect(res.status).toBe(200);
 		expect(locationDetailSchema.parse(res.body)).toMatchObject({
 			type: "common_area",
-			unitType: null,
+			typology: null,
 			changes: 0,
 			rooms: [
-				{ name: "Cozinha", unitTypeRoomId: null },
-				{ name: "Banheiro", unitTypeRoomId: null },
+				{ name: "Cozinha", typologyRoomId: null },
+				{ name: "Banheiro", typologyRoomId: null },
 			],
 			droppedRooms: [],
 		});
@@ -600,17 +600,17 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 	});
 });
 
-describe("GET /api/projects/:id/unit-types", () => {
+describe("GET /api/projects/:id/typologies", () => {
 	test.each([
 		["the admin", () => admin],
 		["a manager of the project", () => manager],
 		["an assistant of the project", () => assistant],
-	])("%s reads the unit types with their rooms and units", async (_, who) => {
-		const res = await who().agent.get(unitTypesPath(projectId));
+	])("%s reads the typologies with their rooms and units", async (_, who) => {
+		const res = await who().agent.get(typologiesPath(projectId));
 
 		expect(res.status).toBe(200);
-		expect(unitTypeListSchema.parse(res.body)).toEqual({
-			unitTypes: [
+		expect(typologyListSchema.parse(res.body)).toEqual({
+			typologies: [
 				{
 					id: typeA,
 					name: "Tipologia A",
@@ -636,11 +636,11 @@ describe("GET /api/projects/:id/unit-types", () => {
 		});
 	});
 
-	test("never lists the unit types of another project", async () => {
-		const res = await manager.agent.get(unitTypesPath(otherProjectId));
+	test("never lists the typologies of another project", async () => {
+		const res = await manager.agent.get(typologiesPath(otherProjectId));
 
 		expect(res.status).toBe(200);
-		expect(unitTypeListSchema.parse(res.body).unitTypes).toEqual([
+		expect(typologyListSchema.parse(res.body).typologies).toEqual([
 			{
 				id: otherProjectType,
 				name: "Tipologia A",
@@ -651,11 +651,11 @@ describe("GET /api/projects/:id/unit-types", () => {
 		]);
 	});
 
-	test("a project without unit types answers an empty list", async () => {
-		const res = await admin.agent.get(unitTypesPath(emptyProjectId));
+	test("a project without typologies answers an empty list", async () => {
+		const res = await admin.agent.get(typologiesPath(emptyProjectId));
 
 		expect(res.status).toBe(200);
-		expect(unitTypeListSchema.parse(res.body)).toEqual({ unitTypes: [] });
+		expect(typologyListSchema.parse(res.body)).toEqual({ typologies: [] });
 	});
 
 	test.each([
@@ -663,40 +663,40 @@ describe("GET /api/projects/:id/unit-types", () => {
 		["a person from another organization", () => outsider, () => projectId],
 		["a project of another organization", () => admin, () => outsiderProjectId],
 	])("answers PROJECT_NOT_FOUND to %s", async (_, who, id) => {
-		const res = await who().agent.get(unitTypesPath(id()));
+		const res = await who().agent.get(typologiesPath(id()));
 
 		expect(res.status).toBe(404);
 		expect(problemDetailsSchema.parse(res.body).code).toBe(PROJECT_NOT_FOUND);
 	});
 
 	test("refuses an id that is not a UUID", async () => {
-		const res = await admin.agent.get(unitTypesPath("not-a-uuid"));
+		const res = await admin.agent.get(typologiesPath("not-a-uuid"));
 
 		expect(res.status).toBe(400);
 	});
 
 	test("requires a session", async () => {
-		const res = await request(server).get(unitTypesPath(projectId));
+		const res = await request(server).get(typologiesPath(projectId));
 
 		expect(res.status).toBe(401);
 	});
 });
 
-describe("unit types in the database", () => {
-	test("refuses a unit of one project following the unit type of another", async () => {
+describe("typologies in the database", () => {
+	test("refuses a unit of one project following the typology of another", async () => {
 		await expect(
 			db
 				.update(location)
-				.set({ unitTypeId: otherProjectType })
+				.set({ typologyId: otherProjectType })
 				.where(eq(location.id, unit1001)),
 		).rejects.toThrow();
 	});
 
-	test("refuses a unit type on anything but a unit", async () => {
+	test("refuses a typology on anything but a unit", async () => {
 		await expect(
 			db
 				.update(location)
-				.set({ unitTypeId: typeA })
+				.set({ typologyId: typeA })
 				.where(eq(location.id, ninth)),
 		).rejects.toThrow();
 	});

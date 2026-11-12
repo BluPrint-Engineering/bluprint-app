@@ -8,11 +8,11 @@ export const subtreeRoomsSchema = z.object({
 				id: z.uuid(),
 				rooms: z.array(roomSchema).meta({
 					description:
-						"The location's rooms in the order of `GET .../locations/:locationId`: the ones that came from the unit type first, then the ones only this location has.",
+						"The location's rooms in the order of `GET .../locations/:locationId`: the ones that came from the typology first, then the ones only this location has.",
 				}),
 				droppedRooms: z.array(droppedRoomSchema).meta({
 					description:
-						"The rooms of the unit type the unit took out. Empty for a common area and a unit without a unit type.",
+						"The rooms of the typology the unit took out. Empty for a common area and a unit without a typology.",
 				}),
 			}),
 		)

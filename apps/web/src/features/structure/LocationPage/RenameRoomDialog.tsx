@@ -71,7 +71,7 @@ export function RenameRoomDialog({
 		<FormDialog
 			title="Renomear o cômodo"
 			description={
-				room.unitTypeRoomId === null
+				room.typologyRoomId === null
 					? "O nome novo vale em todo lugar onde o cômodo aparece."
 					: "Muda só nesta unidade. A tipologia continua com o nome dela."
 			}

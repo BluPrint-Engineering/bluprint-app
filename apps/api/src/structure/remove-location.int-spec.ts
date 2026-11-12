@@ -561,25 +561,25 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 			expect(after.position).toBe(before.position);
 		});
 
-		it("brings a unit back as it was, with its id, place, unit type, rooms and changes", async () => {
+		it("brings a unit back as it was, with its id, place, typology, rooms and changes", async () => {
 			const projectId = await newProject(100);
 			const tower = entry(null, "tower", "Torre A");
 			const floor = entry(tower.id, "floor", "9º andar");
 			const neighbour = entry(floor.id, "unit", "903", 0);
 			const unit = {
 				...entry(floor.id, "unit", "904", 1),
-				unitTypeId: randomUUID(),
+				typologyId: randomUUID(),
 			};
 			const typeRooms = ["Sala", "Cozinha", "Sacada"].map((name) => ({
 				id: randomUUID(),
 				name,
 			}));
-			const unitTypes = [
-				{ id: unit.unitTypeId, name: "Tipologia A", rooms: typeRooms },
+			const typologies = [
+				{ id: unit.typologyId, name: "Tipologia A", rooms: typeRooms },
 			];
 			const created = await manager.agent
 				.post(structurePath(projectId))
-				.send({ unitTypes, locations: [tower, floor, neighbour, unit] });
+				.send({ typologies, locations: [tower, floor, neighbour, unit] });
 			expect(created.status).toBe(201);
 			const base = `${locationPath(projectId, unit.id)}`;
 			const roomsOf = async () =>
@@ -608,15 +608,15 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 					type: "unit",
 					name: unit.name,
 					position: before.position,
-					unitTypeId: unit.unitTypeId,
-					rooms: before.rooms.map(({ id, name, unitTypeRoomId, renamed }) => ({
+					typologyId: unit.typologyId,
+					rooms: before.rooms.map(({ id, name, typologyRoomId, renamed }) => ({
 						id,
 						name,
-						...(unitTypeRoomId ? { unitTypeRoomId } : {}),
+						...(typologyRoomId ? { typologyRoomId } : {}),
 						...(renamed ? { renamed } : {}),
 					})),
 					droppedRooms: before.droppedRooms.map(
-						({ unitTypeRoomId }) => unitTypeRoomId,
+						({ typologyRoomId }) => typologyRoomId,
 					),
 				},
 			]);
@@ -624,7 +624,7 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 			expect(undone.status).toBe(201);
 			expect(await roomsOf()).toEqual(before);
 			expect(before.droppedRooms).toEqual([
-				{ unitTypeRoomId: sacada.id, name: "Sacada" },
+				{ typologyRoomId: sacada.id, name: "Sacada" },
 			]);
 			expect(unitNames(await readStructure(projectId))).toEqual(["903", "904"]);
 		});

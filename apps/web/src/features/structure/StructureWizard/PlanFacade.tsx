@@ -39,7 +39,7 @@ export function PlanFacade({ tower }: { tower: PlanTower }) {
 						{floor.units.map((unit) => (
 							<span
 								key={unit.name}
-								title={unit.unitType ?? "Sem tipologia"}
+								title={unit.typology ?? "Sem tipologia"}
 								className={cn(
 									BLOCK,
 									"border font-mono text-[13px] font-medium md:text-[10px] md:font-normal",

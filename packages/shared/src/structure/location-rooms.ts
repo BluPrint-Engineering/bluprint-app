@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { projectParamsSchema } from "../projects/project-params.js";
 import { locationParamsSchema } from "./location-params.js";
-import { ROOM_NAME_MAX_LENGTH } from "./unit-type-ref.js";
+import { ROOM_NAME_MAX_LENGTH } from "./typology-ref.js";
 
 export const locationRoomNameSchema = z
 	.string()
@@ -26,10 +26,10 @@ export const renameRoomSchema = z.object({
 	name: locationRoomNameSchema,
 });
 
-export const changeUnitTypeSchema = z.object({
-	unitTypeId: z.uuid().nullable().meta({
+export const changeTypologySchema = z.object({
+	typologyId: z.uuid().nullable().meta({
 		description:
-			"The unit type the unit follows from now on, one of the project's. Null leaves the unit without one, keeping its current rooms as rooms only it has.",
+			"The typology the unit follows from now on, one of the project's. Null leaves the unit without one, keeping its current rooms as rooms only it has.",
 	}),
 });
 
@@ -38,13 +38,13 @@ export const roomParamsSchema = projectParamsSchema.extend({
 });
 
 export const droppedRoomParamsSchema = locationParamsSchema.extend({
-	unitTypeRoomId: z.uuid().meta({
-		description: "The room of the unit type that the unit took out.",
+	typologyRoomId: z.uuid().meta({
+		description: "The room of the typology that the unit took out.",
 	}),
 });
 
 export type AddRoom = z.infer<typeof addRoomSchema>;
 export type RenameRoom = z.infer<typeof renameRoomSchema>;
-export type ChangeUnitType = z.infer<typeof changeUnitTypeSchema>;
+export type ChangeTypology = z.infer<typeof changeTypologySchema>;
 export type RoomParams = z.infer<typeof roomParamsSchema>;
 export type DroppedRoomParams = z.infer<typeof droppedRoomParamsSchema>;

@@ -51,7 +51,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await page.goto(`/projects/${jardins}/locations/${ninthA}`);
 	await expect(page.getByRole("link", { name: /^903/ })).toContainText("3 alterações");
 	const rooms = async (name) =>
-		(await query("SELECT r.name, r.renamed, r.unit_type_room_id IS NOT NULL AS from_type FROM room r JOIN location l ON l.id = r.location_id WHERE l.name = $1 AND l.parent_id = $2 ORDER BY r.name", [name, ninthA]));
+		(await query("SELECT r.name, r.renamed, r.typology_room_id IS NOT NULL AS from_type FROM room r JOIN location l ON l.id = r.location_id WHERE l.name = $1 AND l.parent_id = $2 ORDER BY r.name", [name, ninthA]));
 	const source = await rooms("903");
 	await page.getByRole("button", { name: "Ações da unidade 903" }).click();
 	await expect(page.getByRole("menuitem")).toHaveText(["Renomear", "Mover para cima", "Mover para baixo", "Duplicar unidade", "Remover unidade"]);

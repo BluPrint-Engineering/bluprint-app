@@ -3,7 +3,7 @@ import {
 	LOCATION_NOT_FOUND,
 	NO_UNITS_LEFT,
 	type ProjectAccessRole,
-	UNIT_TYPE_ROOM_INVALID,
+	TYPOLOGY_ROOM_INVALID,
 } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -22,8 +22,8 @@ function build() {
 	const ninth = floor(
 		"9º andar",
 		[
-			{ name: "901", unitType: "Tipologia A" },
-			{ name: "902", unitType: "Tipologia A" },
+			{ name: "901", typology: "Tipologia A" },
+			{ name: "902", typology: "Tipologia A" },
 			"903",
 			"904",
 		],
@@ -118,7 +118,7 @@ describe("duplicating a tower (R9a)", () => {
 		);
 		expect(api.created).toHaveLength(1);
 		const [sent] = api.created;
-		expect(sent?.unitTypes).toEqual([]);
+		expect(sent?.typologies).toEqual([]);
 		expect(sent?.locations.map(({ type, name }) => [type, name])).toEqual([
 			["tower", "Torre C"],
 			["floor", "9º andar"],
@@ -183,10 +183,10 @@ describe("duplicating a floor", () => {
 			["common_area", "Hall", expect.any(String)],
 		]);
 		expect(sent?.copy).toBe(true);
-		expect(sent?.locations[1]?.unitTypeId).toBe(
-			nth(ninth.units, 0).unitType?.id,
+		expect(sent?.locations[1]?.typologyId).toBe(
+			nth(ninth.units, 0).typology?.id,
 		);
-		expect(sent?.locations[3]).not.toHaveProperty("unitTypeId");
+		expect(sent?.locations[3]).not.toHaveProperty("typologyId");
 
 		await user.click(await screen.findByRole("link", { name: "Torre A" }));
 		const facade = await screen.findByRole("list", {
@@ -209,19 +209,19 @@ describe("duplicating a floor", () => {
 						{
 							id: "0190c000-0000-7000-8000-000000000001",
 							name: "Sala de estar",
-							unitTypeRoomId: "0190c000-0000-7000-8000-0000000000a1",
+							typologyRoomId: "0190c000-0000-7000-8000-0000000000a1",
 							renamed: true,
 						},
 						{
 							id: "0190c000-0000-7000-8000-000000000002",
 							name: "Varanda",
-							unitTypeRoomId: null,
+							typologyRoomId: null,
 							renamed: false,
 						},
 					],
 					droppedRooms: [
 						{
-							unitTypeRoomId: "0190c000-0000-7000-8000-0000000000a2",
+							typologyRoomId: "0190c000-0000-7000-8000-0000000000a2",
 							name: "Lavanderia",
 						},
 					],
@@ -240,7 +240,7 @@ describe("duplicating a floor", () => {
 			{
 				id: expect.any(String),
 				name: "Sala de estar",
-				unitTypeRoomId: "0190c000-0000-7000-8000-0000000000a1",
+				typologyRoomId: "0190c000-0000-7000-8000-0000000000a1",
 				renamed: true,
 			},
 			{ id: expect.any(String), name: "Varanda" },
@@ -438,7 +438,7 @@ describe("duplicating a unit", () => {
 		).toBeEnabled();
 	});
 
-	test("adds the copy to the end of the floor with the same unit type and refreshes the list", async () => {
+	test("adds the copy to the end of the floor with the same typology and refreshes the list", async () => {
 		const { ninth, several } = build();
 		const api = writableApi(obra(), several, { remaining: 12 });
 		stubApi(signedIn, { api: api.handler });
@@ -457,7 +457,7 @@ describe("duplicating a unit", () => {
 				parentId: ninth.id,
 				type: "unit",
 				name: "905",
-				unitTypeId: nth(ninth.units, 0).unitType?.id,
+				typologyId: nth(ninth.units, 0).typology?.id,
 				rooms: [],
 			},
 		]);
@@ -581,7 +581,7 @@ describe("duplicating a unit", () => {
 		const { ninth, several } = build();
 		const api = writableApi(obra(), several, {
 			remaining: 12,
-			create: () => problem(400, UNIT_TYPE_ROOM_INVALID),
+			create: () => problem(400, TYPOLOGY_ROOM_INVALID),
 		});
 		stubApi(signedIn, { api: api.handler });
 		renderAt(pathOf(ninth.id));

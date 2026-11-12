@@ -6,10 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSessionDraft } from "@/features/auth";
-import { useResetUnitTypeMutation } from "../api";
-import { ChangeUnitTypeDialog } from "./ChangeUnitTypeDialog";
+import { useResetTypologyMutation } from "../api";
+import { ChangeTypologyDialog } from "./ChangeTypologyDialog";
 import { RoomsCard } from "./RoomsCard";
-import { changesLabel } from "./unitTypeLine";
+import { changesLabel } from "./typologyLine";
 
 export function UnitBody({
 	projectId,
@@ -20,18 +20,18 @@ export function UnitBody({
 	unit: LocationDetail;
 	editable: boolean;
 }) {
-	const { unitType, changes } = unit;
-	const restoredType = useSessionDraft("change-unit-type", (variables) =>
+	const { typology, changes } = unit;
+	const restoredType = useSessionDraft("change-typology", (variables) =>
 		variables === null || typeof variables === "string" ? variables : undefined,
 	);
 	const [changingType, setChangingType] = useState(restoredType !== undefined);
-	const reset = useResetUnitTypeMutation(projectId, unit.id);
+	const reset = useResetTypologyMutation(projectId, unit.id);
 
-	function returnToUnitType() {
+	function returnToTypology() {
 		reset.mutate(undefined, {
 			onSuccess: () =>
 				toast.success(
-					`A unidade ${unit.name} voltou à tipologia ${unitType?.name}.`,
+					`A unidade ${unit.name} voltou à tipologia ${typology?.name}.`,
 				),
 			onError: () =>
 				toast.error(
@@ -47,15 +47,15 @@ export function UnitBody({
 				<div className="grid gap-(--space-3) rounded-xl bg-card p-(--space-4) shadow-(--ring-hairline)">
 					<div className="flex flex-wrap items-center gap-(--space-2)">
 						<span className="text-base font-semibold">
-							{unitType ? unitType.name : "Sem tipologia"}
+							{typology ? typology.name : "Sem tipologia"}
 						</span>
 						{changes > 0 && (
 							<Badge variant="outline">{changesLabel(changes)}</Badge>
 						)}
 					</div>
 					<p className="text-sm text-pretty text-muted-foreground">
-						{unitType
-							? `Os cômodos acompanham a tipologia ${unitType.name}. O que foi mudado só nesta unidade continua assim quando a tipologia muda.`
+						{typology
+							? `Os cômodos acompanham a tipologia ${typology.name}. O que foi mudado só nesta unidade continua assim quando a tipologia muda.`
 							: "Os cômodos desta unidade são só dela."}
 					</p>
 					{editable && (
@@ -73,7 +73,7 @@ export function UnitBody({
 									type="button"
 									variant="ghost"
 									disabled={reset.isPending}
-									onClick={returnToUnitType}
+									onClick={returnToTypology}
 								>
 									{reset.isPending ? (
 										<Spinner aria-hidden />
@@ -89,7 +89,7 @@ export function UnitBody({
 			</section>
 			<RoomsCard projectId={projectId} location={unit} editable={editable} />
 			{changingType && (
-				<ChangeUnitTypeDialog
+				<ChangeTypologyDialog
 					projectId={projectId}
 					unit={unit}
 					onClose={() => setChangingType(false)}

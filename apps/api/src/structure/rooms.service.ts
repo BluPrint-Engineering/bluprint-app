@@ -1,6 +1,6 @@
 import {
 	type AddRoom,
-	type ChangeUnitType,
+	type ChangeTypology,
 	LOCATION_KIND_INVALID,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
@@ -9,7 +9,7 @@ import {
 	ROOM_NAME_TAKEN,
 	ROOM_NOT_FOUND,
 	type RenameRoom,
-	UNIT_TYPE_NOT_FOUND,
+	TYPOLOGY_NOT_FOUND,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
@@ -19,7 +19,7 @@ import { UnitsService } from "../units/units.service";
 import { RoomsRepository } from "./rooms.repository";
 import { StructureRepository } from "./structure.repository";
 import { StructureService } from "./structure.service";
-import { UnitTypesRepository } from "./unit-types.repository";
+import { TypologiesRepository } from "./typologies.repository";
 
 const ROOM_HOLDERS: readonly LocationType[] = ["unit", "common_area"];
 
@@ -46,7 +46,7 @@ export class RoomsService {
 		private readonly structure: StructureService,
 		private readonly locations: StructureRepository,
 		private readonly rooms: RoomsRepository,
-		private readonly unitTypes: UnitTypesRepository,
+		private readonly typologies: TypologiesRepository,
 	) {}
 
 	@Transactional()
@@ -98,7 +98,7 @@ export class RoomsService {
 		if (await this.rooms.nameInUse(found.locationId, name, roomId)) {
 			throw roomNameTaken(name);
 		}
-		await this.rooms.rename(roomId, name, found.unitTypeRoomId !== null);
+		await this.rooms.rename(roomId, name, found.typologyRoomId !== null);
 
 		return this.structure.readLocation(userId, projectId, found.locationId);
 	}
@@ -113,8 +113,8 @@ export class RoomsService {
 		const found = await this.findRoom(projectId, roomId);
 
 		await this.rooms.delete(roomId);
-		if (found.unitTypeRoomId !== null) {
-			await this.rooms.drop(found.locationId, found.unitTypeRoomId);
+		if (found.typologyRoomId !== null) {
+			await this.rooms.drop(found.locationId, found.typologyRoomId);
 		}
 
 		return this.structure.readLocation(userId, projectId, found.locationId);
@@ -125,13 +125,13 @@ export class RoomsService {
 		userId: string,
 		projectId: string,
 		unitId: string,
-		unitTypeRoomId: string,
+		typologyRoomId: string,
 	): Promise<LocationDetail> {
 		await this.beginWrite(userId, projectId);
 		const unit = await this.findLocation(projectId, unitId);
 		this.assertKind(unit.type, ["unit"]);
 
-		const dropped = await this.rooms.findDropped(unitId, unitTypeRoomId);
+		const dropped = await this.rooms.findDropped(unitId, typologyRoomId);
 		if (!dropped) throw roomNotFound();
 		if (await this.rooms.nameInUse(unitId, dropped.name)) {
 			throw roomNameTaken(dropped.name);
@@ -141,55 +141,55 @@ export class RoomsService {
 			locationId: unitId,
 			name: dropped.name,
 			position: dropped.position,
-			unitTypeRoomId,
+			typologyRoomId,
 		});
-		await this.rooms.takeBack(unitId, unitTypeRoomId);
+		await this.rooms.takeBack(unitId, typologyRoomId);
 
 		return this.structure.readLocation(userId, projectId, unitId);
 	}
 
 	@Transactional()
-	async changeUnitType(
+	async changeTypology(
 		userId: string,
 		projectId: string,
 		unitId: string,
-		{ unitTypeId }: ChangeUnitType,
+		{ typologyId }: ChangeTypology,
 	): Promise<LocationDetail> {
 		await this.beginWrite(userId, projectId);
 		const unit = await this.findLocation(projectId, unitId);
 		this.assertKind(unit.type, ["unit"]);
 
-		const current = unit.unitType?.id ?? null;
-		if (unitTypeId === current) {
+		const current = unit.typology?.id ?? null;
+		if (typologyId === current) {
 			return this.structure.readLocation(userId, projectId, unitId);
 		}
 
-		if (unitTypeId === null) {
+		if (typologyId === null) {
 			const ordered = await this.locations.listRooms(unitId);
 			await this.rooms.keepAsOwn(
 				unitId,
 				ordered.map(({ id }) => id),
 			);
-			await this.rooms.setUnitType(unitId, null);
+			await this.rooms.setTypology(unitId, null);
 		} else {
-			const known = await this.unitTypes.list(projectId);
-			if (!known.some(({ id }) => id === unitTypeId)) {
+			const known = await this.typologies.list(projectId);
+			if (!known.some(({ id }) => id === typologyId)) {
 				throw new ProblemException({
 					status: 400,
-					code: UNIT_TYPE_NOT_FOUND,
-					detail: "The unit type does not exist in the project.",
+					code: TYPOLOGY_NOT_FOUND,
+					detail: "The typology does not exist in the project.",
 				});
 			}
 			await this.rooms.clear(unitId);
-			await this.rooms.setUnitType(unitId, unitTypeId);
-			await this.unitTypes.giveUnitsTheirRooms([{ id: unitId, unitTypeId }]);
+			await this.rooms.setTypology(unitId, typologyId);
+			await this.typologies.giveUnitsTheirRooms([{ id: unitId, typologyId }]);
 		}
 
 		return this.structure.readLocation(userId, projectId, unitId);
 	}
 
 	@Transactional()
-	async resetToUnitType(
+	async resetToTypology(
 		userId: string,
 		projectId: string,
 		unitId: string,
@@ -198,7 +198,7 @@ export class RoomsService {
 		const unit = await this.findLocation(projectId, unitId);
 		this.assertKind(unit.type, ["unit"]);
 
-		if (unit.unitType) await this.rooms.restoreFromUnitType(unitId);
+		if (unit.typology) await this.rooms.restoreFromTypology(unitId);
 
 		return this.structure.readLocation(userId, projectId, unitId);
 	}

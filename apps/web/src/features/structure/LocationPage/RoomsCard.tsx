@@ -237,7 +237,7 @@ export function RoomsCard({
 	location: LocationDetail;
 	editable: boolean;
 }) {
-	const { rooms, droppedRooms, unitType } = location;
+	const { rooms, droppedRooms, typology } = location;
 	const holder: RoomHolder = location.type === "unit" ? "unit" : "common_area";
 	const restoredRename = useSessionDraft("rename-room", (variables) => {
 		if (typeof variables !== "object" || variables === null) return undefined;
@@ -268,7 +268,7 @@ export function RoomsCard({
 	}
 
 	function giveRoomBack(dropped: DroppedRoom) {
-		giveBack.mutate(dropped.unitTypeRoomId, {
+		giveBack.mutate(dropped.typologyRoomId, {
 			onError: (failure) =>
 				toast.error(
 					isRoomNameTaken(failure)
@@ -297,7 +297,7 @@ export function RoomsCard({
 							key={room.id}
 							name={room.name}
 							badge={
-								unitType && room.unitTypeRoomId === null
+								typology && room.typologyRoomId === null
 									? "Só desta unidade"
 									: undefined
 							}
@@ -306,7 +306,7 @@ export function RoomsCard({
 									<RoomMenu
 										room={room}
 										removeLabel={
-											room.unitTypeRoomId === null
+											room.typologyRoomId === null
 												? "Remover cômodo"
 												: "Remover desta unidade"
 										}
@@ -326,7 +326,7 @@ export function RoomsCard({
 					)}
 				</RoomList>
 			)}
-			{unitType && droppedRooms.length > 0 && (
+			{typology && droppedRooms.length > 0 && (
 				<div className="grid gap-(--space-2)">
 					<h3 className="text-sm font-semibold text-muted-foreground">
 						Tirados desta unidade
@@ -334,9 +334,9 @@ export function RoomsCard({
 					<RoomList label="Tirados desta unidade">
 						{droppedRooms.map((dropped) => (
 							<RoomRow
-								key={dropped.unitTypeRoomId}
+								key={dropped.typologyRoomId}
 								name={dropped.name}
-								meta={`Da tipologia ${unitType.name}`}
+								meta={`Da tipologia ${typology.name}`}
 								action={
 									editable && (
 										<Button

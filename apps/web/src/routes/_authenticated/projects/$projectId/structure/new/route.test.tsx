@@ -6,7 +6,7 @@ import {
 	type ProjectSummary,
 	type ProjectUnitsBalance,
 	type Structure,
-	UNIT_TYPE_NAME_TAKEN,
+	TYPOLOGY_NAME_TAKEN,
 } from "@bluprint/shared";
 import {
 	act,
@@ -178,7 +178,7 @@ async function addFloorArea(name: string, floor: string) {
 const floorAreaRow = (name: string) =>
 	screen.getByRole("button", { name: `Tirar ${name}` }).closest("li");
 
-async function toUnitTypesOnPhone() {
+async function toTypologiesOnPhone() {
 	await user.click(
 		await screen.findByRole("button", { name: "Continuar · Áreas comuns" }),
 	);
@@ -188,7 +188,7 @@ async function toUnitTypesOnPhone() {
 }
 
 async function toPreviewOnPhone() {
-	await toUnitTypesOnPhone();
+	await toTypologiesOnPhone();
 	await user.click(
 		await screen.findByRole("button", { name: "Continuar · Prévia" }),
 	);
@@ -197,7 +197,7 @@ async function toPreviewOnPhone() {
 const ruleGroup = (number: number) =>
 	screen.getByRole("group", { name: `Regra ${number}` });
 
-async function addUnitType() {
+async function addTypology() {
 	await user.click(screen.getByRole("button", { name: "Nova tipologia" }));
 }
 
@@ -852,8 +852,8 @@ describe("structure wizard", () => {
 		});
 	});
 
-	describe("the unit types", () => {
-		test("starts with one unit type applied to every final and floor, and says how to use it (W3)", async () => {
+	describe("the typologies", () => {
+		test("starts with one typology applied to every final and floor, and says how to use it (W3)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
 
@@ -890,7 +890,7 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 		});
 
-		test("lists the rooms of a unit type, refuses a repeated one and takes one out (W3)", async () => {
+		test("lists the rooms of a typology, refuses a repeated one and takes one out (W3)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
 			const rooms = await screen.findByRole("textbox", {
@@ -918,12 +918,12 @@ describe("structure wizard", () => {
 			).not.toBeInTheDocument();
 		});
 
-		test("adds a second unit type and applies each by final, counting them in the preview (W3, W4)", async () => {
+		test("adds a second typology and applies each by final, counting them in the preview (W3, W4)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
 			await describeTower("2", "4");
 
-			await addUnitType();
+			await addTypology();
 			await addRule();
 			await typeInto("Finais da regra 1", "01, 03");
 			await typeInto("Finais da regra 2", "02, 04");
@@ -951,7 +951,7 @@ describe("structure wizard", () => {
 			);
 		});
 
-		test("limits a rule to a range of floors and warns of the units it leaves without a unit type (W4)", async () => {
+		test("limits a rule to a range of floors and warns of the units it leaves without a typology (W4)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
 			await describeTower("4", "2");
@@ -1001,7 +1001,7 @@ describe("structure wizard", () => {
 			});
 		});
 
-		test("takes a unit type out together with the rules that point at it", async () => {
+		test("takes a typology out together with the rules that point at it", async () => {
 			const { handler } = wizardApi();
 			open(handler);
 			await describeTower("1", "2");
@@ -1047,7 +1047,7 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 		});
 
-		test("sends the unit types with their rooms and the unit type of each unit (W10)", async () => {
+		test("sends the typologies with their rooms and the typology of each unit (W10)", async () => {
 			const { handler, sent } = wizardApi();
 			const { router } = open(handler);
 			await describeTower("1", "2");
@@ -1061,8 +1061,8 @@ describe("structure wizard", () => {
 			await waitFor(() => {
 				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
 			});
-			const { unitTypes, locations } = sent[0] as CreateStructure;
-			expect(unitTypes).toEqual([
+			const { typologies, locations } = sent[0] as CreateStructure;
+			expect(typologies).toEqual([
 				{
 					id: expect.stringMatching(UUID),
 					name: "Tipologia A",
@@ -1074,18 +1074,18 @@ describe("structure wizard", () => {
 			]);
 			const units = locations.filter((l) => l.type === "unit");
 			expect(units).toHaveLength(2);
-			expect(units.map((l) => l.unitTypeId)).toEqual([
-				unitTypes[0]?.id,
-				unitTypes[0]?.id,
+			expect(units.map((l) => l.typologyId)).toEqual([
+				typologies[0]?.id,
+				typologies[0]?.id,
 			]);
 			expect(
 				locations
 					.filter((l) => l.type !== "unit")
-					.every((l) => l.unitTypeId === undefined),
+					.every((l) => l.typologyId === undefined),
 			).toBe(true);
 		});
 
-		test("resends the same unit type and room ids after a failure (W7)", async () => {
+		test("resends the same typology and room ids after a failure (W7)", async () => {
 			const { handler, sent } = wizardApi({
 				create: (body, attempt) =>
 					attempt === 1 ? json({}, 500) : json({ counts: countsOf(body) }, 201),
@@ -1107,7 +1107,7 @@ describe("structure wizard", () => {
 			expect(sent[1]).toEqual(sent[0]);
 		});
 
-		test("asks for the unit type's name and explains finals that are not numbers, and focuses the first (W5)", async () => {
+		test("asks for the typology's name and explains finals that are not numbers, and focuses the first (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
 			await describeTower("2", "4");
@@ -1130,11 +1130,11 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(0);
 		});
 
-		test("refuses a repeated unit type name and a rule that ends before it starts (W5)", async () => {
+		test("refuses a repeated typology name and a rule that ends before it starts (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
 			await describeTower("2", "4");
-			await addUnitType();
+			await addTypology();
 			await typeInto("Nome da tipologia", " tipologia  a ", 1);
 			await typeInto("Do andar da regra 1", "5");
 			await typeInto("Até o andar da regra 1", "2");
@@ -1159,10 +1159,10 @@ describe("structure wizard", () => {
 			).not.toBeInTheDocument();
 		});
 
-		test("shows the unit type names that clash and keeps the draft (UNIT_TYPE_NAME_TAKEN)", async () => {
+		test("shows the typology names that clash and keeps the draft (TYPOLOGY_NAME_TAKEN)", async () => {
 			const { handler } = wizardApi({
 				create: () =>
-					problem(409, UNIT_TYPE_NAME_TAKEN, { names: ["Tipologia A"] }),
+					problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] }),
 			});
 			open(handler);
 			await describeTower("3", "4");
@@ -1691,7 +1691,7 @@ describe("structure wizard", () => {
 			open(handler);
 			await describeTower("3", "4");
 
-			await toUnitTypesOnPhone();
+			await toTypologiesOnPhone();
 
 			expect(screen.getByText("Passo 3 de 4")).toBeInTheDocument();
 			expect(
@@ -1713,12 +1713,12 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 		});
 
-		test("counts the units of each unit type and warns of the ones without in the preview (W4)", async () => {
+		test("counts the units of each typology and warns of the ones without in the preview (W4)", async () => {
 			setViewport("phone");
 			const { handler } = wizardApi();
 			open(handler);
 			await describeTower("2", "4");
-			await toUnitTypesOnPhone();
+			await toTypologiesOnPhone();
 			await typeInto("Finais", "01, 03");
 
 			await user.click(
@@ -1736,12 +1736,12 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 		});
 
-		test("goes back to the unit types step and focuses a wrong rule field (W5)", async () => {
+		test("goes back to the typologies step and focuses a wrong rule field (W5)", async () => {
 			setViewport("phone");
 			const { handler, sent } = wizardApi();
 			open(handler);
 			await describeTower("2", "4");
-			await toUnitTypesOnPhone();
+			await toTypologiesOnPhone();
 			await typeInto("Finais", "um");
 			await user.click(
 				screen.getByRole("button", { name: "Continuar · Prévia" }),

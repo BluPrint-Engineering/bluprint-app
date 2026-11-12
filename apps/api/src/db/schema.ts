@@ -8,4 +8,4 @@ export * from "../projects/project.entity";
 export * from "../projects/project-use.entity";
 export * from "../structure/location.entity";
 export * from "../structure/room.entity";
-export * from "../structure/unit-type.entity";
+export * from "../structure/typology.entity";

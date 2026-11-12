@@ -10,7 +10,7 @@ import { LocationMenu } from "../components/LocationMenu";
 import type { Adding } from "../components/useAdding";
 import { nextUnitName } from "../naming";
 import { NO_CHILDREN } from "../removeText";
-import { unitTypeLine } from "./unitTypeLine";
+import { typologyLine } from "./typologyLine";
 
 export function FloorBody({
 	project,
@@ -31,7 +31,7 @@ export function FloorBody({
 	const units = floor.units.map((unit) => ({
 		id: unit.id,
 		name: unit.name,
-		meta: unitTypeLine(unit),
+		meta: typologyLine(unit),
 		menu: canEdit && (
 			<LocationMenu
 				projectId={projectId}

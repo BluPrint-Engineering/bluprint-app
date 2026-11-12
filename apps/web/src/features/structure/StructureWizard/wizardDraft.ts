@@ -3,7 +3,7 @@ import {
 	MAX_UNITS_PER_FLOOR,
 	type StructureTower,
 	sameLocationName,
-	type UnitType,
+	type Typology,
 } from "@bluprint/shared";
 import { describeTower, newFloorsLead } from "./towerNow";
 import {
@@ -11,8 +11,8 @@ import {
 	parseFinals,
 	parseFloorBound,
 	type RuleDraft,
-	type UnitTypeDraft,
-} from "./unitTypeRules";
+	type TypologyDraft,
+} from "./typologyRules";
 
 export type Numbering = "digits" | "letters";
 
@@ -49,7 +49,7 @@ export interface WizardDraft {
 	projectAreas: string[];
 	towerAreas: string[];
 	floorAreas: FloorAreaDraft[];
-	unitTypes: UnitTypeDraft[];
+	typologies: TypologyDraft[];
 	rules: RuleDraft[];
 }
 
@@ -60,9 +60,9 @@ const TOWER_KEY = "tower-";
 let towerKeys = 0;
 const nextTowerKey = () => `${TOWER_KEY}${++towerKeys}`;
 
-const UNIT_TYPE_KEY = "unit-type-";
+const TYPOLOGY_KEY = "typology-";
 let typeKeys = 0;
-const nextUnitTypeKey = () => `${UNIT_TYPE_KEY}${++typeKeys}`;
+const nextTypologyKey = () => `${TYPOLOGY_KEY}${++typeKeys}`;
 
 const RULE_KEY = "rule-";
 let ruleKeys = 0;
@@ -77,7 +77,7 @@ function highestKey(items: { key: string }[], prefix: string): number {
 	);
 }
 
-export const FIRST_UNIT_TYPE_NAME = "Tipologia A";
+export const FIRST_TYPOLOGY_NAME = "Tipologia A";
 
 function record(value: unknown): Record<string, unknown> | undefined {
 	if (typeof value !== "object" || value === null || Array.isArray(value)) {
@@ -129,7 +129,7 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			hall: tower.hall,
 		});
 	}
-	if (!Array.isArray(draft.floorAreas) || !Array.isArray(draft.unitTypes)) {
+	if (!Array.isArray(draft.floorAreas) || !Array.isArray(draft.typologies)) {
 		return undefined;
 	}
 	if (!Array.isArray(draft.rules)) return undefined;
@@ -152,23 +152,23 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			name: area.name,
 		});
 	}
-	const unitTypes: UnitTypeDraft[] = [];
-	for (const item of draft.unitTypes) {
-		const unitType = record(item);
-		const rooms = unitType && strings(unitType.rooms);
+	const typologies: TypologyDraft[] = [];
+	for (const item of draft.typologies) {
+		const typology = record(item);
+		const rooms = typology && strings(typology.rooms);
 		if (
-			!unitType ||
+			!typology ||
 			!rooms ||
-			typeof unitType.key !== "string" ||
-			typeof unitType.name !== "string"
+			typeof typology.key !== "string" ||
+			typeof typology.name !== "string"
 		) {
 			return undefined;
 		}
-		unitTypes.push({
-			key: unitType.key,
-			name: unitType.name,
+		typologies.push({
+			key: typology.key,
+			name: typology.name,
 			rooms,
-			...(unitType.existing === true ? { existing: true } : {}),
+			...(typology.existing === true ? { existing: true } : {}),
 		});
 	}
 	const rules: RuleDraft[] = [];
@@ -181,7 +181,7 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			typeof rule.finals !== "string" ||
 			typeof rule.from !== "string" ||
 			typeof rule.to !== "string" ||
-			typeof rule.unitType !== "string"
+			typeof rule.typology !== "string"
 		) {
 			return undefined;
 		}
@@ -191,13 +191,13 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			finals: rule.finals,
 			from: rule.from,
 			to: rule.to,
-			unitType: rule.unitType,
+			typology: rule.typology,
 		});
 	}
 	const extend = readExtend(draft.extend);
 	if (draft.extend !== undefined && !extend) return undefined;
 	towerKeys = Math.max(towerKeys, highestKey(towers, TOWER_KEY));
-	typeKeys = Math.max(typeKeys, highestKey(unitTypes, UNIT_TYPE_KEY));
+	typeKeys = Math.max(typeKeys, highestKey(typologies, TYPOLOGY_KEY));
 	ruleKeys = Math.max(ruleKeys, highestKey(rules, RULE_KEY));
 	return {
 		...(extend ? { extend } : {}),
@@ -206,7 +206,7 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 		projectAreas,
 		towerAreas,
 		floorAreas,
-		unitTypes,
+		typologies,
 		rules,
 	};
 }
@@ -238,9 +238,9 @@ function readExtend(value: unknown): ExtendDraft | undefined {
 }
 
 export function initialDraft(): WizardDraft {
-	const unitType: UnitTypeDraft = {
-		key: nextUnitTypeKey(),
-		name: FIRST_UNIT_TYPE_NAME,
+	const typology: TypologyDraft = {
+		key: nextTypologyKey(),
+		name: FIRST_TYPOLOGY_NAME,
 		rooms: [],
 	};
 	return {
@@ -259,7 +259,7 @@ export function initialDraft(): WizardDraft {
 		projectAreas: [],
 		towerAreas: [],
 		floorAreas: [],
-		unitTypes: [unitType],
+		typologies: [typology],
 		rules: [
 			{
 				key: nextRuleKey(),
@@ -267,7 +267,7 @@ export function initialDraft(): WizardDraft {
 				finals: ALL_FINALS,
 				from: "",
 				to: "",
-				unitType: unitType.key,
+				typology: typology.key,
 			},
 		],
 	};
@@ -275,17 +275,17 @@ export function initialDraft(): WizardDraft {
 
 function mirroredRules(
 	tower: StructureTower,
-	unitTypes: UnitTypeDraft[],
+	typologies: TypologyDraft[],
 ): RuleDraft[] | undefined {
 	const units = describeTower(tower).lastFloor?.units ?? [];
 	if (units.length === 0) return undefined;
 	const finalsByType = new Map<string, number[]>();
 	units.forEach((unit, at) => {
-		const id = unit.unitType?.id;
-		if (id === undefined || !unitTypes.some(({ key }) => key === id)) return;
+		const id = unit.typology?.id;
+		if (id === undefined || !typologies.some(({ key }) => key === id)) return;
 		finalsByType.set(id, [...(finalsByType.get(id) ?? []), at + 1]);
 	});
-	return [...finalsByType].map(([unitType, finals]) => ({
+	return [...finalsByType].map(([typology, finals]) => ({
 		key: nextRuleKey(),
 		tower: 0,
 		finals:
@@ -294,17 +294,17 @@ function mirroredRules(
 				: finals.map((final) => String(final).padStart(2, "0")).join(", "),
 		from: "",
 		to: "",
-		unitType,
+		typology,
 	}));
 }
 
 export function extendedDraft(
 	tower: StructureTower,
-	existingTypes: UnitType[],
+	existingTypes: Typology[],
 	named: boolean,
 ): WizardDraft {
 	const now = describeTower(tower);
-	const unitTypes: UnitTypeDraft[] = existingTypes.map(
+	const typologies: TypologyDraft[] = existingTypes.map(
 		({ id, name, rooms }) => ({
 			key: id,
 			name,
@@ -312,15 +312,15 @@ export function extendedDraft(
 			existing: true,
 		}),
 	);
-	let rules = mirroredRules(tower, unitTypes);
+	let rules = mirroredRules(tower, typologies);
 	if (rules === undefined) {
-		const first = unitTypes[0];
-		const unitType = first ?? {
-			key: nextUnitTypeKey(),
-			name: FIRST_UNIT_TYPE_NAME,
+		const first = typologies[0];
+		const typology = first ?? {
+			key: nextTypologyKey(),
+			name: FIRST_TYPOLOGY_NAME,
 			rooms: [],
 		};
-		if (!first) unitTypes.push(unitType);
+		if (!first) typologies.push(typology);
 		rules = [
 			{
 				key: nextRuleKey(),
@@ -328,7 +328,7 @@ export function extendedDraft(
 				finals: ALL_FINALS,
 				from: "",
 				to: "",
-				unitType: unitType.key,
+				typology: typology.key,
 			},
 		];
 	}
@@ -363,12 +363,12 @@ export function extendedDraft(
 		projectAreas: [],
 		towerAreas: [],
 		floorAreas: [],
-		unitTypes,
+		typologies,
 		rules,
 	};
 }
 
-function freeUnitTypeName(taken: string[]): string {
+function freeTypologyName(taken: string[]): string {
 	for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
 		const name = `Tipologia ${letter}`;
 		if (!taken.some((other) => sameLocationName(other, name))) return name;
@@ -376,31 +376,31 @@ function freeUnitTypeName(taken: string[]): string {
 	return "";
 }
 
-export function withNewUnitType(draft: WizardDraft): WizardDraft {
+export function withNewTypology(draft: WizardDraft): WizardDraft {
 	return {
 		...draft,
-		unitTypes: [
-			...draft.unitTypes,
+		typologies: [
+			...draft.typologies,
 			{
-				key: nextUnitTypeKey(),
-				name: freeUnitTypeName(draft.unitTypes.map(({ name }) => name)),
+				key: nextTypologyKey(),
+				name: freeTypologyName(draft.typologies.map(({ name }) => name)),
 				rooms: [],
 			},
 		],
 	};
 }
 
-export function withoutUnitType(draft: WizardDraft, key: string): WizardDraft {
+export function withoutTypology(draft: WizardDraft, key: string): WizardDraft {
 	return {
 		...draft,
-		unitTypes: draft.unitTypes.filter((unitType) => unitType.key !== key),
-		rules: draft.rules.filter((rule) => rule.unitType !== key),
+		typologies: draft.typologies.filter((typology) => typology.key !== key),
+		rules: draft.rules.filter((rule) => rule.typology !== key),
 	};
 }
 
 export function withNewRule(draft: WizardDraft): WizardDraft {
-	const unitType = draft.unitTypes[0];
-	if (!unitType) return draft;
+	const typology = draft.typologies[0];
+	if (!typology) return draft;
 	return {
 		...draft,
 		rules: [
@@ -411,7 +411,7 @@ export function withNewRule(draft: WizardDraft): WizardDraft {
 				finals: ALL_FINALS,
 				from: "",
 				to: "",
-				unitType: unitType.key,
+				typology: typology.key,
 			},
 		],
 	};
@@ -519,7 +519,7 @@ export const listedFloorAreas = (draft: WizardDraft) =>
 
 export type RuleField = "finals" | "from" | "to";
 
-export const unitTypeFieldId = (key: string) => `${key}-name`;
+export const typologyFieldId = (key: string) => `${key}-name`;
 
 export const ruleFieldId = (key: string, field: RuleField) => `${key}-${field}`;
 
@@ -650,14 +650,14 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		if (problem) errors[floorAreaFieldId(area.key)] = problem.message;
 	});
 
-	draft.unitTypes.forEach((unitType, index) => {
-		const id = unitTypeFieldId(unitType.key);
-		if (unitType.name.trim() === "") {
+	draft.typologies.forEach((typology, index) => {
+		const id = typologyFieldId(typology.key);
+		if (typology.name.trim() === "") {
 			errors[id] = "Informe o nome da tipologia.";
 		} else if (
-			draft.unitTypes.some(
+			draft.typologies.some(
 				(other, at) =>
-					at < index && sameLocationName(other.name, unitType.name),
+					at < index && sameLocationName(other.name, typology.name),
 			)
 		) {
 			errors[id] = "Já existe outra tipologia com esse nome.";
@@ -697,8 +697,8 @@ export function firstInvalidField(
 			id: floorAreaFieldId(area.key),
 			section: "areas" as const,
 		})),
-		...draft.unitTypes.map((unitType) => ({
-			id: unitTypeFieldId(unitType.key),
+		...draft.typologies.map((typology) => ({
+			id: typologyFieldId(typology.key),
 			section: "types" as const,
 		})),
 		...draft.rules.flatMap((rule) =>

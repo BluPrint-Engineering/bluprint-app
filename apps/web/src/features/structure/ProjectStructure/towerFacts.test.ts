@@ -8,17 +8,17 @@ function floor(
 	name: string,
 	units: number,
 	commonAreas: string[] = [],
-	unitTypes: (string | null)[] = [],
+	typologies: (string | null)[] = [],
 ): StructureFloor {
 	return {
 		id: id(),
 		name,
 		units: Array.from({ length: units }, (_, i) => {
-			const typeName = unitTypes[i % Math.max(unitTypes.length, 1)] ?? null;
+			const typeName = typologies[i % Math.max(typologies.length, 1)] ?? null;
 			return {
 				id: id(),
 				name: `${name}-${i}`,
-				unitType: typeName ? { id: `type-${typeName}`, name: typeName } : null,
+				typology: typeName ? { id: `type-${typeName}`, name: typeName } : null,
 				changes: 0,
 			};
 		}),
@@ -86,7 +86,7 @@ describe("towerFacts", () => {
 		expect(facts[1]).toEqual(["Unidades", "6 · 2 por andar"]);
 	});
 
-	test("lists each unit type of the tower once, in the order they first appear", () => {
+	test("lists each typology of the tower once, in the order they first appear", () => {
 		const facts = towerFacts(
 			tower([
 				floor("1º andar", 4, [], ["Tipologia A", "Tipologia B"]),
@@ -101,7 +101,7 @@ describe("towerFacts", () => {
 		]);
 	});
 
-	test("ignores the units without a unit type when others have one", () => {
+	test("ignores the units without a typology when others have one", () => {
 		const facts = towerFacts(
 			tower([floor("1º andar", 3, [], ["Tipologia A", null, null])]),
 		);

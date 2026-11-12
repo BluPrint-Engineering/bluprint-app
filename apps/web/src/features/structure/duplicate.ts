@@ -215,13 +215,13 @@ export function buildDuplicate(
 			rooms: found.rooms.map((room) => ({
 				id: idFor(`room:${room.id}`),
 				name: room.name,
-				...(room.unitTypeRoomId !== null && {
-					unitTypeRoomId: room.unitTypeRoomId,
+				...(room.typologyRoomId !== null && {
+					typologyRoomId: room.typologyRoomId,
 				}),
 				...(room.renamed && { renamed: true }),
 			})),
 			...(found.droppedRooms.length > 0 && {
-				droppedRooms: found.droppedRooms.map((room) => room.unitTypeRoomId),
+				droppedRooms: found.droppedRooms.map((room) => room.typologyRoomId),
 			}),
 		};
 	};
@@ -238,7 +238,7 @@ export function buildDuplicate(
 			type: "unit",
 			name: unitName,
 			...(position !== undefined && { position }),
-			...(unit.unitType && { unitTypeId: unit.unitType.id }),
+			...(unit.typology && { typologyId: unit.typology.id }),
 			...rooms(unit.id),
 		});
 	};
@@ -316,5 +316,5 @@ export function buildDuplicate(
 		}
 	}
 
-	return { unitTypes: [], locations, copy: true };
+	return { typologies: [], locations, copy: true };
 }

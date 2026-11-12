@@ -8,18 +8,18 @@ import {
 	locationDetailSchema,
 	NO_UNITS_LEFT,
 	type NewLocation,
-	type NewUnitType,
+	type NewTypology,
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	problemDetailsSchema,
 	ROOM_ID_TAKEN,
 	structureSchema,
 	subtreeRoomsSchema,
-	UNIT_TYPE_ID_TAKEN,
-	UNIT_TYPE_NAME_TAKEN,
-	UNIT_TYPE_NOT_FOUND,
-	UNIT_TYPE_ROOM_INVALID,
-	unitTypeListSchema,
+	TYPOLOGY_ID_TAKEN,
+	TYPOLOGY_NAME_TAKEN,
+	TYPOLOGY_NOT_FOUND,
+	TYPOLOGY_ROOM_INVALID,
+	typologyListSchema,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -136,15 +136,15 @@ async function create(
 async function createWith(
 	person: Person,
 	projectId: string,
-	unitTypes: NewUnitType[],
+	typologies: NewTypology[],
 	locations: NewLocation[],
 ) {
 	return person.agent
 		.post(structurePath(projectId))
-		.send({ unitTypes, locations });
+		.send({ typologies, locations });
 }
 
-const unitTypeOf = (name: string, rooms: string[]): NewUnitType => ({
+const typologyOf = (name: string, rooms: string[]): NewTypology => ({
 	id: randomUUID(),
 	name,
 	rooms: rooms.map((room) => ({ id: randomUUID(), name: room })),
@@ -153,11 +153,11 @@ const unitTypeOf = (name: string, rooms: string[]): NewUnitType => ({
 const unitOf = (
 	floorId: string,
 	name: string,
-	unitTypeId?: string,
+	typologyId?: string,
 	position = 0,
 ): NewLocation => ({
 	...entry(floorId, "unit", name, position),
-	...(unitTypeId !== undefined && { unitTypeId }),
+	...(typologyId !== undefined && { typologyId }),
 });
 
 async function readLocation(projectId: string, locationId: string) {
@@ -167,9 +167,9 @@ async function readLocation(projectId: string, locationId: string) {
 	return locationDetailSchema.parse(res.body);
 }
 
-async function readUnitTypes(projectId: string) {
-	const res = await admin.agent.get(`/api/projects/${projectId}/unit-types`);
-	return unitTypeListSchema.parse(res.body).unitTypes;
+async function readTypologies(projectId: string) {
+	const res = await admin.agent.get(`/api/projects/${projectId}/typologies`);
+	return typologyListSchema.parse(res.body).typologies;
 }
 
 async function readStructure(projectId: string) {
@@ -253,7 +253,7 @@ describe("POST /api/projects/:id/structure", () => {
 		expect(structure.commonAreas.map((area) => area.name)).toEqual(["Guarita"]);
 	});
 
-	it("stores trimmed names and no unit type", async () => {
+	it("stores trimmed names and no typology", async () => {
 		const projectId = await newProject(10);
 		const tower = entry(null, "tower", "  Torre   A  ");
 		const floor = entry(tower.id, "floor", "1º andar");
@@ -267,7 +267,7 @@ describe("POST /api/projects/:id/structure", () => {
 			.from(location)
 			.where(eq(location.projectId, projectId));
 		expect(rows.find((row) => row.type === "tower")!.name).toBe("Torre   A");
-		expect(rows.find((row) => row.type === "unit")!.unitTypeId).toBeNull();
+		expect(rows.find((row) => row.type === "unit")!.typologyId).toBeNull();
 	});
 
 	it("answers the same and creates nothing when the request is sent again", async () => {
@@ -758,7 +758,7 @@ describe("POST /api/projects/:id/structure", () => {
 	});
 });
 
-describe("POST /api/projects/:id/structure with unit types", () => {
+describe("POST /api/projects/:id/structure with typologies", () => {
 	const roomsOfA = ["Sala", "Cozinha", "Dormitório"];
 
 	const aTower = () => entry(null, "tower", "Torre A");
@@ -769,10 +769,10 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		return { tower, floor };
 	}
 
-	it("creates the unit types with their rooms and gives each unit the rooms of its type", async () => {
+	it("creates the typologies with their rooms and gives each unit the rooms of its type", async () => {
 		const projectId = await newProject(10);
-		const typeA = unitTypeOf("Tipologia A", roomsOfA);
-		const typeB = unitTypeOf("Tipologia B", ["Sala", "Banheiro"]);
+		const typeA = typologyOf("Tipologia A", roomsOfA);
+		const typeB = typologyOf("Tipologia B", ["Sala", "Banheiro"]);
 		const { tower, floor } = floorWith();
 		const unitA = unitOf(floor.id, "101", typeA.id);
 		const unitB = unitOf(floor.id, "102", typeB.id, 1);
@@ -789,9 +789,9 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 			counts: { towers: 1, floors: 1, units: 2, commonAreas: 0 },
 		});
 		const detailA = await readLocation(projectId, unitA.id);
-		expect(detailA.unitType).toEqual({ id: typeA.id, name: "Tipologia A" });
+		expect(detailA.typology).toEqual({ id: typeA.id, name: "Tipologia A" });
 		expect(detailA.rooms.map((room) => room.name)).toEqual(roomsOfA);
-		expect(detailA.rooms.map((room) => room.unitTypeRoomId)).toEqual(
+		expect(detailA.rooms.map((room) => room.typologyRoomId)).toEqual(
 			typeA.rooms.map((room) => room.id),
 		);
 		expect(detailA.rooms.every((room) => !room.renamed)).toBe(true);
@@ -801,7 +801,7 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 			"Sala",
 			"Banheiro",
 		]);
-		const listed = await readUnitTypes(projectId);
+		const listed = await readTypologies(projectId);
 		expect(listed.find((type) => type.id === typeA.id)).toMatchObject({
 			name: "Tipologia A",
 			unitCount: 1,
@@ -814,9 +814,9 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		});
 	});
 
-	it("leaves a unit without a unit type with no unit type and no rooms", async () => {
+	it("leaves a unit without a typology with no typology and no rooms", async () => {
 		const projectId = await newProject(10);
-		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const typeA = typologyOf("Tipologia A", roomsOfA);
 		const { tower, floor } = floorWith();
 		const bare = unitOf(floor.id, "101");
 
@@ -829,14 +829,14 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 
 		expect(res.status).toBe(201);
 		const detail = await readLocation(projectId, bare.id);
-		expect(detail.unitType).toBeNull();
+		expect(detail.typology).toBeNull();
 		expect(detail.rooms).toEqual([]);
-		expect((await readUnitTypes(projectId))[0]!.unitCount).toBe(0);
+		expect((await readTypologies(projectId))[0]!.unitCount).toBe(0);
 	});
 
-	it("creates a unit type with no rooms", async () => {
+	it("creates a typology with no rooms", async () => {
 		const projectId = await newProject(10);
-		const empty = unitTypeOf("Tipologia A", []);
+		const empty = typologyOf("Tipologia A", []);
 		const { tower, floor } = floorWith();
 		const unit = unitOf(floor.id, "101", empty.id);
 
@@ -853,10 +853,10 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 
 	it("answers the same and creates nothing when the request is sent again", async () => {
 		const projectId = await newProject(10);
-		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const typeA = typologyOf("Tipologia A", roomsOfA);
 		const { tower, floor } = floorWith();
 		const unit = unitOf(floor.id, "101", typeA.id);
-		const request: [NewUnitType[], NewLocation[]] = [
+		const request: [NewTypology[], NewLocation[]] = [
 			[typeA],
 			[tower, floor, unit],
 		];
@@ -866,13 +866,13 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 
 		expect(again.status).toBe(201);
 		expect(again.body).toEqual(first.body);
-		expect(await readUnitTypes(projectId)).toHaveLength(1);
+		expect(await readTypologies(projectId)).toHaveLength(1);
 		expect((await readLocation(projectId, unit.id)).rooms).toHaveLength(3);
 	});
 
-	it("gives a unit of a later request the rooms of a unit type that already exists", async () => {
+	it("gives a unit of a later request the rooms of a typology that already exists", async () => {
 		const projectId = await newProject(10);
-		const typeA = unitTypeOf("Tipologia A", roomsOfA);
+		const typeA = typologyOf("Tipologia A", roomsOfA);
 		const { tower, floor } = floorWith();
 		await createWith(manager, projectId, [typeA], [tower, floor]);
 		const unit = unitOf(floor.id, "101", typeA.id);
@@ -890,13 +890,13 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		["repeated spaces", "Tipologia    A"],
 		["the ends", "  Tipologia A "],
 	])(
-		"refuses a unit type name that differs only by %s",
+		"refuses a typology name that differs only by %s",
 		async (_label, name) => {
 			const projectId = await newProject(10);
 			await createWith(
 				manager,
 				projectId,
-				[unitTypeOf("Tipologia A", [])],
+				[typologyOf("Tipologia A", [])],
 				[aTower()],
 			);
 			const { tower, floor } = floorWith("Torre B");
@@ -904,49 +904,49 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 			const res = await createWith(
 				manager,
 				projectId,
-				[unitTypeOf(name, ["Sala"])],
+				[typologyOf(name, ["Sala"])],
 				[tower, floor, unitOf(floor.id, "101")],
 			);
 
 			expect(res.status).toBe(409);
 			const problem = problemOf(res.body);
-			expect(problem.code).toBe(UNIT_TYPE_NAME_TAKEN);
+			expect(problem.code).toBe(TYPOLOGY_NAME_TAKEN);
 			expect(problem.names).toEqual([name.trim()]);
 			expect(await countLocations(projectId)).toBe(1);
-			expect(await readUnitTypes(projectId)).toHaveLength(1);
+			expect(await readTypologies(projectId)).toHaveLength(1);
 		},
 	);
 
-	it("refuses two unit types of one request with the same name and creates nothing", async () => {
+	it("refuses two typologies of one request with the same name and creates nothing", async () => {
 		const projectId = await newProject(10);
 		const { tower, floor } = floorWith();
 
 		const res = await createWith(
 			manager,
 			projectId,
-			[unitTypeOf("Tipologia A", ["Sala"]), unitTypeOf("tipologia a", [])],
+			[typologyOf("Tipologia A", ["Sala"]), typologyOf("tipologia a", [])],
 			[tower, floor],
 		);
 
 		expect(res.status).toBe(409);
-		expect(problemOf(res.body).code).toBe(UNIT_TYPE_NAME_TAKEN);
+		expect(problemOf(res.body).code).toBe(TYPOLOGY_NAME_TAKEN);
 		expect(await countLocations(projectId)).toBe(0);
 	});
 
-	it("lets two projects each have their own unit type of the same name", async () => {
+	it("lets two projects each have their own typology of the same name", async () => {
 		const first = await newProject(10);
 		const second = await newProject(10);
 
 		const a = await createWith(
 			manager,
 			first,
-			[unitTypeOf("Tipologia A", [])],
+			[typologyOf("Tipologia A", [])],
 			[aTower()],
 		);
 		const b = await createWith(
 			manager,
 			second,
-			[unitTypeOf("Tipologia A", [])],
+			[typologyOf("Tipologia A", [])],
 			[aTower()],
 		);
 
@@ -954,10 +954,10 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		expect(b.status).toBe(201);
 	});
 
-	it("refuses a unit that follows a unit type the project does not have", async () => {
+	it("refuses a unit that follows a typology the project does not have", async () => {
 		const projectId = await newProject(10);
 		const otherId = await newProject(10);
-		const foreign = unitTypeOf("Tipologia A", ["Sala"]);
+		const foreign = typologyOf("Tipologia A", ["Sala"]);
 		const { tower, floor } = floorWith();
 		await createWith(manager, otherId, [foreign], [tower, floor]);
 		const mine = floorWith();
@@ -977,41 +977,41 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 
 		for (const res of [unknown, ofAnotherProject]) {
 			expect(res.status).toBe(400);
-			expect(problemOf(res.body).code).toBe(UNIT_TYPE_NOT_FOUND);
+			expect(problemOf(res.body).code).toBe(TYPOLOGY_NOT_FOUND);
 		}
 		expect(await countLocations(projectId)).toBe(0);
 	});
 
-	it("refuses a unit type id or a room id that belongs to another project", async () => {
+	it("refuses a typology id or a room id that belongs to another project", async () => {
 		const projectId = await newProject(10);
 		const otherId = await newProject(10);
-		const taken = unitTypeOf("Tipologia A", ["Sala"]);
+		const taken = typologyOf("Tipologia A", ["Sala"]);
 		await createWith(manager, otherId, [taken], [aTower()]);
 
 		const sameType = await createWith(
 			manager,
 			projectId,
-			[{ ...unitTypeOf("Outra", []), id: taken.id }],
+			[{ ...typologyOf("Outra", []), id: taken.id }],
 			[aTower()],
 		);
 		const sameRoom = await createWith(
 			manager,
 			projectId,
-			[{ ...unitTypeOf("Outra", []), rooms: taken.rooms }],
+			[{ ...typologyOf("Outra", []), rooms: taken.rooms }],
 			[aTower()],
 		);
 
 		for (const res of [sameType, sameRoom]) {
 			expect(res.status).toBe(409);
-			expect(problemOf(res.body).code).toBe(UNIT_TYPE_ID_TAKEN);
+			expect(problemOf(res.body).code).toBe(TYPOLOGY_ID_TAKEN);
 		}
-		expect(await readUnitTypes(projectId)).toEqual([]);
+		expect(await readTypologies(projectId)).toEqual([]);
 	});
 
-	it("refuses a malformed unit type request", async () => {
+	it("refuses a malformed typology request", async () => {
 		const projectId = await newProject(10);
 		const { tower, floor } = floorWith();
-		const typeA = unitTypeOf("Tipologia A", ["Sala", "sala"]);
+		const typeA = typologyOf("Tipologia A", ["Sala", "sala"]);
 
 		const sameRoomTwice = await createWith(
 			manager,
@@ -1022,10 +1022,10 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		const onAFloor = await createWith(
 			manager,
 			projectId,
-			[unitTypeOf("Tipologia B", [])],
-			[tower, { ...floor, unitTypeId: randomUUID() }],
+			[typologyOf("Tipologia B", [])],
+			[tower, { ...floor, typologyId: randomUUID() }],
 		);
-		const sharedId = unitTypeOf("Tipologia C", []);
+		const sharedId = typologyOf("Tipologia C", []);
 		const twoWithOneId = await createWith(
 			manager,
 			projectId,
@@ -1039,9 +1039,9 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 		expect(await countLocations(projectId)).toBe(0);
 	});
 
-	it("creates no unit type when the units do not fit the reservation", async () => {
+	it("creates no typology when the units do not fit the reservation", async () => {
 		const projectId = await newProject(1);
-		const typeA = unitTypeOf("Tipologia A", ["Sala"]);
+		const typeA = typologyOf("Tipologia A", ["Sala"]);
 		const { tower, floor } = floorWith();
 
 		const res = await createWith(
@@ -1058,35 +1058,35 @@ describe("POST /api/projects/:id/structure with unit types", () => {
 
 		expect(res.status).toBe(409);
 		expect(problemOf(res.body).code).toBe(NO_UNITS_LEFT);
-		expect(await readUnitTypes(projectId)).toEqual([]);
+		expect(await readTypologies(projectId)).toEqual([]);
 	});
 
-	it("lets the assistant send unit types and refuses a delivered project", async () => {
+	it("lets the assistant send typologies and refuses a delivered project", async () => {
 		const projectId = await newProject(10);
 		const delivered = await newProject(10, "delivered");
 
 		const ok = await createWith(
 			assistant,
 			projectId,
-			[unitTypeOf("Tipologia A", [])],
+			[typologyOf("Tipologia A", [])],
 			[aTower()],
 		);
 		const refused = await createWith(
 			admin,
 			delivered,
-			[unitTypeOf("Tipologia A", [])],
+			[typologyOf("Tipologia A", [])],
 			[aTower()],
 		);
 
 		expect(ok.status).toBe(201);
 		expect(refused.status).toBe(409);
 		expect(problemOf(refused.body).code).toBe(PROJECT_DELIVERED);
-		expect(await readUnitTypes(delivered)).toEqual([]);
+		expect(await readTypologies(delivered)).toEqual([]);
 	});
 });
 
 describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
-	const typeA = () => unitTypeOf("Tipologia A", ["Sala", "Cozinha", "Quarto"]);
+	const typeA = () => typologyOf("Tipologia A", ["Sala", "Cozinha", "Quarto"]);
 
 	function floorWith() {
 		const tower = entry(null, "tower", "Torre A");
@@ -1096,7 +1096,7 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 
 	const roomOf = (
 		name: string,
-		extra: { unitTypeRoomId?: string; renamed?: boolean } = {},
+		extra: { typologyRoomId?: string; renamed?: boolean } = {},
 	) => ({ id: randomUUID(), name, ...extra });
 
 	it("keeps the rooms a unit was given, the one renamed, the one only it has and the one it dropped", async () => {
@@ -1107,8 +1107,8 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		const copy: NewLocation = {
 			...unitOf(floor.id, "101", type.id),
 			rooms: [
-				roomOf("Sala de estar", { unitTypeRoomId: sala!.id, renamed: true }),
-				roomOf(cozinha!.name, { unitTypeRoomId: cozinha!.id }),
+				roomOf("Sala de estar", { typologyRoomId: sala!.id, renamed: true }),
+				roomOf(cozinha!.name, { typologyRoomId: cozinha!.id }),
 				roomOf("Varanda"),
 			],
 			droppedRooms: [quarto!.id],
@@ -1126,22 +1126,22 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		expect(detail.rooms).toEqual([
 			expect.objectContaining({
 				name: "Sala de estar",
-				unitTypeRoomId: sala!.id,
+				typologyRoomId: sala!.id,
 				renamed: true,
 			}),
 			expect.objectContaining({
 				name: "Cozinha",
-				unitTypeRoomId: cozinha!.id,
+				typologyRoomId: cozinha!.id,
 				renamed: false,
 			}),
 			expect.objectContaining({
 				name: "Varanda",
-				unitTypeRoomId: null,
+				typologyRoomId: null,
 				renamed: false,
 			}),
 		]);
 		expect(detail.droppedRooms).toEqual([
-			{ unitTypeRoomId: quarto!.id, name: "Quarto" },
+			{ typologyRoomId: quarto!.id, name: "Quarto" },
 		]);
 		expect(detail.changes).toBe(3);
 	});
@@ -1162,13 +1162,13 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 			unit.rooms!.map(({ id, name }) => ({
 				id,
 				name,
-				unitTypeRoomId: null,
+				typologyRoomId: null,
 				renamed: false,
 			})),
 		);
 	});
 
-	it("keeps a unit that took out every room of its unit type", async () => {
+	it("keeps a unit that took out every room of its typology", async () => {
 		const projectId = await newProject(10);
 		const type = typeA();
 		const { tower, floor } = floorWith();
@@ -1193,22 +1193,22 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 
 	it.each([
 		[
-			"leave out the rooms of its unit type",
+			"leave out the rooms of its typology",
 			(): Partial<NewLocation> => ({ rooms: [] }),
 		],
 		[
-			"take out one room of its unit type and leave out the others",
-			(type: NewUnitType): Partial<NewLocation> => ({
+			"take out one room of its typology and leave out the others",
+			(type: NewTypology): Partial<NewLocation> => ({
 				rooms: [roomOf("Varanda")],
 				droppedRooms: [type.rooms[0]!.id],
 			}),
 		],
 		[
-			"carry another name for a room of its unit type not renamed",
-			(type: NewUnitType): Partial<NewLocation> => ({
+			"carry another name for a room of its typology not renamed",
+			(type: NewTypology): Partial<NewLocation> => ({
 				rooms: type.rooms.map((room, at) =>
 					roomOf(at === 0 ? "Sala de estar" : room.name, {
-						unitTypeRoomId: room.id,
+						typologyRoomId: room.id,
 					}),
 				),
 			}),
@@ -1232,12 +1232,12 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 			);
 
 			expect(res.status).toBe(400);
-			expect(problemOf(res.body).code).toBe(UNIT_TYPE_ROOM_INVALID);
+			expect(problemOf(res.body).code).toBe(TYPOLOGY_ROOM_INVALID);
 			expect(await countLocations(projectId)).toBe(0);
 		},
 	);
 
-	it("refuses a unit whose rooms leave out a room its unit type already had", async () => {
+	it("refuses a unit whose rooms leave out a room its typology already had", async () => {
 		const projectId = await newProject(10);
 		const type = typeA();
 		const { tower, floor } = floorWith();
@@ -1246,13 +1246,13 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 			...unitOf(floor.id, "101", type.id),
 			rooms: type.rooms
 				.slice(1)
-				.map((room) => roomOf(room.name, { unitTypeRoomId: room.id })),
+				.map((room) => roomOf(room.name, { typologyRoomId: room.id })),
 		};
 
 		const res = await createWith(manager, projectId, [], [copy]);
 
 		expect(res.status).toBe(400);
-		expect(problemOf(res.body).code).toBe(UNIT_TYPE_ROOM_INVALID);
+		expect(problemOf(res.body).code).toBe(TYPOLOGY_ROOM_INVALID);
 		expect(await countLocations(projectId)).toBe(2);
 	});
 
@@ -1282,7 +1282,7 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		const copy: NewLocation = {
 			...unitOf(floor.id, "101", type.id),
 			rooms: [
-				...kept.map((room) => roomOf(room.name, { unitTypeRoomId: room.id })),
+				...kept.map((room) => roomOf(room.name, { typologyRoomId: room.id })),
 				roomOf("Varanda"),
 			],
 			droppedRooms: [sala!.id],
@@ -1338,14 +1338,14 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		expect((await readLocation(projectId, copied.id)).rooms).toHaveLength(201);
 	});
 
-	it("refuses a room that belongs to another unit type and creates nothing", async () => {
+	it("refuses a room that belongs to another typology and creates nothing", async () => {
 		const projectId = await newProject(10);
 		const type = typeA();
-		const other = unitTypeOf("Tipologia B", ["Banheiro"]);
+		const other = typologyOf("Tipologia B", ["Banheiro"]);
 		const { tower, floor } = floorWith();
 		const copy: NewLocation = {
 			...unitOf(floor.id, "101", type.id),
-			rooms: [roomOf("Banheiro", { unitTypeRoomId: other.rooms[0]!.id })],
+			rooms: [roomOf("Banheiro", { typologyRoomId: other.rooms[0]!.id })],
 		};
 
 		const res = await createWith(
@@ -1356,9 +1356,9 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		);
 
 		expect(res.status).toBe(400);
-		expect(problemOf(res.body).code).toBe(UNIT_TYPE_ROOM_INVALID);
+		expect(problemOf(res.body).code).toBe(TYPOLOGY_ROOM_INVALID);
 		expect(await countLocations(projectId)).toBe(0);
-		expect(await readUnitTypes(projectId)).toEqual([]);
+		expect(await readTypologies(projectId)).toEqual([]);
 	});
 
 	it("refuses a dropped room that does not exist", async () => {
@@ -1379,10 +1379,10 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		);
 
 		expect(res.status).toBe(400);
-		expect(problemOf(res.body).code).toBe(UNIT_TYPE_ROOM_INVALID);
+		expect(problemOf(res.body).code).toBe(TYPOLOGY_ROOM_INVALID);
 	});
 
-	it("refuses a room of the unit type that is both kept and taken out", async () => {
+	it("refuses a room of the typology that is both kept and taken out", async () => {
 		const projectId = await newProject(10);
 		const type = typeA();
 		const { tower, floor } = floorWith();
@@ -1390,7 +1390,7 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 		const copy: NewLocation = {
 			...unitOf(floor.id, "101", type.id),
 			rooms: [sala!, ...kept].map((room) =>
-				roomOf(room.name, { unitTypeRoomId: room.id }),
+				roomOf(room.name, { typologyRoomId: room.id }),
 			),
 			droppedRooms: [sala!.id],
 		};
@@ -1436,11 +1436,11 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 			}),
 		],
 		[
-			"rooms of a unit type on a unit without one",
+			"rooms of a typology on a unit without one",
 			(floorId: string): NewLocation => ({
 				...unitOf(floorId, "101"),
 				rooms: [
-					{ id: randomUUID(), name: "Sala", unitTypeRoomId: randomUUID() },
+					{ id: randomUUID(), name: "Sala", typologyRoomId: randomUUID() },
 				],
 			}),
 		],
@@ -1469,7 +1469,7 @@ describe("POST /api/projects/:id/structure with the rooms of a copy", () => {
 			}),
 		],
 		[
-			"a renamed room that is not of a unit type",
+			"a renamed room that is not of a typology",
 			(floorId: string): NewLocation => ({
 				...entry(floorId, "common_area", "Hall"),
 				rooms: [{ id: randomUUID(), name: "Sala", renamed: true }],
@@ -1496,7 +1496,7 @@ describe("GET /api/projects/:id/locations/:locationId/subtree-rooms", () => {
 
 	async function buildTower() {
 		const projectId = await newProject(10);
-		const type = unitTypeOf("Tipologia A", ["Sala", "Cozinha"]);
+		const type = typologyOf("Tipologia A", ["Sala", "Cozinha"]);
 		const tower = entry(null, "tower", "Torre A");
 		const floor = entry(tower.id, "floor", "1º andar");
 		const otherFloor = entry(tower.id, "floor", "2º andar", 1);
@@ -1507,7 +1507,7 @@ describe("GET /api/projects/:id/locations/:locationId/subtree-rooms", () => {
 				{
 					id: randomUUID(),
 					name: "Sala",
-					unitTypeRoomId: type.rooms[0]!.id,
+					typologyRoomId: type.rooms[0]!.id,
 				},
 				{ id: randomUUID(), name: "Varanda" },
 			],
