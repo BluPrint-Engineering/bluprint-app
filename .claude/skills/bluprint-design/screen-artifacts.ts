@@ -12,7 +12,7 @@ import {
 	transportProblem,
 } from "./screen-bundle";
 
-// The issue page dropped its whole Artifacts section on issues with 13 or more artifacts while 11 still showed (2026-11-12).
+// The issue page dropped its whole Artifacts section on issues with 24 and 40 artifacts while 13 still showed (2026-11-12).
 const maxArtifactsPerIssue = 10;
 
 const publishedSchema = z.array(
