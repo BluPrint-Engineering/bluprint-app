@@ -1,5 +1,7 @@
 # A unit follows its unit type, and keeps the changes made on it
 
+Extended to common areas, and its tables renamed to `typology`, by [0080](0080-one-typology-table-for-units-and-common-areas.md).
+
 A unit type (*tipologia*) is a named list of rooms. The setup wizard assigns unit types by stack and floor range (stacks 01 and 03 on floors 1 to 11 take type A, stacks 02 and 04 take type B, floor 12 takes Cobertura). A unit stays linked to its type: adding, renaming or removing a room in the type reaches every unit of it, so a room forgotten at setup is fixed once. A single unit may still add rooms of its own, drop a room of its type, or change type, and those changes survive later edits to the type.
 
 Requirements: RF-204, RF-207, RF-213
