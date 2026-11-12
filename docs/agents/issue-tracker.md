@@ -24,6 +24,23 @@ The five triage roles in `docs/agents/triage-labels.md` are the `triagem:` axis:
 
 Run `gh label list` before assuming a label exists, and don't invent new ones without asking.
 
+## Milestones, epics, tickets and spikes
+
+Four kinds of work, each with one GitHub mechanism. Nothing else gets its own category: a loose idea is a spike (a question to answer) or a ticket in `triagem:pendente`.
+
+| Kind | Answers | Ends when | GitHub |
+| --- | --- | --- | --- |
+| **Milestone** | "Can the app do X end to end?" | its epics close | a milestone, no due date |
+| **Epic** | "Which body of product work has a start and an end?" | its "Pronto quando" closes | issue type `Epic` and the `epic` label |
+| **Ticket** | "Which slice ships in one PR?" | the PR merges | native sub-issue of an epic |
+| **Spike** | "Which question must be answered before deciding?" | a recommendation or tickets come out | issue type `Spike` and the `tipo:spike` label, no epic, no milestone |
+
+- **Issue type.** Set it on every new issue: `tipo:feat` is `Feature`, `tipo:bug` is `Bug`, `tipo:chore`, `tipo:docs` and `tipo:infra` are `Task`. The `tipo:` labels stay. Set it with `gh issue edit <n> --type <Type>`.
+- **Milestone.** An epic gets one; a ticket inherits its parent's (`gh issue edit <n> --milestone "<title>"`). The stages, in order, are `M1 - Obra montada`, `M2 - Primeiro pin`, `M3 - Time entra`, `M4 - Obra acompanhada` and `M5 - Operação BluPrint`. A new stage needs the maintainer's say-so.
+- **Epics have an end.** New scope that is not in an epic's "Pronto quando" is a new epic or a spike, never another ticket under the old one; an epic that keeps growing never finishes and turns into a reference. Reference-only parents (screen specs, merged epics) are closed once nothing is left to build; their artifacts stay readable.
+- **Only `tipo:feat` needs an epic.** Maintenance (`tipo:infra`, `tipo:chore`, `tipo:docs`, `tipo:bug`) may stand alone, without a milestone.
+- **Merging is closing with a pointer.** Copy what matters into the surviving issue, then `gh issue close <n> --reason "not planned" --comment "<pointer>"`. Never delete an issue.
+
 ## GitHub Project
 
 The repo has a project board, **BluPrint** (project number `3`, owner `BluPrint-Engineering`). Issues do **not** join it automatically. After creating one:
@@ -32,11 +49,13 @@ The repo has a project board, **BluPrint** (project number `3`, owner `BluPrint-
 gh project item-add 3 --owner BluPrint-Engineering --url <issue-url>
 ```
 
-When a skill creates several issues at once (`/to-tickets` breaking down an epic), add each of them.
+When a skill creates several issues at once (`/to-tickets` breaking down an epic), add each of them, and give each the epic's milestone and the issue type above.
+
+Views: **Roadmap por marco** (open items with a milestone, grouped by milestone, showing sub-issue progress), **Em andamento** (To Do, In Progress, In Review), **Pesquisa e manutenção** (spikes and standalone tasks and bugs) and **Todos os itens**. Status stays Backlog, To Do, In Progress, In Review, Done; the milestone, not the status, says where the app stands.
 
 ## Screen specs and implementation slices
 
-A parent issue per screen holds the complete visual spec (`README.md`), handoff, static key-state HTML and self-contained interactive `*.dc.html` artifacts (ADR 0076). Reuse the original screen issue when it fits; otherwise create `Tela: <name>`, label it normally and add it to project 3. Implementation tickets are native sub-issues; each ticket has its own artifacts containing **only the part it implements**, including the relevant states. A link to the complete parent is context, not a substitute for the slice. Preserve existing historical ticket relationships when migrating shipped screens.
+A parent issue per screen holds the complete visual spec (`README.md`), handoff, static key-state HTML and self-contained interactive `*.dc.html` artifacts (ADR 0076). Reuse the original screen issue when it fits; otherwise create `Tela: <name>`, label it normally and add it to project 3. The screen parent is the epic: type `Epic`, the `epic` label, the stage's milestone and its slices as sub-issues, so it closes when they do. When a numbered area epic (such as `2 — Estrutura da obra`) is still open, the screen epics hang under it as sub-issues. Implementation tickets are native sub-issues; each ticket has its own artifacts containing **only the part it implements**, including the relevant states. A link to the complete parent is context, not a substitute for the slice. Preserve existing historical ticket relationships when migrating shipped screens.
 
 Read the ticket's artifacts first, then the parent for context. Plain `gh` >= 2.103 supports issue artifacts; these are separate from Actions artifacts. Use explicit repository selection outside a clone:
 
