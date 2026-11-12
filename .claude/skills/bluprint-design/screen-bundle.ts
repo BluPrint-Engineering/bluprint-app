@@ -349,8 +349,8 @@ export function statePages(file: string, body: string): StatePage[] {
 	});
 }
 
-// GitHub dropped "·" from an artifact name on 2026-11-12, so names keep only letters, digits and plain punctuation.
-const artifactNameCharacters = /^[\p{L}\p{N} ._,()-]+$/u;
+// GitHub drops other characters from artifact names: only letters, digits, spaces, ".", "-" and "_" survive (2026-11-12).
+const artifactNameCharacters = /^[\p{L}\p{N} ._-]+$/u;
 
 export function safeArtifactName(name: string) {
 	return artifactNameCharacters.test(name) && !/\s{2}/.test(name);
@@ -358,7 +358,7 @@ export function safeArtifactName(name: string) {
 
 export function stateFileName(screen: string, page: StatePage) {
 	const name = `${screen} ${page.id} ${page.title}`
-		.replace(/\s*[^\p{L}\p{N} ._,()-]+\s*/gu, " - ")
+		.replace(/\s*[^\p{L}\p{N} ._-]+\s*/gu, " - ")
 		.replace(/\s+/g, " ")
 		.trim();
 	return `${name}.dc.html`;
