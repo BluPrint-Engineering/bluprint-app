@@ -17,7 +17,7 @@ A purchase of a number of units by the organization, owned by the organization a
 The sum of the organization's licenses.
 
 **Reservation** (pt-BR: *reserva*):
-The units one project may create, set by the admin. Reservations together never exceed the contracted units.
+The units one project may use, set by the admin. Reservations together never exceed the contracted units.
 _Avoid_: limit, quota, ceiling
 
 **Free units** (pt-BR: *unidades livres*):
@@ -25,10 +25,10 @@ Contracted units not reserved by any project; what the admin has to start a new 
 _Avoid_: balance, credits
 
 **Used units** (pt-BR: *unidades usadas*):
-A project's existing units plus those that held content and were removed.
+What a project has taken from its reservation: one per existing unit and per existing common area, plus those that held content and were removed.
 
 **Project** (pt-BR: *obra*, *projeto*):
-One construction development. It is created with a reservation of units. Ex.: Casa Moinhos.
+One construction development. It is created with a reservation. Ex.: Casa Moinhos.
 _Avoid_: site, work, construction
 
 **Project status** (pt-BR: *status da obra*):
@@ -106,21 +106,21 @@ An apartment or office; always hangs on a floor. Has a status and a sale status.
 _Avoid_: apartment
 
 **Stack** (pt-BR: *final*):
-The units at the same position on every floor of a tower, named by the last two digits of their number (final 01).
+The units at the same position on the floors of one floor range of a tower, named by the last two digits of their number (final 01). A tower may have different stacks on different ranges.
 _Avoid_: column, line
 
 **Common area** (pt-BR: *área comum*):
-A shared location with no unit number or status, such as a hall, garage, party room or façade.
+A shared location with no unit number or status, such as a hall, garage, party room or façade. It uses one unit of the reservation and is not a unit.
 
 **Room** (pt-BR: *cômodo*):
 A room inside a unit or common area, used as the place of a pin. Not a location.
 
-**Unit type** (pt-BR: *tipologia*):
-A named list of rooms shared by units built alike. A unit follows its unit type, so a change to the type reaches every unit of it, and may still add or drop rooms of its own.
-_Avoid_: template, apartamento tipo, planta tipo
+**Typology** (pt-BR: *tipologia*):
+A named list of rooms shared by units built alike, or by common areas built alike; a typology serves one of the two, never both. A location follows its typology, so a change to the typology reaches every location of it, and may still add or drop rooms of its own.
+_Avoid_: unit type, template, apartamento tipo, planta tipo
 
 **Location content** (pt-BR: *conteúdo*):
-What field work has recorded on a location or anywhere below it: pins, plans and filled-in unit data. Structure, rooms and unit types are not content.
+What field work has recorded on a location or anywhere below it: pins, plans and filled-in unit data. Structure, rooms and typologies are not content.
 
 **Archived** (pt-BR: *arquivado*):
 A location with content that was removed: it leaves navigation, counts and reports, keeps everything it holds and can be restored. A location without content is deleted instead.
@@ -129,10 +129,10 @@ _Avoid_: deleted, hidden, inactive
 ### Plans and pins
 
 **Discipline** (pt-BR: *disciplina*):
-A trade whose issues are tracked separately, such as plumbing or electrical. Defined for the whole project.
+A trade whose issues are tracked separately, such as plumbing or electrical. It belongs to the project, and each location says whether it applies there.
 
 **General** (pt-BR: *Geral*):
-The discipline whose plan accepts pins of every discipline. No pin is ever recorded as General.
+The discipline whose plan accepts pins of every discipline. No pin is ever recorded as General, and it applies at every location.
 _Avoid_: architectural, arquitetônica
 
 **Plan** (pt-BR: *planta*):

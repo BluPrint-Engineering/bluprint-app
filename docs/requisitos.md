@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 15/10/2026, RF-205, RF-207 e RF-209, do refinamento da estrutura da obra.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 11/11/2026, RF-207, RF-218, RF-402 e RF-404, do refinamento da Nova obra.
 
 ---
 
@@ -117,7 +117,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-204 | Cadastro dos **cômodos** de cada unidade (lavabo, cozinha, sacada…), usados como "local" do pin | M |
 | RF-205 | **Todos os vinculados à obra** — admin, gerentes e assistentes — podem criar e alterar a estrutura enquanto a obra estiver em andamento. A estrutura é editável de ponta a ponta, para corrigir erro ou completar o que faltou | M |
 | RF-206 | Geração automática da estrutura (ex.: "12 andares × 4 unidades") com ajuste manual depois | S |
-| RF-207 | **Tipologia**: definir os cômodos uma vez e aplicar às unidades iguais, por final e faixa de andares. Mudar a tipologia muda todas as unidades dela; cada unidade pode ter cômodos a mais ou a menos | S |
+| RF-207 | **Tipologia**: definir os cômodos uma vez e aplicar às unidades iguais, por final e faixa de andares, e às áreas comuns iguais. São dois catálogos, um de unidade e um de área comum, com nome único na obra entre os dois; unidade não usa tipologia de área comum, nem o contrário. Mudar a tipologia muda todos os locais dela; cada local pode ter cômodos a mais ou a menos | S |
 | RF-208 | Duplicar/clonar andar ou unidade já configurada | C |
 | RF-209 | Unidade, andar, torre ou área comum **sem conteúdo** (nenhum pin, nenhuma planta e nenhum dado de unidade preenchido, nela ou abaixo dela) pode ser excluída direto, por qualquer vinculado à obra e sem cerimônia — é o caso do erro de cadastro | M |
 | RF-210 | Item **com conteúdo** nunca é excluído: é **arquivado**. Sai do mapa de unidades, das contagens e dos relatórios, e passa a viver numa lista de arquivados na configuração da obra | M |
@@ -128,7 +128,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-215 | **Status da obra**: em andamento ou entregue. Gerente de obra ou admin entrega a obra depois de confirmar, num diálogo, o que acontece. A entrega é definitiva: o app não reabre a obra, e uma obra entregue por engano só é reaberta pelo suporte da BluPrint, a pedido da construtora e com registro | M |
 | RF-216 | Obra **entregue** fica fechada de vez: nada nela muda. Ninguém cria, edita, conclui ou exclui pin, foto, planta, estrutura, equipe, disciplina, empresa executora ou o nome da obra. Relatórios são exportados em qualquer status | M |
 | RF-217 | Gerente de obra ou admin **renomeia a obra** a qualquer momento antes da entrega, para corrigir o nome | M |
-| RF-218 | Cada **unidade** criada usa uma unidade da reserva da obra. Criar além do que resta é recusado por inteiro, e quem cria vê quantas restam antes. Unidade removida sem nunca ter tido conteúdo devolve a vaga à reserva; unidade que já teve conteúdo, nela ou num local acima, fica usada mesmo arquivada ou excluída de vez | M |
+| RF-218 | Cada **unidade** e cada **área comum** criada usa uma unidade da reserva da obra; a área comum continua sem número de apartamento e sem status. Criar além do que resta é recusado por inteiro, e quem cria vê quantas restam antes. Unidade ou área comum removida sem nunca ter tido conteúdo devolve a vaga à reserva; a que já teve conteúdo, nela ou num local acima, fica usada mesmo arquivada ou excluída de vez | M |
 | RF-219 | Admin ajusta a **reserva** de cada obra, nunca abaixo das unidades usadas, e a soma das reservas nunca passa das unidades contratadas; na entrega, a reserva que sobrou volta às livres | M |
 
 ## 3. Empresas executoras
@@ -152,9 +152,9 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | ID | Requisito | Prio |
 | --- | --- | --- |
 | RF-401 | Três disciplinas padrão em toda obra: **Geral** (antes chamada de arquitetônica), **Hidráulica** e **Elétrica** | M |
-| RF-402 | Criação de disciplinas extras (alvenaria, estrutural, pintura…) por gerente, assistente **ou** admin. Na criação o sistema pergunta **se a disciplina terá planta própria** e pede a **cor** | M |
+| RF-402 | Criação de disciplinas extras (alvenaria, estrutural, pintura…) por gerente, assistente **ou** admin. Na criação o sistema pergunta **se a disciplina terá planta própria**, pede a **cor** e pergunta **onde ela vale**: na obra toda ou só nos locais escolhidos. Criada no assistente da estrutura, pede só o nome, nasce com a próxima cor livre e sem planta própria, e os dois se ajustam depois na configuração | M |
 | RF-403 | O seletor de cor bloqueia azul (hidráulica), âmbar (elétrica), cinza (reservado a pin concluído) e as cores já usadas por outras disciplinas daquela obra | M |
-| RF-404 | Disciplina criada vale para a obra inteira e fica disponível a todos os usuários daquela obra | M |
+| RF-404 | Disciplina criada pertence à obra e fica disponível a todos os usuários dela. **Onde ela se aplica é decidido por local**: cada unidade, área comum, andar e torre tem a sua lista. Unidade e área comum nascem com as disciplinas que valem na obra toda; andar e torre nascem só com Hidráulica e Elétrica. Geral vale sempre e não entra na lista. Disciplina com planta ou pin num local não é desligada ali; local sem disciplina específica não recebe pin novo. A mesma lista pode ser aplicada em lote a locais escolhidos, a um andar ou a uma torre, e o lote não muda nada se algum local perderia disciplina com planta ou pin | M |
 | RF-405 | Upload da planta (imagem/PDF) **por unidade, andar ou área comum, e por disciplina**, conforme a etapa da obra avança | M |
 | RF-406 | Visualização da planta com zoom e pan, com os pins sobrepostos | M |
 | RF-407 | **Planta Geral** aceita pin de **qualquer** disciplina da obra, inclusive das que já têm planta própria. Ao criar o pin ali, o usuário **escolhe** a disciplina — não existe pin com disciplina "Geral" | M |
