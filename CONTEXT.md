@@ -109,6 +109,18 @@ _Avoid_: apartment
 The units at the same position on the floors of one floor range of a tower, named by the last two digits of their number (final 01). A tower may have different stacks on different ranges.
 _Avoid_: column, line
 
+**Floor range** (pt-BR: *faixa*):
+A run of numbered floors of one tower that share the same stacks, or that have no units. It exists only in the structure draft: after creation there are floors and units, not ranges.
+_Avoid_: band, block, interval
+
+**Assignment rule** (pt-BR: *regra*):
+In the structure draft, what gives a typology to the units of chosen towers, stacks and floors. Two rules never reach the same unit.
+_Avoid_: mapping, filter
+
+**Structure draft** (pt-BR: *rascunho*):
+What a person typed in the structure wizard and has not created yet, kept in their browser for one project and one flow (setting up, or adding floors to one tower).
+_Avoid_: template, saved structure
+
 **Common area** (pt-BR: *área comum*):
 A shared location with no unit number or status, such as a hall, garage, party room or façade. It uses one unit of the reservation and is not a unit.
 
