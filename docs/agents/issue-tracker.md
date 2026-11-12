@@ -55,7 +55,7 @@ Views: **Roadmap por marco** (open items with a milestone, grouped by milestone,
 
 ## Screen specs and implementation slices
 
-A parent issue per screen holds the complete visual spec (`README.md`), handoff, static key-state HTML and self-contained interactive `*.dc.html` artifacts (ADR 0076). Reuse the original screen issue when it fits; otherwise create `Tela: <name>`, label it normally and add it to project 3. Implementation tickets are native sub-issues; each ticket has its own artifacts containing **only the part it implements**, including the relevant states. A link to the complete parent is context, not a substitute for the slice. Preserve existing historical ticket relationships when migrating shipped screens.
+A parent issue per screen holds the complete visual spec (`README.md`), handoff, static key-state HTML and self-contained interactive `*.dc.html` artifacts (ADR 0076). Reuse the original screen issue when it fits; otherwise create `Tela: <name>`, label it normally and add it to project 3. The screen parent is the epic: type `Epic`, the `epic` label, the stage's milestone and its slices as sub-issues, so it closes when they do. Implementation tickets are native sub-issues; each ticket has its own artifacts containing **only the part it implements**, including the relevant states. A link to the complete parent is context, not a substitute for the slice. Preserve existing historical ticket relationships when migrating shipped screens.
 
 Read the ticket's artifacts first, then the parent for context. Plain `gh` >= 2.103 supports issue artifacts; these are separate from Actions artifacts. Use explicit repository selection outside a clone:
 
