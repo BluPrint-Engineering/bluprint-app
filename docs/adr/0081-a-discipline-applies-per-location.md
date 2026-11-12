@@ -2,6 +2,8 @@
 
 Narrows RF-404: a discipline still belongs to the whole project, but where it applies is decided per location.
 
+What a batch changes, what a tower means as its target, and the id, name and color of a new discipline are in [0085](0085-a-discipline-batch-changes-only-what-it-names.md).
+
 The team needs to say which disciplines exist in each unit and common area, and floors and towers must not start cluttered with every extra discipline. A discipline records its type (`general`, `base` for Hidráulica and Elétrica, or `extra`) and whether it applies everywhere or only where it is turned on. That choice is made when the discipline is created and does not change. A location stores only its exceptions: "on here" or "off here". What applies at a location is the exception when there is one, otherwise the default: for a unit or common area, the discipline's own; for a floor or tower, the base disciplines only. General is never listed and always applies.
 
 Requirements: RF-401, RF-402, RF-404, RF-414
