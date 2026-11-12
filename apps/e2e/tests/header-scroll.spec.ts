@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
 
-async function createProject(page: Page) {
+async function createProject(page: Page, reservedUnits = "200") {
 	await page.goto("/signup");
 	await page.getByLabel("Nome completo").fill("Scroll Test");
 	await page.getByLabel("E-mail").fill(`scroll-${randomUUID()}@e2e.test`);
@@ -15,7 +15,7 @@ async function createProject(page: Page) {
 	await expect(page).toHaveURL("/projects");
 	await page.getByRole("link", { name: "Nova obra" }).click();
 	await page.getByLabel("Nome da obra").fill("Scroll building");
-	await page.getByLabel("Unidades reservadas").fill("200");
+	await page.getByLabel("Unidades reservadas").fill(reservedUnits);
 	await page.getByRole("button", { name: "Criar obra" }).click();
 	await page.getByRole("link", { name: "Início da obra" }).click();
 	await expect(
@@ -65,6 +65,55 @@ test.describe("desktop scrolling", () => {
 		await expect.poll(async () => (await preview.boundingBox())?.y).toBe(24);
 	});
 
+	test("a crowded desktop preview in a short window scrolls as a whole and keeps a usable façade", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(isMobile, "Desktop sticky layout");
+		await page.setViewportSize({ width: 1280, height: 600 });
+		await createProject(page, "5");
+		await page.getByRole("link", { name: "Montar estrutura" }).click();
+		await page.getByLabel("Último andar").fill("30");
+		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByRole("button", { name: "Tirar regra 1" }).click();
+		await page.evaluate(() => window.scrollTo(0, 0));
+		const preview = page.getByRole("complementary", { name: "Prévia" });
+		await expect(
+			preview.getByText("ficam sem tipologia", { exact: false }),
+		).toBeVisible();
+		await expect(
+			preview.getByRole("button", { name: "Alterar reserva" }),
+		).toBeVisible();
+		await page.mouse.move(600, 300);
+		await page.mouse.wheel(0, 450);
+		await expect.poll(async () => (await preview.boundingBox())?.y).toBe(24);
+		await expect
+			.poll(async () => {
+				const box = await preview.boundingBox();
+				return box ? box.y + box.height : Number.POSITIVE_INFINITY;
+			})
+			.toBeLessThanOrEqual(576);
+		const facade = preview.getByRole("list", { name: "Fachada da Torre A" });
+		const facadeViewportHeight = await facade.evaluate((list) => {
+			let scroller = list.parentElement;
+			while (scroller && getComputedStyle(scroller).overflowY !== "auto") {
+				scroller = scroller.parentElement;
+			}
+			return scroller?.offsetHeight ?? 0;
+		});
+		expect(facadeViewportHeight).toBeGreaterThanOrEqual(180);
+		const heading = preview.getByRole("heading", { name: "Prévia" });
+		const headingBox = await heading.boundingBox();
+		if (!headingBox) throw new Error("Preview heading has no bounding box");
+		await page.mouse.move(headingBox.x + 4, headingBox.y + 4);
+		await page.mouse.wheel(0, 600);
+		await expect(facade).toBeInViewport();
+		await expect(
+			preview.getByRole("button", { name: "Criar estrutura" }),
+		).toBeInViewport();
+		await expect.poll(async () => (await preview.boundingBox())?.y).toBe(24);
+	});
+
 	test("configuration navigation pins at 24px and its section links stay visible", async ({
 		page,
 		isMobile,
@@ -91,9 +140,16 @@ test.describe("desktop scrolling", () => {
 		});
 		await navigation.getByRole("link", { name: "Status da obra" }).click();
 		await expect.poll(async () => (await navigation.boundingBox())?.y).toBe(24);
-		await expect(
-			page.getByRole("heading", { name: "Status da obra", exact: true }),
-		).toBeInViewport();
+		await expect
+			.poll(
+				async () =>
+					(
+						await page
+							.getByRole("region", { name: "Status da obra" })
+							.boundingBox()
+					)?.y ?? 0,
+			)
+			.toBeCloseTo(24, 0);
 		await navigation.getByRole("link", { name: "Tipologias" }).click();
 		await expect(
 			page.getByRole("heading", { name: "Tipologias", exact: true }),
