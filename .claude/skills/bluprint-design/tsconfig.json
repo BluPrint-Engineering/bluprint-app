@@ -2,8 +2,8 @@
 	"extends": "../../../tsconfig.json",
 	"compilerOptions": {
 		"target": "ESNext",
-		"lib": ["ESNext"],
+		"lib": ["ESNext", "DOM"],
 		"types": ["bun"]
 	},
-	"files": ["screen-artifacts.ts"]
+	"files": ["screen-artifacts.ts", "screen-bundle.ts", "screen-bundle.test.ts"]
 }

@@ -22,7 +22,7 @@ A map of the codebase: where things live and how they connect. The reasoning beh
 
 A Bun workspaces monorepo; Bun runs scripts, the API runs on Node ([0001](adr/0001-bun-workspaces-node-runtime.md)).
 
-A screen's parent GitHub issue holds its full spec, handoff, static QA snapshots and self-contained interactive prototypes; implementation sub-issues hold only their slice ([0076](adr/0076-screen-specs-live-as-issue-artifacts.md)). These are high-fidelity references to rebuild in `apps/web`, never production code to import. `.claude/skills/bluprint-design/` holds the design system and the bundle/publish script; screen sources and generated output stay in temporary directories. Reading and versioning artifacts: [`agents/issue-tracker.md`](agents/issue-tracker.md).
+A screen's parent GitHub issue holds its full spec and handoff; its prototypes live in versioned folders of [bluprint-prototypes](https://github.com/BluPrint-Engineering/bluprint-prototypes), linked from the screen epic and from each ticket ([0088](adr/0088-prototypes-live-in-a-versioned-prototypes-repository.md)); implementation sub-issues hold only their slice ([0076](adr/0076-screen-specs-live-as-issue-artifacts.md)). These are high-fidelity references to rebuild in `apps/web`, never production code to import. `.claude/skills/bluprint-design/` holds the design system and the bundle/publish script; screen sources and generated output stay in temporary directories. Reading and versioning artifacts: [`agents/issue-tracker.md`](agents/issue-tracker.md).
 
 ### `apps/web/functions`
 

@@ -1,5 +1,7 @@
 # Screen specs live as issue artifacts
 
+Amended by [0088](0088-prototypes-live-in-a-versioned-prototypes-repository.md): prototypes live in the bluprint-prototypes repository and issues link to them; HTML artifacts and static snapshots are dropped; the rest stands.
+
 A parent GitHub issue per screen holds its full visual spec, handoff, static key-state HTML and self-contained interactive prototypes. Each implementation ticket is a native sub-issue whose artifacts contain only its slice. Screen sources and generated output stay outside the repository; `.claude/skills/bluprint-design/` remains the design system and owns `screen-artifacts.ts`. This removes checked-in screen bundles while keeping designs beside their implementation work.
 
 The [personal-repository spike](https://github.com/lucamandelli/bluprint-artifact-spike/issues/1) confirmed HTML uploads through 4.70 MB, closed-issue artifacts, independent sub-issue artifacts and byte-identical downloads. **Scripts did not run in default preview as of 2026-10-29**, including inline/CDN probes and a fully bundled prototype. A script-free React DOM snapshot rendered correctly in a signed-in preview. This is an observed default, not a permanent platform guarantee; GitHub documents a restricted sandbox and the panel has settings. We publish both static preview snapshots and interactive files for download-and-open-locally. See [spike evidence](../agents/screen-artifact-spike.md).
