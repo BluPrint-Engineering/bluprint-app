@@ -4,6 +4,8 @@ The structure wizard's draft must survive a reload until it is created or discar
 
 The draft also keeps the ids of its last attempt. After a request that ended without an answer, and when a draft is restored, the app asks the server whether one of those ids exists before it lets the person edit or send again. Creation is all or nothing, so one id answers for the whole attempt: found, the attempt succeeded and the draft is dropped; not found, the person goes on editing.
 
+When the draft ends, what two tabs do with it and how the check reaches the person are in [0086](0086-the-structure-draft-is-dropped-on-leaving-and-checked-after-a-lost-answer.md). What a range, a stack and a rule mean in the draft is in [0087](0087-floor-ranges-and-assignment-rules-exist-only-in-the-draft.md).
+
 Requirements: RF-206, RNF-12
 
 ## Consequences
