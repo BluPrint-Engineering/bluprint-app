@@ -1,5 +1,7 @@
 # The structure is edited where it is navigated, and a tower reads as its façade
 
+Names of rooms and typologies also ignore accents, by [0083](0083-room-and-typology-names-ignore-accents.md); a location's name keeps the rule below.
+
 A project's structure has no editor of its own. The navigation everyone uses to reach a unit (project, tower, floor, unit, RF-604) carries the editing: each level lists its children with an "add" action at the end and a menu per item for rename, reorder, duplicate and remove. A tower shows every floor as a row holding its units and common areas, so a unit is two taps from the project and a wrong number shows at a glance. Setting up a whole project goes through one wizard that creates every tower at once, each with its own floor range, units per floor, ground floor, halls, common areas and unit types, with a preview before anything is saved. Everyone on the project and the admin edit (ADR 0067), so there is no edit mode to enter.
 
 Requirements: RF-202, RF-203, RF-205, RF-206, RF-207, RF-208, RF-604
