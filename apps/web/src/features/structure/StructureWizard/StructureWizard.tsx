@@ -120,7 +120,7 @@ function Section({
 		<section
 			aria-label={title}
 			className={cn(
-				"scroll-mt-22 grid gap-(--space-4)",
+				"scroll-mt-6 grid gap-(--space-4)",
 				desktop && "rounded-xl bg-card p-(--space-6) shadow-(--ring-hairline)",
 			)}
 		>
@@ -498,7 +498,7 @@ export function StructureWizard({
 			</div>
 			<aside
 				aria-label="Prévia"
-				className="sticky top-22 grid gap-(--space-4) rounded-xl bg-card p-(--space-5) shadow-(--ring-hairline)"
+				className="sticky top-6 flex max-h-[calc(100dvh-48px)] flex-col gap-(--space-4) rounded-xl bg-card p-(--space-5) shadow-(--ring-hairline)"
 			>
 				<h2 className="text-lg font-semibold tracking-tight">Prévia</h2>
 				<PreviewSummary plan={preview} units={unitsLine} heading={heading} />
@@ -507,7 +507,7 @@ export function StructureWizard({
 				{blocker}
 				{createButton}
 				{note}
-				<div className="max-h-[max(180px,calc(100dvh-520px))] overflow-y-auto border-t border-border pt-(--space-4) pr-1">
+				<div className="min-h-0 overflow-y-auto border-t border-border pt-(--space-4) pr-1">
 					{!tooLarge && <PreviewTowers plan={preview} />}
 				</div>
 			</aside>

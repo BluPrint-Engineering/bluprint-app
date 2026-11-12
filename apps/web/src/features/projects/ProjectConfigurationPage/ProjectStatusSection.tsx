@@ -31,7 +31,7 @@ export function ProjectStatusSection({ project }: { project: ProjectSummary }) {
 		<section
 			id={SECTION_ID.status}
 			aria-label="Status da obra"
-			className="scroll-mt-22"
+			className="scroll-mt-6"
 		>
 			<Card>
 				<CardHeader>

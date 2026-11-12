@@ -3,7 +3,7 @@ import { type AccountUser, UserMenu } from "./UserMenu";
 
 export function AppHeader({ user }: { user: AccountUser }) {
 	return (
-		<header className="relative top-0 z-30 border-b border-border bg-background pt-[env(safe-area-inset-top)] md:sticky">
+		<header className="relative z-30 border-b border-border bg-background pt-[env(safe-area-inset-top)]">
 			<div className="mx-auto flex h-14 max-w-(--content-max-wide) items-center justify-between gap-(--space-3) px-(--page-pad) md:h-16 md:px-(--page-pad-desktop)">
 				<Link
 					to="/projects"
