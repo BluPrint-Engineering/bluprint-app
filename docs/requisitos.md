@@ -7,7 +7,7 @@ App de gestão de obra. Engenheiros e assistentes de engenharia mapeiam pendênc
 
 **Numeração:** o primeiro dígito do ID indica o módulo (RF-1xx = módulo 1, RF-2xx = módulo 2…). Novos requisitos entram no bloco do seu módulo, sem renumerar os existentes.
 
-Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 11/11/2026, RF-204, RF-207, RF-218, RF-402 e RF-404, do refinamento da Nova obra.
+Base: meetings de definição do projeto (Luca Mandelli + João Pedro Proença Nicola) e app de referência do Gui. Última atualização: 12/11/2026, RF-204, RF-206, RF-207, RF-218, RF-402 e RF-404, do refinamento da Nova obra.
 
 ---
 
@@ -116,7 +116,7 @@ Cinza fica reservado para **pin concluído** e não pode ser cor de disciplina.
 | RF-203 | Definição da nomenclatura/numeração de andares e unidades (901, 901A, etc.) | M |
 | RF-204 | Cadastro dos **cômodos** de cada unidade e área comum (lavabo, cozinha, sacada…), usados como "local" do pin. O campo sugere os cômodos mais comuns e os já usados na obra, e nada entra sem a pessoa confirmar. O nome não se repete na mesma tipologia nem no mesmo local, ignorando maiúsculas, acentos e espaços repetidos | M |
 | RF-205 | **Todos os vinculados à obra** — admin, gerentes e assistentes — podem criar e alterar a estrutura enquanto a obra estiver em andamento. A estrutura é editável de ponta a ponta, para corrigir erro ou completar o que faltou | M |
-| RF-206 | Geração automática da estrutura (ex.: "12 andares × 4 unidades") com ajuste manual depois | S |
+| RF-206 | Geração automática da estrutura por **faixas de andares**: cada torre tem faixas com primeiro andar, último andar e finais, e os finais são o intervalo do menor ao maior informado (01, 03 gera 01, 02 e 03). Andar numerado só existe dentro de uma faixa; uma faixa pode ser de andares sem unidades. Uma prévia mostra cada local e quanto da reserva a estrutura usa antes de criar. O que foi montado fica guardado no navegador até criar ou descartar, e uma falha de envio nunca cria a estrutura duas vezes. O mesmo assistente acrescenta andares a uma torre, em qualquer número que ela ainda não tem. Ajuste manual depois | S |
 | RF-207 | **Tipologia**: definir os cômodos uma vez e aplicar às unidades iguais, por final e faixa de andares, e às áreas comuns iguais. São dois catálogos, um de unidade e um de área comum, com nome único na obra entre os dois; unidade não usa tipologia de área comum, nem o contrário. Mudar a tipologia muda todos os locais dela; cada local pode ter cômodos a mais ou a menos. O nome único ignora maiúsculas, acentos e espaços repetidos. Uma tipologia pode ser **copiada** com outro nome, no mesmo catálogo: a cópia leva os cômodos e depois muda separada da original. Quem salva uma tipologia que outra pessoa mudou nesse meio-tempo é avisado antes de gravar por cima | S |
 | RF-208 | Duplicar/clonar andar ou unidade já configurada | C |
 | RF-209 | Unidade, andar, torre ou área comum **sem conteúdo** (nenhum pin, nenhuma planta e nenhum dado de unidade preenchido, nela ou abaixo dela) pode ser excluída direto, por qualquer vinculado à obra e sem cerimônia — é o caso do erro de cadastro | M |
