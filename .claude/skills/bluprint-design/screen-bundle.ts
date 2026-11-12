@@ -349,9 +349,16 @@ export function statePages(file: string, body: string): StatePage[] {
 	});
 }
 
+// GitHub dropped "·" from an artifact name on 2026-11-12, so names keep only letters, digits and plain punctuation.
+const artifactNameCharacters = /^[\p{L}\p{N} ._,()-]+$/u;
+
+export function safeArtifactName(name: string) {
+	return artifactNameCharacters.test(name) && !/\s{2}/.test(name);
+}
+
 export function stateFileName(screen: string, page: StatePage) {
 	const name = `${screen} ${page.id} ${page.title}`
-		.replace(/[/\\]+/g, "-")
+		.replace(/\s*[^\p{L}\p{N} ._,()-]+\s*/gu, " - ")
 		.replace(/\s+/g, " ")
 		.trim();
 	return `${name}.dc.html`;
@@ -410,6 +417,8 @@ export async function buildBundle(source: string, out: string) {
 		);
 	const artifacts: Artifact[] = [];
 	const add = async (file: string, body: string) => {
+		if (!safeArtifactName(file))
+			throw new Error(`GitHub rewrites this artifact name: ${file}`);
 		if (artifacts.some((artifact) => artifact.file === file))
 			throw new Error(`Duplicate artifact name: ${file}`);
 		await writeFile(join(out, file), body);

@@ -81,7 +81,7 @@ const demoQa = `<!DOCTYPE html>
 </div>
 </x-dc>
 <script type="text/x-dc" data-dc-script>
-const GROUPS = [["Um", [["D1", "Primeiro", "um"]]], ["Dois", [["D2", "Segundo / fim", "dois"]]]];
+const GROUPS = [["Um", [["D1", "Primeiro", "um"]]], ["Dois", [["D2", "Segundo · fim", "dois"]]]];
 class Component extends DCLogic {
   state = { seen: 0 };
   renderVals() {
@@ -155,7 +155,7 @@ describe("statePages", () => {
 		const pages = statePages("Demo QA.dc.html", demoQa);
 		expect(pages.map((page) => [page.id, page.title])).toEqual([
 			["D1", "Primeiro"],
-			["D2", "Segundo / fim"],
+			["D2", "Segundo · fim"],
 		]);
 		const logic = pages[1]?.body.split("data-dc-script>")[1] ?? "";
 		expect(logic).toContain('"id": "D2"');

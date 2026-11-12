@@ -7,6 +7,7 @@ import {
 	buildBundle,
 	digest,
 	manifestSchema,
+	safeArtifactName,
 	transportProblem,
 } from "./screen-bundle";
 
@@ -58,6 +59,8 @@ async function publish(issue: string, dir: string, only: string[]) {
 		? manifest.artifacts.filter((artifact) => only.includes(artifact.file))
 		: manifest.artifacts;
 	for (const artifact of selected) {
+		if (!safeArtifactName(artifact.file))
+			throw new Error(`GitHub rewrites this artifact name: ${artifact.file}`);
 		const body = await readFile(join(dir, artifact.file));
 		if (digest(body) !== artifact.sha256)
 			throw new Error(`Changed after build: ${artifact.file}`);
