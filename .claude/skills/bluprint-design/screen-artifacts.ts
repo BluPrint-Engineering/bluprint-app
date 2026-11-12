@@ -6,10 +6,14 @@ import { z } from "zod";
 import {
 	buildBundle,
 	digest,
+	type GallerySpec,
 	manifestSchema,
 	safeArtifactName,
 	transportProblem,
 } from "./screen-bundle";
+
+// The issue page dropped its whole Artifacts section on issues with 13 or more artifacts while 11 still showed (2026-11-12).
+const maxArtifactsPerIssue = 10;
 
 const publishedSchema = z.array(
 	z.object({
@@ -35,10 +39,32 @@ async function command(args: string[]) {
 	return stdout;
 }
 
-async function build(source: string) {
+async function build(source: string, options: string[]) {
+	const galleries: GallerySpec[] = [];
+	for (let index = 0; index < options.length; index += 2) {
+		const spec = options[index + 1];
+		const separator = spec?.indexOf("=") ?? -1;
+		if (options[index] !== "--gallery" || !spec || separator < 1)
+			throw new Error('Use --gallery "<name>=<state>,<prefix>*,..."');
+		galleries.push({
+			name: spec.slice(0, separator),
+			states: spec
+				.slice(separator + 1)
+				.split(",")
+				.filter(Boolean),
+		});
+	}
 	const dir = await mkdtemp(join(tmpdir(), "bluprint-screen-"));
-	for (const artifact of await buildBundle(source, dir))
-		console.log(artifact.file);
+	for (const artifact of await buildBundle(
+		source,
+		dir,
+		galleries.length ? galleries : undefined,
+	))
+		console.log(
+			artifact.states.length
+				? `${artifact.file}\t${artifact.states.join(",")}`
+				: artifact.file,
+		);
 	console.log(dir);
 }
 
@@ -88,6 +114,13 @@ async function publish(issue: string, dir: string, only: string[]) {
 			),
 		);
 	let existing = await list();
+	const created = selected.filter(
+		(artifact) => !existing.some((entry) => entry.name === artifact.file),
+	).length;
+	if (existing.length + created > maxArtifactsPerIssue)
+		throw new Error(
+			`${issue} would hold ${existing.length + created} artifacts; the issue page lists at most ${maxArtifactsPerIssue}`,
+		);
 	for (const artifact of selected) {
 		const prior = existing.find((entry) => entry.name === artifact.file);
 		if (prior)
@@ -148,10 +181,14 @@ async function publish(issue: string, dir: string, only: string[]) {
 }
 
 const [operation, first, second, ...rest] = Bun.argv.slice(2);
-if (operation === "build" && first && !second) await build(resolve(first));
+if (operation === "build" && first)
+	await build(
+		resolve(first),
+		[second, ...rest].filter((arg) => arg !== undefined),
+	);
 else if (operation === "publish" && first && second)
 	await publish(first, resolve(second), rest);
 else
 	throw new Error(
-		"Usage: bun screen-artifacts.ts build <trusted-screen-dir> | publish <issue-url> <bundle-dir> [artifact-file ...]",
+		"Usage: bun screen-artifacts.ts build <trusted-screen-dir> [--gallery <name>=<states>]... | publish <issue-url> <bundle-dir> [artifact-file ...]",
 	);

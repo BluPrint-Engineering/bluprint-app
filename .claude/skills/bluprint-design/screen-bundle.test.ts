@@ -11,7 +11,8 @@ import {
 	escapeControlEscapes,
 	evaluatesCode,
 	patchRuntime,
-	statePages,
+	galleryPage,
+	selectStates,
 	transportProblem,
 } from "./screen-bundle";
 
@@ -150,23 +151,33 @@ describe("patchRuntime", () => {
 	});
 });
 
-describe("statePages", () => {
-	test("gives each QA state a page with only its row, revealed at once", () => {
-		const pages = statePages("Demo QA.dc.html", demoQa);
-		expect(pages.map((page) => [page.id, page.title])).toEqual([
-			["D1", "Primeiro"],
-			["D2", "Segundo · fim"],
-		]);
-		const logic = pages[1]?.body.split("data-dc-script>")[1] ?? "";
+describe("selectStates", () => {
+	test("keeps QA order and expands letter prefixes", () => {
+		expect(
+			selectStates(["W1", "W1b", "WX1", "A1", "W10"], ["A1", "W*"]),
+		).toEqual(["W1", "W1b", "A1", "W10"]);
+	});
+
+	test("rejects a pattern that matches nothing", () => {
+		expect(() => selectStates(["W1"], ["C*"])).toThrow("C*");
+	});
+});
+
+describe("galleryPage", () => {
+	test("keeps only the chosen states and drops groups left empty", () => {
+		const page = galleryPage("Demo QA.dc.html", demoQa, ["D2"]);
+		expect(page.states).toEqual(["D2"]);
+		const logic = page.body.split("data-dc-script>")[1] ?? "";
 		expect(logic).toContain('"id": "D2"');
 		expect(logic).not.toContain('"D1"');
-		expect(logic).toContain('"shown": true');
-		expect(logic).toContain('"placeholder": false');
 		expect(logic).not.toContain('"title": "Um"');
+		expect(page.body).toContain('id="{{ row.id }}"');
 	});
 
 	test("rejects a QA page without state rows", () => {
-		expect(() => statePages("X QA.dc.html", demo)).toThrow("data-screen-label");
+		expect(() => galleryPage("X QA.dc.html", demo, ["*"])).toThrow(
+			"data-screen-label",
+		);
 	});
 });
 
@@ -282,10 +293,13 @@ describe("Preview sandbox", () => {
 			await writeFile(join(source, "Demo.dc.html"), demo);
 			await writeFile(join(source, "Demo QA.dc.html"), demoQa);
 			await writeFile(join(source, "README.md"), "# Demo\n");
-			await buildBundle(source, out);
+			await buildBundle(source, out, [
+				{ name: "", states: ["*"] },
+				{ name: "Dois · fim", states: ["D2"] },
+			]);
 		}, 60_000);
 
-		test("publishes the screen and one artifact per state, no gallery", async () => {
+		test("publishes the screen and one gallery per chosen set of states", async () => {
 			const manifest = JSON.parse(
 				await readFile(join(out, "manifest.json"), "utf8"),
 			);
@@ -293,8 +307,8 @@ describe("Preview sandbox", () => {
 				manifest.artifacts.map((artifact: { file: string }) => artifact.file),
 			).toEqual([
 				"README.md",
-				"Demo D1 Primeiro.dc.html",
-				"Demo D2 Segundo - fim.dc.html",
+				"Demo QA.dc.html",
+				"Demo QA Dois - fim.dc.html",
 				"Demo.dc.html",
 			]);
 		});
@@ -326,19 +340,27 @@ describe("Preview sandbox", () => {
 			await page.close();
 		}, 30_000);
 
-		test("renders only its own state with the sibling screen", async () => {
+		test("renders only its states, with an index, through the sibling screen", async () => {
 			const { page, frame } = await openInPreviewSandbox(
-				await readFile(join(out, "Demo D2 Segundo - fim.dc.html"), "utf8"),
+				await readFile(join(out, "Demo QA Dois - fim.dc.html"), "utf8"),
 			);
 			await frame().locator("#note").waitFor({ timeout: 15_000 });
 			expect(await frame().locator("#note").textContent()).toBe("dois");
 			expect(await frame().locator("[data-screen-label]").count()).toBe(1);
-			expect(
-				await frame().evaluate(() => {
-					const title = document.getElementById("gallery-title");
-					return title ? getComputedStyle(title).display : "missing";
-				}),
-			).toBe("none");
+			expect(await frame().locator("#D2").count()).toBe(1);
+			expect(await frame().locator('nav a[href="#D2"]').textContent()).toBe(
+				"D2 Segundo · fim",
+			);
+			await page.close();
+		}, 30_000);
+
+		test("mounts every state of a gallery", async () => {
+			const { page, frame } = await openInPreviewSandbox(
+				await readFile(join(out, "Demo QA.dc.html"), "utf8"),
+			);
+			await frame().locator("#D2 #note").waitFor({ timeout: 15_000 });
+			expect(await frame().locator("#D1 #note").textContent()).toBe("um");
+			expect(await frame().locator("#D2 #note").textContent()).toBe("dois");
 			await page.close();
 		}, 30_000);
 	});

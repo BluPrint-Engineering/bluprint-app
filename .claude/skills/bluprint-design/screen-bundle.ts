@@ -252,20 +252,11 @@ function collectRows(value: unknown, rows: Row[] = []): Row[] {
 
 type Pruned = { value: unknown; found: boolean; hasRows: boolean };
 
-function pruneToState(value: unknown, id: string, path: string): Pruned {
-	if (isRow(value))
-		return {
-			value: {
-				...value,
-				...(value.shown === false && { shown: true }),
-				...(value.placeholder === true && { placeholder: false }),
-			},
-			found: value.id === id,
-			hasRows: true,
-		};
+function pruneToStates(value: unknown, ids: Set<string>, path: string): Pruned {
+	if (isRow(value)) return { value, found: ids.has(value.id), hasRows: true };
 	if (Array.isArray(value)) {
 		const items = value.map((item, index) =>
-			pruneToState(item, id, `${path}[${index}]`),
+			pruneToStates(item, ids, `${path}[${index}]`),
 		);
 		const kept = items.filter((item) => !item.hasRows || item.found);
 		return {
@@ -279,7 +270,8 @@ function pruneToState(value: unknown, id: string, path: string): Pruned {
 		if (prototype !== null && Object.getPrototypeOf(prototype) !== null)
 			throw new Error(`QA value ${path} is not plain data`);
 		const entries = Object.entries(value).map(
-			([key, item]) => [key, pruneToState(item, id, `${path}.${key}`)] as const,
+			([key, item]) =>
+				[key, pruneToStates(item, ids, `${path}.${key}`)] as const,
 		);
 		return {
 			value: Object.fromEntries(
@@ -318,13 +310,83 @@ function qaValues(file: string, body: string) {
 	return new Component().renderVals();
 }
 
-const statePageCss =
-	"#dc-root :not([data-screen-label],[data-screen-label] *,:has([data-screen-label])){display:none!important}#dc-root :has([data-screen-label]){width:auto!important;padding:0!important;gap:0!important}html,body{background:var(--secondary)!important}#dc-root{padding:16px}[data-screen-label]>div{flex-wrap:wrap}";
+const galleryCss =
+	"html,body{background:var(--secondary)!important}#dc-root>.sc-host>div{width:auto!important;padding:16px!important;gap:48px!important}#dc-root>.sc-host>div,#dc-root>.sc-host>div *:has([data-screen-label]),[data-screen-label]{grid-template-columns:minmax(0,1fr);min-width:0}[data-screen-label]{scroll-margin-top:16px}[data-screen-label]>div{flex-wrap:wrap;max-width:100%}";
 
-export type StatePage = { id: string; title: string; body: string };
+const galleryIndex =
+	'<nav aria-label="Estados" style="display:flex; flex-wrap:wrap; gap:8px 16px; padding:16px; background:var(--secondary); font-family:var(--font-sans); font-size:var(--text-sm)"><sc-for list="{{ qaIndex }}" as="state"><a href="#{{ state.id }}" onClick="{{ jump }}">{{ state.id }} {{ state.title }}</a></sc-for></nav>';
 
-export function statePages(file: string, body: string): StatePage[] {
-	if (!/data-screen-label="\{\{\s*\w+\.id\s*\}\}"/.test(body))
+const galleryLogic = (
+	values: unknown,
+	index: { id: string; title: string }[],
+) => `
+const VALUES = ${JSON.stringify(values, null, 2)};
+const INDEX = ${JSON.stringify(index, null, 2)};
+const IDS = new Set(INDEX.map((state) => state.id));
+class Component extends DCLogic {
+  state = { mounted: [] };
+  observed = new Set();
+  componentDidMount() {
+    this.observer = new IntersectionObserver((entries) => {
+      const near = entries.filter((entry) => entry.isIntersecting).map((entry) => entry.target.getAttribute("data-screen-label"));
+      if (near.length) this.setState((state) => ({ mounted: [...new Set([...state.mounted, ...near])] }));
+    }, { rootMargin: "1200px 0px" });
+    this.observeRows();
+  }
+  componentDidUpdate() { this.observeRows(); }
+  componentWillUnmount() { this.observer.disconnect(); }
+  observeRows() {
+    for (const row of document.querySelectorAll("[data-screen-label]")) {
+      if (this.observed.has(row)) continue;
+      this.observed.add(row);
+      this.observer.observe(row);
+    }
+  }
+  jump = (event) => {
+    event.preventDefault();
+    document.getElementById(event.currentTarget.getAttribute("href").slice(1))?.scrollIntoView({ block: "start" });
+  };
+  renderVals() {
+    const mounted = new Set(this.state.mounted);
+    const reveal = (value) => {
+      if (Array.isArray(value)) return value.map(reveal);
+      if (!value || typeof value !== "object") return value;
+      if (typeof value.id === "string" && IDS.has(value.id)) {
+        const shown = mounted.has(value.id);
+        return { ...value, ...("shown" in value && { shown }), ...("placeholder" in value && { placeholder: !shown }) };
+      }
+      return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, reveal(item)]));
+    };
+    return { ...reveal(VALUES), qaIndex: INDEX, jump: this.jump };
+  }
+}
+`;
+
+export type GallerySpec = { name: string; states: string[] };
+
+export function selectStates(available: string[], patterns: string[]) {
+	const selected = new Set<string>();
+	for (const pattern of patterns) {
+		const matches =
+			pattern === "*"
+				? available
+				: pattern.endsWith("*")
+					? available.filter(
+							(id) =>
+								id.startsWith(pattern.slice(0, -1)) &&
+								/^[0-9]/.test(id.slice(pattern.length - 1)),
+						)
+					: available.filter((id) => id === pattern);
+		if (!matches.length) throw new Error(`No QA state matches ${pattern}`);
+		for (const id of matches) selected.add(id);
+	}
+	return available.filter((id) => selected.has(id));
+}
+
+export function galleryPage(file: string, body: string, patterns: string[]) {
+	const rowAttribute = /data-screen-label="\{\{\s*(\w+)\.id\s*\}\}"/;
+	const variable = rowAttribute.exec(body)?.[1];
+	if (!variable)
 		throw new Error(
 			`${file}: QA rows need data-screen-label="{{ row.id }}" (SKILL.md)`,
 		);
@@ -334,19 +396,28 @@ export function statePages(file: string, body: string): StatePage[] {
 	const ids = rows.map((row) => row.id);
 	const duplicate = ids.find((id, index) => ids.indexOf(id) !== index);
 	if (duplicate) throw new Error(`${file}: duplicate state ${duplicate}`);
-	return rows.map((row) => {
-		const values_ = pruneToState(values, row.id, "renderVals()").value;
-		const logic = `\nclass Component extends DCLogic {\n  renderVals() {\n    return ${JSON.stringify(values_, null, 2)};\n  }\n}\n`;
-		return {
-			id: row.id,
-			title: row.title,
-			body: body.replace(
-				logicPattern,
-				(_, opening: string, __: string, closing: string) =>
-					opening + logic + closing,
-			),
-		};
-	});
+	const selected = new Set(selectStates(ids, patterns));
+	const index = rows
+		.filter((row) => selected.has(row.id))
+		.map(({ id, title }) => ({ id, title }));
+	const pruned = pruneToStates(values, selected, "renderVals()").value;
+	const withIndex = body
+		.replace(
+			new RegExp(rowAttribute.source, "g"),
+			(attribute) => `${attribute} id="{{ ${variable}.id }}"`,
+		)
+		.replace(
+			/<\/helmet>|<x-dc(?:\s[^>]*)?>(?![\s\S]*<\/helmet>)/,
+			(tag) => `${tag}\n${galleryIndex}`,
+		);
+	return {
+		states: index.map((state) => state.id),
+		body: withIndex.replace(
+			logicPattern,
+			(_, opening: string, __: string, closing: string) =>
+				opening + galleryLogic(pruned, index) + closing,
+		),
+	};
 }
 
 // GitHub drops other characters from artifact names: only letters, digits, spaces, ".", "-" and "_" survive (2026-11-12).
@@ -356,12 +427,12 @@ export function safeArtifactName(name: string) {
 	return artifactNameCharacters.test(name) && !/\s{2}/.test(name);
 }
 
-export function stateFileName(screen: string, page: StatePage) {
-	const name = `${screen} ${page.id} ${page.title}`
+export function galleryFileName(screen: string, name: string) {
+	const label = `${screen} QA ${name}`
 		.replace(/\s*[^\p{L}\p{N} ._-]+\s*/gu, " - ")
 		.replace(/\s+/g, " ")
 		.trim();
-	return `${name}.dc.html`;
+	return `${label}.dc.html`;
 }
 
 async function library(url: string, hash: string) {
@@ -376,7 +447,11 @@ async function library(url: string, hash: string) {
 	return code;
 }
 
-export async function buildBundle(source: string, out: string) {
+export async function buildBundle(
+	source: string,
+	out: string,
+	galleries: GallerySpec[] = [{ name: "", states: ["*"] }],
+) {
 	const files = (await readdir(source)).sort();
 	const prototypes = files.filter((file) => file.endsWith(".dc.html"));
 	if (!prototypes.length)
@@ -416,6 +491,7 @@ export async function buildBundle(source: string, out: string) {
 			scripts,
 		);
 	const artifacts: Artifact[] = [];
+	const states = new Map<string, string[]>();
 	const add = async (file: string, body: string) => {
 		if (!safeArtifactName(file))
 			throw new Error(`GitHub rewrites this artifact name: ${file}`);
@@ -432,8 +508,14 @@ export async function buildBundle(source: string, out: string) {
 			continue;
 		}
 		const screen = file.slice(0, -".dc.html".length).replace(/ QA$/, "");
-		for (const page of statePages(file, body))
-			await add(stateFileName(screen, page), preview(page.body, statePageCss));
+		for (const gallery of galleries) {
+			const page = galleryPage(file, body, gallery.states);
+			await add(
+				galleryFileName(screen, gallery.name),
+				preview(page.body, galleryCss),
+			);
+			states.set(galleryFileName(screen, gallery.name), page.states);
+		}
 	}
 	for (const artifact of artifacts) {
 		const problem = transportProblem(
@@ -445,5 +527,8 @@ export async function buildBundle(source: string, out: string) {
 		join(out, "manifest.json"),
 		JSON.stringify({ artifacts }, null, 2),
 	);
-	return artifacts;
+	return artifacts.map((artifact) => ({
+		...artifact,
+		states: states.get(artifact.file) ?? [],
+	}));
 }
