@@ -1,9 +1,16 @@
 import { createHash } from "node:crypto";
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import {
+	access,
+	copyFile,
+	cp,
+	mkdir,
+	readdir,
+	readFile,
+	writeFile,
+} from "node:fs/promises";
 import { createRequire } from "node:module";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { runInNewContext } from "node:vm";
-import { z } from "zod";
 
 const skill = import.meta.dir;
 const repo = resolve(skill, "../../..");
@@ -19,41 +26,8 @@ const libraries = [
 ] satisfies [string, string][];
 
 export const stateIdPattern = /^[A-Za-z]+[0-9][A-Za-z0-9]*$/;
-export const artifactSchema = z.object({
-	file: z
-		.string()
-		.refine((file) => !/[/\\]/.test(file) && ![".", ".."].includes(file)),
-	sha256: z.string().regex(/^[a-f0-9]{64}$/),
-});
-export const manifestSchema = z.object({
-	artifacts: z.array(artifactSchema).min(1),
-});
-type Artifact = z.infer<typeof artifactSchema>;
-
-const controlCharacter = /[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]/;
-const controlEscape =
-	/\\u(?:00[01][0-9a-fA-F]|007[fF]|00[89][0-9a-fA-F]|\{0*(?:[01]?[0-9a-fA-F]|7[fF]|[89][0-9a-fA-F])\})/;
-
-export function digest(content: Uint8Array | string) {
-	return createHash("sha256").update(content).digest("hex");
-}
-
-export function transportProblem(body: string) {
-	if (controlCharacter.test(body)) return "a raw control character";
-	if (controlEscape.test(body))
-		return "a Unicode escape of a control character";
-	return null;
-}
-
-// GitHub's artifact round-trip rewrote \u escapes of control characters (\u0000 became \^@) in the 2026-11-12 Preview probe (ADR 0076).
-export function escapeControlEscapes(js: string) {
-	return js.replace(
-		/(?<!\\)((?:\\\\)*)\\u(?:00([01][0-9a-fA-F]|7[fF]|[89][0-9a-fA-F])|\{0*([01]?[0-9a-fA-F]|7[fF]|[89][0-9a-fA-F])\})/g,
-		(_, slashes: string, short?: string, braced?: string) =>
-			`${slashes}\\x${(short ?? braced ?? "").padStart(2, "0")}`,
-	);
-}
-
+export const versionFolderPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*\/v[1-9][0-9]*$/;
+const pagePathPattern = /^(?:[a-z0-9][a-z0-9.-]*\/)*[a-z0-9][a-z0-9.-]*\.html$/;
 const attributes = `(?:[^>"']|"[^"]*"|'[^']*')*`;
 const rawWrapped = [
 	"select",
@@ -105,68 +79,18 @@ function encodeRootTemplate(body: string) {
 const logicPattern =
 	/(<script\b[^>]*\bdata-dc-script\b[^>]*>)([\s\S]*?)(<\/script>)/;
 
-function encodeLogic(body: string) {
-	return body.replace(
-		new RegExp(logicPattern, "g"),
-		(_, opening: string, logic: string, closing: string) =>
-			`${opening.slice(0, -1)} data-encoded-logic="${Buffer.from(logic).toString("base64")}">${closing}`,
-	);
+export function inlineScript(js: string) {
+	if (/<\/script|<!--/i.test(js))
+		throw new Error("An inlined script contains </script or <!--");
+	return `<script>\n${js}\n</script>`;
 }
 
-const runtimePatches = [
-	[
-		`const fn = new Function(
-      "DCLogic",
-      "StreamableLogic",
-      "React",`,
-		`const fn = __bluprintCompile(
-      ["DCLogic", "StreamableLogic", "React"],`,
-	],
-	[
-		`new Function("React", "module", "exports", "require", code)(`,
-		`__bluprintCompile(["React", "module", "exports", "require"], code)(`,
-	],
-] as const;
-
-export function patchRuntime(runtime: string) {
-	let patched = runtime;
-	for (const [from, to] of runtimePatches) {
-		if (patched.split(from).length !== 2)
-			throw new Error(
-				"support.js changed: update runtimePatches in screen-bundle.ts",
-			);
-		patched = patched.replace(from, to);
-	}
-	return patched;
-}
-
-export function evaluatesCode(js: string) {
-	return /(?<![\w$.])(?:new\s+Function\b|Function\s*\(|eval\s*\()/.test(js);
-}
-
-function escapeHtml(text: string) {
-	return text.replaceAll("&", "&amp;").replaceAll("<", "&lt;");
-}
-
-const bootstrap = `if(window.__bluprintBooted)return;window.__bluprintBooted=true;const errors=[];const record=e=>errors.push(e.message);window.addEventListener('error',record);try{for(const source of document.querySelectorAll('textarea[data-preview-script]')){const script=document.createElement('script');script.textContent=source.value;document.head.appendChild(script);script.remove();source.remove()}}finally{window.removeEventListener('error',record)}this.remove();if(errors.length)document.body.insertAdjacentText('afterbegin','Preview error: '+errors.join('; '))`;
-
-export function assemblePreview(body: string, css: string, scripts: string[]) {
-	const sources = scripts.map((script) => {
-		const js = escapeControlEscapes(script);
-		if (evaluatesCode(js))
-			throw new Error("Preview scripts must not use eval or new Function");
-		return `<textarea hidden data-preview-script>\n${escapeHtml(js)}</textarea>`;
-	});
-	const tail = `${sources.join("\n")}\n<img alt="" width="1" height="1" style="position:absolute" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///ywAAAAAAQABAAACAUwAOw==" onload="${bootstrap.replaceAll("&", "&amp;").replaceAll('"', "&quot;")}">\n`;
-	const head = `<head>\n<style>${css}</style>\n<style>x-dc{display:none}</style>\n`;
+export function assemblePage(body: string, css: string, scripts: string[]) {
 	if (!body.includes("<head>")) throw new Error("Prototype must have <head>");
-	const end = body.lastIndexOf("</body>");
-	const html = (
-		end === -1 ? body + tail : body.slice(0, end) + tail + body.slice(end)
-	).replace("<head>", head);
-	const problem = transportProblem(html);
-	if (problem) throw new Error(`Preview document contains ${problem}`);
-	return html;
+	return body.replace(
+		"<head>",
+		`<head>\n<style>${css}</style>\n${scripts.map(inlineScript).join("\n")}\n`,
+	);
 }
 
 export async function stylesheet(file: string): Promise<string> {
@@ -362,7 +286,7 @@ class Component extends DCLogic {
 }
 `;
 
-export type GallerySpec = { name: string; states: string[] };
+export type GallerySpec = { file: string; states: string[] };
 
 export function selectStates(available: string[], patterns: string[]) {
 	const selected = new Set<string>();
@@ -420,19 +344,45 @@ export function galleryPage(file: string, body: string, patterns: string[]) {
 	};
 }
 
-// GitHub drops other characters from artifact names: only letters, digits, spaces, ".", "-" and "_" survive (2026-11-12).
-const artifactNameCharacters = /^[\p{L}\p{N} ._-]+$/u;
-
-export function safeArtifactName(name: string) {
-	return artifactNameCharacters.test(name) && !/\s{2}/.test(name);
+export function pageName(prototype: string) {
+	return `${prototype
+		.slice(0, -".dc.html".length)
+		.normalize("NFD")
+		.replace(/[̀-ͯ]/g, "")
+		.toLowerCase()
+		.replace(/[^a-z0-9]+/g, "-")
+		.replace(/^-|-$/g, "")}.html`;
 }
 
-export function galleryFileName(screen: string, name: string) {
-	const label = `${screen} QA ${name}`
-		.replace(/\s*[^\p{L}\p{N} ._-]+\s*/gu, " - ")
-		.replace(/\s+/g, " ")
-		.trim();
-	return `${label}.dc.html`;
+function escapeHtml(text: string) {
+	return text
+		.replaceAll("&", "&amp;")
+		.replaceAll("<", "&lt;")
+		.replaceAll('"', "&quot;");
+}
+
+function listPage(title: string, intro: string, items: string[]) {
+	return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)}</title>
+<style>body{font-family:system-ui,sans-serif;max-width:860px;margin:0 auto;padding:24px 16px;line-height:1.5;color:#0b1b33}a{color:#0a5bd8}li{margin:4px 0}span{color:#5b6b80;font-size:.9em}@media (prefers-color-scheme:dark){body{background:#081830;color:#e6edf7}a{color:#7fb2ff}span{color:#9fb0c6}}</style>
+</head>
+<body>
+<h1>${escapeHtml(title)}</h1>
+${intro}
+<ul>
+${items.join("\n")}
+</ul>
+</body>
+</html>
+`;
+}
+
+function listItem(href: string, label: string, note = "") {
+	return `<li><a href="${escapeHtml(href)}">${escapeHtml(label)}</a>${note ? ` <span>${escapeHtml(note)}</span>` : ""}</li>`;
 }
 
 async function library(url: string, hash: string) {
@@ -447,11 +397,13 @@ async function library(url: string, hash: string) {
 	return code;
 }
 
+export type Page = { file: string; states: string[] };
+
 export async function buildBundle(
 	source: string,
 	out: string,
-	galleries: GallerySpec[] = [{ name: "", states: ["*"] }],
-) {
+	galleries: GallerySpec[] = [{ file: "qa.html", states: ["*"] }],
+): Promise<Page[]> {
 	const files = (await readdir(source)).sort();
 	const prototypes = files.filter((file) => file.endsWith(".dc.html"));
 	if (!prototypes.length)
@@ -464,10 +416,12 @@ export async function buildBundle(
 			),
 		),
 	);
-	const isQa = (body: string) => body.includes("data-screen-label=");
-	const screens = [...sources].filter(
-		([file, body]) => !isQa(body) && !/ QA\.dc\.html$/.test(file),
-	);
+	const isQa = (file: string, body: string) =>
+		body.includes("data-screen-label=") || / QA\.dc\.html$/.test(file);
+	const screens = [...sources].filter(([file, body]) => !isQa(file, body));
+	const qa = [...sources].filter(([file, body]) => isQa(file, body));
+	if (qa.length > 1)
+		throw new Error("Screen directory must hold at most one QA prototype");
 	const siblings = new Set(screens.map(([file]) => file));
 	for (const [file, body] of sources) checkOffline(file, body, siblings);
 	const resources = Object.fromEntries(
@@ -480,55 +434,139 @@ export async function buildBundle(
 	const scripts = [
 		...(await Promise.all(libraries.map(([url, hash]) => library(url, hash)))),
 		await readFile(join(skill, "_ds_bundle.js"), "utf8"),
-		`window.__resources={};window.__resourceBlobs=Object.fromEntries(Object.entries(${JSON.stringify(resources)}).map(([key,body])=>[key,new Blob([body],{type:"text/html"})]));`,
-		await readFile(join(skill, "preview-prelude.js"), "utf8"),
-		patchRuntime(await readFile(join(skill, "support.js"), "utf8")),
+		`window.__resources={};window.__resourceBlobs=Object.fromEntries(Object.entries(${JSON.stringify(resources).replaceAll("<", "\\u003c")}).map(([key,body])=>[key,new Blob([body],{type:"text/html"})]));`,
+		await readFile(join(skill, "support.js"), "utf8"),
 	];
-	const preview = (body: string, extraCss = "") =>
-		assemblePreview(
-			encodeLogic(encodeRootTemplate(body)),
-			css + extraCss,
-			scripts,
+	const pages: Page[] = [];
+	const add = async (file: string, body: string, states: string[] = []) => {
+		if (!pagePathPattern.test(file))
+			throw new Error(`Use a lowercase relative .html path: ${file}`);
+		if (pages.some((page) => page.file === file))
+			throw new Error(`Duplicate page: ${file}`);
+		await mkdir(dirname(join(out, file)), { recursive: true });
+		await writeFile(
+			join(out, file),
+			assemblePage(
+				encodeRootTemplate(body),
+				css + (states.length ? galleryCss : ""),
+				scripts,
+			),
 		);
-	const artifacts: Artifact[] = [];
-	const states = new Map<string, string[]>();
-	const add = async (file: string, body: string) => {
-		if (!safeArtifactName(file))
-			throw new Error(`GitHub rewrites this artifact name: ${file}`);
-		if (artifacts.some((artifact) => artifact.file === file))
-			throw new Error(`Duplicate artifact name: ${file}`);
-		await writeFile(join(out, file), body);
-		artifacts.push({ file, sha256: digest(body) });
+		pages.push({ file, states });
 	};
-	for (const file of files.filter((file) => file.endsWith(".md")))
-		await add(file, await readFile(join(source, file), "utf8"));
-	for (const [file, body] of sources) {
-		if (siblings.has(file)) {
-			await add(file, preview(body));
-			continue;
-		}
-		const screen = file.slice(0, -".dc.html".length).replace(/ QA$/, "");
+	for (const [file, body] of screens) await add(pageName(file), body);
+	const [qaPrototype] = qa;
+	if (qaPrototype)
 		for (const gallery of galleries) {
-			const page = galleryPage(file, body, gallery.states);
-			await add(
-				galleryFileName(screen, gallery.name),
-				preview(page.body, galleryCss),
-			);
-			states.set(galleryFileName(screen, gallery.name), page.states);
+			const page = galleryPage(qaPrototype[0], qaPrototype[1], gallery.states);
+			await add(gallery.file, page.body, page.states);
 		}
-	}
-	for (const artifact of artifacts) {
-		const problem = transportProblem(
-			await readFile(join(out, artifact.file), "utf8"),
-		);
-		if (problem) throw new Error(`${artifact.file} contains ${problem}`);
-	}
-	await writeFile(
-		join(out, "manifest.json"),
-		JSON.stringify({ artifacts }, null, 2),
+	const kept = files.filter(
+		(file) => file.endsWith(".dc.html") || file.endsWith(".md"),
 	);
-	return artifacts.map((artifact) => ({
-		...artifact,
-		states: states.get(artifact.file) ?? [],
-	}));
+	const docs = files.filter((file) => file.endsWith(".md"));
+	await mkdir(join(out, "source"));
+	for (const file of kept)
+		await copyFile(join(source, file), join(out, "source", file));
+	for (const file of docs) await copyFile(join(source, file), join(out, file));
+	const [screen] = screens;
+	await writeFile(
+		join(out, "index.html"),
+		listPage(
+			screen ? screen[0].slice(0, -".dc.html".length) : "Protótipo",
+			"<p>Versão imutável: uma mudança vira uma nova pasta de versão. Cada página abre sozinha, sem rede.</p>",
+			[
+				...pages.map((page) =>
+					listItem(page.file, page.file, page.states.join(", ")),
+				),
+				...docs.map((file) => listItem(file, file)),
+				listItem("source/", "source/", "arquivos da sessão de refinamento"),
+			],
+		),
+	);
+	await writeFile(
+		join(out, "source", "index.html"),
+		listPage(
+			"Fontes",
+			"<p>Arquivos como saíram da sessão de refinamento.</p>",
+			kept.map((file) => listItem(encodeURIComponent(file), file)),
+		),
+	);
+	return pages;
+}
+
+async function git(clone: string, args: string[]) {
+	const child = Bun.spawn(["git", "-C", clone, ...args], {
+		stdout: "pipe",
+		stderr: "pipe",
+	});
+	const [stdout, stderr, code] = await Promise.all([
+		new Response(child.stdout).text(),
+		new Response(child.stderr).text(),
+		child.exited,
+	]);
+	if (code !== 0) throw new Error(`git ${args[0]} failed: ${stderr || stdout}`);
+	return stdout.trim();
+}
+
+async function exists(path: string) {
+	return access(path).then(
+		() => true,
+		() => false,
+	);
+}
+
+export async function stageVersion(
+	bundle: string,
+	clone: string,
+	folder: string,
+) {
+	if (!versionFolderPattern.test(folder))
+		throw new Error("Use <screen>/v<n>, such as nova-obra/v2");
+	if ((await git(clone, ["branch", "--show-current"])) !== "main")
+		throw new Error("The prototypes clone must be on main");
+	if (await git(clone, ["status", "--porcelain"]))
+		throw new Error("The prototypes clone has uncommitted changes");
+	const target = join(clone, folder);
+	if (await exists(target))
+		throw new Error(`${folder} exists; versions are immutable`);
+	await cp(bundle, target, { recursive: true });
+	const [screen] = folder.split("/");
+	if (!screen) throw new Error("Missing screen folder");
+	const versions = (await readdir(join(clone, screen), { withFileTypes: true }))
+		.filter((entry) => entry.isDirectory() && /^v[0-9]+$/.test(entry.name))
+		.map((entry) => entry.name)
+		.sort((a, b) => Number(a.slice(1)) - Number(b.slice(1)));
+	await writeFile(
+		join(clone, screen, "index.html"),
+		listPage(
+			screen,
+			"",
+			versions.map((version) => listItem(`${version}/`, version)),
+		),
+	);
+	const screens = (await readdir(clone, { withFileTypes: true }))
+		.filter(
+			(entry) =>
+				entry.isDirectory() && versionFolderPattern.test(`${entry.name}/v1`),
+		)
+		.map((entry) => entry.name)
+		.sort();
+	await writeFile(
+		join(clone, "index.html"),
+		listPage(
+			"BluPrint · protótipos",
+			"<p>Protótipos de tela aprovados, em pastas versionadas e imutáveis.</p>",
+			screens.map((name) => listItem(`${name}/`, name)),
+		),
+	);
+	await writeFile(join(clone, ".nojekyll"), "");
+	await git(clone, ["add", "--all"]);
+	await git(clone, [
+		"commit",
+		"--quiet",
+		"-m",
+		`feat: add ${folder} prototypes`,
+	]);
+	return git(clone, ["rev-parse", "HEAD"]);
 }

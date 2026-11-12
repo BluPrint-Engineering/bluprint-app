@@ -3,22 +3,17 @@ import { mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { runInNewContext } from "node:vm";
 import {
-	assemblePreview,
 	buildBundle,
 	encodeTemplateCase,
-	escapeControlEscapes,
-	evaluatesCode,
-	patchRuntime,
 	galleryPage,
+	inlineScript,
+	pageName,
 	selectStates,
-	transportProblem,
+	stageVersion,
 } from "./screen-bundle";
 
 const repo = resolve(import.meta.dir, "../../..");
-const observedPreviewCsp =
-	"default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; font-src data:; img-src data: blob:; connect-src 'none'; media-src 'none'; child-src 'none'; worker-src 'none'; frame-src 'none'; object-src 'none'; form-action 'none'; manifest-src 'none'; base-uri 'none'";
 
 const demo = `<!DOCTYPE html>
 <html>
@@ -122,35 +117,6 @@ describe("encodeTemplateCase", () => {
 	});
 });
 
-describe("escapeControlEscapes", () => {
-	test("rewrites control-character escapes to equivalent hex escapes", () => {
-		const source = String.raw`["a\u0000b", "\u001b", /\u0080/.test(String.fromCharCode(128)), "\u{7f}", "\u00e9"]`;
-		const escaped = escapeControlEscapes(source);
-		expect(transportProblem(escaped)).toBeNull();
-		expect(escaped).toContain("\\u00e9");
-		expect(runInNewContext(escaped)).toEqual(runInNewContext(source));
-	});
-
-	test("leaves escaped backslashes alone", () => {
-		const source = String.raw`"\\u0000"`;
-		expect(escapeControlEscapes(source)).toBe(source);
-	});
-});
-
-describe("patchRuntime", () => {
-	test("removes every Function constructor from support.js", async () => {
-		const runtime = await readFile(join(import.meta.dir, "support.js"), "utf8");
-		expect(evaluatesCode(runtime)).toBe(true);
-		const patched = patchRuntime(runtime);
-		expect(evaluatesCode(patched)).toBe(false);
-		expect(patched.match(/__bluprintCompile\(/g)).toHaveLength(2);
-	});
-
-	test("fails loudly when the runtime no longer matches", () => {
-		expect(() => patchRuntime("const fn = 1;")).toThrow("support.js changed");
-	});
-});
-
 describe("selectStates", () => {
 	test("keeps QA order and expands letter prefixes", () => {
 		expect(
@@ -181,11 +147,16 @@ describe("galleryPage", () => {
 	});
 });
 
-describe("assemblePreview", () => {
-	test("refuses scripts that evaluate strings", () => {
-		expect(() =>
-			assemblePreview("<head></head><body></body>", "", ["eval('1')"]),
-		).toThrow("eval");
+describe("inlineScript", () => {
+	test("refuses code that would end the script element early", () => {
+		expect(() => inlineScript('const tag = "</script>";')).toThrow("</script");
+	});
+});
+
+describe("pageName", () => {
+	test("turns a prototype file into a lowercase page path", () => {
+		expect(pageName("Nova obra.dc.html")).toBe("nova-obra.html");
+		expect(pageName("Configuração.dc.html")).toBe("configuracao.html");
 	});
 });
 
@@ -193,175 +164,156 @@ type Browser = {
 	newPage: () => Promise<Page>;
 	close: () => Promise<void>;
 };
-type Frame = {
-	url: () => string;
-	evaluate: <T>(fn: () => T) => Promise<T>;
-	locator: (selector: string) => {
-		pressSequentially: (text: string) => Promise<void>;
-		press: (key: string) => Promise<void>;
-		inputValue: () => Promise<string>;
-		textContent: () => Promise<string | null>;
-		count: () => Promise<number>;
-		waitFor: (options?: { timeout: number }) => Promise<void>;
-	};
+type Locator = {
+	pressSequentially: (text: string) => Promise<void>;
+	press: (key: string) => Promise<void>;
+	inputValue: () => Promise<string>;
+	textContent: () => Promise<string | null>;
+	count: () => Promise<number>;
+	waitFor: (options?: { timeout: number }) => Promise<void>;
 };
 type Page = {
-	route: (
-		url: string,
-		handler: (route: {
-			fulfill: (response: Record<string, unknown>) => Promise<void>;
-		}) => Promise<void>,
-	) => Promise<void>;
 	goto: (url: string) => Promise<unknown>;
-	frames: () => Frame[];
+	locator: (selector: string) => Locator;
+	evaluate: <T>(fn: () => T) => Promise<T>;
+	on: (event: "pageerror", handler: (error: Error) => void) => void;
 	waitForTimeout: (ms: number) => Promise<void>;
 	close: () => Promise<void>;
 };
 
-let browser: Browser;
-
-beforeAll(async () => {
-	const { chromium } = createRequire(join(repo, "apps/e2e/package.json"))(
-		"@playwright/test",
-	);
-	browser = await chromium.launch();
-});
-
-afterAll(() => browser.close());
-
-async function openInPreviewSandbox(html: string) {
-	const page = await browser.newPage();
-	await page.route("https://preview.test/", (route) =>
-		route.fulfill({
-			contentType: "text/html",
-			body: '<iframe sandbox="allow-scripts" src="https://artifact.test/" style="width:1000px;height:900px"></iframe>',
-		}),
-	);
-	await page.route("https://artifact.test/", (route) =>
-		route.fulfill({
-			contentType: "text/html; charset=utf-8",
-			headers: { "content-security-policy": observedPreviewCsp },
-			body: html,
-		}),
-	);
-	await page.goto("https://preview.test/");
-	const frame = () => {
-		const found = page
-			.frames()
-			.find((candidate) => candidate.url() === "https://artifact.test/");
-		if (!found) throw new Error("Preview frame missing");
-		return found;
-	};
-	return { page, frame };
+async function git(cwd: string, ...args: string[]) {
+	const child = Bun.spawn(["git", "-C", cwd, ...args], { stdout: "pipe" });
+	await child.exited;
+	return (await new Response(child.stdout).text()).trim();
 }
 
-describe("Preview sandbox", () => {
-	test("runs each script once, in order, and shows errors", async () => {
-		const html = assemblePreview(
-			"<!DOCTYPE html><html><head></head><body><p id='log'></p></body></html>",
-			"",
-			[
-				"window.order = ['first'];",
-				"window.order.push('second'); try { globalThis['Function']('return 1')(); window.order.push('eval allowed'); } catch { window.order.push('eval blocked'); }",
-				"throw new Error('boom');",
-				"window.order.push('after error'); document.getElementById('log').textContent = window.order.join(',');",
-			],
+describe("built screen", () => {
+	let out: string;
+	let browser: Browser;
+	let server: ReturnType<typeof Bun.serve>;
+	const errors: string[] = [];
+
+	beforeAll(async () => {
+		const source = await mkdtemp(join(tmpdir(), "bluprint-bundle-test-"));
+		out = await mkdtemp(join(tmpdir(), "bluprint-bundle-test-out-"));
+		await writeFile(join(source, "Demo.dc.html"), demo);
+		await writeFile(join(source, "Demo QA.dc.html"), demoQa);
+		await writeFile(join(source, "README.md"), "# Demo\n");
+		await buildBundle(source, out, [
+			{ file: "qa.html", states: ["*"] },
+			{ file: "tickets/1.2.html", states: ["D2"] },
+		]);
+		server = Bun.serve({
+			port: 0,
+			fetch: (request) => {
+				const path = decodeURIComponent(new URL(request.url).pathname);
+				return new Response(
+					Bun.file(join(out, path.endsWith("/") ? `${path}index.html` : path)),
+				);
+			},
+		});
+		const { chromium } = createRequire(join(repo, "apps/e2e/package.json"))(
+			"@playwright/test",
 		);
-		const { page, frame } = await openInPreviewSandbox(html);
-		await frame().locator("#log").waitFor();
-		await page.waitForTimeout(300);
-		expect(await frame().locator("#log").textContent()).toBe(
-			"first,second,eval blocked,after error",
+		browser = await chromium.launch();
+	}, 60_000);
+
+	afterAll(async () => {
+		await browser.close();
+		server.stop();
+	});
+
+	async function open(path: string) {
+		const page = await browser.newPage();
+		page.on("pageerror", (error) => errors.push(error.message));
+		await page.goto(new URL(path, server.url).href);
+		return page;
+	}
+
+	test("writes the screen, the galleries, the docs, the sources and an index", async () => {
+		const index = await readFile(join(out, "index.html"), "utf8");
+		for (const href of [
+			"demo.html",
+			"qa.html",
+			"tickets/1.2.html",
+			"README.md",
+			"source/",
+		])
+			expect(index).toContain(`href="${href}"`);
+		expect(await readFile(join(out, "source", "Demo QA.dc.html"), "utf8")).toBe(
+			demoQa,
 		);
+	});
+
+	test("types into camelCase handlers and submits on Enter", async () => {
+		const page = await open("demo.html");
+		await page.locator("#name").waitFor({ timeout: 15_000 });
+		await page.locator("#name").pressSequentially("Casa");
+		await page.locator("#ds").pressSequentially("Moinhos");
+		expect(await page.locator("#name").inputValue()).toBe("Casa");
+		expect(await page.locator("#ds").inputValue()).toBe("Moinhos");
+		await page.locator("#name").press("Enter");
+		await page.waitForTimeout(200);
+		expect(await page.locator("#result").textContent()).toBe("Salvo: Casa");
 		expect(
-			await frame().evaluate(() => document.body.textContent?.includes("boom")),
-		).toBe(true);
-		expect(
-			await frame().evaluate(
-				() => document.querySelectorAll("textarea,img").length,
+			await page.evaluate(
+				() =>
+					(
+						window as unknown as {
+							BluPrintDesignSystem_d4fa62: { __errors: unknown[] };
+						}
+					).BluPrintDesignSystem_d4fa62.__errors.length,
 			),
 		).toBe(0);
+		expect(errors).toEqual([]);
 		await page.close();
-	});
+	}, 30_000);
 
-	describe("built screen", () => {
-		let out: string;
+	test("renders only a gallery's states, with an index, through the sibling screen", async () => {
+		const page = await open("tickets/1.2.html");
+		await page.locator("#note").waitFor({ timeout: 15_000 });
+		expect(await page.locator("#note").textContent()).toBe("dois");
+		expect(await page.locator("[data-screen-label]").count()).toBe(1);
+		expect(await page.locator('nav a[href="#D2"]').textContent()).toBe(
+			"D2 Segundo · fim",
+		);
+		expect(errors).toEqual([]);
+		await page.close();
+	}, 30_000);
 
-		beforeAll(async () => {
-			const source = await mkdtemp(join(tmpdir(), "bluprint-bundle-test-"));
-			out = await mkdtemp(join(tmpdir(), "bluprint-bundle-test-out-"));
-			await writeFile(join(source, "Demo.dc.html"), demo);
-			await writeFile(join(source, "Demo QA.dc.html"), demoQa);
-			await writeFile(join(source, "README.md"), "# Demo\n");
-			await buildBundle(source, out, [
-				{ name: "", states: ["*"] },
-				{ name: "Dois · fim", states: ["D2"] },
-			]);
-		}, 60_000);
+	test("mounts every state of a gallery", async () => {
+		const page = await open("qa.html");
+		await page.locator("#D2 #note").waitFor({ timeout: 15_000 });
+		expect(await page.locator("#D1 #note").textContent()).toBe("um");
+		expect(await page.locator("#D2 #note").textContent()).toBe("dois");
+		await page.close();
+	}, 30_000);
 
-		test("publishes the screen and one gallery per chosen set of states", async () => {
-			const manifest = JSON.parse(
-				await readFile(join(out, "manifest.json"), "utf8"),
-			);
-			expect(
-				manifest.artifacts.map((artifact: { file: string }) => artifact.file),
-			).toEqual([
-				"README.md",
-				"Demo QA.dc.html",
-				"Demo QA Dois - fim.dc.html",
-				"Demo.dc.html",
-			]);
-		});
-
-		test("types into camelCase handlers and submits on Enter", async () => {
-			const { page, frame } = await openInPreviewSandbox(
-				await readFile(join(out, "Demo.dc.html"), "utf8"),
-			);
-			await frame().locator("#name").waitFor({ timeout: 15_000 });
-			await frame().locator("#name").pressSequentially("Casa");
-			await frame().locator("#ds").pressSequentially("Moinhos");
-			expect(await frame().locator("#name").inputValue()).toBe("Casa");
-			expect(await frame().locator("#ds").inputValue()).toBe("Moinhos");
-			await frame().locator("#name").press("Enter");
-			await page.waitForTimeout(200);
-			expect(await frame().locator("#result").textContent()).toBe(
-				"Salvo: Casa",
-			);
-			expect(
-				await frame().evaluate(
-					() =>
-						(
-							window as unknown as {
-								BluPrintDesignSystem_d4fa62: { __errors: unknown[] };
-							}
-						).BluPrintDesignSystem_d4fa62.__errors.length,
-				),
-			).toBe(0);
-			await page.close();
-		}, 30_000);
-
-		test("renders only its states, with an index, through the sibling screen", async () => {
-			const { page, frame } = await openInPreviewSandbox(
-				await readFile(join(out, "Demo QA Dois - fim.dc.html"), "utf8"),
-			);
-			await frame().locator("#note").waitFor({ timeout: 15_000 });
-			expect(await frame().locator("#note").textContent()).toBe("dois");
-			expect(await frame().locator("[data-screen-label]").count()).toBe(1);
-			expect(await frame().locator("#D2").count()).toBe(1);
-			expect(await frame().locator('nav a[href="#D2"]').textContent()).toBe(
-				"D2 Segundo · fim",
-			);
-			await page.close();
-		}, 30_000);
-
-		test("mounts every state of a gallery", async () => {
-			const { page, frame } = await openInPreviewSandbox(
-				await readFile(join(out, "Demo QA.dc.html"), "utf8"),
-			);
-			await frame().locator("#D2 #note").waitFor({ timeout: 15_000 });
-			expect(await frame().locator("#D1 #note").textContent()).toBe("um");
-			expect(await frame().locator("#D2 #note").textContent()).toBe("dois");
-			await page.close();
-		}, 30_000);
-	});
+	test("stages a version as one commit and refuses to overwrite it", async () => {
+		const clone = await mkdtemp(join(tmpdir(), "bluprint-prototypes-test-"));
+		await git(clone, "init", "--quiet", "--initial-branch=main");
+		await git(clone, "config", "user.email", "test@example.com");
+		await git(clone, "config", "user.name", "Test");
+		await git(clone, "config", "commit.gpgsign", "false");
+		const sha = await stageVersion(out, clone, "demo/v1");
+		expect(await git(clone, "rev-parse", "HEAD")).toBe(sha);
+		expect(await git(clone, "log", "--format=%s")).toBe(
+			"feat: add demo/v1 prototypes",
+		);
+		expect(await readFile(join(clone, "demo/v1/demo.html"), "utf8")).toBe(
+			await readFile(join(out, "demo.html"), "utf8"),
+		);
+		expect(await readFile(join(clone, "index.html"), "utf8")).toContain(
+			'href="demo/"',
+		);
+		expect(await readFile(join(clone, "demo/index.html"), "utf8")).toContain(
+			'href="v1/"',
+		);
+		await expect(stageVersion(out, clone, "demo/v1")).rejects.toThrow(
+			"immutable",
+		);
+		await expect(stageVersion(out, clone, "Demo/1")).rejects.toThrow(
+			"<screen>/v<n>",
+		);
+	}, 30_000);
 });
