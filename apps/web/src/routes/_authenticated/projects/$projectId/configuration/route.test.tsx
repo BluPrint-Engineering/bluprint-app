@@ -102,6 +102,26 @@ describe("project configuration", () => {
 		).not.toBeInTheDocument();
 	});
 
+	test("opens #tipologias with that section at the start of the viewport", async () => {
+		const scrollIntoView = vi
+			.spyOn(Element.prototype, "scrollIntoView")
+			.mockImplementation(() => {});
+		try {
+			const { handler } = projectApi(OBRA);
+			stubApi(signedIn, { api: handler });
+
+			renderAt(`${CONFIG_PATH}#tipologias`);
+
+			const region = await screen.findByRole("region", { name: "Tipologias" });
+			await waitFor(() => {
+				expect(scrollIntoView).toHaveBeenCalledWith({ block: "start" });
+			});
+			expect(scrollIntoView.mock.instances).toContain(region);
+		} finally {
+			scrollIntoView.mockRestore();
+		}
+	});
+
 	test("links back to the project home from the header", async () => {
 		const { handler } = projectApi(OBRA);
 		stubApi(signedIn, { api: handler });

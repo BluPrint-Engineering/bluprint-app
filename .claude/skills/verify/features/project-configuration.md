@@ -49,7 +49,7 @@ Preconditions:
 
 ## Gotchas
 
-- On desktop the app header scrolls away and the section navigation pins 24px from the viewport top. Capture before and after a navigation click; the target heading must remain visible. Open `/projects/<id>/configuration#tipologias` directly and check `Tipologias` is in the viewport. Near the document end, scrolling stops at the page bottom.
+- On desktop the app header scrolls away and the section navigation pins 24px from the viewport top. Capture before and after a navigation click; the target heading must remain visible. Open `/projects/<id>/configuration#tipologias` directly and check `Tipologias` is in the viewport on the phone and the desktop. Near the document end, scrolling stops at the page bottom.
 
 - The `h1` and the card both show the name: scope name assertions to `getByRole("region", { name: "Dados da obra" })` or to `getByRole("heading", { level: 1 })`.
 - The back link is named `Início da obra` here and `Obras` on the home.
