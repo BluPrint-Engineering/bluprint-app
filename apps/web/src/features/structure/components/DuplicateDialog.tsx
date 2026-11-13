@@ -114,7 +114,7 @@ function DuplicateContent({
 	const [problem, setProblem] = useState<string>();
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		duplicateReservation,
+		(variables) => duplicateReservation(variables, locationOf(source)),
 	);
 	const [reserving, setReserving] = useState(restoredReservation !== undefined);
 	const alterReservation = useRef<HTMLButtonElement>(null);
@@ -320,21 +320,28 @@ function DuplicateContent({
 					onOpenChange={setReserving}
 					returnFocus={alterReservation}
 					onSaved={() => void units.refetch()}
-					opener={DUPLICATE_OPENER}
+					opener={duplicateOpener(locationOf(source))}
 				/>
 			)}
 		</>
 	);
 }
 
-const DUPLICATE_OPENER = "duplicate";
+function duplicateOpener(locationId: string): string {
+	return `duplicate:${locationId}`;
+}
 
-export function duplicateReservation(variables: unknown): number | undefined {
+export function duplicateReservation(
+	variables: unknown,
+	locationId: string,
+): { reserved: number; ours: boolean } | undefined {
 	const draft = reservationDraft(variables);
-	if (draft?.opener !== undefined && draft.opener !== DUPLICATE_OPENER) {
-		return undefined;
-	}
-	return draft?.reserved;
+	if (draft === undefined) return undefined;
+	if (draft.opener === undefined)
+		return { reserved: draft.reserved, ours: false };
+	return draft.opener === duplicateOpener(locationId)
+		? { reserved: draft.reserved, ours: true }
+		: undefined;
 }
 
 function duplicateName(

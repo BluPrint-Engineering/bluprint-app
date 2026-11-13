@@ -81,13 +81,12 @@ export function LocationMenu({
 	const [renaming, setRenaming] = useState(restoredRename !== undefined);
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		duplicateReservation,
+		(variables) => duplicate && duplicateReservation(variables, duplicate.id),
 	);
 	const [duplicating, setDuplicating] = useState(
 		restoredDuplicate !== undefined ||
-			(reopensReservation &&
-				duplicate !== undefined &&
-				restoredReservation !== undefined),
+			restoredReservation?.ours === true ||
+			(reopensReservation && restoredReservation !== undefined),
 	);
 	const [confirming, setConfirming] = useState(false);
 	const trigger = useRef<HTMLButtonElement>(null);
