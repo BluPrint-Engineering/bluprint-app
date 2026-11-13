@@ -77,22 +77,20 @@ export class DisciplinesService {
 			});
 		}
 
-		const limitReached = new ProblemException({
-			status: 409,
-			code: DISCIPLINE_LIMIT_REACHED,
-			detail: `A project holds at most ${MAX_EXTRA_DISCIPLINES} extra disciplines.`,
-		});
 		if (
 			(await this.disciplines.countExtras(projectId)) >= MAX_EXTRA_DISCIPLINES
 		) {
-			throw limitReached;
+			throw new ProblemException({
+				status: 409,
+				code: DISCIPLINE_LIMIT_REACHED,
+				detail: `A project holds at most ${MAX_EXTRA_DISCIPLINES} extra disciplines.`,
+			});
 		}
 
 		const used = await this.disciplines.usedColors(projectId);
 		const color = EXTRA_DISCIPLINE_COLORS.find(
 			(candidate) => !used.has(candidate),
-		);
-		if (!color) throw limitReached;
+		)!;
 
 		return toDiscipline(
 			await this.disciplines.insertExtra({
