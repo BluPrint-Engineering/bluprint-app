@@ -9,23 +9,12 @@ import { ProjectDetailsSection } from "./ProjectDetailsSection";
 import { ProjectStatusSection } from "./ProjectStatusSection";
 import { SectionNav } from "./SectionNav";
 
-function sectionIdFromHash(hash: string) {
-	const raw = hash.startsWith("#") ? hash.slice(1) : hash;
-	if (raw === "") return "";
-	try {
-		return decodeURIComponent(raw);
-	} catch {
-		return "";
-	}
-}
-
 // WebKit scrolls a hash only while the target is already in the first document.
 function HashTarget() {
 	const hash = useRouterState({ select: (state) => state.location.hash });
 
 	useEffect(() => {
-		const id = sectionIdFromHash(hash);
-		const target = id === "" ? null : document.getElementById(id);
+		const target = hash ? document.getElementById(hash) : null;
 		const scope = target?.parentElement;
 		if (!target || !scope) return;
 
