@@ -21,7 +21,7 @@ export function PreviewSummary({
 	const { floors, units: unitCount, commonAreas } = plan.counts;
 	const towers = plan.towers.length;
 	const perType = [
-		...plan.unitTypeCounts.map(({ name, units: count }) => `${name}: ${count}`),
+		...plan.typologyCounts.map(({ name, units: count }) => `${name}: ${count}`),
 		...(plan.untyped > 0 ? [`Sem tipologia: ${plan.untyped}`] : []),
 	];
 	return (

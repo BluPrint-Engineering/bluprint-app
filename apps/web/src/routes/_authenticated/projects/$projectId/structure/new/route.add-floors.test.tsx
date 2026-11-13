@@ -19,8 +19,8 @@ import {
 	floor,
 	structureOf,
 	tower,
-	unitTypeOf,
-	unitTypesApi,
+	typologiesApi,
+	typologyOf,
 	writableApi,
 } from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
@@ -30,8 +30,8 @@ const user = userEvent.setup({ delay: null });
 const OBRA: ProjectSummary = { ...project(7), name: "Casa Moinhos" };
 const LOCKED = "A obra foi entregue: a estrutura não pode mais ser alterada.";
 
-const typeA = unitTypeOf("Tipologia A", ["Sala", "Quarto"]);
-const typeB = unitTypeOf("Tipologia B", ["Sala"]);
+const typeA = typologyOf("Tipologia A", ["Sala", "Quarto"]);
+const typeB = typologyOf("Tipologia B", ["Sala"]);
 
 function typedFloors(
 	from: number,
@@ -42,9 +42,9 @@ function typedFloors(
 		const number = from + at;
 		return floor(
 			`${number}º andar`,
-			typeNames.map((unitType, unit) => ({
+			typeNames.map((typology, unit) => ({
 				name: `${number}${String(unit + 1).padStart(2, "0")}`,
-				unitType,
+				typology,
 			})),
 			["Hall"],
 		);
@@ -88,7 +88,7 @@ function scenario(
 		...(options.create && { create: options.create }),
 	});
 	const handler = combine(
-		unitTypesApi(summary.id, { unitTypes: [typeA, typeB] }),
+		typologiesApi(summary.id, { typologies: [typeA, typeB] }),
 		api.handler,
 	);
 	return { ...api, handler, towerB, structure };
@@ -298,7 +298,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			expect(created).toHaveLength(1);
 			const body = nth(created, 0) as CreateStructure;
-			expect(body.unitTypes).toEqual([]);
+			expect(body.typologies).toEqual([]);
 			expect(
 				body.locations
 					.filter(({ type }) => type === "floor")
@@ -310,7 +310,7 @@ describe("adding floors to a tower (W9)", () => {
 			expect(
 				body.locations
 					.filter(({ type }) => type === "unit")
-					.map(({ name, unitTypeId }) => [name, unitTypeId]),
+					.map(({ name, typologyId }) => [name, typologyId]),
 			).toEqual([
 				["1101", typeA.id],
 				["1102", typeB.id],
@@ -364,7 +364,7 @@ describe("adding floors to a tower (W9)", () => {
 
 			await waitFor(() => expect(created).toHaveLength(1));
 			const body = nth(created, 0) as CreateStructure;
-			expect(body.unitTypes.map(({ name }) => name)).toEqual(["Cobertura"]);
+			expect(body.typologies.map(({ name }) => name)).toEqual(["Cobertura"]);
 			const terraco = body.locations.find(({ name }) => name === "Terraço");
 			const twelfth = body.locations.find(({ name }) => name === "12º andar");
 			expect(terraco?.parentId).toBe(twelfth?.id);
@@ -389,7 +389,7 @@ describe("adding floors to a tower (W9)", () => {
 		test("continues past a renamed top floor", async () => {
 			const withCobertura = tower("Torre B", [
 				...typedFloors(1, 3, ["Tipologia A"]),
-				floor("Cobertura", [{ name: "401", unitType: "Tipologia A" }]),
+				floor("Cobertura", [{ name: "401", typology: "Tipologia A" }]),
 			]);
 			const { handler } = scenario({ towerB: withCobertura });
 			open(handler, pathFor(withCobertura.id));
@@ -402,8 +402,8 @@ describe("adding floors to a tower (W9)", () => {
 			const withCobertura = tower("Torre B", [
 				...typedFloors(1, 12, ["Tipologia A", "Tipologia A"]),
 				floor("Cobertura", [
-					{ name: "1301", unitType: "Tipologia A" },
-					{ name: "1302", unitType: "Tipologia A" },
+					{ name: "1301", typology: "Tipologia A" },
+					{ name: "1302", typology: "Tipologia A" },
 				]),
 			]);
 			const { handler, created } = scenario({ towerB: withCobertura });
@@ -597,7 +597,7 @@ describe("adding floors to a tower (W9)", () => {
 			open(
 				combine(
 					(url) =>
-						broken && url.pathname === `/api/projects/${OBRA.id}/unit-types`
+						broken && url.pathname === `/api/projects/${OBRA.id}/typologies`
 							? json({}, 500)
 							: undefined,
 					handler,

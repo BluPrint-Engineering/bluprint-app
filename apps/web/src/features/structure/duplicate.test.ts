@@ -74,8 +74,8 @@ function scene() {
 	const ninth = floor(
 		"9º andar",
 		[
-			{ name: "901", unitType: "Tipologia A", changes: 3 },
-			{ name: "902", unitType: "Tipologia B" },
+			{ name: "901", typology: "Tipologia A", changes: 3 },
+			{ name: "902", typology: "Tipologia B" },
 			"903",
 			"904",
 		],
@@ -292,7 +292,7 @@ describe("a copy the API takes", () => {
 					Array.from({ length: MAX_ROOMS_PER_LOCATION + 1 }, (_, i) => ({
 						id: `0190d000-0000-7000-8000-${String(i).padStart(12, "0")}`,
 						name: `Sala ${i + 1}`,
-						unitTypeRoomId: null,
+						typologyRoomId: null,
 						renamed: false,
 					})),
 				),
@@ -386,14 +386,14 @@ describe("buildDuplicate of a unit", () => {
 			sequentialIds(),
 		);
 
-		expect(request.unitTypes).toEqual([]);
+		expect(request.typologies).toEqual([]);
 		expect(request.locations).toEqual([
 			{
 				id: "new-1",
 				parentId: ninth.id,
 				type: "unit",
 				name: "905",
-				unitTypeId: unit.unitType?.id,
+				typologyId: unit.typology?.id,
 			},
 		]);
 	});
@@ -409,13 +409,13 @@ describe("buildDuplicate of a unit", () => {
 						{
 							id: "r1",
 							name: "Sala de estar",
-							unitTypeRoomId: "t1",
+							typologyRoomId: "t1",
 							renamed: true,
 						},
-						{ id: "r2", name: "Cozinha", unitTypeRoomId: "t2", renamed: false },
-						{ id: "r3", name: "Varanda", unitTypeRoomId: null, renamed: false },
+						{ id: "r2", name: "Cozinha", typologyRoomId: "t2", renamed: false },
+						{ id: "r3", name: "Varanda", typologyRoomId: null, renamed: false },
 					],
-					[{ unitTypeRoomId: "t3", name: "Lavanderia" }],
+					[{ typologyRoomId: "t3", name: "Lavanderia" }],
 				),
 			],
 		};
@@ -431,10 +431,10 @@ describe("buildDuplicate of a unit", () => {
 			{
 				id: "new-2",
 				name: "Sala de estar",
-				unitTypeRoomId: "t1",
+				typologyRoomId: "t1",
 				renamed: true,
 			},
-			{ id: "new-3", name: "Cozinha", unitTypeRoomId: "t2" },
+			{ id: "new-3", name: "Cozinha", typologyRoomId: "t2" },
 			{ id: "new-4", name: "Varanda" },
 		]);
 		expect(copy?.droppedRooms).toEqual(["t3"]);
@@ -455,7 +455,7 @@ describe("buildDuplicate of a unit", () => {
 		expect(copy).not.toHaveProperty("droppedRooms");
 	});
 
-	test("leaves the unit type out for a unit without one", () => {
+	test("leaves the typology out for a unit without one", () => {
 		const { ninth, structure } = scene();
 		const unit = nth(ninth.units, 2);
 
@@ -466,7 +466,7 @@ describe("buildDuplicate of a unit", () => {
 			sequentialIds(),
 		).locations;
 
-		expect(copy).not.toHaveProperty("unitTypeId");
+		expect(copy).not.toHaveProperty("typologyId");
 	});
 });
 
@@ -499,13 +499,13 @@ describe("buildDuplicate of a floor", () => {
 		]);
 	});
 
-	test("keeps the unit types and the changes of each unit", () => {
+	test("keeps the typologies and the changes of each unit", () => {
 		const { ninth, structure } = scene();
 		const [first, second] = ninth.units;
 		const below: SubtreeRooms = {
 			locations: [
 				roomsOf(first?.id ?? "", [
-					{ id: "r1", name: "Varanda", unitTypeRoomId: null, renamed: false },
+					{ id: "r1", name: "Varanda", typologyRoomId: null, renamed: false },
 				]),
 			],
 		};
@@ -518,10 +518,10 @@ describe("buildDuplicate of a floor", () => {
 		);
 
 		expect(locations[1]).toMatchObject({
-			unitTypeId: first?.unitType?.id,
+			typologyId: first?.typology?.id,
 			rooms: [{ name: "Varanda" }],
 		});
-		expect(locations[2]?.unitTypeId).toBe(second?.unitType?.id);
+		expect(locations[2]?.typologyId).toBe(second?.typology?.id);
 	});
 
 	test("copies the rooms of a common area", () => {
@@ -530,7 +530,7 @@ describe("buildDuplicate of a floor", () => {
 		const below: SubtreeRooms = {
 			locations: [
 				roomsOf(hall.id, [
-					{ id: "r1", name: "Depósito", unitTypeRoomId: null, renamed: false },
+					{ id: "r1", name: "Depósito", typologyRoomId: null, renamed: false },
 				]),
 			],
 		};
@@ -696,7 +696,7 @@ describe("buildDuplicate of a tower", () => {
 
 		const keys = new Set(locations.flatMap((entry) => Object.keys(entry)));
 		expect([...keys].sort()).toEqual(
-			["id", "name", "parentId", "position", "type", "unitTypeId"].sort(),
+			["id", "name", "parentId", "position", "type", "typologyId"].sort(),
 		);
 	});
 });

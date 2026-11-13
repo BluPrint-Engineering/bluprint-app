@@ -14,8 +14,8 @@ import {
 	type StructureTower,
 	type StructureUnit,
 	type SubtreeRooms,
-	type UnitType,
-	type UnitTypeList,
+	type Typology,
+	type TypologyList,
 } from "@bluprint/shared";
 import { type ApiHandler, json } from "@/test/renderApp";
 
@@ -25,33 +25,33 @@ const nextId = () =>
 
 const named = (name: string) => ({ id: nextId(), name });
 
-const unitTypeIds = new Map<string, string>();
+const typologyIds = new Map<string, string>();
 
-function unitTypeId(name: string): string {
-	let id = unitTypeIds.get(name);
+function typologyId(name: string): string {
+	let id = typologyIds.get(name);
 	if (!id) {
 		id = nextId();
-		unitTypeIds.set(name, id);
+		typologyIds.set(name, id);
 	}
 	return id;
 }
 
 export interface UnitSpec {
 	name: string;
-	unitType?: string;
+	typology?: string;
 	changes?: number;
 }
 
 function unitOf(spec: string | UnitSpec): StructureUnit {
 	const {
 		name,
-		unitType,
+		typology,
 		changes = 0,
 	} = typeof spec === "string" ? { name: spec } : spec;
 	return {
 		id: nextId(),
 		name,
-		unitType: unitType ? { id: unitTypeId(unitType), name: unitType } : null,
+		typology: typology ? { id: typologyId(typology), name: typology } : null,
 		changes,
 	};
 }
@@ -63,13 +63,13 @@ export function room(
 	return {
 		id: nextId(),
 		name,
-		unitTypeRoomId: options.fromType ? nextId() : null,
+		typologyRoomId: options.fromType ? nextId() : null,
 		renamed: options.renamed ?? false,
 	};
 }
 
 export function droppedRoom(name: string): DroppedRoom {
-	return { unitTypeRoomId: nextId(), name };
+	return { typologyRoomId: nextId(), name };
 }
 
 export function floor(
@@ -162,7 +162,7 @@ export function locationIn(
 		position: 0,
 		ancestors,
 		children,
-		unitType: null,
+		typology: null,
 		changes: 0,
 		rooms: [],
 		droppedRooms: [],
@@ -205,7 +205,7 @@ export function locationIn(
 			for (const u of f.units) {
 				if (u.id === locationId) {
 					return at("unit", u, [towerRef, floorRef], [], {
-						unitType: u.unitType,
+						typology: u.typology,
 						changes: u.changes,
 					});
 				}
@@ -303,7 +303,7 @@ function applyCreation(structure: Structure, body: CreateStructure) {
 			structure.towers
 				.flatMap((t) => t.floors)
 				.find((f) => f.id === parentId)
-				?.units.push({ id, name, unitType: null, changes: 0 });
+				?.units.push({ id, name, typology: null, changes: 0 });
 		} else if (parentId === null) {
 			structure.commonAreas.push({ id, name });
 		} else {
@@ -585,13 +585,13 @@ export function writableApi(
 	return { handler, state, created, renamed, removed, moved, roomsRead };
 }
 
-export function unitTypeOf(
+export function typologyOf(
 	name: string,
 	rooms: string[],
 	usage: { units?: number; changed?: number } = {},
-): UnitType {
+): Typology {
 	return {
-		id: unitTypeId(name),
+		id: typologyId(name),
 		name,
 		rooms: rooms.map(named),
 		unitCount: usage.units ?? 0,
@@ -599,12 +599,12 @@ export function unitTypeOf(
 	};
 }
 
-export function unitTypesApi(
+export function typologiesApi(
 	projectId: string,
-	list: UnitTypeList = { unitTypes: [] },
+	list: TypologyList = { typologies: [] },
 ): ApiHandler {
 	return (url, init) =>
-		url.pathname === `/api/projects/${projectId}/unit-types` &&
+		url.pathname === `/api/projects/${projectId}/typologies` &&
 		(init?.method ?? "GET") === "GET"
 			? json(list)
 			: undefined;
@@ -613,10 +613,10 @@ export function unitTypesApi(
 export function configurationSectionsApi(
 	projectId: string,
 	structure: Structure = emptyStructure,
-	unitTypes: UnitTypeList = { unitTypes: [] },
+	typologies: TypologyList = { typologies: [] },
 ): ApiHandler {
 	return combine(
 		structureApi(projectId, structure),
-		unitTypesApi(projectId, unitTypes),
+		typologiesApi(projectId, typologies),
 	);
 }

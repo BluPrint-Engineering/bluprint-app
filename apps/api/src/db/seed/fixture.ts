@@ -2,7 +2,7 @@ import type { DefaultRole, EffectiveRole } from "@bluprint/shared";
 import {
 	type SeedStructure,
 	numberedFloors,
-	sameUnitType,
+	sameTypology,
 } from "./seed-structure";
 
 export const FIXTURE_PASSWORD = "canteiro-de-obras-azul";
@@ -60,7 +60,7 @@ const apartmentRooms = [
 const casaMoinhos: SeedStructure = {
 	commonAreas: ["Guarita"],
 	commonAreaRooms: { "Salão de festas": ["Cozinha", "Banheiro"] },
-	unitTypes: [
+	typologies: [
 		{ name: "Tipologia A", rooms: apartmentRooms },
 		{
 			name: "Tipologia B",
@@ -89,7 +89,7 @@ const casaMoinhos: SeedStructure = {
 		},
 		{ name: "Duplex", rooms: ["Sala", "Quarto", "Banheiro"] },
 	],
-	unitTypeOf: ({ tower, floor, name, stack }) => {
+	typologyOf: ({ tower, floor, name, stack }) => {
 		if (floor === "Cobertura") return "Cobertura";
 		if (tower === "Torre A" && name === "1204") return undefined;
 		return stack % 2 === 0 ? "Tipologia A" : "Tipologia B";
@@ -132,7 +132,7 @@ const casaMoinhos: SeedStructure = {
 };
 
 const edificioAurora: SeedStructure = {
-	...sameUnitType("Apartamento", [
+	...sameTypology("Apartamento", [
 		"Sala",
 		"Cozinha",
 		"Banheiro",
@@ -157,7 +157,7 @@ const edificioAurora: SeedStructure = {
 };
 
 const parqueDasAguas: SeedStructure = {
-	...sameUnitType("Padrão", apartmentRooms),
+	...sameTypology("Padrão", apartmentRooms),
 	towers: ["Torre A", "Torre B", "Torre C"].map((name) => ({
 		name,
 		floors: [
@@ -178,7 +178,7 @@ const condominioPortoBelo: SeedStructure = {
 };
 
 const vilaNova: SeedStructure = {
-	...sameUnitType("Tipologia A", apartmentRooms),
+	...sameTypology("Tipologia A", apartmentRooms),
 	commonAreas: ["Guarita"],
 	towers: ["Torre A", "Torre B"].map((name) => ({
 		name,
@@ -190,7 +190,7 @@ const vilaNova: SeedStructure = {
 };
 
 const verticeJardins: SeedStructure = {
-	...sameUnitType("Tipologia A", apartmentRooms),
+	...sameTypology("Tipologia A", apartmentRooms),
 	towers: [
 		{
 			name: "Torre A",

@@ -19,7 +19,7 @@ import {
 	floor,
 	structureOf,
 	tower,
-	unitTypeOf,
+	typologyOf,
 	writableApi,
 } from "@/test/structureApi";
 
@@ -950,11 +950,11 @@ describe("actions that must not come back", () => {
 	});
 
 	test("does not delete a typology again or reopen its menu after signing back in", async () => {
-		const tipologia = unitTypeOf("Tipologia A", ["Sala"]);
+		const tipologia = typologyOf("Tipologia A", ["Sala"]);
 		const deletes: string[] = [];
 		const handler = (url: URL, init?: RequestInit) => {
 			if (
-				url.pathname.endsWith(`/unit-types/${tipologia.id}`) &&
+				url.pathname.endsWith(`/typologies/${tipologia.id}`) &&
 				init?.method === "DELETE"
 			) {
 				deletes.push(tipologia.id);
@@ -974,7 +974,7 @@ describe("actions that must not come back", () => {
 			api: combine(
 				handler,
 				configurationSectionsApi(OBRA.id, undefined, {
-					unitTypes: [tipologia],
+					typologies: [tipologia],
 				}),
 			),
 		});

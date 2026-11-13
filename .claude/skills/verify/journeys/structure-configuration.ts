@@ -29,9 +29,9 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await shot("c1-sections");
 
 	const unitsOf = async (typeName) =>
-		(await query("SELECT count(*)::int AS n FROM location l JOIN unit_type t ON t.id = l.unit_type_id WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0].n;
+		(await query("SELECT count(*)::int AS n FROM location l JOIN typology t ON t.id = l.typology_id WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0].n;
 	const roomsOf = async (typeName) =>
-		(await query("SELECT count(*)::int AS n FROM unit_type_room r JOIN unit_type t ON t.id = r.unit_type_id WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0].n;
+		(await query("SELECT count(*)::int AS n FROM typology_room r JOIN typology t ON t.id = r.typology_id WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0].n;
 	const unitsA = await unitsOf("Tipologia A");
 	await expect(tipologias.getByText(`${plural(await roomsOf("Tipologia A"), "cômodo", "cômodos")} · ${plural(unitsA, "unidade", "unidades")}`)).toBeVisible();
 	await page.getByRole("button", { name: "Ações da Tipologia A" }).click();
@@ -55,7 +55,7 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await page.getByRole("button", { name: "Salvar" }).click();
 	await expect(page.getByText(`Tipologia A salva. ${plural(unitsA, "unidade atualizada", "unidades atualizadas")}.`)).toBeVisible();
 	await shot("c2-saved");
-	const withRoom = (await query("SELECT count(*)::int AS n FROM location l JOIN unit_type t ON t.id = l.unit_type_id JOIN room r ON r.location_id = l.id WHERE t.project_id = $1 AND t.name = 'Tipologia A' AND r.name = 'Despensa' AND r.unit_type_room_id IS NOT NULL", [jardins]))[0].n;
+	const withRoom = (await query("SELECT count(*)::int AS n FROM location l JOIN typology t ON t.id = l.typology_id JOIN room r ON r.location_id = l.id WHERE t.project_id = $1 AND t.name = 'Tipologia A' AND r.name = 'Despensa' AND r.typology_room_id IS NOT NULL", [jardins]))[0].n;
 	expect(withRoom).toBe(unitsA);
 
 	await menu("Duplex", "Renomear");

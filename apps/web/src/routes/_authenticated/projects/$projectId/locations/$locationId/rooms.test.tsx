@@ -4,7 +4,7 @@ import {
 	PROJECT_DELIVERED,
 	type ProjectSummary,
 	ROOM_NAME_TAKEN,
-	type UnitTypeList,
+	type TypologyList,
 } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -35,7 +35,7 @@ const OBRA: ProjectSummary = { ...project(3), name: "Casa Moinhos" };
 
 const ninth = floor(
 	"9º andar",
-	[{ name: "903", unitType: "Tipologia A" }, "904"],
+	[{ name: "903", typology: "Tipologia A" }, "904"],
 	["Hall"],
 );
 const towerA = tower("Torre A", [ninth], ["Salão de festas"]);
@@ -69,12 +69,12 @@ type Answer = (write: Write) => Promise<Response> | undefined;
 function locationApi({
 	details = {},
 	summary = OBRA,
-	unitTypes,
+	typologies,
 	answer,
 }: {
 	details?: Record<string, Partial<LocationDetail>>;
 	summary?: ProjectSummary;
-	unitTypes?: UnitTypeList;
+	typologies?: TypologyList;
 	answer?: Answer;
 } = {}) {
 	const writes: Write[] = [];
@@ -91,8 +91,8 @@ function locationApi({
 				writes.push(write);
 				return answer?.(write);
 			}
-			if (url.pathname === `${base}/unit-types` && unitTypes) {
-				return json(unitTypes);
+			if (url.pathname === `${base}/typologies` && typologies) {
+				return json(typologies);
 			}
 			if (url.pathname === base) return json(summary);
 			return undefined;
@@ -102,15 +102,15 @@ function locationApi({
 	return { handler, writes };
 }
 
-const UNIT_TYPES: UnitTypeList = {
-	unitTypes: [
+const TYPOLOGIES: TypologyList = {
+	typologies: [
 		{
-			id: nth(unit903.unitType ? [unit903.unitType] : [], 0).id,
+			id: nth(unit903.typology ? [unit903.typology] : [], 0).id,
 			name: "Tipologia A",
 			rooms: [
-				{ id: sala.unitTypeRoomId ?? "", name: "Sala" },
-				{ id: cozinha.unitTypeRoomId ?? "", name: "Cozinha" },
-				{ id: sacada.unitTypeRoomId ?? "", name: "Sacada" },
+				{ id: sala.typologyRoomId ?? "", name: "Sala" },
+				{ id: cozinha.typologyRoomId ?? "", name: "Cozinha" },
+				{ id: sacada.typologyRoomId ?? "", name: "Sacada" },
 			],
 			unitCount: 2,
 			changedUnitCount: 0,
@@ -341,7 +341,7 @@ describe("adding a room (U3)", () => {
 });
 
 describe("renaming a room", () => {
-	test("renames a room of the unit type only in this unit, and says so (G3)", async () => {
+	test("renames a room of the typology only in this unit, and says so (G3)", async () => {
 		const renamed = { ...sala, name: "Sala de estar", renamed: true };
 		const { handler, writes } = locationApi({
 			details: { [unit903.id]: { rooms: [sala, cozinha] } },
@@ -445,7 +445,7 @@ describe("renaming a room", () => {
 });
 
 describe("removing a room", () => {
-	test("takes a room of the unit type out of this unit and lists it under Tirados desta unidade", async () => {
+	test("takes a room of the typology out of this unit and lists it under Tirados desta unidade", async () => {
 		const { handler, writes } = locationApi({
 			details: { [unit903.id]: { rooms: [sala, cozinha, sacada] } },
 			answer: () =>
@@ -582,7 +582,7 @@ describe("giving a room back", () => {
 		expect(writes).toEqual([
 			{
 				method: "DELETE",
-				path: `/locations/${unit903.id}/dropped-rooms/${sacadaTaken.unitTypeRoomId}`,
+				path: `/locations/${unit903.id}/dropped-rooms/${sacadaTaken.typologyRoomId}`,
 				body: null,
 			},
 		]);
@@ -619,8 +619,8 @@ describe("trocar tipologia (U4)", () => {
 		});
 	}
 
-	test("lists the unit types with their rooms and Sem tipologia, the current one chosen", async () => {
-		const { handler } = locationApi({ unitTypes: UNIT_TYPES });
+	test("lists the typologies with their rooms and Sem tipologia, the current one chosen", async () => {
+		const { handler } = locationApi({ typologies: TYPOLOGIES });
 		await openUnit(handler);
 
 		const dialog = await openTypeDialog();
@@ -640,15 +640,15 @@ describe("trocar tipologia (U4)", () => {
 		).toBeDisabled();
 	});
 
-	test("starts the unit over on the chosen unit type", async () => {
-		const typeB = nth(UNIT_TYPES.unitTypes, 1);
+	test("starts the unit over on the chosen typology", async () => {
+		const typeB = nth(TYPOLOGIES.typologies, 1);
 		const suite = room("Suíte", { fromType: true });
 		const { handler, writes } = locationApi({
-			unitTypes: UNIT_TYPES,
+			typologies: TYPOLOGIES,
 			answer: () =>
 				json(
 					unitDetail({
-						unitType: { id: typeB.id, name: typeB.name },
+						typology: { id: typeB.id, name: typeB.name },
 						rooms: [suite],
 						changes: 0,
 					}),
@@ -670,8 +670,8 @@ describe("trocar tipologia (U4)", () => {
 		expect(writes).toEqual([
 			{
 				method: "PUT",
-				path: `/locations/${unit903.id}/unit-type`,
-				body: { unitTypeId: typeB.id },
+				path: `/locations/${unit903.id}/typology`,
+				body: { typologyId: typeB.id },
 			},
 		]);
 		expect(
@@ -682,13 +682,13 @@ describe("trocar tipologia (U4)", () => {
 		expect(roomNames()).toEqual(["Suíte", "Adicionar cômodo"]);
 	});
 
-	test("leaves the unit without a unit type, keeping the rooms as its own (G4)", async () => {
+	test("leaves the unit without a typology, keeping the rooms as its own (G4)", async () => {
 		const { handler, writes } = locationApi({
-			unitTypes: UNIT_TYPES,
+			typologies: TYPOLOGIES,
 			answer: () =>
 				json(
 					unitDetail({
-						unitType: null,
+						typology: null,
 						rooms: [room("Sala"), room("Cozinha")],
 						changes: 0,
 					}),
@@ -707,19 +707,19 @@ describe("trocar tipologia (U4)", () => {
 		expect(
 			await screen.findByText("Os cômodos desta unidade são só dela."),
 		).toBeInTheDocument();
-		expect(writes[0]?.body).toEqual({ unitTypeId: null });
+		expect(writes[0]?.body).toEqual({ typologyId: null });
 		expect(
 			screen.getByText("A unidade 903 ficou sem tipologia."),
 		).toBeInTheDocument();
 	});
 
-	test("says the unit types could not load and offers to try again", async () => {
+	test("says the typologies could not load and offers to try again", async () => {
 		let attempts = 0;
-		const base = locationApi({ unitTypes: UNIT_TYPES });
+		const base = locationApi({ typologies: TYPOLOGIES });
 		const handler: ApiHandler = (url, init) => {
-			if (url.pathname === `/api/projects/${OBRA.id}/unit-types`) {
+			if (url.pathname === `/api/projects/${OBRA.id}/typologies`) {
 				attempts += 1;
-				return attempts < 5 ? problem(500, "INTERNAL_ERROR") : json(UNIT_TYPES);
+				return attempts < 5 ? problem(500, "INTERNAL_ERROR") : json(TYPOLOGIES);
 			}
 			return base.handler(url, init);
 		};
@@ -776,13 +776,13 @@ describe("voltar à tipologia", () => {
 		expect(writes).toEqual([
 			{
 				method: "POST",
-				path: `/locations/${unit903.id}/unit-type/reset`,
+				path: `/locations/${unit903.id}/typology/reset`,
 				body: null,
 			},
 		]);
 	});
 
-	test("is not offered to a unit on its unit type with no changes", async () => {
+	test("is not offered to a unit on its typology with no changes", async () => {
 		const { handler } = locationApi();
 		await openUnit(handler);
 
@@ -794,7 +794,7 @@ describe("voltar à tipologia", () => {
 		).not.toBeInTheDocument();
 	});
 
-	test("is not offered to a unit without a unit type", async () => {
+	test("is not offered to a unit without a typology", async () => {
 		const { handler } = locationApi();
 		stubApi(signedIn, { api: handler });
 		renderAt(`/projects/${OBRA.id}/locations/${unit904.id}`);

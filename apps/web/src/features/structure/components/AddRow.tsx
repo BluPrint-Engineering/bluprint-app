@@ -99,7 +99,7 @@ function AddForm({
 		if (found) return setProblem(found);
 		create.mutate(
 			{
-				unitTypes: [],
+				typologies: [],
 				locations: [{ id: id.current, parentId, type, name: name.trim() }],
 			},
 			{ onSuccess: adding.close },

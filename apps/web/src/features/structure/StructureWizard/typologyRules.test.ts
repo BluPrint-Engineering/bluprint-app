@@ -2,8 +2,8 @@ import {
 	parseFinals,
 	parseFloorBound,
 	type RuleDraft,
-	unitTypeKeyFor,
-} from "./unitTypeRules";
+	typologyKeyFor,
+} from "./typologyRules";
 
 const rule = (rest: Partial<RuleDraft> = {}): RuleDraft => ({
 	key: "rule",
@@ -11,7 +11,7 @@ const rule = (rest: Partial<RuleDraft> = {}): RuleDraft => ({
 	finals: "todos",
 	from: "",
 	to: "",
-	unitType: "a",
+	typology: "a",
 	...rest,
 });
 
@@ -50,30 +50,30 @@ describe("parseFloorBound", () => {
 	});
 });
 
-describe("unitTypeKeyFor", () => {
+describe("typologyKeyFor", () => {
 	test("returns null without rules", () => {
-		expect(unitTypeKeyFor([], 0, 1, 1)).toBeNull();
+		expect(typologyKeyFor([], 0, 1, 1)).toBeNull();
 	});
 
-	test("takes the unit type of the first rule that reaches the tower, floor and stack", () => {
+	test("takes the typology of the first rule that reaches the tower, floor and stack", () => {
 		const rules = [
-			rule({ unitType: "odd", finals: "1, 3", from: "1", to: "11" }),
-			rule({ unitType: "even", finals: "2, 4", from: "1", to: "11" }),
-			rule({ unitType: "top", from: "12", to: "12" }),
+			rule({ typology: "odd", finals: "1, 3", from: "1", to: "11" }),
+			rule({ typology: "even", finals: "2, 4", from: "1", to: "11" }),
+			rule({ typology: "top", from: "12", to: "12" }),
 		];
 
-		expect(unitTypeKeyFor(rules, 0, 5, 1)).toBe("odd");
-		expect(unitTypeKeyFor(rules, 0, 5, 4)).toBe("even");
-		expect(unitTypeKeyFor(rules, 0, 12, 3)).toBe("top");
-		expect(unitTypeKeyFor(rules, 0, 13, 1)).toBeNull();
-		expect(unitTypeKeyFor(rules, 1, 5, 1)).toBeNull();
+		expect(typologyKeyFor(rules, 0, 5, 1)).toBe("odd");
+		expect(typologyKeyFor(rules, 0, 5, 4)).toBe("even");
+		expect(typologyKeyFor(rules, 0, 12, 3)).toBe("top");
+		expect(typologyKeyFor(rules, 0, 13, 1)).toBeNull();
+		expect(typologyKeyFor(rules, 1, 5, 1)).toBeNull();
 	});
 
 	test("includes both ends of the floor range", () => {
 		const rules = [rule({ from: "3", to: "5" })];
 
 		expect(
-			[2, 3, 5, 6].map((floor) => unitTypeKeyFor(rules, 0, floor, 1)),
+			[2, 3, 5, 6].map((floor) => typologyKeyFor(rules, 0, floor, 1)),
 		).toEqual([null, "a", "a", null]);
 	});
 });

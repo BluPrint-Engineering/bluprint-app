@@ -247,7 +247,7 @@ describe("PATCH /api/projects/:id/locations/:locationId", () => {
 		expect(structure.commonAreas[0]!.name).toBe("Portaria");
 	});
 
-	it("keeps the order, the unit type and the children of what it renames", async () => {
+	it("keeps the order, the typology and the children of what it renames", async () => {
 		const projectId = await newProject(100);
 		const { a } = await twoTowers(projectId);
 		const before = await readStructure(projectId);

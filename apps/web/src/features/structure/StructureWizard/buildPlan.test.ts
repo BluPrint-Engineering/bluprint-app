@@ -261,7 +261,7 @@ describe("buildPlan", () => {
 		const again = buildPlan(draft, idFor);
 
 		expect(again.locations).toEqual(first.locations);
-		expect(again.unitTypes).toEqual(first.unitTypes);
+		expect(again.typologies).toEqual(first.typologies);
 		expect(new Set(first.locations.map((location) => location.id)).size).toBe(
 			first.locations.length,
 		);
@@ -275,27 +275,27 @@ const typeOf = (key: string, name: string, rooms: string[] = []) => ({
 });
 
 const ruleOf = (
-	unitType: string,
+	typology: string,
 	rest: Partial<WizardDraft["rules"][number]> = {},
 ) => ({
-	key: `rule-${unitType}-${Math.random()}`,
+	key: `rule-${typology}-${Math.random()}`,
 	tower: 0,
 	finals: "todos",
 	from: "",
 	to: "",
-	unitType,
+	typology,
 	...rest,
 });
 
 const typesOfUnits = (plan: ReturnType<typeof buildPlan>) =>
 	plan.towers.flatMap((tower) =>
 		tower.floors.flatMap((floor) =>
-			floor.units.map((unit) => `${unit.name}:${unit.unitType ?? "-"}`),
+			floor.units.map((unit) => `${unit.name}:${unit.typology ?? "-"}`),
 		),
 	);
 
-describe("buildPlan unit types", () => {
-	test("applies the starting unit type to every unit of every floor", () => {
+describe("buildPlan typologies", () => {
+	test("applies the starting typology to every unit of every floor", () => {
 		const plan = buildPlan(draftOf([{ last: "2", perFloor: "2" }]), identity);
 
 		expect(typesOfUnits(plan)).toEqual([
@@ -305,20 +305,20 @@ describe("buildPlan unit types", () => {
 			"202:Tipologia A",
 		]);
 		expect(plan.untyped).toBe(0);
-		expect(plan.unitTypeCounts).toEqual([
+		expect(plan.typologyCounts).toEqual([
 			expect.objectContaining({ name: "Tipologia A", units: 4 }),
 		]);
-		const [type] = plan.unitTypes;
+		const [type] = plan.typologies;
 		expect(plan.locations.filter((l) => l.type === "unit")).toSatisfy(
 			(units: typeof plan.locations) =>
-				units.every((unit) => unit.unitTypeId === type?.id),
+				units.every((unit) => unit.typologyId === type?.id),
 		);
 	});
 
-	test("gives odd and even stacks their own unit type", () => {
+	test("gives odd and even stacks their own typology", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "2", perFloor: "4" }], {
-				unitTypes: [typeOf("a", "A"), typeOf("b", "B")],
+				typologies: [typeOf("a", "A"), typeOf("b", "B")],
 				rules: [
 					ruleOf("a", { finals: "01, 03" }),
 					ruleOf("b", { finals: "02, 04" }),
@@ -337,7 +337,7 @@ describe("buildPlan unit types", () => {
 			"203:A",
 			"204:B",
 		]);
-		expect(plan.unitTypeCounts.map(({ name, units }) => [name, units])).toEqual(
+		expect(plan.typologyCounts.map(({ name, units }) => [name, units])).toEqual(
 			[
 				["A", 4],
 				["B", 4],
@@ -345,10 +345,10 @@ describe("buildPlan unit types", () => {
 		);
 	});
 
-	test("applies a rule only inside its floor range and leaves the rest without a unit type", () => {
+	test("applies a rule only inside its floor range and leaves the rest without a typology", () => {
 		const plan = buildPlan(
 			draftOf([{ first: "1", last: "4", perFloor: "1" }], {
-				unitTypes: [typeOf("a", "A")],
+				typologies: [typeOf("a", "A")],
 				rules: [ruleOf("a", { from: "2", to: "3" })],
 			}),
 			identity,
@@ -357,14 +357,14 @@ describe("buildPlan unit types", () => {
 		expect(typesOfUnits(plan)).toEqual(["101:-", "201:A", "301:A", "401:-"]);
 		expect(plan.untyped).toBe(2);
 		expect(
-			plan.locations.filter((l) => l.type === "unit").map((l) => l.unitTypeId),
-		).toEqual([undefined, "unit-type:a", "unit-type:a", undefined]);
+			plan.locations.filter((l) => l.type === "unit").map((l) => l.typologyId),
+		).toEqual([undefined, "typology:a", "typology:a", undefined]);
 	});
 
 	test("reads a blank bound as open and a floor past the last as covered by an open end", () => {
 		const plan = buildPlan(
 			draftOf([{ first: "1", last: "3", perFloor: "1" }], {
-				unitTypes: [typeOf("a", "A"), typeOf("c", "Cobertura")],
+				typologies: [typeOf("a", "A"), typeOf("c", "Cobertura")],
 				rules: [ruleOf("c", { from: "3" }), ruleOf("a", { to: "2" })],
 			}),
 			identity,
@@ -376,7 +376,7 @@ describe("buildPlan unit types", () => {
 	test("lets the first rule that matches win", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", perFloor: "2" }], {
-				unitTypes: [typeOf("a", "A"), typeOf("b", "B")],
+				typologies: [typeOf("a", "A"), typeOf("b", "B")],
 				rules: [ruleOf("b", { finals: "2" }), ruleOf("a")],
 			}),
 			identity,
@@ -393,7 +393,7 @@ describe("buildPlan unit types", () => {
 					{ last: "1", perFloor: "1" },
 				],
 				{
-					unitTypes: [typeOf("a", "A"), typeOf("b", "B")],
+					typologies: [typeOf("a", "A"), typeOf("b", "B")],
 					rules: [ruleOf("a", { tower: 0 }), ruleOf("b", { tower: 1 })],
 				},
 			),
@@ -403,10 +403,10 @@ describe("buildPlan unit types", () => {
 		expect(typesOfUnits(plan)).toEqual(["101:A", "101:B"]);
 	});
 
-	test("leaves a unit without a unit type when no rule reaches its stack", () => {
+	test("leaves a unit without a typology when no rule reaches its stack", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", perFloor: "3" }], {
-				unitTypes: [typeOf("a", "A")],
+				typologies: [typeOf("a", "A")],
 				rules: [ruleOf("a", { finals: "1" })],
 			}),
 			identity,
@@ -414,13 +414,13 @@ describe("buildPlan unit types", () => {
 
 		expect(typesOfUnits(plan)).toEqual(["101:A", "102:-", "103:-"]);
 		expect(plan.untyped).toBe(2);
-		expect(plan.unitTypeCounts).toHaveLength(1);
+		expect(plan.typologyCounts).toHaveLength(1);
 	});
 
 	test("ignores a rule whose finals cannot be read", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", perFloor: "1" }], {
-				unitTypes: [typeOf("a", "A")],
+				typologies: [typeOf("a", "A")],
 				rules: [ruleOf("a", { finals: "um" })],
 			}),
 			identity,
@@ -429,10 +429,10 @@ describe("buildPlan unit types", () => {
 		expect(plan.untyped).toBe(1);
 	});
 
-	test("sends every unit type with its rooms in order, including one no unit uses", () => {
+	test("sends every typology with its rooms in order, including one no unit uses", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", perFloor: "1" }], {
-				unitTypes: [
+				typologies: [
 					typeOf("a", " Tipologia  A ", ["Sala", "Cozinha"]),
 					typeOf("b", "Cobertura", ["Terraço"]),
 				],
@@ -441,30 +441,30 @@ describe("buildPlan unit types", () => {
 			identity,
 		);
 
-		expect(plan.unitTypes).toEqual([
+		expect(plan.typologies).toEqual([
 			{
-				id: "unit-type:a",
+				id: "typology:a",
 				name: "Tipologia A",
 				rooms: [
-					{ id: "unit-type:a:room:0", name: "Sala" },
-					{ id: "unit-type:a:room:1", name: "Cozinha" },
+					{ id: "typology:a:room:0", name: "Sala" },
+					{ id: "typology:a:room:1", name: "Cozinha" },
 				],
 			},
 			{
-				id: "unit-type:b",
+				id: "typology:b",
 				name: "Cobertura",
-				rooms: [{ id: "unit-type:b:room:0", name: "Terraço" }],
+				rooms: [{ id: "typology:b:room:0", name: "Terraço" }],
 			},
 		]);
-		expect(plan.unitTypeCounts.map(({ name }) => name)).toEqual([
+		expect(plan.typologyCounts.map(({ name }) => name)).toEqual([
 			"Tipologia A",
 		]);
 	});
 
-	test("leaves a unit without a unit type when its rule points at a unit type that is gone", () => {
+	test("leaves a unit without a typology when its rule points at a typology that is gone", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", perFloor: "1" }], {
-				unitTypes: [],
+				typologies: [],
 				rules: [ruleOf("gone")],
 			}),
 			identity,
@@ -473,7 +473,7 @@ describe("buildPlan unit types", () => {
 		expect(typesOfUnits(plan)).toEqual(["101:-"]);
 	});
 
-	test("keeps the ground floor and the halls without a unit type", () => {
+	test("keeps the ground floor and the halls without a typology", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", perFloor: "1", ground: true, hall: true }]),
 			identity,
@@ -483,7 +483,7 @@ describe("buildPlan unit types", () => {
 		expect(
 			plan.locations
 				.filter((l) => l.type !== "unit")
-				.every((location) => location.unitTypeId === undefined),
+				.every((location) => location.typologyId === undefined),
 		).toBe(true);
 	});
 });

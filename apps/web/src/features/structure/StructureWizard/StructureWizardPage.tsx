@@ -1,4 +1,4 @@
-import type { ProjectSummary, Structure, UnitTypeList } from "@bluprint/shared";
+import type { ProjectSummary, Structure, TypologyList } from "@bluprint/shared";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { Navigate } from "@tanstack/react-router";
 import { LoadFailure } from "@/components/LoadFailure";
@@ -12,7 +12,7 @@ import {
 	isProjectNotFound,
 	projectQueryOptions,
 } from "../../projects/api";
-import { structureQueryOptions, unitTypesQueryOptions } from "../api";
+import { structureQueryOptions, typologiesQueryOptions } from "../api";
 import { STRUCTURE_LOCKED } from "../lockedText";
 import { StructureWizard } from "./StructureWizard";
 import { towerNowLine } from "./towerNow";
@@ -35,8 +35,8 @@ export function StructureWizardPage({
 		...structureQueryOptions(projectId),
 		enabled: extending,
 	});
-	const unitTypes = useQuery({
-		...unitTypesQueryOptions(projectId),
+	const typologies = useQuery({
+		...typologiesQueryOptions(projectId),
 		enabled: extending,
 	});
 
@@ -59,7 +59,7 @@ export function StructureWizardPage({
 			<AddFloorsPage
 				project={query.data}
 				towerId={towerId}
-				queries={[structure, unitTypes]}
+				queries={[structure, typologies]}
 			/>
 		);
 	}
@@ -131,20 +131,20 @@ export function StructureWizardPage({
 function AddFloorsPage({
 	project,
 	towerId,
-	queries: [structure, unitTypes],
+	queries: [structure, typologies],
 }: {
 	project: ProjectSummary;
 	towerId: string;
 	queries: [
 		UseQueryResult<Structure, unknown>,
-		UseQueryResult<UnitTypeList, unknown>,
+		UseQueryResult<TypologyList, unknown>,
 	];
 }) {
 	const delivered = project.status === "delivered";
 	const tower = structure.data?.towers.find(({ id }) => id === towerId);
 	const named = (structure.data?.towers.length ?? 0) > 1;
 
-	if (structure.data && unitTypes.data && tower) {
+	if (structure.data && typologies.data && tower) {
 		return (
 			<>
 				<PageBand>
@@ -179,7 +179,7 @@ function AddFloorsPage({
 					<PageMain>
 						<StructureWizard
 							project={project}
-							start={extendedDraft(tower, unitTypes.data.unitTypes, named)}
+							start={extendedDraft(tower, typologies.data.typologies, named)}
 						/>
 					</PageMain>
 				)}
@@ -187,7 +187,7 @@ function AddFloorsPage({
 		);
 	}
 
-	const waiting = [structure, unitTypes].filter(({ data }) => !data);
+	const waiting = [structure, typologies].filter(({ data }) => !data);
 	const failed = waiting.find((query) => firstLoadState(query) === "failed");
 	const offline = waiting.some((query) => firstLoadState(query) === "offline");
 	return (

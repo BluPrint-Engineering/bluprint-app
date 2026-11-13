@@ -6,12 +6,12 @@ import {
 	nextTowerName,
 	parseTower,
 	ruleFieldId,
-	unitTypeFieldId,
+	typologyFieldId,
 	validateDraft,
 	type WizardDraft,
 	withNewRule,
-	withNewUnitType,
-	withoutUnitType,
+	withNewTypology,
+	withoutTypology,
 	withTowerCount,
 } from "./wizardDraft";
 
@@ -302,11 +302,11 @@ describe("firstInvalidField", () => {
 	});
 });
 
-describe("unit types in the draft", () => {
-	test("starts with one unit type applied to every final and floor of the first tower", () => {
+describe("typologies in the draft", () => {
+	test("starts with one typology applied to every final and floor of the first tower", () => {
 		const draft = initialDraft();
 
-		expect(draft.unitTypes).toEqual([
+		expect(draft.typologies).toEqual([
 			expect.objectContaining({ name: "Tipologia A", rooms: [] }),
 		]);
 		expect(draft.rules).toEqual([
@@ -315,7 +315,7 @@ describe("unit types in the draft", () => {
 				finals: "todos",
 				from: "",
 				to: "",
-				unitType: draft.unitTypes[0]?.key,
+				typology: draft.typologies[0]?.key,
 			}),
 		]);
 	});
@@ -328,7 +328,7 @@ describe("unit types in the draft", () => {
 		expect(three.rules.map((rule) => rule.tower)).toEqual([0, 1, 2]);
 		expect(new Set(three.rules.map((rule) => rule.key)).size).toBe(3);
 		expect(
-			three.rules.every((rule) => rule.unitType === draft.rules[0]?.unitType),
+			three.rules.every((rule) => rule.typology === draft.rules[0]?.typology),
 		).toBe(true);
 		expect(withTowerCount(three, 2).rules.map((rule) => rule.tower)).toEqual([
 			0, 1,
@@ -338,35 +338,35 @@ describe("unit types in the draft", () => {
 		]);
 	});
 
-	test("names a new unit type with the first free letter", () => {
-		const draft = withNewUnitType(withNewUnitType(initialDraft()));
+	test("names a new typology with the first free letter", () => {
+		const draft = withNewTypology(withNewTypology(initialDraft()));
 
-		expect(draft.unitTypes.map((unitType) => unitType.name)).toEqual([
+		expect(draft.typologies.map((typology) => typology.name)).toEqual([
 			"Tipologia A",
 			"Tipologia B",
 			"Tipologia C",
 		]);
 		expect(
-			withNewUnitType({
+			withNewTypology({
 				...draft,
-				unitTypes: draft.unitTypes.filter(
-					(unitType) => unitType.name !== "Tipologia B",
+				typologies: draft.typologies.filter(
+					(typology) => typology.name !== "Tipologia B",
 				),
-			}).unitTypes.map((unitType) => unitType.name),
+			}).typologies.map((typology) => typology.name),
 		).toEqual(["Tipologia A", "Tipologia C", "Tipologia B"]);
 	});
 
-	test("takes a unit type out together with the rules that point at it", () => {
-		const draft = withNewUnitType(initialDraft());
-		const [first, second] = draft.unitTypes;
+	test("takes a typology out together with the rules that point at it", () => {
+		const draft = withNewTypology(initialDraft());
+		const [first, second] = draft.typologies;
 
-		const only = withoutUnitType(draft, first?.key ?? "");
+		const only = withoutTypology(draft, first?.key ?? "");
 
-		expect(only.unitTypes).toEqual([second]);
+		expect(only.typologies).toEqual([second]);
 		expect(only.rules).toEqual([]);
 	});
 
-	test("adds a rule for every final and floor of the first tower with the first unit type", () => {
+	test("adds a rule for every final and floor of the first tower with the first typology", () => {
 		const draft = withNewRule(initialDraft());
 
 		expect(draft.rules).toHaveLength(2);
@@ -374,18 +374,18 @@ describe("unit types in the draft", () => {
 			expect.objectContaining({
 				tower: 0,
 				finals: "todos",
-				unitType: draft.unitTypes[0]?.key,
+				typology: draft.typologies[0]?.key,
 			}),
 		);
-		expect(withNewRule({ ...draft, unitTypes: [] }).rules).toHaveLength(2);
+		expect(withNewRule({ ...draft, typologies: [] }).rules).toHaveLength(2);
 	});
 
-	test("asks for a unit type's name and refuses one that repeats an earlier name", () => {
-		const draft = withNewUnitType(withNewUnitType(initialDraft()));
-		const [first, second, third] = draft.unitTypes;
+	test("asks for a typology's name and refuses one that repeats an earlier name", () => {
+		const draft = withNewTypology(withNewTypology(initialDraft()));
+		const [first, second, third] = draft.typologies;
 		const named = {
 			...draft,
-			unitTypes: [
+			typologies: [
 				first,
 				{ ...second, name: "  " },
 				{ ...third, name: " tipologia   a " },
@@ -394,13 +394,13 @@ describe("unit types in the draft", () => {
 
 		const errors = validateDraft(named);
 
-		expect(errors[unitTypeFieldId(second?.key ?? "")]).toBe(
+		expect(errors[typologyFieldId(second?.key ?? "")]).toBe(
 			"Informe o nome da tipologia.",
 		);
-		expect(errors[unitTypeFieldId(third?.key ?? "")]).toBe(
+		expect(errors[typologyFieldId(third?.key ?? "")]).toBe(
 			"Já existe outra tipologia com esse nome.",
 		);
-		expect(errors[unitTypeFieldId(first?.key ?? "")]).toBeUndefined();
+		expect(errors[typologyFieldId(first?.key ?? "")]).toBeUndefined();
 	});
 
 	test("refuses finals that are not numbers and a last floor below the first", () => {
@@ -423,7 +423,7 @@ describe("unit types in the draft", () => {
 		expect(errors[ruleFieldId(rule?.key ?? "", "from")]).toBeUndefined();
 	});
 
-	test("points firstInvalidField at the unit types section after the towers and areas", () => {
+	test("points firstInvalidField at the typologies section after the towers and areas", () => {
 		const draft = withNewRule(initialDraft());
 		const rule = draft.rules[1];
 		const bad = {
@@ -465,12 +465,12 @@ describe("a draft restored after the tab reloaded", () => {
 		const restored = reloaded.readWizardDraft(stored);
 		if (!restored) throw new Error("the stored draft did not read back");
 		const grown = reloaded.withTowerCount(
-			reloaded.withNewRule(reloaded.withNewUnitType(restored)),
+			reloaded.withNewRule(reloaded.withNewTypology(restored)),
 			restored.towers.length + 1,
 		);
 
 		expect(unique(grown.towers)).toBe(true);
-		expect(unique(grown.unitTypes)).toBe(true);
+		expect(unique(grown.typologies)).toBe(true);
 		expect(unique(grown.rules)).toBe(true);
 	});
 });

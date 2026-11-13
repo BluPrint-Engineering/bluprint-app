@@ -130,7 +130,7 @@ function unitsOf(structure: SeedStructure): SeedUnitRef[] {
 }
 
 function typedStructures() {
-	return seededStructures().filter(([, structure]) => structure.unitTypes);
+	return seededStructures().filter(([, structure]) => structure.typologies);
 }
 
 function jardins(): SeedStructure {
@@ -143,14 +143,14 @@ function jardins(): SeedStructure {
 	return found[1];
 }
 
-describe("the seeded unit types", () => {
+describe("the seeded typologies", () => {
 	test.each(typedStructures())(
-		"%s gives every unit a unit type it defines",
+		"%s gives every unit a typology it defines",
 		(_project, structure) => {
-			const defined = new Set(structure.unitTypes?.map((type) => type.name));
+			const defined = new Set(structure.typologies?.map((type) => type.name));
 
 			const unknown = unitsOf(structure)
-				.map((unit) => structure.unitTypeOf?.(unit))
+				.map((unit) => structure.typologyOf?.(unit))
 				.filter((name) => name !== undefined && !defined.has(name));
 
 			expect(unknown).toEqual([]);
@@ -158,9 +158,9 @@ describe("the seeded unit types", () => {
 	);
 
 	test.each(typedStructures())(
-		"%s repeats no room name in a unit type or in a common area",
+		"%s repeats no room name in a typology or in a common area",
 		(_project, structure) => {
-			for (const type of structure.unitTypes ?? []) {
+			for (const type of structure.typologies ?? []) {
 				expect(duplicates(type.rooms)).toEqual([]);
 			}
 			for (const rooms of Object.values(structure.commonAreaRooms ?? {})) {
@@ -173,7 +173,7 @@ describe("the seeded unit types", () => {
 		"%s keeps every room name within 60 characters",
 		(_project, structure) => {
 			const names = [
-				...(structure.unitTypes ?? []).flatMap((type) => [
+				...(structure.typologies ?? []).flatMap((type) => [
 					type.name,
 					...type.rooms,
 				]),
@@ -189,7 +189,7 @@ describe("the seeded unit types", () => {
 	test("Residencial Jardins has A, B and Cobertura applied, and a type no unit follows", () => {
 		const structure = jardins();
 		const used = new Set(
-			unitsOf(structure).map((unit) => structure.unitTypeOf?.(unit)),
+			unitsOf(structure).map((unit) => structure.typologyOf?.(unit)),
 		);
 
 		expect(
@@ -198,7 +198,7 @@ describe("the seeded unit types", () => {
 			),
 		).toBe(true);
 		expect(
-			structure.unitTypes?.filter((type) => !used.has(type.name)),
+			structure.typologies?.filter((type) => !used.has(type.name)),
 		).toHaveLength(1);
 	});
 
@@ -208,7 +208,7 @@ describe("the seeded unit types", () => {
 			(unit) => unit.tower === "Torre A" && unit.floor === "9º andar",
 		);
 
-		expect(ninth.map((unit) => structure.unitTypeOf?.(unit))).toEqual([
+		expect(ninth.map((unit) => structure.typologyOf?.(unit))).toEqual([
 			"Tipologia A",
 			"Tipologia B",
 			"Tipologia A",
@@ -216,11 +216,11 @@ describe("the seeded unit types", () => {
 		]);
 	});
 
-	test("Residencial Jardins has a unit without a unit type", () => {
+	test("Residencial Jardins has a unit without a typology", () => {
 		const structure = jardins();
 
 		expect(
-			unitsOf(structure).filter((unit) => !structure.unitTypeOf?.(unit)),
+			unitsOf(structure).filter((unit) => !structure.typologyOf?.(unit)),
 		).toHaveLength(1);
 	});
 
@@ -233,15 +233,15 @@ describe("the seeded unit types", () => {
 		expect(changes.some((change) => change.renamedRooms)).toBe(true);
 	});
 
-	test("every change names a unit that exists, and the rooms it drops or renames belong to its unit type", () => {
+	test("every change names a unit that exists, and the rooms it drops or renames belong to its typology", () => {
 		for (const [, structure] of seededStructures()) {
 			for (const change of structure.unitChanges ?? []) {
 				const unit = unitsOf(structure).find(
 					(candidate) =>
 						candidate.tower === change.tower && candidate.name === change.unit,
 				);
-				const type = structure.unitTypes?.find(
-					(candidate) => candidate.name === structure.unitTypeOf?.(unit!),
+				const type = structure.typologies?.find(
+					(candidate) => candidate.name === structure.typologyOf?.(unit!),
 				);
 
 				expect(unit).toBeDefined();

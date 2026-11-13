@@ -204,18 +204,18 @@ describe("project home", () => {
 		expect(screen.queryByText(LOCKED)).not.toBeInTheDocument();
 	});
 
-	test("lists the unit types each tower uses on its card, or says it has none (E2)", async () => {
+	test("lists the typologies each tower uses on its card, or says it has none (E2)", async () => {
 		const structure = structureOf([
 			tower("Torre A", [
 				floor("1º andar", [
-					{ name: "101", unitType: "Tipologia A" },
-					{ name: "102", unitType: "Tipologia B" },
+					{ name: "101", typology: "Tipologia A" },
+					{ name: "102", typology: "Tipologia B" },
 				]),
 				floor("2º andar", [
-					{ name: "201", unitType: "Tipologia A" },
-					{ name: "202", unitType: "Tipologia B" },
+					{ name: "201", typology: "Tipologia A" },
+					{ name: "202", typology: "Tipologia B" },
 				]),
-				floor("Cobertura", [{ name: "1301", unitType: "Cobertura" }]),
+				floor("Cobertura", [{ name: "1301", typology: "Cobertura" }]),
 			]),
 			tower("Torre B", numberedFloors(1, 2, 2)),
 		]);

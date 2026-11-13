@@ -1,10 +1,10 @@
 import {
 	type NewLocation,
-	type NewUnitType,
+	type NewTypology,
 	type StructureCounts,
 	tidyLocationName,
 } from "@bluprint/shared";
-import { unitTypeKeyFor } from "./unitTypeRules";
+import { typologyKeyFor } from "./typologyRules";
 import {
 	FLOOR_HALL,
 	type ParsedTower,
@@ -21,7 +21,7 @@ export interface PlanArea {
 
 export interface PlanUnit {
 	name: string;
-	unitType: string | null;
+	typology: string | null;
 }
 
 export interface PlanFloor {
@@ -38,18 +38,18 @@ export interface PlanTower {
 	valid: boolean;
 }
 
-export interface PlanUnitTypeCount {
+export interface PlanTypologyCount {
 	key: string;
 	name: string;
 	units: number;
 }
 
 export interface Plan {
-	unitTypes: NewUnitType[];
+	typologies: NewTypology[];
 	locations: NewLocation[];
 	counts: StructureCounts;
 	towers: PlanTower[];
-	unitTypeCounts: PlanUnitTypeCount[];
+	typologyCounts: PlanTypologyCount[];
 	untyped: number;
 }
 
@@ -69,7 +69,7 @@ export function buildPlan(
 		type: NewLocation["type"],
 		name: string,
 		position: number,
-		unitTypeKey: string | null = null,
+		typologyKey: string | null = null,
 	) => {
 		const id = idFor(key);
 		const appended =
@@ -80,20 +80,20 @@ export function buildPlan(
 			type,
 			name,
 			...(!appended && { position }),
-			...(unitTypeKey !== null && { unitTypeId: unitTypeIdOf(unitTypeKey) }),
+			...(typologyKey !== null && { typologyId: typologyIdOf(typologyKey) }),
 		});
 		return id;
 	};
 
-	const unitTypeNames = new Map(
-		draft.unitTypes.map(({ key, name }) => [key, tidyLocationName(name)]),
+	const typologyNames = new Map(
+		draft.typologies.map(({ key, name }) => [key, tidyLocationName(name)]),
 	);
 	const existingTypes = new Set(
-		draft.unitTypes.filter(({ existing }) => existing).map(({ key }) => key),
+		draft.typologies.filter(({ existing }) => existing).map(({ key }) => key),
 	);
-	const unitTypeIdKey = (key: string) => `unit-type:${key}`;
-	const unitTypeIdOf = (key: string) =>
-		existingTypes.has(key) ? key : idFor(unitTypeIdKey(key));
+	const typologyIdKey = (key: string) => `typology:${key}`;
+	const typologyIdOf = (key: string) =>
+		existingTypes.has(key) ? key : idFor(typologyIdKey(key));
 	const typedUnits = new Map<string, number>();
 	let untyped = 0;
 
@@ -148,14 +148,14 @@ export function buildPlan(
 			const units: PlanUnit[] = [];
 			for (let at = 0; at < parsed.perFloor; at++) {
 				const name = unitName(number, at, draft.numbering);
-				const ruled = unitTypeKeyFor(draft.rules, towerIndex, number, at + 1);
+				const ruled = typologyKeyFor(draft.rules, towerIndex, number, at + 1);
 				const typeKey =
-					ruled !== null && unitTypeNames.has(ruled) ? ruled : null;
+					ruled !== null && typologyNames.has(ruled) ? ruled : null;
 				add(`${floorKey}:unit:${at}`, floorId, "unit", name, at, typeKey);
 				units.push({
 					name,
-					unitType:
-						typeKey === null ? null : (unitTypeNames.get(typeKey) ?? null),
+					typology:
+						typeKey === null ? null : (typologyNames.get(typeKey) ?? null),
 				});
 				if (typeKey === null) untyped++;
 				else typedUnits.set(typeKey, (typedUnits.get(typeKey) ?? 0) + 1);
@@ -211,21 +211,21 @@ export function buildPlan(
 		locations.filter((location) => location.type === type).length;
 
 	return {
-		unitTypes: draft.unitTypes
+		typologies: draft.typologies
 			.filter(({ existing }) => !existing)
 			.map(({ key, rooms }) => ({
-				id: unitTypeIdOf(key),
-				name: unitTypeNames.get(key) ?? "",
+				id: typologyIdOf(key),
+				name: typologyNames.get(key) ?? "",
 				rooms: rooms.map((name, at) => ({
-					id: idFor(`${unitTypeIdKey(key)}:room:${at}`),
+					id: idFor(`${typologyIdKey(key)}:room:${at}`),
 					name,
 				})),
 			})),
-		unitTypeCounts: draft.unitTypes
+		typologyCounts: draft.typologies
 			.filter(({ key }) => typedUnits.has(key))
 			.map(({ key }) => ({
 				key,
-				name: unitTypeNames.get(key) ?? "",
+				name: typologyNames.get(key) ?? "",
 				units: typedUnits.get(key) ?? 0,
 			})),
 		untyped,

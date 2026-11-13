@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { floor, numberedFloors, tower, unitTypeOf } from "@/test/structureApi";
+import { floor, numberedFloors, tower, typologyOf } from "@/test/structureApi";
 import { buildPlan } from "./buildPlan";
 import { describeTower, newFloorsLead, towerNowLine } from "./towerNow";
 import { extendedDraft, validateDraft } from "./wizardDraft";
@@ -126,22 +126,22 @@ describe("extendedDraft", () => {
 	});
 
 	test("keeps the project's tipologias and mirrors the finals of the last floor", () => {
-		const a = unitTypeOf("Tipologia A", ["Sala", "Quarto"]);
-		const b = unitTypeOf("Tipologia B", ["Sala"]);
+		const a = typologyOf("Tipologia A", ["Sala", "Quarto"]);
+		const b = typologyOf("Tipologia B", ["Sala"]);
 		const draft = extendedDraft(
 			tower("Torre B", [
 				floor("1º andar", [
-					{ name: "101", unitType: "Tipologia A" },
-					{ name: "102", unitType: "Tipologia B" },
-					{ name: "103", unitType: "Tipologia A" },
-					{ name: "104", unitType: "Tipologia B" },
+					{ name: "101", typology: "Tipologia A" },
+					{ name: "102", typology: "Tipologia B" },
+					{ name: "103", typology: "Tipologia A" },
+					{ name: "104", typology: "Tipologia B" },
 				]),
 			]),
 			[a, b],
 			true,
 		);
 
-		expect(draft.unitTypes).toEqual([
+		expect(draft.typologies).toEqual([
 			{
 				key: a.id,
 				name: "Tipologia A",
@@ -151,7 +151,7 @@ describe("extendedDraft", () => {
 			{ key: b.id, name: "Tipologia B", rooms: ["Sala"], existing: true },
 		]);
 		expect(
-			draft.rules.map(({ finals, unitType }) => [finals, unitType]),
+			draft.rules.map(({ finals, typology }) => [finals, typology]),
 		).toEqual([
 			["01, 03", a.id],
 			["02, 04", b.id],
@@ -159,25 +159,25 @@ describe("extendedDraft", () => {
 	});
 
 	test("types every unit with the one tipologia the last floor uses", () => {
-		const a = unitTypeOf("Tipologia A", []);
+		const a = typologyOf("Tipologia A", []);
 		const draft = extendedDraft(
 			tower("Torre B", [
 				floor("1º andar", [
-					{ name: "101", unitType: "Tipologia A" },
-					{ name: "102", unitType: "Tipologia A" },
+					{ name: "101", typology: "Tipologia A" },
+					{ name: "102", typology: "Tipologia A" },
 				]),
 			]),
 			[a],
 			true,
 		);
 
-		expect(draft.rules).toMatchObject([{ finals: "todos", unitType: a.id }]);
+		expect(draft.rules).toMatchObject([{ finals: "todos", typology: a.id }]);
 	});
 
 	test("leaves the new units without tipologia when the last floor has none", () => {
 		const draft = extendedDraft(
 			tower("Torre B", numberedFloors(1, 2, 2)),
-			[unitTypeOf("Tipologia A", [])],
+			[typologyOf("Tipologia A", [])],
 			true,
 		);
 
@@ -185,18 +185,20 @@ describe("extendedDraft", () => {
 	});
 
 	test("falls back to the first tipologia when the tower has no floor to mirror", () => {
-		const a = unitTypeOf("Tipologia A", []);
-		const b = unitTypeOf("Tipologia B", []);
+		const a = typologyOf("Tipologia A", []);
+		const b = typologyOf("Tipologia B", []);
 		const draft = extendedDraft(tower("Torre A"), [a, b], false);
 
-		expect(draft.rules).toMatchObject([{ finals: "todos", unitType: a.id }]);
+		expect(draft.rules).toMatchObject([{ finals: "todos", typology: a.id }]);
 	});
 
 	test("starts a new Tipologia A when the project has none", () => {
 		const draft = extendedDraft(tower("Torre A"), [], false);
 
-		expect(draft.unitTypes).toMatchObject([{ name: "Tipologia A", rooms: [] }]);
-		expect(draft.unitTypes[0]?.existing).toBeUndefined();
+		expect(draft.typologies).toMatchObject([
+			{ name: "Tipologia A", rooms: [] },
+		]);
+		expect(draft.typologies[0]?.existing).toBeUndefined();
 		expect(draft.rules).toHaveLength(1);
 	});
 
@@ -212,13 +214,13 @@ describe("extendedDraft", () => {
 });
 
 describe("buildPlan for added floors", () => {
-	const typed = (name: string) => ({ name, unitType: "Tipologia A" });
+	const typed = (name: string) => ({ name, typology: "Tipologia A" });
 	const existing = tower("Torre B", [
 		floor("1º andar", [typed("101"), typed("102")]),
 		floor("2º andar", [typed("201"), typed("202")]),
 		floor("Cobertura", ["301"]),
 	]);
-	const type = unitTypeOf("Tipologia A", ["Sala"]);
+	const type = typologyOf("Tipologia A", ["Sala"]);
 
 	function plan(
 		last: string,
@@ -249,11 +251,11 @@ describe("buildPlan for added floors", () => {
 		const { plan: built } = plan("3");
 
 		const units = built.locations.filter(({ type: kind }) => kind === "unit");
-		expect(units.map(({ name, unitTypeId }) => [name, unitTypeId])).toEqual([
+		expect(units.map(({ name, typologyId }) => [name, typologyId])).toEqual([
 			["301", type.id],
 			["302", type.id],
 		]);
-		expect(built.unitTypes).toEqual([]);
+		expect(built.typologies).toEqual([]);
 		expect(built.counts).toEqual({
 			towers: 0,
 			floors: 1,
@@ -264,7 +266,7 @@ describe("buildPlan for added floors", () => {
 
 	test("creates a tipologia that is new and refers to the existing one by its id", () => {
 		const { plan: built, draft } = plan("3", (each) => {
-			each.unitTypes.push({ key: "novo", name: "Cobertura", rooms: ["Sala"] });
+			each.typologies.push({ key: "novo", name: "Cobertura", rooms: ["Sala"] });
 			each.rules = [
 				{
 					key: "r1",
@@ -272,7 +274,7 @@ describe("buildPlan for added floors", () => {
 					finals: "01",
 					from: "",
 					to: "",
-					unitType: type.id,
+					typology: type.id,
 				},
 				{
 					key: "r2",
@@ -280,20 +282,20 @@ describe("buildPlan for added floors", () => {
 					finals: "02",
 					from: "",
 					to: "",
-					unitType: "novo",
+					typology: "novo",
 				},
 			];
 		});
 
-		expect(draft.unitTypes).toHaveLength(2);
-		expect(built.unitTypes.map(({ name }) => name)).toEqual(["Cobertura"]);
+		expect(draft.typologies).toHaveLength(2);
+		expect(built.typologies.map(({ name }) => name)).toEqual(["Cobertura"]);
 		const units = built.locations.filter(({ type: kind }) => kind === "unit");
-		expect(units.map(({ unitTypeId }) => unitTypeId)).toEqual([
+		expect(units.map(({ typologyId }) => typologyId)).toEqual([
 			type.id,
-			built.unitTypes[0]?.id,
+			built.typologies[0]?.id,
 		]);
 		expect(
-			built.unitTypeCounts.map(({ name, units: count }) => [name, count]),
+			built.typologyCounts.map(({ name, units: count }) => [name, count]),
 		).toEqual([
 			["Tipologia A", 1],
 			["Cobertura", 1],

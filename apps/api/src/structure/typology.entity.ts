@@ -15,8 +15,8 @@ import { project } from "../projects/project.entity";
 const nameIgnoringCaseAndSpacing = (name: unknown) =>
 	sql`lower(regexp_replace(btrim(${name}), '\\s+', ' ', 'g'))`;
 
-export const unitType = pgTable(
-	"unit_type",
+export const typology = pgTable(
+	"typology",
 	{
 		id: uuidV7PrimaryKey(),
 		projectId: uuid()
@@ -26,38 +26,38 @@ export const unitType = pgTable(
 		createdAt: createdAt(),
 	},
 	(table) => [
-		unique("unit_type_id_project_id_unique").on(table.id, table.projectId),
-		uniqueIndex("unit_type_name_unique").on(
+		unique("typology_id_project_id_unique").on(table.id, table.projectId),
+		uniqueIndex("typology_name_unique").on(
 			table.projectId,
 			nameIgnoringCaseAndSpacing(table.name),
 		),
 		check(
-			"unit_type_name_length",
+			"typology_name_length",
 			sql`char_length(btrim(${table.name})) between 1 and 60`,
 		),
 	],
 );
 
-export const unitTypeRoom = pgTable(
-	"unit_type_room",
+export const typologyRoom = pgTable(
+	"typology_room",
 	{
 		id: uuidV7PrimaryKey(),
-		unitTypeId: uuid()
+		typologyId: uuid()
 			.notNull()
-			.references(() => unitType.id, { onDelete: "cascade" }),
+			.references(() => typology.id, { onDelete: "cascade" }),
 		name: text().notNull(),
 		position: integer().notNull(),
 	},
 	(table) => [
-		index("unit_type_room_unit_type_id_idx").on(table.unitTypeId),
-		uniqueIndex("unit_type_room_name_unique").on(
-			table.unitTypeId,
+		index("typology_room_typology_id_idx").on(table.typologyId),
+		uniqueIndex("typology_room_name_unique").on(
+			table.typologyId,
 			nameIgnoringCaseAndSpacing(table.name),
 		),
 		check(
-			"unit_type_room_name_length",
+			"typology_room_name_length",
 			sql`char_length(btrim(${table.name})) between 1 and 60`,
 		),
-		check("unit_type_room_position_non_negative", sql`${table.position} >= 0`),
+		check("typology_room_position_non_negative", sql`${table.position} >= 0`),
 	],
 );

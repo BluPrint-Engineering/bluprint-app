@@ -8,9 +8,9 @@ export const sessionDraftKinds = [
 	"rename-location",
 	"add-room",
 	"rename-room",
-	"change-unit-type",
-	"create-unit-type",
-	"update-unit-type",
+	"change-typology",
+	"create-typology",
+	"update-typology",
 ] as const;
 
 export type SessionDraftKind = (typeof sessionDraftKinds)[number];

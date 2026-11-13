@@ -11,7 +11,7 @@ import {
 	ROOM_ID_TAKEN,
 	ROOM_NAME_TAKEN,
 	ROOM_NOT_FOUND,
-	UNIT_TYPE_NOT_FOUND,
+	TYPOLOGY_NOT_FOUND,
 } from "@bluprint/shared";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
@@ -23,7 +23,7 @@ import { DATABASE, Database } from "../db/database.module";
 import { member, organization, project, projectMember } from "../db/schema";
 import { location } from "./location.entity";
 import { droppedRoom, room } from "./room.entity";
-import { unitType, unitTypeRoom } from "./unit-type.entity";
+import { typology, typologyRoom } from "./typology.entity";
 
 const SIGN_UP = "/api/auth/sign-up/email";
 const PASSWORD = "senha-de-obra-123";
@@ -107,23 +107,23 @@ async function world(
 		.returning({ id: location.id });
 
 	const types = await db
-		.insert(unitType)
+		.insert(typology)
 		.values([
 			{ projectId, name: "Tipologia A" },
 			{ projectId, name: "Tipologia B" },
 		])
-		.returning({ id: unitType.id });
+		.returning({ id: typology.id });
 	const [typeA, typeB] = types.map((type) => type.id) as [string, string];
 	const typeRooms = await db
-		.insert(unitTypeRoom)
+		.insert(typologyRoom)
 		.values([
-			{ unitTypeId: typeA, name: "Sala", position: 0 },
-			{ unitTypeId: typeA, name: "Cozinha", position: 1 },
-			{ unitTypeId: typeA, name: "Sacada", position: 2 },
-			{ unitTypeId: typeB, name: "Sala", position: 0 },
-			{ unitTypeId: typeB, name: "Suíte", position: 1 },
+			{ typologyId: typeA, name: "Sala", position: 0 },
+			{ typologyId: typeA, name: "Cozinha", position: 1 },
+			{ typologyId: typeA, name: "Sacada", position: 2 },
+			{ typologyId: typeB, name: "Sala", position: 0 },
+			{ typologyId: typeB, name: "Suíte", position: 1 },
 		])
-		.returning({ id: unitTypeRoom.id });
+		.returning({ id: typologyRoom.id });
 	const [sala, cozinha, sacada] = typeRooms.map((typeRoom) => typeRoom.id) as [
 		string,
 		string,
@@ -139,7 +139,7 @@ async function world(
 				type: "unit",
 				name: "901",
 				position: 0,
-				unitTypeId: typeA,
+				typologyId: typeA,
 			},
 			{
 				projectId,
@@ -147,7 +147,7 @@ async function world(
 				type: "unit",
 				name: "902",
 				position: 1,
-				unitTypeId: typeA,
+				typologyId: typeA,
 			},
 			{
 				projectId,
@@ -182,7 +182,7 @@ async function world(
 				locationId: unit,
 				name: name!,
 				position,
-				unitTypeRoomId: id!,
+				typologyRoomId: id!,
 			})),
 		);
 	}
@@ -272,7 +272,7 @@ describe("POST /api/projects/:id/locations/:locationId/rooms", () => {
 			"Lavanderia",
 		]);
 		expect(detail.rooms[3]).toMatchObject({
-			unitTypeRoomId: null,
+			typologyRoomId: null,
 			renamed: false,
 		});
 		expect(detail.changes).toBe(1);
@@ -283,7 +283,7 @@ describe("POST /api/projects/:id/locations/:locationId/rooms", () => {
 		]);
 	});
 
-	it("adds a room to a unit without a unit type and to a common area", async () => {
+	it("adds a room to a unit without a typology and to a common area", async () => {
 		const w = await world();
 
 		const bare = await assistant.agent
@@ -460,7 +460,7 @@ describe("POST /api/projects/:id/locations/:locationId/rooms", () => {
 });
 
 describe("PATCH /api/projects/:id/rooms/:roomId", () => {
-	it("renames a room of the unit type in this unit only, and counts it as a change", async () => {
+	it("renames a room of the typology in this unit only, and counts it as a change", async () => {
 		const w = await world();
 		const sala = await roomIdOf(w, w.unitA1, "Sala");
 
@@ -475,9 +475,9 @@ describe("PATCH /api/projects/:id/rooms/:roomId", () => {
 		expect(detail.changes).toBe(1);
 		expect(roomNames(await detailOf(w, w.unitA2))[0]).toBe("Sala");
 		const [typeRoom] = await db
-			.select({ name: unitTypeRoom.name })
-			.from(unitTypeRoom)
-			.where(eq(unitTypeRoom.id, w.typeARooms.sala));
+			.select({ name: typologyRoom.name })
+			.from(typologyRoom)
+			.where(eq(typologyRoom.id, w.typeARooms.sala));
 		expect(typeRoom!.name).toBe("Sala");
 	});
 
@@ -585,7 +585,7 @@ describe("DELETE /api/projects/:id/rooms/:roomId", () => {
 		).toBe(0);
 	});
 
-	it("records a room of the unit type as taken out of this unit only", async () => {
+	it("records a room of the typology as taken out of this unit only", async () => {
 		const w = await world();
 		const sacada = await roomIdOf(w, w.unitA1, "Sacada");
 
@@ -595,7 +595,7 @@ describe("DELETE /api/projects/:id/rooms/:roomId", () => {
 		const detail = locationDetailSchema.parse(res.body);
 		expect(roomNames(detail)).toEqual(["Sala", "Cozinha"]);
 		expect(detail.droppedRooms).toEqual([
-			{ unitTypeRoomId: w.typeARooms.sacada, name: "Sacada" },
+			{ typologyRoomId: w.typeARooms.sacada, name: "Sacada" },
 		]);
 		expect(detail.changes).toBe(1);
 		expect(roomNames(await detailOf(w, w.unitA2))).toContain("Sacada");
@@ -643,13 +643,13 @@ describe("DELETE /api/projects/:id/rooms/:roomId", () => {
 	});
 });
 
-describe("DELETE /api/projects/:id/locations/:unitId/dropped-rooms/:unitTypeRoomId", () => {
+describe("DELETE /api/projects/:id/locations/:unitId/dropped-rooms/:typologyRoomId", () => {
 	async function dropSacada(w: World) {
 		const sacada = await roomIdOf(w, w.unitA1, "Sacada");
 		await manager.agent.delete(path(w, `rooms/${sacada}`));
 	}
 
-	it("gives the room back with its name and place in the unit type", async () => {
+	it("gives the room back with its name and place in the typology", async () => {
 		const w = await world();
 		await dropSacada(w);
 
@@ -660,7 +660,7 @@ describe("DELETE /api/projects/:id/locations/:unitId/dropped-rooms/:unitTypeRoom
 		expect(res.status).toBe(200);
 		const detail = locationDetailSchema.parse(res.body);
 		expect(roomNames(detail)).toEqual(["Sala", "Cozinha", "Sacada"]);
-		expect(detail.rooms[2]?.unitTypeRoomId).toBe(w.typeARooms.sacada);
+		expect(detail.rooms[2]?.typologyRoomId).toBe(w.typeARooms.sacada);
 		expect(detail.droppedRooms).toEqual([]);
 		expect(detail.changes).toBe(0);
 	});
@@ -715,7 +715,7 @@ describe("DELETE /api/projects/:id/locations/:unitId/dropped-rooms/:unitTypeRoom
 	});
 });
 
-describe("PUT /api/projects/:id/locations/:unitId/unit-type", () => {
+describe("PUT /api/projects/:id/locations/:unitId/typology", () => {
 	async function changeUnitA1(w: World) {
 		await manager.agent
 			.post(path(w, `locations/${w.unitA1}/rooms`))
@@ -728,17 +728,17 @@ describe("PUT /api/projects/:id/locations/:unitId/unit-type", () => {
 			.send({ name: "Sala de estar" });
 	}
 
-	it("starts the unit over on the rooms of the new unit type", async () => {
+	it("starts the unit over on the rooms of the new typology", async () => {
 		const w = await world();
 		await changeUnitA1(w);
 
 		const res = await manager.agent
-			.put(path(w, `locations/${w.unitA1}/unit-type`))
-			.send({ unitTypeId: w.typeB });
+			.put(path(w, `locations/${w.unitA1}/typology`))
+			.send({ typologyId: w.typeB });
 
 		expect(res.status).toBe(200);
 		const detail = locationDetailSchema.parse(res.body);
-		expect(detail.unitType).toEqual({ id: w.typeB, name: "Tipologia B" });
+		expect(detail.typology).toEqual({ id: w.typeB, name: "Tipologia B" });
 		expect(roomNames(detail)).toEqual(["Sala", "Suíte"]);
 		expect(detail.droppedRooms).toEqual([]);
 		expect(detail.changes).toBe(0);
@@ -749,36 +749,36 @@ describe("PUT /api/projects/:id/locations/:unitId/unit-type", () => {
 		]);
 	});
 
-	it("gives a unit without a unit type the rooms of the one it takes", async () => {
+	it("gives a unit without a typology the rooms of the one it takes", async () => {
 		const w = await world();
 
 		const res = await manager.agent
-			.put(path(w, `locations/${w.unitBare}/unit-type`))
-			.send({ unitTypeId: w.typeA });
+			.put(path(w, `locations/${w.unitBare}/typology`))
+			.send({ typologyId: w.typeA });
 
 		const detail = locationDetailSchema.parse(res.body);
 		expect(roomNames(detail)).toEqual(["Sala", "Cozinha", "Sacada"]);
-		expect(detail.unitType?.id).toBe(w.typeA);
+		expect(detail.typology?.id).toBe(w.typeA);
 	});
 
-	it("keeps the current rooms, in order, as rooms only the unit has when it ends up without a unit type", async () => {
+	it("keeps the current rooms, in order, as rooms only the unit has when it ends up without a typology", async () => {
 		const w = await world();
 		await changeUnitA1(w);
 
 		const res = await manager.agent
-			.put(path(w, `locations/${w.unitA1}/unit-type`))
-			.send({ unitTypeId: null });
+			.put(path(w, `locations/${w.unitA1}/typology`))
+			.send({ typologyId: null });
 
 		expect(res.status).toBe(200);
 		const detail = locationDetailSchema.parse(res.body);
-		expect(detail.unitType).toBeNull();
+		expect(detail.typology).toBeNull();
 		expect(roomNames(detail)).toEqual([
 			"Sala de estar",
 			"Cozinha",
 			"Lavanderia",
 		]);
 		expect(
-			detail.rooms.every(({ unitTypeRoomId }) => unitTypeRoomId === null),
+			detail.rooms.every(({ typologyRoomId }) => typologyRoomId === null),
 		).toBe(true);
 		expect(detail.rooms.every(({ renamed }) => !renamed)).toBe(true);
 		expect(detail.droppedRooms).toEqual([]);
@@ -788,28 +788,28 @@ describe("PUT /api/projects/:id/locations/:unitId/unit-type", () => {
 		).toBe(0);
 	});
 
-	it("changes nothing when the unit already follows that unit type", async () => {
+	it("changes nothing when the unit already follows that typology", async () => {
 		const w = await world();
 		await changeUnitA1(w);
 
 		const res = await manager.agent
-			.put(path(w, `locations/${w.unitA1}/unit-type`))
-			.send({ unitTypeId: w.typeA });
+			.put(path(w, `locations/${w.unitA1}/typology`))
+			.send({ typologyId: w.typeA });
 
 		expect(res.status).toBe(200);
 		expect(locationDetailSchema.parse(res.body).changes).toBe(3);
 	});
 
-	it("answers 400 UNIT_TYPE_NOT_FOUND for a unit type of another project", async () => {
+	it("answers 400 TYPOLOGY_NOT_FOUND for a typology of another project", async () => {
 		const w = await world();
 		const other = await world();
 
-		for (const unitTypeId of [other.typeA, randomUUID()]) {
+		for (const typologyId of [other.typeA, randomUUID()]) {
 			const res = await manager.agent
-				.put(path(w, `locations/${w.unitA1}/unit-type`))
-				.send({ unitTypeId });
+				.put(path(w, `locations/${w.unitA1}/typology`))
+				.send({ typologyId });
 			expect(res.status).toBe(400);
-			expect(problemOf(res).code).toBe(UNIT_TYPE_NOT_FOUND);
+			expect(problemOf(res).code).toBe(TYPOLOGY_NOT_FOUND);
 		}
 		expect(roomNames(await detailOf(w, w.unitA1))).toEqual([
 			"Sala",
@@ -822,8 +822,8 @@ describe("PUT /api/projects/:id/locations/:unitId/unit-type", () => {
 		const w = await world();
 
 		const res = await manager.agent
-			.put(path(w, `locations/${w.area}/unit-type`))
-			.send({ unitTypeId: w.typeA });
+			.put(path(w, `locations/${w.area}/typology`))
+			.send({ typologyId: w.typeA });
 
 		expect(res.status).toBe(400);
 		expect(problemOf(res).code).toBe(LOCATION_KIND_INVALID);
@@ -834,21 +834,21 @@ describe("PUT /api/projects/:id/locations/:unitId/unit-type", () => {
 		const delivered = await world("delivered");
 
 		const unseen = await outsider.agent
-			.put(path(w, `locations/${w.unitA1}/unit-type`))
-			.send({ unitTypeId: null });
+			.put(path(w, `locations/${w.unitA1}/typology`))
+			.send({ typologyId: null });
 		const closed = await manager.agent
-			.put(path(delivered, `locations/${delivered.unitA1}/unit-type`))
-			.send({ unitTypeId: null });
+			.put(path(delivered, `locations/${delivered.unitA1}/typology`))
+			.send({ typologyId: null });
 
 		expect(problemOf(unseen).code).toBe(PROJECT_NOT_FOUND);
 		expect(problemOf(closed).code).toBe(PROJECT_DELIVERED);
 		expect(
-			(await detailOf(delivered, delivered.unitA1)).unitType,
+			(await detailOf(delivered, delivered.unitA1)).typology,
 		).not.toBeNull();
 	});
 });
 
-describe("POST /api/projects/:id/locations/:unitId/unit-type/reset", () => {
+describe("POST /api/projects/:id/locations/:unitId/typology/reset", () => {
 	it("undoes the three kinds of change", async () => {
 		const w = await world();
 		await manager.agent
@@ -862,7 +862,7 @@ describe("POST /api/projects/:id/locations/:unitId/unit-type/reset", () => {
 			.send({ name: "Sala de estar" });
 
 		const res = await manager.agent.post(
-			path(w, `locations/${w.unitA1}/unit-type/reset`),
+			path(w, `locations/${w.unitA1}/typology/reset`),
 		);
 
 		expect(res.status).toBe(200);
@@ -887,7 +887,7 @@ describe("POST /api/projects/:id/locations/:unitId/unit-type/reset", () => {
 			.send({ name: "Cozinha" });
 
 		const res = await manager.agent.post(
-			path(w, `locations/${w.unitA1}/unit-type/reset`),
+			path(w, `locations/${w.unitA1}/typology/reset`),
 		);
 
 		expect(res.status).toBe(200);
@@ -898,11 +898,11 @@ describe("POST /api/projects/:id/locations/:unitId/unit-type/reset", () => {
 		]);
 	});
 
-	it("leaves a unit without a unit type as it is", async () => {
+	it("leaves a unit without a typology as it is", async () => {
 		const w = await world();
 
 		const res = await manager.agent.post(
-			path(w, `locations/${w.unitBare}/unit-type/reset`),
+			path(w, `locations/${w.unitBare}/typology/reset`),
 		);
 
 		expect(res.status).toBe(200);
@@ -916,7 +916,7 @@ describe("POST /api/projects/:id/locations/:unitId/unit-type/reset", () => {
 		const w = await world();
 
 		const res = await manager.agent.post(
-			path(w, `locations/${w.area}/unit-type/reset`),
+			path(w, `locations/${w.area}/typology/reset`),
 		);
 
 		expect(res.status).toBe(400);
@@ -927,7 +927,7 @@ describe("POST /api/projects/:id/locations/:unitId/unit-type/reset", () => {
 		const w = await world("delivered");
 
 		const res = await manager.agent.post(
-			path(w, `locations/${w.unitA1}/unit-type/reset`),
+			path(w, `locations/${w.unitA1}/typology/reset`),
 		);
 
 		expect(res.status).toBe(409);

@@ -1,11 +1,11 @@
-import type { UnitType } from "@bluprint/shared";
+import type { Typology } from "@bluprint/shared";
 import { plural } from "../plural";
 
 export function unitsChangedText({
 	name,
 	unitCount,
 	changedUnitCount,
-}: UnitType): string {
+}: Typology): string {
 	if (unitCount === 0) return `Nenhuma unidade usa a ${name} ainda.`;
 
 	const reach =

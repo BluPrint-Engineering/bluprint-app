@@ -614,9 +614,9 @@ describe("unit and common area pages", () => {
 });
 
 const typed = floor("5º andar", [
-	{ name: "501", unitType: "Tipologia A", changes: 2 },
-	{ name: "502", unitType: "Tipologia B", changes: 1 },
-	{ name: "503", unitType: "Tipologia A" },
+	{ name: "501", typology: "Tipologia A", changes: 2 },
+	{ name: "502", typology: "Tipologia B", changes: 1 },
+	{ name: "503", typology: "Tipologia A" },
 	"504",
 ]);
 const typedTower = tower("Torre T", [typed], ["Salão de festas"]);
@@ -783,12 +783,12 @@ describe("back from a unit or a common area", () => {
 	});
 });
 
-describe("floor page with unit types", () => {
+describe("floor page with typologies", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 	});
 
-	test("shows under each unit its unit type, with the changes when it has some", async () => {
+	test("shows under each unit its typology, with the changes when it has some", async () => {
 		stubApi(signedIn, { api: api(typedStructure) });
 
 		renderAt(pathOf(typed.id));
@@ -809,7 +809,7 @@ describe("unit page", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("shows a unit on its unit type with no changes (U1)", async () => {
+	test("shows a unit on its typology with no changes (U1)", async () => {
 		stubApi(signedIn, {
 			api: api(typedStructure, OBRA, {
 				[unit503.id]: {
@@ -826,12 +826,12 @@ describe("unit page", () => {
 		expect(
 			await screen.findByRole("heading", { level: 1, name: "503" }),
 		).toBeInTheDocument();
-		const unitType = sectionOf("Tipologia");
-		expect(unitType).toHaveTextContent("Tipologia A");
-		expect(unitType).toHaveTextContent(
+		const typology = sectionOf("Tipologia");
+		expect(typology).toHaveTextContent("Tipologia A");
+		expect(typology).toHaveTextContent(
 			"Os cômodos acompanham a tipologia Tipologia A. O que foi mudado só nesta unidade continua assim quando a tipologia muda.",
 		);
-		expect(within(unitType).queryByText(/alteraç/)).not.toBeInTheDocument();
+		expect(within(typology).queryByText(/alteraç/)).not.toBeInTheDocument();
 		expect(
 			within(sectionOf("Cômodos"))
 				.getAllByRole("listitem")
@@ -876,7 +876,7 @@ describe("unit page", () => {
 		).toEqual(["SacadaDa tipologia Tipologia ADevolver"]);
 	});
 
-	test("says the rooms of a unit without a unit type are only its own, with no badge on them", async () => {
+	test("says the rooms of a unit without a typology are only its own, with no badge on them", async () => {
 		stubApi(signedIn, {
 			api: api(typedStructure, OBRA, {
 				[unit504.id]: { rooms: [room("Quarto"), room("Banheiro")] },
@@ -886,9 +886,9 @@ describe("unit page", () => {
 		renderAt(pathOf(unit504.id));
 
 		await screen.findByRole("heading", { level: 1, name: "504" });
-		const unitType = sectionOf("Tipologia");
-		expect(unitType).toHaveTextContent("Sem tipologia");
-		expect(unitType).toHaveTextContent("Os cômodos desta unidade são só dela.");
+		const typology = sectionOf("Tipologia");
+		expect(typology).toHaveTextContent("Sem tipologia");
+		expect(typology).toHaveTextContent("Os cômodos desta unidade são só dela.");
 		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
 		expect(
 			within(sectionOf("Cômodos"))
@@ -951,7 +951,7 @@ describe("common area page", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("shows only the rooms card, with no unit type (U5)", async () => {
+	test("shows only the rooms card, with no typology (U5)", async () => {
 		stubApi(signedIn, {
 			api: api(typedStructure, OBRA, {
 				[salao.id]: { rooms: [room("Cozinha"), room("Banheiro")] },

@@ -2,7 +2,7 @@ import {
 	type AddRoom,
 	type CreateStructure,
 	type CreateStructureResult,
-	type CreateUnitType,
+	type CreateTypology,
 	createStructureResultSchema,
 	LOCATION_NAME_TAKEN,
 	LOCATION_NOT_FOUND,
@@ -19,12 +19,12 @@ import {
 	type SubtreeRooms,
 	structureSchema,
 	subtreeRoomsSchema,
-	UNIT_TYPE_IN_USE,
-	UNIT_TYPE_NAME_TAKEN,
-	type UpdateUnitType,
-	unitTypeListSchema,
-	unitTypeSchema,
-	updateUnitTypeResultSchema,
+	TYPOLOGY_IN_USE,
+	TYPOLOGY_NAME_TAKEN,
+	typologyListSchema,
+	typologySchema,
+	type UpdateTypology,
+	updateTypologyResultSchema,
 } from "@bluprint/shared";
 import {
 	queryOptions,
@@ -94,9 +94,9 @@ export function namesTakenOf(error: unknown): string[] | undefined {
 		: undefined;
 }
 
-export function unitTypeNamesTakenOf(error: unknown): string[] | undefined {
+export function typologyNamesTakenOf(error: unknown): string[] | undefined {
 	return error instanceof ApiError &&
-		error.problem?.code === UNIT_TYPE_NAME_TAKEN
+		error.problem?.code === TYPOLOGY_NAME_TAKEN
 		? (error.problem.names ?? [])
 		: undefined;
 }
@@ -286,17 +286,17 @@ export function deleteLocation(projectId: string, locationId: string) {
 	);
 }
 
-export function unitTypesQueryOptions(projectId: string) {
+export function typologiesQueryOptions(projectId: string) {
 	return queryOptions({
-		queryKey: ["structure", projectId, "unit-types"],
+		queryKey: ["structure", projectId, "typologies"],
 		queryFn: () =>
-			apiFetch(`/projects/${projectId}/unit-types`, unitTypeListSchema),
+			apiFetch(`/projects/${projectId}/typologies`, typologyListSchema),
 		retry: retryUnlessNotFound,
 	});
 }
 
-export function isUnitTypeInUse(error: unknown) {
-	return error instanceof ApiError && error.problem?.code === UNIT_TYPE_IN_USE;
+export function isTypologyInUse(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === TYPOLOGY_IN_USE;
 }
 
 export function roomNamesTakenOf(error: unknown): string[] | undefined {
@@ -323,7 +323,7 @@ function useLocationMutation<Variables>(
 	projectId: string,
 	locationId: string,
 	send: (variables: Variables) => Promise<LocationDetail>,
-	kind?: "add-room" | "rename-room" | "change-unit-type",
+	kind?: "add-room" | "rename-room" | "change-typology",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -339,7 +339,7 @@ function useLocationMutation<Variables>(
 				exact: true,
 			});
 			void queryClient.invalidateQueries({
-				queryKey: unitTypesQueryOptions(projectId).queryKey,
+				queryKey: typologiesQueryOptions(projectId).queryKey,
 			});
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
 		},
@@ -399,47 +399,47 @@ export function useRemoveRoomMutation(projectId: string, locationId: string) {
 }
 
 export function useGiveRoomBackMutation(projectId: string, unitId: string) {
-	return useLocationMutation(projectId, unitId, (unitTypeRoomId: string) =>
+	return useLocationMutation(projectId, unitId, (typologyRoomId: string) =>
 		apiFetch(
-			`/projects/${projectId}/locations/${unitId}/dropped-rooms/${unitTypeRoomId}`,
+			`/projects/${projectId}/locations/${unitId}/dropped-rooms/${typologyRoomId}`,
 			locationDetailSchema,
 			{ method: "DELETE" },
 		),
 	);
 }
 
-export function useChangeUnitTypeMutation(projectId: string, unitId: string) {
+export function useChangeTypologyMutation(projectId: string, unitId: string) {
 	return useLocationMutation(
 		projectId,
 		unitId,
-		(unitTypeId: string | null) =>
+		(typologyId: string | null) =>
 			apiFetch(
-				`/projects/${projectId}/locations/${unitId}/unit-type`,
+				`/projects/${projectId}/locations/${unitId}/typology`,
 				locationDetailSchema,
 				{
 					method: "PUT",
 					headers: JSON_HEADERS,
-					body: JSON.stringify({ unitTypeId }),
+					body: JSON.stringify({ typologyId }),
 				},
 			),
-		"change-unit-type",
+		"change-typology",
 	);
 }
 
-export function useResetUnitTypeMutation(projectId: string, unitId: string) {
+export function useResetTypologyMutation(projectId: string, unitId: string) {
 	return useLocationMutation(projectId, unitId, () =>
 		apiFetch(
-			`/projects/${projectId}/locations/${unitId}/unit-type/reset`,
+			`/projects/${projectId}/locations/${unitId}/typology/reset`,
 			locationDetailSchema,
 			{ method: "POST" },
 		),
 	);
 }
 
-function useUnitTypeMutation<Variables, Result>(
+function useTypologyMutation<Variables, Result>(
 	projectId: string,
 	send: (variables: Variables) => Promise<Result>,
-	kind?: "create-unit-type" | "update-unit-type",
+	kind?: "create-typology" | "update-typology",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -462,41 +462,41 @@ function useUnitTypeMutation<Variables, Result>(
 	});
 }
 
-export function useCreateUnitTypeMutation(projectId: string) {
-	return useUnitTypeMutation(
+export function useCreateTypologyMutation(projectId: string) {
+	return useTypologyMutation(
 		projectId,
-		(body: CreateUnitType) =>
-			apiFetch(`/projects/${projectId}/unit-types`, unitTypeSchema, {
+		(body: CreateTypology) =>
+			apiFetch(`/projects/${projectId}/typologies`, typologySchema, {
 				method: "POST",
 				headers: JSON_HEADERS,
 				body: JSON.stringify(body),
 			}),
-		"create-unit-type",
+		"create-typology",
 	);
 }
 
-export function useUpdateUnitTypeMutation(projectId: string) {
-	return useUnitTypeMutation(
+export function useUpdateTypologyMutation(projectId: string) {
+	return useTypologyMutation(
 		projectId,
-		({ unitTypeId, ...body }: { unitTypeId: string } & UpdateUnitType) =>
+		({ typologyId, ...body }: { typologyId: string } & UpdateTypology) =>
 			apiFetch(
-				`/projects/${projectId}/unit-types/${unitTypeId}`,
-				updateUnitTypeResultSchema,
+				`/projects/${projectId}/typologies/${typologyId}`,
+				updateTypologyResultSchema,
 				{
 					method: "PATCH",
 					headers: JSON_HEADERS,
 					body: JSON.stringify(body),
 				},
 			),
-		"update-unit-type",
+		"update-typology",
 	);
 }
 
-export function useDeleteUnitTypeMutation(projectId: string) {
-	return useUnitTypeMutation(projectId, (unitTypeId: string) =>
+export function useDeleteTypologyMutation(projectId: string) {
+	return useTypologyMutation(projectId, (typologyId: string) =>
 		apiFetch(
-			`/projects/${projectId}/unit-types/${unitTypeId}`,
-			unitTypeListSchema,
+			`/projects/${projectId}/typologies/${typologyId}`,
+			typologyListSchema,
 			{ method: "DELETE" },
 		),
 	);

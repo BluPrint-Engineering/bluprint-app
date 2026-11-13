@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { project } from "../projects/project.entity";
-import { unitType } from "./unit-type.entity";
+import { typology } from "./typology.entity";
 
 export const locationType = pgEnum("location_type", locationTypes);
 
@@ -27,7 +27,7 @@ export const location = pgTable(
 			.references(() => project.id, { onDelete: "cascade" }),
 		parentId: uuid(),
 		type: locationType().notNull(),
-		unitTypeId: uuid(),
+		typologyId: uuid(),
 		name: text().notNull(),
 		position: integer().notNull(),
 		createdAt: createdAt(),
@@ -43,9 +43,9 @@ export const location = pgTable(
 				foreignColumns: [table.id, table.projectId],
 			}).onDelete("cascade"),
 			foreignKey({
-				name: "location_unit_type_fk",
-				columns: [table.unitTypeId, table.projectId],
-				foreignColumns: [unitType.id, unitType.projectId],
+				name: "location_typology_fk",
+				columns: [table.typologyId, table.projectId],
+				foreignColumns: [typology.id, typology.projectId],
 			}),
 			index("location_project_id_idx").on(table.projectId),
 			index("location_parent_id_idx").on(table.parentId),
@@ -60,8 +60,8 @@ export const location = pgTable(
 				sql`char_length(btrim(${table.name})) between 1 and 60`,
 			),
 			check(
-				"location_unit_type_on_unit",
-				sql`${table.unitTypeId} is null or ${table.type} = 'unit'`,
+				"location_typology_on_unit",
+				sql`${table.typologyId} is null or ${table.type} = 'unit'`,
 			),
 			check("location_position_non_negative", sql`${table.position} >= 0`),
 			check(

@@ -1,7 +1,7 @@
 import {
-	MAX_ROOMS_PER_UNIT_TYPE,
+	MAX_ROOMS_PER_TYPOLOGY,
 	sameLocationName,
-	type UnitType,
+	type Typology,
 } from "@bluprint/shared";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,9 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
-import { roomNamesTakenOf, useUpdateUnitTypeMutation } from "../api";
+import { roomNamesTakenOf, useUpdateTypologyMutation } from "../api";
 import { AddTag, Tags } from "../components/Tags";
-import { savedText, unitsChangedText } from "./unitTypeSaveText";
+import { savedText, unitsChangedText } from "./typologySaveText";
 
 interface DraftRoom {
 	id: string;
@@ -21,10 +21,10 @@ interface DraftRoom {
 
 function restoredRooms(
 	variables: unknown,
-	unitTypeId: string,
+	typologyId: string,
 ): DraftRoom[] | undefined {
 	if (typeof variables !== "object" || variables === null) return undefined;
-	if (!("unitTypeId" in variables) || variables.unitTypeId !== unitTypeId) {
+	if (!("typologyId" in variables) || variables.typologyId !== typologyId) {
 		return undefined;
 	}
 	if (!("rooms" in variables) || !Array.isArray(variables.rooms))
@@ -59,27 +59,27 @@ function failureText(error: unknown) {
 	return `A tipologia não pode ter ${single ? "o cômodo" : "os cômodos"} ${names.join(", ")}: uma unidade já tem ${single ? "um cômodo com esse nome" : "cômodos com esses nomes"}. Renomeie ${single ? "o cômodo" : "os cômodos"} na unidade e tente de novo.`;
 }
 
-export function UnitTypeEditor({
+export function TypologyEditor({
 	projectId,
-	unitType,
+	typology,
 	onClose,
 }: {
 	projectId: string;
-	unitType: UnitType;
+	typology: Typology;
 	onClose: () => void;
 }) {
-	const update = useUpdateUnitTypeMutation(projectId);
-	const restored = useSessionDraft("update-unit-type", (variables) =>
-		restoredRooms(variables, unitType.id),
+	const update = useUpdateTypologyMutation(projectId);
+	const restored = useSessionDraft("update-typology", (variables) =>
+		restoredRooms(variables, typology.id),
 	);
-	const clearDraft = useClearSessionDraft("update-unit-type");
-	const [rooms, setRooms] = useState<DraftRoom[]>(restored ?? unitType.rooms);
-	const stored = new Set(unitType.rooms.map(({ id }) => id));
+	const clearDraft = useClearSessionDraft("update-typology");
+	const [rooms, setRooms] = useState<DraftRoom[]>(restored ?? typology.rooms);
+	const stored = new Set(typology.rooms.map(({ id }) => id));
 	const isNew = (name: string) =>
 		rooms.some((room) => room.name === name && !stored.has(room.id));
 
 	function addRoom(name: string) {
-		const taken = unitType.rooms.find((room) =>
+		const taken = typology.rooms.find((room) =>
 			sameLocationName(room.name, name),
 		);
 		const brought = taken && !rooms.some((room) => room.id === taken.id);
@@ -96,12 +96,12 @@ export function UnitTypeEditor({
 	}
 
 	function save() {
-		if (sameRooms(rooms, unitType.rooms)) return close();
+		if (sameRooms(rooms, typology.rooms)) return close();
 		update.mutate(
-			{ unitTypeId: unitType.id, rooms },
+			{ typologyId: typology.id, rooms },
 			{
 				onSuccess: ({ updatedUnitCount }) => {
-					toast.success(savedText(unitType.name, updatedUnitCount));
+					toast.success(savedText(typology.name, updatedUnitCount));
 					onClose();
 				},
 			},
@@ -110,7 +110,7 @@ export function UnitTypeEditor({
 
 	return (
 		<div className="grid gap-(--space-3) p-(--space-4)">
-			<span className="font-semibold">{unitType.name}</span>
+			<span className="font-semibold">{typology.name}</span>
 			<Tags
 				items={rooms.map(({ name }) => name)}
 				isNew={isNew}
@@ -123,8 +123,8 @@ export function UnitTypeEditor({
 				placeholder="Novo cômodo"
 				existing={rooms.map(({ name }) => name)}
 				duplicateMessage="Esta tipologia já tem esse cômodo."
-				maxItems={MAX_ROOMS_PER_UNIT_TYPE}
-				maxMessage={`A tipologia pode ter até ${MAX_ROOMS_PER_UNIT_TYPE} cômodos.`}
+				maxItems={MAX_ROOMS_PER_TYPOLOGY}
+				maxMessage={`A tipologia pode ter até ${MAX_ROOMS_PER_TYPOLOGY} cômodos.`}
 				onAdd={addRoom}
 			/>
 			{update.isError && (
@@ -133,7 +133,7 @@ export function UnitTypeEditor({
 				</Alert>
 			)}
 			<Alert>
-				<AlertDescription>{unitsChangedText(unitType)}</AlertDescription>
+				<AlertDescription>{unitsChangedText(typology)}</AlertDescription>
 			</Alert>
 			<div className="flex gap-(--space-2) max-md:*:flex-1">
 				<Button type="button" disabled={update.isPending} onClick={save}>

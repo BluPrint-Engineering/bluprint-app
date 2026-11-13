@@ -1,4 +1,4 @@
-import type { UnitType } from "@bluprint/shared";
+import type { Typology } from "@bluprint/shared";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,30 +10,30 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { plural } from "../plural";
 
-export function UnitTypeRow({
-	unitType,
+export function TypologyRow({
+	typology,
 	editable,
 	onEditRooms,
 	onRename,
 	onDelete,
 }: {
-	unitType: UnitType;
+	typology: Typology;
 	editable: boolean;
 	onEditRooms: () => void;
 	onRename: () => void;
 	onDelete: () => void;
 }) {
-	const inUse = unitType.unitCount > 0;
+	const inUse = typology.unitCount > 0;
 
 	return (
 		<div className="flex min-h-14 items-center gap-(--space-2) py-(--space-2) pr-(--space-2) pl-(--space-4)">
 			<span className="grid min-w-0 flex-1">
 				<span className="text-base font-medium [overflow-wrap:anywhere]">
-					{unitType.name}
+					{typology.name}
 				</span>
 				<span className="text-sm text-muted-foreground">
-					{plural(unitType.rooms.length, "cômodo", "cômodos")} ·{" "}
-					{plural(unitType.unitCount, "unidade", "unidades")}
+					{plural(typology.rooms.length, "cômodo", "cômodos")} ·{" "}
+					{plural(typology.unitCount, "unidade", "unidades")}
 				</span>
 			</span>
 			{editable && (
@@ -43,7 +43,7 @@ export function UnitTypeRow({
 							type="button"
 							variant="ghost"
 							size="icon"
-							aria-label={`Ações da ${unitType.name}`}
+							aria-label={`Ações da ${typology.name}`}
 						>
 							<Ellipsis aria-hidden="true" />
 						</Button>

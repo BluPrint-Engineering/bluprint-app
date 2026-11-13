@@ -21,7 +21,7 @@ const user = userEvent.setup({ delay: null });
 function build() {
 	const ninth = floor(
 		"9º andar",
-		["901", "902", "903", { name: "904", unitType: "Tipologia A" }],
+		["901", "902", "903", { name: "904", typology: "Tipologia A" }],
 		["Hall"],
 	);
 	const tenth = floor("10º andar");
@@ -99,7 +99,7 @@ describe("removing an empty location at once (R1)", () => {
 		expect(undo).not.toHaveClass("border-transparent");
 	});
 
-	test("brings the unit back with the same id, place, unit type, rooms and changes when Desfazer is pressed", async () => {
+	test("brings the unit back with the same id, place, typology, rooms and changes when Desfazer is pressed", async () => {
 		const { ninth, several } = build();
 		const unit = nth(ninth.units, 3);
 		const kept = room("Cozinha", { fromType: true });
@@ -127,7 +127,7 @@ describe("removing an empty location at once (R1)", () => {
 		).toBeInTheDocument();
 		expect(api.created).toEqual([
 			{
-				unitTypes: [],
+				typologies: [],
 				locations: [
 					{
 						id: unit.id,
@@ -135,22 +135,22 @@ describe("removing an empty location at once (R1)", () => {
 						type: "unit",
 						name: "904",
 						position: 3,
-						unitTypeId: unit.unitType?.id,
+						typologyId: unit.typology?.id,
 						rooms: [
 							{
 								id: renamed.id,
 								name: "Estar",
-								unitTypeRoomId: renamed.unitTypeRoomId,
+								typologyRoomId: renamed.typologyRoomId,
 								renamed: true,
 							},
 							{
 								id: kept.id,
 								name: "Cozinha",
-								unitTypeRoomId: kept.unitTypeRoomId,
+								typologyRoomId: kept.typologyRoomId,
 							},
 							{ id: own.id, name: "Lavanderia" },
 						],
-						droppedRooms: [taken.unitTypeRoomId],
+						droppedRooms: [taken.typologyRoomId],
 					},
 				],
 			},
@@ -162,7 +162,7 @@ describe("removing an empty location at once (R1)", () => {
 		});
 	});
 
-	test("brings a unit without a unit type back with its rooms and none taken out", async () => {
+	test("brings a unit without a typology back with its rooms and none taken out", async () => {
 		const { ninth, several } = build();
 		const unit = nth(ninth.units, 1);
 		const own = room("Sala");

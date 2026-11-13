@@ -32,7 +32,7 @@ export function buildStructure(
 		units: childrenOfType(id, "unit").map((unit) => ({
 			id: unit.id,
 			name: unit.name,
-			unitType: unit.unitType,
+			typology: unit.typology,
 			changes: changesByUnit.get(unit.id) ?? 0,
 		})),
 		commonAreas: commonAreasOf(id),

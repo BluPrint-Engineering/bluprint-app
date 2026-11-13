@@ -6,9 +6,9 @@ function row(
 	type: LocationRow["type"],
 	name: string,
 	parentId: string | null,
-	unitType: StructureRow["unitType"] = null,
+	typology: StructureRow["typology"] = null,
 ): StructureRow {
-	return { id, type, name, parentId, unitType };
+	return { id, type, name, parentId, typology };
 }
 
 const noChanges = new Map<string, number>();
@@ -86,7 +86,7 @@ describe("buildStructure", () => {
 		expect(counts).toEqual({ towers: 1, floors: 1, units: 2, commonAreas: 2 });
 	});
 
-	test("gives each unit its unit type and the changes counted for it, none when nothing was recorded", () => {
+	test("gives each unit its typology and the changes counted for it, none when nothing was recorded", () => {
 		const typeA = { id: "type-a", name: "Tipologia A" };
 		const structure = buildStructure(
 			[
@@ -100,9 +100,9 @@ describe("buildStructure", () => {
 		);
 
 		expect(structure.towers[0]!.floors[0]!.units).toEqual([
-			{ id: "u1", name: "101", unitType: typeA, changes: 0 },
-			{ id: "u2", name: "102", unitType: typeA, changes: 3 },
-			{ id: "u3", name: "103", unitType: null, changes: 0 },
+			{ id: "u1", name: "101", typology: typeA, changes: 0 },
+			{ id: "u2", name: "102", typology: typeA, changes: 3 },
+			{ id: "u3", name: "103", typology: null, changes: 0 },
 		]);
 	});
 });

@@ -24,7 +24,7 @@ import { planInsertion, planMove } from "./sibling-order";
 import { planCreation } from "./plan-creation";
 import { buildStructure } from "./structure-tree";
 import { StructureRepository } from "./structure.repository";
-import { UnitTypesRepository } from "./unit-types.repository";
+import { TypologiesRepository } from "./typologies.repository";
 
 const toRef = ({ id, type, name }: LocationRow) => ({ id, type, name });
 
@@ -41,7 +41,7 @@ export class StructureService {
 		private readonly projects: ProjectsService,
 		private readonly units: UnitsService,
 		private readonly locations: StructureRepository,
-		private readonly unitTypes: UnitTypesRepository,
+		private readonly typologies: TypologiesRepository,
 		private readonly content: LocationContent,
 	) {}
 
@@ -53,44 +53,44 @@ export class StructureService {
 	): Promise<CreateStructureResult> {
 		await this.projects.beginStructureWrite(userId, projectId);
 
-		const { unitTypes, locations } = request;
+		const { typologies, locations } = request;
 		const inProject = await this.locations.listForNaming(projectId);
-		const storedUnitTypes = await this.unitTypes.list(projectId);
+		const storedTypologies = await this.typologies.list(projectId);
 		const locationIdsElsewhere = await this.locations.findIdsInOtherProjects(
 			projectId,
 			locations.map(({ id }) => id),
 		);
-		const typesElsewhere = await this.unitTypes.findIdsInOtherProjects(
+		const typesElsewhere = await this.typologies.findIdsInOtherProjects(
 			projectId,
-			unitTypes.map(({ id }) => id),
+			typologies.map(({ id }) => id),
 		);
-		const storedRooms = await this.unitTypes.findRoomIds(
-			unitTypes.flatMap(({ rooms }) => rooms.map(({ id }) => id)),
+		const storedRooms = await this.typologies.findRoomIds(
+			typologies.flatMap(({ rooms }) => rooms.map(({ id }) => id)),
 		);
-		const typeRooms = await this.unitTypes.listRooms(projectId);
+		const typeRooms = await this.typologies.listRooms(projectId);
 		const roomIdsInUse = await this.locations.findRoomIds(
 			locations.flatMap(({ rooms }) => rooms?.map(({ id }) => id) ?? []),
 		);
-		const { freshUnitTypes, fresh, newUnits, counts } = planCreation(request, {
+		const { freshTypologies, fresh, newUnits, counts } = planCreation(request, {
 			locations: inProject,
-			unitTypes: storedUnitTypes,
+			typologies: storedTypologies,
 			locationIdsElsewhere,
-			unitTypeIdsInUse: { typesElsewhere, storedRooms },
+			typologyIdsInUse: { typesElsewhere, storedRooms },
 			typeRooms,
 			roomIdsInUse,
 		});
 
 		await this.units.assertAvailable(projectId, newUnits);
-		await this.unitTypes.insertAll(projectId, freshUnitTypes);
+		await this.typologies.insertAll(projectId, freshTypologies);
 		await this.locations.insertAll(
 			projectId,
 			await this.placeAmongSiblings(projectId, inProject, fresh),
 		);
-		await this.unitTypes.giveUnitsTheirRooms(
-			fresh.flatMap(({ id, unitTypeId, rooms }) =>
-				unitTypeId === undefined || rooms !== undefined
+		await this.typologies.giveUnitsTheirRooms(
+			fresh.flatMap(({ id, typologyId, rooms }) =>
+				typologyId === undefined || rooms !== undefined
 					? []
-					: [{ id, unitTypeId }],
+					: [{ id, typologyId }],
 			),
 		);
 		await this.locations.insertRooms(
@@ -100,16 +100,16 @@ export class StructureService {
 					locationId,
 					name: entry.name,
 					position,
-					unitTypeRoomId: entry.unitTypeRoomId ?? null,
+					typologyRoomId: entry.typologyRoomId ?? null,
 					renamed: entry.renamed ?? false,
 				})),
 			),
 		);
 		await this.locations.insertDroppedRooms(
 			fresh.flatMap(({ id: locationId, droppedRooms }) =>
-				(droppedRooms ?? []).map((unitTypeRoomId) => ({
+				(droppedRooms ?? []).map((typologyRoomId) => ({
 					locationId,
-					unitTypeRoomId,
+					typologyRoomId,
 				})),
 			),
 		);
@@ -296,8 +296,8 @@ export class StructureService {
 					: [],
 				this.locations.listChildren(found.id),
 				holdsRooms ? this.locations.listRooms(found.id) : [],
-				found.unitType ? this.locations.listDroppedRooms(found.id) : [],
-				found.unitType
+				found.typology ? this.locations.listDroppedRooms(found.id) : [],
+				found.typology
 					? this.locations.countUnitChanges(projectId, found.id)
 					: new Map<string, number>(),
 			]);
@@ -307,7 +307,7 @@ export class StructureService {
 			position: found.position,
 			ancestors: ancestors.map(toRef),
 			children: children.map(toRef),
-			unitType: found.unitType,
+			typology: found.typology,
 			changes: changes.get(found.id) ?? 0,
 			rooms,
 			droppedRooms,

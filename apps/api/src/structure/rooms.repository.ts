@@ -5,14 +5,14 @@ import { and, eq, ne, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import { droppedRoom, room } from "./room.entity";
-import { unitTypeRoom } from "./unit-type.entity";
+import { typologyRoom } from "./typology.entity";
 
 export interface RoomRow {
 	id: string;
 	locationId: string;
 	locationType: LocationType;
 	name: string;
-	unitTypeRoomId: string | null;
+	typologyRoomId: string | null;
 }
 
 const comparableName = sql`lower(regexp_replace(btrim(${room.name}), '\\s+', ' ', 'g'))`;
@@ -31,7 +31,7 @@ export class RoomsRepository {
 				locationId: room.locationId,
 				locationType: location.type,
 				name: room.name,
-				unitTypeRoomId: room.unitTypeRoomId,
+				typologyRoomId: room.typologyRoomId,
 			})
 			.from(room)
 			.innerJoin(location, eq(location.id, room.locationId))
@@ -84,7 +84,7 @@ export class RoomsRepository {
 		locationId: string;
 		name: string;
 		position: number;
-		unitTypeRoomId?: string;
+		typologyRoomId?: string;
 	}): Promise<void> {
 		await this.txHost.tx.insert(room).values(values);
 	}
@@ -92,11 +92,11 @@ export class RoomsRepository {
 	async rename(
 		roomId: string,
 		name: string,
-		renamedFromUnitType: boolean,
+		renamedFromTypology: boolean,
 	): Promise<void> {
 		await this.txHost.tx
 			.update(room)
-			.set(renamedFromUnitType ? { name, renamed: true } : { name })
+			.set(renamedFromTypology ? { name, renamed: true } : { name })
 			.where(eq(room.id, roomId));
 	}
 
@@ -104,46 +104,46 @@ export class RoomsRepository {
 		await this.txHost.tx.delete(room).where(eq(room.id, roomId));
 	}
 
-	async drop(locationId: string, unitTypeRoomId: string): Promise<void> {
+	async drop(locationId: string, typologyRoomId: string): Promise<void> {
 		await this.txHost.tx
 			.insert(droppedRoom)
-			.values({ locationId, unitTypeRoomId })
+			.values({ locationId, typologyRoomId })
 			.onConflictDoNothing();
 	}
 
 	async findDropped(
 		locationId: string,
-		unitTypeRoomId: string,
+		typologyRoomId: string,
 	): Promise<{ name: string; position: number } | undefined> {
 		const [found] = await this.txHost.tx
-			.select({ name: unitTypeRoom.name, position: unitTypeRoom.position })
+			.select({ name: typologyRoom.name, position: typologyRoom.position })
 			.from(droppedRoom)
-			.innerJoin(unitTypeRoom, eq(unitTypeRoom.id, droppedRoom.unitTypeRoomId))
+			.innerJoin(typologyRoom, eq(typologyRoom.id, droppedRoom.typologyRoomId))
 			.where(
 				and(
 					eq(droppedRoom.locationId, locationId),
-					eq(droppedRoom.unitTypeRoomId, unitTypeRoomId),
+					eq(droppedRoom.typologyRoomId, typologyRoomId),
 				),
 			);
 
 		return found;
 	}
 
-	async takeBack(locationId: string, unitTypeRoomId: string): Promise<void> {
+	async takeBack(locationId: string, typologyRoomId: string): Promise<void> {
 		await this.txHost.tx
 			.delete(droppedRoom)
 			.where(
 				and(
 					eq(droppedRoom.locationId, locationId),
-					eq(droppedRoom.unitTypeRoomId, unitTypeRoomId),
+					eq(droppedRoom.typologyRoomId, typologyRoomId),
 				),
 			);
 	}
 
-	async setUnitType(unitId: string, unitTypeId: string | null): Promise<void> {
+	async setTypology(unitId: string, typologyId: string | null): Promise<void> {
 		await this.txHost.tx
 			.update(location)
-			.set({ unitTypeId })
+			.set({ typologyId })
 			.where(eq(location.id, unitId));
 	}
 
@@ -157,7 +157,7 @@ export class RoomsRepository {
 	async keepAsOwn(unitId: string, orderedIds: string[]): Promise<void> {
 		await this.txHost.tx
 			.update(room)
-			.set({ unitTypeRoomId: null, renamed: false })
+			.set({ typologyRoomId: null, renamed: false })
 			.where(eq(room.locationId, unitId));
 		for (const [position, id] of orderedIds.entries()) {
 			await this.txHost.tx
@@ -170,11 +170,11 @@ export class RoomsRepository {
 			.where(eq(droppedRoom.locationId, unitId));
 	}
 
-	async restoreFromUnitType(unitId: string): Promise<void> {
+	async restoreFromTypology(unitId: string): Promise<void> {
 		await this.txHost.tx
 			.delete(room)
 			.where(
-				and(eq(room.locationId, unitId), sql`${room.unitTypeRoomId} is null`),
+				and(eq(room.locationId, unitId), sql`${room.typologyRoomId} is null`),
 			);
 		await this.txHost.tx
 			.update(room)
@@ -183,23 +183,23 @@ export class RoomsRepository {
 		await this.txHost.tx
 			.update(room)
 			.set({
-				name: unitTypeRoom.name,
-				position: unitTypeRoom.position,
+				name: typologyRoom.name,
+				position: typologyRoom.position,
 				renamed: false,
 			})
-			.from(unitTypeRoom)
+			.from(typologyRoom)
 			.where(
 				and(
 					eq(room.locationId, unitId),
-					eq(room.unitTypeRoomId, unitTypeRoom.id),
+					eq(room.typologyRoomId, typologyRoom.id),
 					eq(room.renamed, true),
 				),
 			);
 		await this.txHost.tx.execute(sql`
-			insert into ${room} (location_id, name, position, unit_type_room_id)
-			select ${droppedRoom.locationId}, ${unitTypeRoom.name}, ${unitTypeRoom.position}, ${unitTypeRoom.id}
+			insert into ${room} (location_id, name, position, typology_room_id)
+			select ${droppedRoom.locationId}, ${typologyRoom.name}, ${typologyRoom.position}, ${typologyRoom.id}
 			from ${droppedRoom}
-			join ${unitTypeRoom} on ${unitTypeRoom.id} = ${droppedRoom.unitTypeRoomId}
+			join ${typologyRoom} on ${typologyRoom.id} = ${droppedRoom.typologyRoomId}
 			where ${droppedRoom.locationId} = ${unitId}
 		`);
 		await this.txHost.tx

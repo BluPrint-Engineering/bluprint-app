@@ -20,7 +20,7 @@ import { ChangeReservationDialog } from "../../projects/components/ChangeReserva
 import {
 	namesTakenOf,
 	projectUnitsQueryOptions,
-	unitTypeNamesTakenOf,
+	typologyNamesTakenOf,
 	useCreateStructureMutation,
 } from "../api";
 import { plural } from "../plural";
@@ -30,7 +30,7 @@ import {
 	nameTakenText,
 	overReserveText,
 	planLine,
-	unitTypeNameTakenText,
+	typologyNameTakenText,
 } from "../reserveText";
 import { buildPlan } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
@@ -41,7 +41,7 @@ import {
 	UntypedAlert,
 } from "./Preview";
 import { TowersStep } from "./TowersStep";
-import { UnitTypesStep } from "./UnitTypesStep";
+import { TypologiesStep } from "./TypologiesStep";
 import {
 	type DraftErrors,
 	firstInvalidField,
@@ -249,9 +249,9 @@ export function StructureWizard({
 
 	function submit() {
 		if (create.isPending || blocked || !validate()) return;
-		const { unitTypes, locations } = buildPlan(draft, idFor);
+		const { typologies, locations } = buildPlan(draft, idFor);
 		create.mutate(
-			{ unitTypes, locations, draft },
+			{ typologies, locations, draft },
 			{
 				onSuccess: ({ counts }) => {
 					if (extend) {
@@ -300,11 +300,11 @@ export function StructureWizard({
 				};
 
 	const names = namesTakenOf(create.error);
-	const unitTypeNames = unitTypeNamesTakenOf(create.error);
+	const typologyNames = typologyNamesTakenOf(create.error);
 	const failed =
 		create.isError &&
 		names === undefined &&
-		unitTypeNames === undefined &&
+		typologyNames === undefined &&
 		availableUnitsOf(create.error) === undefined;
 
 	const blocker = blocked ? (
@@ -388,10 +388,10 @@ export function StructureWizard({
 					<AlertDescription>{nameTakenText(names)}</AlertDescription>
 				</Alert>
 			)}
-			{unitTypeNames !== undefined && (
+			{typologyNames !== undefined && (
 				<Alert variant="destructive">
 					<AlertDescription>
-						{unitTypeNameTakenText(unitTypeNames)}
+						{typologyNameTakenText(typologyNames)}
 					</AlertDescription>
 				</Alert>
 			)}
@@ -419,7 +419,7 @@ export function StructureWizard({
 	);
 
 	const typesStep = (
-		<UnitTypesStep
+		<TypologiesStep
 			draft={draft}
 			errors={errors}
 			edit={edit}

@@ -39,10 +39,10 @@ export interface RemoveRequest {
 function recreation(removed: LocationDetail): CreateStructure {
 	const parentId = removed.ancestors.at(-1)?.id ?? null;
 	const holdsRooms = removed.type === "unit" || removed.type === "common_area";
-	const followsUnitType = removed.type === "unit" && removed.unitType !== null;
+	const followsTypology = removed.type === "unit" && removed.typology !== null;
 
 	return {
-		unitTypes: [],
+		typologies: [],
 		locations: [
 			{
 				id: removed.id,
@@ -50,19 +50,19 @@ function recreation(removed: LocationDetail): CreateStructure {
 				type: removed.type,
 				name: removed.name,
 				position: removed.position,
-				...(followsUnitType &&
-					removed.unitType && { unitTypeId: removed.unitType.id }),
+				...(followsTypology &&
+					removed.typology && { typologyId: removed.typology.id }),
 				...(holdsRooms && {
-					rooms: removed.rooms.map(({ id, name, unitTypeRoomId, renamed }) => ({
+					rooms: removed.rooms.map(({ id, name, typologyRoomId, renamed }) => ({
 						id,
 						name,
-						...(unitTypeRoomId !== null && { unitTypeRoomId }),
+						...(typologyRoomId !== null && { typologyRoomId }),
 						...(renamed && { renamed }),
 					})),
 				}),
-				...(followsUnitType && {
+				...(followsTypology && {
 					droppedRooms: removed.droppedRooms.map(
-						({ unitTypeRoomId }) => unitTypeRoomId,
+						({ typologyRoomId }) => typologyRoomId,
 					),
 				}),
 			},

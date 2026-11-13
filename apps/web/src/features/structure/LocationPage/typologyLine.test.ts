@@ -1,24 +1,24 @@
-import { changesLabel, unitTypeLine } from "./unitTypeLine";
+import { changesLabel, typologyLine } from "./typologyLine";
 
 const typeA = { id: "type-a", name: "Tipologia A" };
 
-describe("unitTypeLine", () => {
-	test("says a unit has no unit type", () => {
-		expect(unitTypeLine({ unitType: null, changes: 0 })).toBe("Sem tipologia");
+describe("typologyLine", () => {
+	test("says a unit has no typology", () => {
+		expect(typologyLine({ typology: null, changes: 0 })).toBe("Sem tipologia");
 	});
 
-	test("names the unit type alone when the unit has no changes", () => {
-		expect(unitTypeLine({ unitType: typeA, changes: 0 })).toBe("Tipologia A");
+	test("names the typology alone when the unit has no changes", () => {
+		expect(typologyLine({ typology: typeA, changes: 0 })).toBe("Tipologia A");
 	});
 
 	test("adds the changes in the singular for one", () => {
-		expect(unitTypeLine({ unitType: typeA, changes: 1 })).toBe(
+		expect(typologyLine({ typology: typeA, changes: 1 })).toBe(
 			"Tipologia A · 1 alteração",
 		);
 	});
 
 	test("adds the changes in the plural for more than one", () => {
-		expect(unitTypeLine({ unitType: typeA, changes: 2 })).toBe(
+		expect(typologyLine({ typology: typeA, changes: 2 })).toBe(
 			"Tipologia A · 2 alterações",
 		);
 	});

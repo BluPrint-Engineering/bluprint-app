@@ -17,7 +17,7 @@ import {
 	structureApi,
 	structureOf,
 	tower,
-	unitTypesApi,
+	typologiesApi,
 } from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
 
@@ -45,7 +45,7 @@ function stubConfiguration(
 				: undefined,
 		...(extra ? [extra] : []),
 		structureApi(summary.id, structure),
-		unitTypesApi(summary.id),
+		typologiesApi(summary.id),
 	);
 	return stubApi(signedIn, { api });
 }

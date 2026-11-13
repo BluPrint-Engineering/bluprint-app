@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { location } from "./location.entity";
-import { unitTypeRoom } from "./unit-type.entity";
+import { typologyRoom } from "./typology.entity";
 
 export const room = pgTable(
 	"room",
@@ -23,7 +23,7 @@ export const room = pgTable(
 			.references(() => location.id, { onDelete: "cascade" }),
 		name: text().notNull(),
 		position: integer().notNull(),
-		unitTypeRoomId: uuid().references(() => unitTypeRoom.id, {
+		typologyRoomId: uuid().references(() => typologyRoom.id, {
 			onDelete: "set null",
 		}),
 		renamed: boolean().notNull().default(false),
@@ -49,14 +49,14 @@ export const droppedRoom = pgTable(
 		locationId: uuid()
 			.notNull()
 			.references(() => location.id, { onDelete: "cascade" }),
-		unitTypeRoomId: uuid()
+		typologyRoomId: uuid()
 			.notNull()
-			.references(() => unitTypeRoom.id, { onDelete: "cascade" }),
+			.references(() => typologyRoom.id, { onDelete: "cascade" }),
 	},
 	(table) => [
 		primaryKey({
 			name: "dropped_room_pk",
-			columns: [table.locationId, table.unitTypeRoomId],
+			columns: [table.locationId, table.typologyRoomId],
 		}),
 	],
 );

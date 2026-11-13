@@ -1,5 +1,5 @@
-import type { UnitType } from "@bluprint/shared";
-import { UNIT_TYPE_NAME_MAX_LENGTH } from "@bluprint/shared";
+import type { Typology } from "@bluprint/shared";
+import { TYPOLOGY_NAME_MAX_LENGTH } from "@bluprint/shared";
 import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -8,14 +8,14 @@ import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import { isProjectDelivered } from "../../projects/api";
 import {
-	unitTypeNamesTakenOf,
-	useCreateUnitTypeMutation,
-	useUpdateUnitTypeMutation,
+	typologyNamesTakenOf,
+	useCreateTypologyMutation,
+	useUpdateTypologyMutation,
 } from "../api";
 import { FormDialog } from "../components/FormDialog";
-import { unitTypeNameError, unitTypeNameTakenText } from "./unitTypeNames";
+import { typologyNameError, typologyNameTakenText } from "./typologyNames";
 
-function unitTypeName(
+function typologyName(
 	variables: unknown,
 	target: NameDialogTarget,
 ): string | undefined {
@@ -32,8 +32,8 @@ function unitTypeName(
 	}
 	if (target.mode === "create") return variables.name;
 	if (
-		!("unitTypeId" in variables) ||
-		variables.unitTypeId !== target.unitType.id
+		!("typologyId" in variables) ||
+		variables.typologyId !== target.typology.id
 	) {
 		return undefined;
 	}
@@ -42,9 +42,9 @@ function unitTypeName(
 
 export type NameDialogTarget =
 	| { mode: "create" }
-	| { mode: "rename"; unitType: UnitType };
+	| { mode: "rename"; typology: Typology };
 
-export function UnitTypeNameDialog({
+export function TypologyNameDialog({
 	projectId,
 	target,
 	onClose,
@@ -53,19 +53,19 @@ export function UnitTypeNameDialog({
 	projectId: string;
 	target: NameDialogTarget;
 	onClose: () => void;
-	onCreated: (unitType: UnitType) => void;
+	onCreated: (typology: Typology) => void;
 }) {
 	const fieldId = useId();
-	const create = useCreateUnitTypeMutation(projectId);
-	const update = useUpdateUnitTypeMutation(projectId);
+	const create = useCreateTypologyMutation(projectId);
+	const update = useUpdateTypologyMutation(projectId);
 	const [newId] = useState(uuidV7);
 	const draftKind =
-		target.mode === "create" ? "create-unit-type" : "update-unit-type";
+		target.mode === "create" ? "create-typology" : "update-typology";
 	const restored = useSessionDraft(draftKind, (variables) =>
-		unitTypeName(variables, target),
+		typologyName(variables, target),
 	);
 	const clearDraft = useClearSessionDraft(draftKind);
-	const current = target.mode === "rename" ? target.unitType.name : "";
+	const current = target.mode === "rename" ? target.typology.name : "";
 	const [name, setName] = useState(restored ?? current);
 	const [error, setError] = useState<string>();
 	const mutation = target.mode === "create" ? create : update;
@@ -76,15 +76,15 @@ export function UnitTypeNameDialog({
 	}
 
 	function submit() {
-		const invalid = unitTypeNameError(name);
+		const invalid = typologyNameError(name);
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
 		if (target.mode === "rename" && trimmed === current) return close();
 
 		const handlers = {
 			onError: (failure: unknown) => {
-				if (unitTypeNamesTakenOf(failure)) {
-					setError(unitTypeNameTakenText(trimmed));
+				if (typologyNamesTakenOf(failure)) {
+					setError(typologyNameTakenText(trimmed));
 				} else if (isProjectDelivered(failure)) {
 					close();
 				}
@@ -103,7 +103,7 @@ export function UnitTypeNameDialog({
 			);
 		} else {
 			update.mutate(
-				{ unitTypeId: target.unitType.id, name: trimmed },
+				{ typologyId: target.typology.id, name: trimmed },
 				{ ...handlers, onSuccess: close },
 			);
 		}
@@ -111,7 +111,7 @@ export function UnitTypeNameDialog({
 
 	const failed =
 		mutation.isError &&
-		!unitTypeNamesTakenOf(mutation.error) &&
+		!typologyNamesTakenOf(mutation.error) &&
 		!isProjectDelivered(mutation.error);
 
 	return (
@@ -146,7 +146,7 @@ export function UnitTypeNameDialog({
 					autoFocus
 					autoComplete="off"
 					enterKeyHint="done"
-					maxLength={UNIT_TYPE_NAME_MAX_LENGTH + 20}
+					maxLength={TYPOLOGY_NAME_MAX_LENGTH + 20}
 					value={name}
 					disabled={mutation.isPending}
 					aria-invalid={!!error}
