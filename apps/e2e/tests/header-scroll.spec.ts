@@ -161,6 +161,40 @@ test.describe("desktop scrolling", () => {
 	});
 });
 
+test.describe("phone hash", () => {
+	test.use({ storageState: { cookies: [], origins: [] } });
+	test("opening configuration#tipologias shows Tipologias", async ({
+		page,
+		isMobile,
+	}) => {
+		test.skip(!isMobile, "Phone hash landing");
+		await createProject(page);
+		await page.getByRole("link", { name: "Montar estrutura" }).click();
+		await page.getByLabel("Último andar").fill("3");
+		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByRole("button", { name: "Continuar · Áreas comuns" }).click();
+		await page.getByRole("button", { name: "Continuar · Tipologias" }).click();
+		for (let count = 0; count < 3; count++) {
+			await page
+				.getByRole("button", { name: "Nova tipologia", exact: true })
+				.click();
+		}
+		await page.getByRole("button", { name: "Continuar · Prévia" }).click();
+		await page.getByRole("button", { name: "Criar estrutura" }).click();
+		await expect(
+			page.getByRole("heading", { name: "Fachada", exact: true }),
+		).toBeVisible();
+		const projectURL = page.url();
+		await page.goto(`${projectURL}/configuration#tipologias`);
+		await expect(
+			page.getByRole("heading", { name: "Tipologias", exact: true }),
+		).toBeInViewport();
+		await expect(
+			page.getByRole("region", { name: "Dados da obra" }),
+		).not.toBeInViewport();
+	});
+});
+
 test("mobile project filters remain at the viewport top after the app header scrolls away", async ({
 	page,
 	isMobile,
