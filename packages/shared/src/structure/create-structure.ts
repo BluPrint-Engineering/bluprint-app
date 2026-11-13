@@ -30,6 +30,12 @@ export const comparableLocationName = (name: string) =>
 export const sameLocationName = (a: string, b: string) =>
 	comparableLocationName(a) === comparableLocationName(b);
 
+export const comparableRoomName = (name: string) =>
+	tidyLocationName(name).normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
+
+export const sameRoomName = (a: string, b: string) =>
+	comparableRoomName(a) === comparableRoomName(b);
+
 export const newLocationRoomSchema = z.object({
 	id: z.uuid().meta({
 		description:

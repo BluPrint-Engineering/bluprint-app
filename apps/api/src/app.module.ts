@@ -5,6 +5,7 @@ import { TransactionalAdapterDrizzleOrm } from "@nestjs-cls/transactional-adapte
 import { ClsModule } from "nestjs-cls";
 import { AuthModule } from "./auth/auth.module";
 import { DATABASE, DatabaseModule } from "./db/database.module";
+import { DisciplinesModule } from "./disciplines/disciplines.module";
 import { HealthModule } from "./health/health.module";
 import { envSchema } from "./lib/env";
 import { OrganizationsModule } from "./organizations/organizations.module";
@@ -37,6 +38,7 @@ import { StructureModule } from "./structure/structure.module";
 		OrganizationsModule,
 		ProjectsModule,
 		StructureModule,
+		DisciplinesModule,
 	],
 })
 export class AppModule {}

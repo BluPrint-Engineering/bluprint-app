@@ -71,6 +71,11 @@ export const problemDetailsSchema = z.object({
 				"The names that clashed, as the request sent them, present on `LOCATION_NAME_TAKEN` and `TYPOLOGY_NAME_TAKEN`.",
 			example: ["Torre A", "901"],
 		}),
+	name: z.string().optional().meta({
+		description:
+			"The name as it is already spelled in the project, present on `DISCIPLINE_NAME_TAKEN`.",
+		example: "Pintura",
+	}),
 });
 
 export type FieldError = z.infer<typeof fieldErrorSchema>;

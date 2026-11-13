@@ -99,6 +99,8 @@ A project's typologies (*tipologias*) and their ordered room names are migrated 
 
 ## 4. Disciplines and plans
 
+`discipline` and `location_discipline` are migrated. Every project is born with its three default disciplines in the same transaction that creates it, and the migration gave them to the projects that already existed; `location_discipline` starts empty. The name rule rides on an `IMMUTABLE` SQL wrapper of `unaccent`, `immutable_unaccent`, because an index cannot call `unaccent` itself. `plan` and what follows are designed only.
+
 | Table | Columns that matter | Why |
 | --- | --- | --- |
 | `discipline` | `name`, `color?`, `type`, `has_own_plan`, `applies_everywhere` | Belongs to the project. `type` is `general`, `base` (Hidráulica, Elétrica) or `extra`; General is the only discipline without a color ([0028](adr/0028-general-discipline-has-no-pins.md)). `has_own_plan` false means its pins are created on the General plan. `applies_everywhere` is the default for units and common areas, chosen at creation and fixed; floors and towers default to the base disciplines only ([0081](adr/0081-a-discipline-applies-per-location.md)). The name is unique per project ignoring accents, case and repeated spaces, and an extra discipline takes the first unused color of a fixed list of ten ([0085](adr/0085-a-discipline-batch-changes-only-what-it-names.md)). |

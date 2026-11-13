@@ -20,6 +20,7 @@ import {
 import { user } from "../auth/auth.entity";
 import { alias } from "drizzle-orm/pg-core";
 import { DatabaseAdapter } from "../db/database.module";
+import { insertDefaultDisciplines } from "../disciplines/default-disciplines";
 import { member } from "../members/member.entity";
 import { projectMember } from "../project-members/project-member.entity";
 import { project } from "./project.entity";
@@ -291,6 +292,7 @@ export class ProjectsRepository {
 			.insert(project)
 			.values(values)
 			.returning();
+		await insertDefaultDisciplines(this.txHost.tx, created!.id);
 
 		return created!;
 	}
@@ -306,6 +308,7 @@ export class ProjectsRepository {
 			.values(values)
 			.onConflictDoNothing({ target: project.id })
 			.returning();
+		if (created) await insertDefaultDisciplines(this.txHost.tx, created.id);
 
 		return created;
 	}
