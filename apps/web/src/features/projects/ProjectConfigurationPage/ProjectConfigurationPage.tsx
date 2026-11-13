@@ -19,7 +19,7 @@ function sectionIdFromHash(hash: string) {
 	}
 }
 
-// WebKit scrolls a hash only while the target is already in the first document, and sections above it still grow after this page renders.
+// WebKit scrolls a hash only while the target is already in the first document.
 function HashTarget() {
 	const hash = useRouterState({ select: (state) => state.location.hash });
 
@@ -29,7 +29,6 @@ function HashTarget() {
 		const scope = target?.parentElement;
 		if (!target || !scope) return;
 
-		let quiet = 0;
 		let frame = 0;
 		const align = () => {
 			target.scrollIntoView({ block: "start" });
@@ -37,24 +36,27 @@ function HashTarget() {
 			frame = requestAnimationFrame(() =>
 				target.scrollIntoView({ block: "start" }),
 			);
-			window.clearTimeout(quiet);
-			quiet = window.setTimeout(() => observer.disconnect(), 1500);
 		};
 		const observer = new ResizeObserver(align);
 		align();
 		observer.observe(scope);
+		const userIntentEvents = [
+			"pointerdown",
+			"keydown",
+			"wheel",
+			"touchmove",
+		] as const;
 		const stop = () => {
 			cancelAnimationFrame(frame);
-			window.clearTimeout(quiet);
 			observer.disconnect();
+			for (const event of userIntentEvents) {
+				window.removeEventListener(event, stop);
+			}
 		};
-		window.addEventListener("pointerdown", stop, { once: true });
-		window.addEventListener("keydown", stop, { once: true });
-		return () => {
-			stop();
-			window.removeEventListener("pointerdown", stop);
-			window.removeEventListener("keydown", stop);
-		};
+		for (const event of userIntentEvents) {
+			window.addEventListener(event, stop, { passive: true });
+		}
+		return stop;
 	}, [hash]);
 
 	return null;

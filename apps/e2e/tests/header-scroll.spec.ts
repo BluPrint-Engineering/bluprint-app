@@ -154,10 +154,14 @@ test.describe("desktop scrolling", () => {
 		await expect(
 			page.getByRole("heading", { name: "Tipologias", exact: true }),
 		).toBeInViewport();
+		await page.goto(projectURL);
 		await page.goto(`${projectURL}/configuration#tipologias`);
 		await expect(
 			page.getByRole("heading", { name: "Tipologias", exact: true }),
 		).toBeInViewport();
+		await expect(
+			page.getByRole("region", { name: "Dados da obra" }),
+		).not.toBeInViewport();
 	});
 });
 
