@@ -59,6 +59,8 @@ test.describe("desktop scrolling", () => {
 		const box = await preview.boundingBox();
 		expect(box).not.toBeNull();
 		if (!box) throw new Error("Preview has no bounding box");
+		await page.getByRole("button", { name: "Fechar aviso" }).click();
+		await expect(page.getByText("Obra “Scroll building” criada.")).toBeHidden();
 		await page.mouse.move(box.x + box.width / 2, box.y + box.height - 32);
 		await page.mouse.wheel(0, 1500);
 		await expect(groundFloor).toBeInViewport();
