@@ -172,7 +172,9 @@ test.describe("phone hash", () => {
 		await page.getByRole("link", { name: "Montar estrutura" }).click();
 		await page.getByLabel("Último andar").fill("3");
 		await page.getByLabel("Unidades por andar").fill("4");
-		await page.getByRole("button", { name: "Continuar · Áreas comuns" }).click();
+		await page
+			.getByRole("button", { name: "Continuar · Áreas comuns" })
+			.click();
 		await page.getByRole("button", { name: "Continuar · Tipologias" }).click();
 		for (let count = 0; count < 3; count++) {
 			await page
