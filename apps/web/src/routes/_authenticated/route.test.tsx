@@ -1137,6 +1137,36 @@ describe("restoring a reserva change", () => {
 		).toBeInTheDocument();
 	});
 
+	test("shows the current reserve in another row's Alterar reserva once the restored one is cancelled", async () => {
+		await expireReservationFromDuplicate(
+			"Ações do andar",
+			"Duplicar andar",
+			"Duplicar o 9º andar",
+		);
+		await screen.findByRole("dialog", { name: "Alterar reserva" });
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Alterar reserva" }),
+			).not.toBeInTheDocument(),
+		);
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Duplicar o 9º andar" }),
+			).not.toBeInTheDocument(),
+		);
+		const [unitRowReservation] = screen.getAllByRole("button", {
+			name: "Alterar reserva",
+		});
+		if (!unitRowReservation) throw new Error("no Alterar reserva");
+		await userEvent.click(unitRowReservation);
+
+		expect(
+			await screen.findByRole("textbox", { name: "Unidades reservadas" }),
+		).toHaveValue("2");
+	});
+
 	test("reopens it inside the unit's Duplicar, not the floor's, on the floor page", async () => {
 		await expireReservationFromDuplicate(
 			"Ações da unidade 901",
