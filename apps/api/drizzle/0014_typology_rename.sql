@@ -16,4 +16,15 @@ ALTER TABLE "dropped_room" RENAME CONSTRAINT "dropped_room_unit_type_room_id_uni
 ALTER TABLE "room" RENAME CONSTRAINT "room_unit_type_room_id_unit_type_room_id_fk" TO "room_typology_room_id_typology_room_id_fk";--> statement-breakpoint
 ALTER INDEX "unit_type_name_unique" RENAME TO "typology_name_unique";--> statement-breakpoint
 ALTER INDEX "unit_type_room_unit_type_id_idx" RENAME TO "typology_room_typology_id_idx";--> statement-breakpoint
-ALTER INDEX "unit_type_room_name_unique" RENAME TO "typology_room_name_unique";
+ALTER INDEX "unit_type_room_name_unique" RENAME TO "typology_room_name_unique";--> statement-breakpoint
+ALTER TABLE "typology" RENAME CONSTRAINT "unit_type_pkey" TO "typology_pkey";--> statement-breakpoint
+ALTER TABLE "typology_room" RENAME CONSTRAINT "unit_type_room_pkey" TO "typology_room_pkey";--> statement-breakpoint
+ALTER TABLE "typology" RENAME CONSTRAINT "unit_type_id_not_null" TO "typology_id_not_null";--> statement-breakpoint
+ALTER TABLE "typology" RENAME CONSTRAINT "unit_type_project_id_not_null" TO "typology_project_id_not_null";--> statement-breakpoint
+ALTER TABLE "typology" RENAME CONSTRAINT "unit_type_name_not_null" TO "typology_name_not_null";--> statement-breakpoint
+ALTER TABLE "typology" RENAME CONSTRAINT "unit_type_created_at_not_null" TO "typology_created_at_not_null";--> statement-breakpoint
+ALTER TABLE "typology_room" RENAME CONSTRAINT "unit_type_room_id_not_null" TO "typology_room_id_not_null";--> statement-breakpoint
+ALTER TABLE "typology_room" RENAME CONSTRAINT "unit_type_room_unit_type_id_not_null" TO "typology_room_typology_id_not_null";--> statement-breakpoint
+ALTER TABLE "typology_room" RENAME CONSTRAINT "unit_type_room_name_not_null" TO "typology_room_name_not_null";--> statement-breakpoint
+ALTER TABLE "typology_room" RENAME CONSTRAINT "unit_type_room_position_not_null" TO "typology_room_position_not_null";--> statement-breakpoint
+ALTER TABLE "dropped_room" RENAME CONSTRAINT "dropped_room_unit_type_room_id_not_null" TO "dropped_room_typology_room_id_not_null";
