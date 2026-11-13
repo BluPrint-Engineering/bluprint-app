@@ -8,7 +8,7 @@ export function SectionNav() {
 	return (
 		<nav
 			aria-label="Seções da configuração"
-			className="sticky top-22 grid gap-0.5"
+			className="sticky top-6 grid gap-0.5"
 		>
 			{SECTIONS.map(({ id, label, Icon }) => (
 				<a

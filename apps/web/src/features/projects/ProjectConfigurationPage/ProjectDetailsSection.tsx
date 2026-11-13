@@ -58,7 +58,7 @@ export function ProjectDetailsSection({
 		<section
 			id={SECTION_ID.details}
 			aria-label="Dados da obra"
-			className="scroll-mt-22"
+			className="scroll-mt-6"
 		>
 			<Card>
 				<CardHeader>

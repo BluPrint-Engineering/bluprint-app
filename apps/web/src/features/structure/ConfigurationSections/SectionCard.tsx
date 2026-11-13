@@ -11,7 +11,7 @@ export function SectionCard({
 	children: ReactNode;
 }) {
 	return (
-		<section id={id} aria-label={title} className="scroll-mt-22">
+		<section id={id} aria-label={title} className="scroll-mt-6">
 			<Card>
 				<CardHeader>
 					<CardTitle

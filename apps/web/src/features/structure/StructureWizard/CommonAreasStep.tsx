@@ -249,7 +249,7 @@ export function CommonAreasStep({
 									id={id}
 									tabIndex={-1}
 									aria-describedby={error ? `${id}-error` : undefined}
-									className="flex min-h-14 scroll-mt-22 items-center gap-(--space-2) pl-(--space-4) outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+									className="flex min-h-14 scroll-mt-6 items-center gap-(--space-2) pl-(--space-4) outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
 								>
 									<span className="grid min-w-0 flex-1 gap-(--space-1) [overflow-wrap:anywhere]">
 										<span>
