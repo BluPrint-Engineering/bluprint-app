@@ -18,9 +18,9 @@ import {
 	holderIdsCopied,
 	locationsCopied,
 	renumberedUnitNames,
+	reserveUsedByCopy,
 	StaleCopyError,
 	suggestedCopyName,
-	unitsCopied,
 } from "./duplicate";
 import {
 	copiedUnitsTakenText,
@@ -165,14 +165,14 @@ describe("suggestedCopyName", () => {
 	});
 });
 
-describe("unitsCopied", () => {
-	test("counts the units the copy creates", () => {
+describe("reserveUsedByCopy", () => {
+	test("counts the units and common areas the copy creates", () => {
 		const { ninth, towerA, structure } = scene();
 		const unit = nth(ninth.units, 0);
 
-		expect(unitsCopied(sourceOf(structure, "unit", unit.id))).toBe(1);
-		expect(unitsCopied(sourceOf(structure, "floor", ninth.id))).toBe(4);
-		expect(unitsCopied(sourceOf(structure, "tower", towerA.id))).toBe(6);
+		expect(reserveUsedByCopy(sourceOf(structure, "unit", unit.id))).toBe(1);
+		expect(reserveUsedByCopy(sourceOf(structure, "floor", ninth.id))).toBe(6);
+		expect(reserveUsedByCopy(sourceOf(structure, "tower", towerA.id))).toBe(9);
 	});
 });
 
@@ -800,36 +800,36 @@ describe("renumberedUnitNames", () => {
 describe("duplicateLine", () => {
 	test("says what the copy uses and what is left", () => {
 		expect(plain(duplicateLine(4, 12))).toBe(
-			"Cria 4 unidades das 12 que restam nesta obra. Depois, sobram 8.",
+			"Usa 4 das 12 unidades que restam nesta obra. Depois, sobram 8.",
 		);
 	});
 
 	test("says the only unit left in the singular", () => {
 		expect(plain(duplicateLine(1, 1))).toBe(
-			"Cria 1 unidade, a única que resta nesta obra. Depois, sobram 0.",
+			"Usa 1 da única unidade que resta nesta obra. Depois, sobram 0.",
 		);
 	});
 
 	test("says one left over in the singular", () => {
 		expect(plain(duplicateLine(11, 12))).toBe(
-			"Cria 11 unidades das 12 que restam nesta obra. Depois, sobra 1.",
+			"Usa 11 das 12 unidades que restam nesta obra. Depois, sobra 1.",
 		);
 	});
 });
 
 describe("duplicateOverText", () => {
-	test("says how many the copy creates and how many remain", () => {
+	test("says how many the copy uses and how many remain", () => {
 		expect(plain(duplicateOverText("Duplicar o 9º andar", 4, 2))).toBe(
-			"Duplicar o 9º andar cria 4 unidades e restam 2.",
+			"Duplicar o 9º andar usa 4 unidades e restam 2.",
 		);
 		expect(plain(duplicateOverText("Duplicar a Torre A", 6, 1))).toBe(
-			"Duplicar a Torre A cria 6 unidades e resta 1.",
+			"Duplicar a Torre A usa 6 unidades e resta 1.",
 		);
 	});
 
 	test("says the reserva is over when nothing remains", () => {
 		expect(duplicateOverText("Duplicar a unidade 903", 1, 0)).toBe(
-			"Duplicar a unidade 903 cria 1 unidade e a reserva da obra acabou.",
+			"Duplicar a unidade 903 usa 1 unidade e a reserva da obra acabou.",
 		);
 	});
 });

@@ -61,6 +61,23 @@ export function countUnits(structure: SeedStructure | undefined): number {
 	);
 }
 
+export function countUsed(structure: SeedStructure | undefined): number {
+	const commonAreas =
+		(structure?.commonAreas?.length ?? 0) +
+		(structure?.towers.reduce(
+			(sum, tower) =>
+				sum +
+				(tower.commonAreas?.length ?? 0) +
+				tower.floors.reduce(
+					(n, floor) => n + (floor.commonAreas?.length ?? 0),
+					0,
+				),
+			0,
+		) ?? 0);
+
+	return countUnits(structure) + commonAreas;
+}
+
 export function floorName(number: number): string {
 	return `${number}º andar`;
 }

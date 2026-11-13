@@ -213,6 +213,13 @@ beforeAll(async () => {
 
 	const otherFloor = await seedFloor(otherProjectId);
 	await seedUnits(otherProjectId, otherFloor, ["201", "202"]);
+	await db.insert(location).values({
+		projectId: otherProjectId,
+		parentId: otherFloor,
+		type: "common_area",
+		name: "Hall",
+		position: 2,
+	});
 
 	const deliveredFloor = await seedFloor(deliveredProjectId);
 	await seedUnits(deliveredProjectId, deliveredFloor, ["301", "302"]);
@@ -251,13 +258,13 @@ describe("GET /api/projects/:id/units", () => {
 		});
 	});
 
-	test("counts only the units of that project, not its floors, towers or other projects", async () => {
+	test("counts the units and common areas of that project, not its floors, towers or other projects", async () => {
 		const res = await admin.agent.get(unitsPath(otherProjectId));
 
 		expect(projectUnitsBalanceSchema.parse(res.body)).toEqual({
 			reserved: 5,
-			used: 2,
-			remaining: 3,
+			used: 3,
+			remaining: 2,
 		});
 	});
 
@@ -321,18 +328,18 @@ describe("the project summary", () => {
 				.items.map((item) => [item.name, item.units]),
 		);
 		expect(byName["Casa Moinhos"]).toEqual({ reserved: 10, used: 3 });
-		expect(byName["Torre Ipê"]).toEqual({ reserved: 5, used: 2 });
+		expect(byName["Torre Ipê"]).toEqual({ reserved: 5, used: 3 });
 		expect(byName["Galpão Sul"]).toEqual({ reserved: 7, used: 0 });
 	});
 });
 
 describe("GET /api/organization/units", () => {
-	test("reclaimable discounts the units projects in progress already use", async () => {
+	test("reclaimable discounts the units and common areas projects in progress already use", async () => {
 		const res = await admin.agent.get("/api/organization/units");
 
 		expect(organizationUnitsSchema.parse(res.body)).toMatchObject({
 			reserved: 24,
-			reclaimable: 10 - 3 + (5 - 2) + 7,
+			reclaimable: 16,
 		});
 	});
 });
@@ -430,9 +437,9 @@ describe("UnitsService.assertAvailable", () => {
 
 		const res = await admin.agent.get(unitsPath(otherProjectId));
 
-		expect(projectUnitsBalanceSchema.parse(res.body).remaining).toBe(3);
+		expect(projectUnitsBalanceSchema.parse(res.body).remaining).toBe(2);
 		await expect(
-			txHost.withTransaction(() => units.assertAvailable(otherProjectId, 3)),
+			txHost.withTransaction(() => units.assertAvailable(otherProjectId, 2)),
 		).resolves.toBeUndefined();
 	});
 

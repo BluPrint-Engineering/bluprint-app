@@ -9,3 +9,11 @@ export const locationTypeSchema = z.enum(locationTypes).meta({
 });
 
 export type LocationType = z.infer<typeof locationTypeSchema>;
+
+export const locationTypesUsingReservation = [
+	"unit",
+	"common_area",
+] as const satisfies readonly LocationType[];
+
+export const usesReservation = (type: LocationType): boolean =>
+	(locationTypesUsingReservation as readonly LocationType[]).includes(type);

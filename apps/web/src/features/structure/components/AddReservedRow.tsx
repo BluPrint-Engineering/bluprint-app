@@ -2,30 +2,38 @@ import type { ProjectSummary } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useSessionDraft } from "@/features/auth";
+import { reservationDraft } from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import { projectUnitsQueryOptions } from "../api";
-import { addUnitLine } from "../reserveText";
+import { addOneLine } from "../reserveText";
 import { AddRow, type AddRowProps } from "./AddRow";
 
-type AddUnitRowProps = Omit<
+type AddReservedRowProps = Omit<
 	AddRowProps,
-	| "projectId"
-	| "type"
-	| "kind"
-	| "label"
-	| "hint"
-	| "hintLoading"
-	| "blocked"
-	| "scope"
-	| "buttonRef"
-> & { project: ProjectSummary };
+	"projectId" | "type" | "hint" | "hintLoading" | "blocked" | "buttonRef"
+> & {
+	project: ProjectSummary;
+	type: "unit" | "common_area";
+	reopensReservation?: boolean;
+};
 
-export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
+export function AddReservedRow({
+	project,
+	reopensReservation = false,
+	...row
+}: AddReservedRowProps) {
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const admin = project.role === "admin";
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		(variables) => (typeof variables === "number" ? variables : undefined),
+		(variables) => {
+			const draft = reservationDraft(variables);
+			const ours =
+				draft?.opener === undefined
+					? reopensReservation
+					: draft.opener === row.kind;
+			return ours ? draft : undefined;
+		},
 	);
 	const [reserving, setReserving] = useState(
 		admin && restoredReservation !== undefined,
@@ -49,11 +57,7 @@ export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
 			<AddRow
 				{...row}
 				projectId={project.id}
-				kind="floor-unit"
-				type="unit"
-				scope="tower"
-				label="Adicionar unidade"
-				hint={remaining === undefined ? undefined : addUnitLine(remaining)}
+				hint={remaining === undefined ? undefined : addOneLine(remaining)}
 				hintLoading={units.isPending}
 				buttonRef={addButton}
 				blocked={
@@ -88,6 +92,7 @@ export function AddUnitRow({ project, ...row }: AddUnitRowProps) {
 							if (result.isError) savedAt.current = undefined;
 						});
 					}}
+					opener={row.kind}
 				/>
 			)}
 		</>

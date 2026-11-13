@@ -11,6 +11,7 @@ import {
 	TYPOLOGY_NAME_TAKEN,
 	TYPOLOGY_NOT_FOUND,
 	TYPOLOGY_ROOM_INVALID,
+	usesReservation,
 } from "@bluprint/shared";
 import { ProblemException } from "../common/problems/problem.exception";
 import { nameKey } from "./location-names";
@@ -30,7 +31,7 @@ export interface TypologyIdsInUse {
 export interface CreationPlan {
 	freshTypologies: NewTypology[];
 	fresh: NewLocation[];
-	newUnits: number;
+	newUsed: number;
 	counts: StructureCounts;
 }
 
@@ -244,7 +245,7 @@ export function planCreation(
 	return {
 		freshTypologies,
 		fresh,
-		newUnits: fresh.filter((entry) => entry.type === "unit").length,
+		newUsed: fresh.filter(({ type }) => usesReservation(type)).length,
 		counts: {
 			towers: count("tower"),
 			floors: count("floor"),

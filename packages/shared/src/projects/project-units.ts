@@ -4,7 +4,7 @@ import { projectUnitsSchema } from "./project-summary.js";
 export const projectUnitsBalanceSchema = projectUnitsSchema.extend({
 	remaining: z.int().nonnegative().meta({
 		description:
-			"`reserved` minus `used`: the units the project can still create.",
+			"`reserved` minus `used`: how many units and common areas the project can still create.",
 		example: 80,
 	}),
 });

@@ -9,7 +9,7 @@ export const reservationRowSchema = z.object({
 	}),
 	used: z.int().nonnegative().meta({
 		description:
-			"Units the project has used: the least its reservation can be.",
+			"Units the project has used, its units and common areas: the least its reservation can be.",
 		example: 180,
 	}),
 });

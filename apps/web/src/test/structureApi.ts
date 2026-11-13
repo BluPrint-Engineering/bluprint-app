@@ -488,7 +488,7 @@ export function writableApi(
 				if (answered) return answered;
 				applyCreation(structure, body);
 				state.units.remaining -= body.locations.filter(
-					(entry) => entry.type === "unit",
+					(entry) => entry.type === "unit" || entry.type === "common_area",
 				).length;
 				const requested = (type: string) =>
 					body.locations.filter((entry) => entry.type === type).length;
@@ -555,7 +555,7 @@ export function writableApi(
 						404,
 					);
 				}
-				state.units.remaining += counts.units;
+				state.units.remaining += counts.units + counts.commonAreas;
 				return json({ outcome: "deleted", removed: counts });
 			}
 			if (target && init?.method === "PATCH") {

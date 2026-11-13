@@ -236,7 +236,7 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
-					"Usa 8 das 12 unidades que restam nesta obra. Depois de adicionar, sobram 4.",
+					"Usa 10 das 12 unidades que restam nesta obra. Depois de adicionar, sobram 2.",
 				),
 			).toBeInTheDocument();
 			expect(
@@ -271,7 +271,7 @@ describe("adding floors to a tower (W9)", () => {
 
 			expect(
 				await screen.findByText(
-					"Esta estrutura tem 8 unidades e a obra tem 6. Tire 2 unidades ou peça mais reserva ao admin da construtora.",
+					"Esta estrutura tem 10 unidades e a obra tem 6. Tire 4 unidades ou peça mais reserva ao admin da construtora.",
 				),
 			).toBeInTheDocument();
 			expect(
@@ -483,7 +483,7 @@ describe("adding floors to a tower (W9)", () => {
 							title: "Conflict",
 							status: 409,
 							code: NO_UNITS_LEFT,
-							requested: 8,
+							requested: 10,
 							available: 6,
 						},
 						409,
@@ -498,7 +498,7 @@ describe("adding floors to a tower (W9)", () => {
 
 			expect(
 				await screen.findByText(
-					"Esta estrutura tem 8 unidades e a obra tem 6. Tire 2 unidades ou peça mais reserva ao admin da construtora.",
+					"Esta estrutura tem 10 unidades e a obra tem 6. Tire 4 unidades ou peça mais reserva ao admin da construtora.",
 				),
 			).toBeInTheDocument();
 			expect(await addButton()).toBeDisabled();
@@ -660,12 +660,12 @@ describe("adding floors to a tower (W9)", () => {
 			await toPreviewOnPhone();
 
 			const alert = await screen.findByText(
-				"Esta estrutura tem 8 unidades e a obra tem 6. Tire 2 unidades ou peça mais reserva ao admin da construtora.",
+				"Esta estrutura tem 10 unidades e a obra tem 6. Tire 4 unidades ou peça mais reserva ao admin da construtora.",
 			);
 			const button = await addButton();
 			expect(button).toBeDisabled();
 			expect(button).toHaveAccessibleDescription(
-				/Esta estrutura tem 8 unidades/,
+				/Esta estrutura tem 10 unidades/,
 			);
 			expect(alert.closest("div[class*='fixed']")).toContainElement(button);
 		});

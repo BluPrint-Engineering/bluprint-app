@@ -27,6 +27,7 @@ import {
 	updateTypologyResultSchema,
 } from "@bluprint/shared";
 import {
+	partialMatchKey,
 	queryOptions,
 	useMutation,
 	useQueryClient,
@@ -123,10 +124,13 @@ function useStructureCreation<Variables>(
 		...(kind && { meta: { sessionDraft: kind } }),
 		mutationFn: send,
 		onSuccess: () => {
+			const unitsKey = projectUnitsQueryOptions(projectId).queryKey;
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
 			void queryClient.invalidateQueries(organizationUnitsQueryOptions);
+			void queryClient.invalidateQueries({ queryKey: unitsKey });
 			return queryClient.invalidateQueries({
 				queryKey: ["structure", projectId],
+				predicate: ({ queryKey }) => !partialMatchKey(queryKey, unitsKey),
 			});
 		},
 		onError: (error) => {

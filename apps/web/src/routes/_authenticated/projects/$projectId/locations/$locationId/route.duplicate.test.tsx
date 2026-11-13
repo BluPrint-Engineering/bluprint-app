@@ -95,8 +95,8 @@ describe("duplicating a tower (R9a)", () => {
 		expect(nameField(dialog)).toHaveValue("Torre C");
 		expect(within(dialog).getByText("Único na obra.")).toBeInTheDocument();
 		expect(
-			plain((await within(dialog).findByText(/^Cria 6 unidades/)).textContent),
-		).toBe("Cria 6 unidades das 12 que restam nesta obra. Depois, sobram 6.");
+			plain((await within(dialog).findByText(/^Usa 8 das/)).textContent),
+		).toBe("Usa 8 das 12 unidades que restam nesta obra. Depois, sobram 4.");
 	});
 
 	test("sends the whole tower in one request and confirms it", async () => {
@@ -108,7 +108,7 @@ describe("duplicating a tower (R9a)", () => {
 		stubApi(signedIn, { api: api.handler });
 		renderAt(pathOf(towerA.id));
 		const dialog = await openDuplicate("Ações da torre", "Duplicar torre");
-		await within(dialog).findByText(/^Cria 6 unidades/);
+		await within(dialog).findByText(/^Usa 8 das/);
 
 		await submit(dialog);
 
@@ -156,8 +156,8 @@ describe("duplicating a floor", () => {
 		expect(nameField(dialog)).toHaveValue("11º andar");
 		expect(within(dialog).getByText("Único na torre.")).toBeInTheDocument();
 		expect(
-			plain((await within(dialog).findByText(/^Cria 4 unidades/)).textContent),
-		).toBe("Cria 4 unidades das 12 que restam nesta obra. Depois, sobram 8.");
+			plain((await within(dialog).findByText(/^Usa 5 das/)).textContent),
+		).toBe("Usa 5 das 12 unidades que restam nesta obra. Depois, sobram 7.");
 	});
 
 	test("renumbers the units by the new number and shows the floor on the façade", async () => {
@@ -282,9 +282,7 @@ describe("duplicating a floor someone else just changed", () => {
 			),
 		).toBeInTheDocument();
 		expect(api.created).toHaveLength(0);
-		expect(
-			await within(dialog).findByText(/^Cria 3 unidades/),
-		).toBeInTheDocument();
+		expect(await within(dialog).findByText(/^Usa 4 das/)).toBeInTheDocument();
 
 		await submit(dialog);
 
@@ -414,8 +412,8 @@ describe("duplicating a unit", () => {
 		expect(nameField(dialog)).toHaveValue("905");
 		expect(nameField(dialog)).toHaveClass("font-mono");
 		expect(
-			plain((await within(dialog).findByText(/^Cria 1 unidade/)).textContent),
-		).toBe("Cria 1 unidade das 12 que restam nesta obra. Depois, sobram 11.");
+			plain((await within(dialog).findByText(/^Usa 1 das/)).textContent),
+		).toBe("Usa 1 das 12 unidades que restam nesta obra. Depois, sobram 11.");
 	});
 
 	test("says the only unit left in the singular", async () => {
@@ -431,8 +429,8 @@ describe("duplicating a unit", () => {
 		);
 
 		expect(
-			plain((await within(dialog).findByText(/^Cria 1 unidade/)).textContent),
-		).toBe("Cria 1 unidade, a única que resta nesta obra. Depois, sobram 0.");
+			plain((await within(dialog).findByText(/^Usa 1 da única/)).textContent),
+		).toBe("Usa 1 da única unidade que resta nesta obra. Depois, sobram 0.");
 		expect(
 			within(dialog).getByRole("button", { name: "Duplicar" }),
 		).toBeEnabled();
@@ -646,7 +644,7 @@ describe("duplicating past the reserva (R9b)", () => {
 		const dialog = await openDuplicate("Ações do andar", "Duplicar andar");
 
 		expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-			"Duplicar o 9º andar cria 4 unidades e restam 2.",
+			"Duplicar o 9º andar usa 5 unidades e restam 2.",
 		);
 		expect(
 			within(dialog).queryByRole("button", { name: "Alterar reserva" }),
@@ -654,7 +652,27 @@ describe("duplicating past the reserva (R9b)", () => {
 		expect(
 			within(dialog).getByRole("button", { name: "Duplicar" }),
 		).toBeDisabled();
-		expect(within(dialog).queryByText(/^Cria /)).not.toBeInTheDocument();
+		expect(within(dialog).queryByText(/^Usa /)).not.toBeInTheDocument();
+	});
+
+	test("counts the common areas of the copy against what remains (M1)", async () => {
+		const small = floor("2º andar", ["201", "202"], ["Hall"]);
+		const towerC = tower("Torre C", [small]);
+		const api = writableApi(obra("manager"), structureOf([towerC]), {
+			remaining: 2,
+		});
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(small.id));
+
+		const dialog = await openDuplicate("Ações do andar", "Duplicar andar");
+
+		expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+			"Duplicar o 2º andar usa 3 unidades e restam 2.",
+		);
+		expect(
+			within(dialog).getByRole("button", { name: "Duplicar" }),
+		).toBeDisabled();
+		expect(api.created).toEqual([]);
 	});
 
 	test("says the reserva is over when nothing remains", async () => {
@@ -670,7 +688,7 @@ describe("duplicating past the reserva (R9b)", () => {
 		);
 
 		expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-			"Duplicar a unidade 903 cria 1 unidade e a reserva da obra acabou.",
+			"Duplicar a unidade 903 usa 1 unidade e a reserva da obra acabou.",
 		);
 		expect(
 			within(dialog).getByRole("button", { name: "Duplicar" }),
@@ -700,18 +718,18 @@ describe("duplicating past the reserva (R9b)", () => {
 			remaining: 12,
 			create: () => {
 				api.state.units.remaining = 3;
-				return problem(409, NO_UNITS_LEFT, { requested: 4, available: 3 });
+				return problem(409, NO_UNITS_LEFT, { requested: 5, available: 3 });
 			},
 		});
 		stubApi(signedIn, { api: api.handler });
 		renderAt(pathOf(ninth.id));
 		const dialog = await openDuplicate("Ações do andar", "Duplicar andar");
-		await within(dialog).findByText(/^Cria 4 unidades/);
+		await within(dialog).findByText(/^Usa 5 das/);
 
 		await submit(dialog);
 
 		expect(await within(dialog).findByRole("alert")).toHaveTextContent(
-			"Duplicar o 9º andar cria 4 unidades e restam 3.",
+			"Duplicar o 9º andar usa 5 unidades e restam 3.",
 		);
 		expect(
 			within(dialog).getByRole("button", { name: "Duplicar" }),

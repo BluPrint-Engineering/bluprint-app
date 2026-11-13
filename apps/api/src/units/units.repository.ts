@@ -1,4 +1,7 @@
-import type { ProjectStatus } from "@bluprint/shared";
+import {
+	locationTypesUsingReservation,
+	type ProjectStatus,
+} from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
@@ -118,7 +121,10 @@ export class UnitsRepository {
 			})
 			.from(location)
 			.where(
-				and(inArray(location.projectId, projectIds), eq(location.type, "unit")),
+				and(
+					inArray(location.projectId, projectIds),
+					inArray(location.type, locationTypesUsingReservation),
+				),
 			)
 			.groupBy(location.projectId);
 
@@ -153,7 +159,7 @@ export class UnitsRepository {
 				and(
 					eq(project.organizationId, organizationId),
 					eq(project.status, "active"),
-					eq(location.type, "unit"),
+					inArray(location.type, locationTypesUsingReservation),
 				),
 			);
 

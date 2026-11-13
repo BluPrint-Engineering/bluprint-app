@@ -310,8 +310,26 @@ describe("removing an empty location at once (R1)", () => {
 	});
 });
 
+describe("giving a common area's place back", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("gives a removed common area's place back to the obra's reservation", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra(), several, { remaining: 5 });
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(ninth.id));
+
+		await pick("Ações da área comum Hall", "Remover área comum");
+
+		expect(await screen.findByText("Área comum Hall excluída.")).toBeVisible();
+		await waitFor(() => expect(api.state.units.remaining).toBe(6));
+	});
+});
+
 describe("removing a location with children (R2)", () => {
-	test("asks to confirm a floor, counting its units and common area, and says the units go back to the reservation", async () => {
+	test("asks to confirm a floor, counting its units and common area, and says all of them go back to the reservation", async () => {
 		const { ninth, several } = build();
 		const api = writableApi(obra(), several);
 		stubApi(signedIn, { api: api.handler });
@@ -329,7 +347,7 @@ describe("removing a location with children (R2)", () => {
 			),
 		).toBeInTheDocument();
 		expect(
-			within(dialog).getByText("As 4 unidades voltam para a reserva da obra."),
+			within(dialog).getByText("As 5 unidades voltam para a reserva da obra."),
 		).toBeInTheDocument();
 		expect(api.removed).toEqual([]);
 	});
@@ -351,11 +369,11 @@ describe("removing a location with children (R2)", () => {
 			),
 		).toBeInTheDocument();
 		expect(
-			within(dialog).getByText("As 4 unidades voltam para a reserva da obra."),
+			within(dialog).getByText("As 6 unidades voltam para a reserva da obra."),
 		).toBeInTheDocument();
 	});
 
-	test("leaves out the reservation line when nothing below is a unit", async () => {
+	test("says the common area goes back to the reservation when it is all the floor holds", async () => {
 		const tenth = floor("10º andar", [], ["Terraço"]);
 		const towerA = tower("Torre A", [tenth]);
 		stubApi(signedIn, {
@@ -372,8 +390,8 @@ describe("removing a location with children (R2)", () => {
 			),
 		).toBeInTheDocument();
 		expect(
-			within(dialog).queryByText(/reserva da obra/),
-		).not.toBeInTheDocument();
+			within(dialog).getByText("A área comum volta para a reserva da obra."),
+		).toBeInTheDocument();
 	});
 
 	test("asks to confirm a floor that looked empty when someone added a unit to it meanwhile", async () => {
@@ -418,7 +436,7 @@ describe("removing a location with children (R2)", () => {
 		expect(
 			screen.queryByRole("button", { name: "Desfazer" }),
 		).not.toBeInTheDocument();
-		await waitFor(() => expect(api.state.units.remaining).toBe(104));
+		await waitFor(() => expect(api.state.units.remaining).toBe(105));
 	});
 
 	test("deletes nothing with Cancelar or Escape", async () => {

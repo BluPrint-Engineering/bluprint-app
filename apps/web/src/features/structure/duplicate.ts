@@ -51,15 +51,18 @@ export function sourceName(source: DuplicateSource): string {
 	}
 }
 
-export function unitsCopied(source: DuplicateSource): number {
+const reserveUsedByFloor = (floor: StructureFloor) =>
+	floor.units.length + floor.commonAreas.length;
+
+export function reserveUsedByCopy(source: DuplicateSource): number {
 	switch (source.type) {
 		case "tower":
 			return source.tower.floors.reduce(
-				(sum, floor) => sum + floor.units.length,
-				0,
+				(sum, floor) => sum + reserveUsedByFloor(floor),
+				source.tower.commonAreas.length,
 			);
 		case "floor":
-			return source.floor.units.length;
+			return reserveUsedByFloor(source.floor);
 		case "unit":
 			return 1;
 	}

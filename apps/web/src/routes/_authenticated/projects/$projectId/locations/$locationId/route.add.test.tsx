@@ -364,7 +364,9 @@ describe("adding a unit on a floor", () => {
 		expect(row).toHaveAttribute("aria-disabled", "true");
 		await waitFor(() => expect(row).toHaveFocus());
 		expect(
-			screen.getByText("A reserva da obra acabou.", { exact: false }),
+			within(sectionOf("Unidades")).getByText("A reserva da obra acabou.", {
+				exact: false,
+			}),
 		).toBeInTheDocument();
 	});
 });
@@ -397,36 +399,24 @@ describe("the reserva is over", () => {
 		},
 	);
 
-	test("leaves the common areas free of the reserva (F5)", async () => {
+	test("stops the common-area row too, so nothing is sent that the server refuses (L8b)", async () => {
 		const { ninth, several } = build();
 		const api = writableApi(obra(), several, { remaining: 0 });
 		stubApi(signedIn, { api: api.handler });
 		renderAt(pathOf(ninth.id));
-		await waitFor(() =>
-			expect(
-				screen.getByRole("button", { name: "Adicionar unidade" }),
-			).toHaveAttribute("aria-disabled", "true"),
-		);
 
-		await user.click(
-			screen.getByRole("button", { name: "Adicionar área comum" }),
-		);
-
-		const field = screen.getByRole("textbox", { name: "Adicionar área comum" });
-		expect(field).toHaveValue("");
-		expect(screen.queryByText(/restam nesta obra/)).not.toBeInTheDocument();
-		await user.type(field, "Terraço");
-		await user.keyboard("{Enter}");
-		await waitFor(() => expect(api.created).toHaveLength(1));
-		expect(bodyOf(nth(api.created, 0))).toMatchObject({
-			parentId: ninth.id,
-			type: "common_area",
-			name: "Terraço",
+		const row = await screen.findByRole("button", {
+			name: "Adicionar área comum",
 		});
-		expect(bodyOf(nth(api.created, 0))).not.toHaveProperty("position");
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
+		expect(row).toHaveAccessibleDescription(
+			"A reserva da obra acabou. Fale com o admin da construtora.",
+		);
+		await user.click(row);
 		expect(
-			await screen.findByRole("link", { name: "Terraço" }),
-		).toBeInTheDocument();
+			screen.queryByRole("textbox", { name: "Adicionar área comum" }),
+		).not.toBeInTheDocument();
+		expect(api.created).toEqual([]);
 	});
 
 	test("brings the row back on a background refetch without moving focus to it", async () => {
@@ -472,7 +462,11 @@ describe("the reserva is over", () => {
 			name: "Adicionar unidade",
 		});
 		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
-		await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
+		await user.click(
+			within(sectionOf("Unidades")).getByRole("button", {
+				name: "Alterar reserva",
+			}),
+		);
 		const dialog = await screen.findByRole("dialog", {
 			name: "Alterar reserva",
 		});
@@ -528,7 +522,11 @@ describe("the reserva is over", () => {
 			"A reserva da obra acabou. Alterar reserva",
 		);
 
-		await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
+		await user.click(
+			within(sectionOf("Unidades")).getByRole("button", {
+				name: "Alterar reserva",
+			}),
+		);
 		const dialog = await screen.findByRole("dialog", {
 			name: "Alterar reserva",
 		});
@@ -594,6 +592,60 @@ describe("adding a common area", () => {
 			await within(sectionOf("Áreas comuns da torre")).findByRole("link", {
 				name: "Academia",
 			}),
+		).toBeInTheDocument();
+	});
+
+	test("says what the area uses of the reserva, like a unit (L8)", async () => {
+		const { ninth, several } = build();
+		stubApi(signedIn, {
+			api: writableApi(obra(), several, { remaining: 12 }).handler,
+		});
+		renderAt(pathOf(ninth.id));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Adicionar área comum" }),
+		);
+
+		expect(
+			await screen.findByText("Usa 1 das 12 unidades que restam nesta obra."),
+		).toBeInTheDocument();
+	});
+
+	test("says the only unit left in the singular on the tower's row", async () => {
+		const { towerA, several } = build();
+		stubApi(signedIn, {
+			api: writableApi(obra(), several, { remaining: 1 }).handler,
+		});
+		renderAt(pathOf(towerA.id));
+
+		await user.click(
+			await screen.findByRole("button", { name: "Adicionar área comum" }),
+		);
+
+		expect(
+			await screen.findByText("Usa 1 da única unidade que resta nesta obra."),
+		).toBeInTheDocument();
+	});
+
+	test("gives the admin the link to change the reserva on the tower's row once it is over (L8)", async () => {
+		const { towerA, several } = build();
+		stubApi(signedIn, {
+			api: writableApi(obra("admin"), several, { remaining: 0 }).handler,
+		});
+		renderAt(pathOf(towerA.id));
+
+		const row = await screen.findByRole("button", {
+			name: "Adicionar área comum",
+		});
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
+		expect(row).toHaveAccessibleDescription(
+			"A reserva da obra acabou. Alterar reserva",
+		);
+
+		await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
+
+		expect(
+			await screen.findByRole("dialog", { name: "Alterar reserva" }),
 		).toBeInTheDocument();
 	});
 

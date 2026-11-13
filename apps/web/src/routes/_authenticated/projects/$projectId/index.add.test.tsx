@@ -358,6 +358,69 @@ describe("several towers (E2)", () => {
 	});
 });
 
+describe("the reserva on the façade's common-area row", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	const reserving = (role: ProjectAccessRole = "manager") => ({
+		...obra(role),
+		units: { reserved: 112, used: 100 },
+	});
+
+	test("says how many units remain when the row opens (L8)", async () => {
+		stubApi(signedIn, {
+			api: writableApi(reserving(), singleTower(), { remaining: 12 }).handler,
+		});
+		renderAt(OBRA_PATH);
+
+		await user.click(
+			await screen.findByRole("button", { name: "Adicionar área comum" }),
+		);
+
+		expect(
+			await screen.findByText("Usa 1 das 12 unidades que restam nesta obra."),
+		).toBeInTheDocument();
+	});
+
+	test("stops the row and tells a manager to ask the admin once the reserva is over (L8b)", async () => {
+		stubApi(signedIn, {
+			api: writableApi(reserving(), singleTower(), { remaining: 0 }).handler,
+		});
+		renderAt(OBRA_PATH);
+
+		const row = await screen.findByRole("button", {
+			name: "Adicionar área comum",
+		});
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
+		expect(row).toHaveAccessibleDescription(
+			"A reserva da obra acabou. Fale com o admin da construtora.",
+		);
+	});
+
+	test("gives the admin the link to change the reserva once it is over (L8)", async () => {
+		stubApi(signedIn, {
+			api: writableApi(reserving("admin"), singleTower(), { remaining: 0 })
+				.handler,
+		});
+		renderAt(OBRA_PATH);
+
+		const row = await screen.findByRole("button", {
+			name: "Adicionar área comum",
+		});
+		await waitFor(() => expect(row).toHaveAttribute("aria-disabled", "true"));
+		expect(row).toHaveAccessibleDescription(
+			"A reserva da obra acabou. Alterar reserva",
+		);
+
+		await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
+
+		expect(
+			await screen.findByRole("dialog", { name: "Alterar reserva" }),
+		).toBeInTheDocument();
+	});
+});
+
 describe("a single tower (E3)", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();

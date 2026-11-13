@@ -171,6 +171,26 @@ export interface ReservationFeedback {
 	failed: (error: Error) => void;
 }
 
+export interface ReservationChange {
+	reserved: number;
+	opener?: string | undefined;
+}
+
+export function reservationDraft(
+	variables: unknown,
+): ReservationChange | undefined {
+	if (typeof variables === "number") return { reserved: variables };
+	if (typeof variables !== "object" || variables === null) return undefined;
+	if (!("reserved" in variables) || typeof variables.reserved !== "number") {
+		return undefined;
+	}
+	const opener =
+		"opener" in variables && typeof variables.opener === "string"
+			? variables.opener
+			: undefined;
+	return { reserved: variables.reserved, opener };
+}
+
 export function useChangeReservationMutation(
 	projectId: string,
 	feedback: ReservationFeedback,
@@ -179,7 +199,7 @@ export function useChangeReservationMutation(
 	const { queryKey } = projectQueryOptions(projectId);
 	return useMutation({
 		meta: { sessionDraft: "change-reservation" },
-		mutationFn: (reserved: number) =>
+		mutationFn: ({ reserved }: ReservationChange) =>
 			apiFetch(`/projects/${projectId}/units`, projectSummarySchema, {
 				method: "PATCH",
 				headers: { "content-type": "application/json" },

@@ -1,6 +1,6 @@
 import type { OrganizationUnits } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
@@ -993,6 +993,202 @@ describe("actions that must not come back", () => {
 		expect(deletes).toEqual([tipologia.id]);
 		expect(
 			screen.queryByRole("menuitem", { name: "Excluir tipologia" }),
+		).not.toBeInTheDocument();
+	});
+});
+
+async function expireReservationFromDuplicate(
+	menuLabel: string,
+	menuItem: string,
+	dialogName: string,
+) {
+	const towerA = tower("Torre A", [floor("9º andar", ["901", "902"])]);
+	const floorA = towerA.floors[0];
+	const obra = {
+		...project(3, "admin"),
+		name: "Casa Moinhos",
+		units: { reserved: 2, used: 2 },
+	};
+	const api = writableApi(obra, structureOf([towerA]), { remaining: 0 });
+	let expired = false;
+	const expireOnce = (url: URL, init?: RequestInit) => {
+		if (
+			!expired ||
+			url.pathname !== `/api/projects/${obra.id}/units` ||
+			init?.method !== "PATCH"
+		) {
+			return undefined;
+		}
+		expired = false;
+		return json({}, 401);
+	};
+	const stub = stubApi(signedIn, { api: combine(expireOnce, api.handler) });
+	renderAt(`/projects/${obra.id}/locations/${floorA?.id}`);
+	await userEvent.click(await screen.findByRole("button", { name: menuLabel }));
+	await userEvent.click(screen.getByRole("menuitem", { name: menuItem }));
+	const duplicate = await screen.findByRole("dialog", { name: dialogName });
+	await userEvent.click(
+		await within(duplicate).findByRole("button", { name: "Alterar reserva" }),
+	);
+	const field = await screen.findByRole("textbox", {
+		name: "Unidades reservadas",
+	});
+	await userEvent.clear(field);
+	await userEvent.type(field, "5");
+	expired = true;
+	stub.setSession(null);
+	await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+	await screen.findByLabelText("E-mail");
+	await signInAs("ana@horizonte.test");
+}
+
+describe("restoring a reserva change", () => {
+	afterEach(() => {
+		localStorage.clear();
+		vi.unstubAllGlobals();
+		onlineManager.setOnline(true);
+	});
+
+	test("reopens it from the tower's add-area row, not from Duplicar, and returns focus to that row", async () => {
+		const towerA = tower("Torre A", [floor("9º andar", ["901", "902"])]);
+		const obra = {
+			...project(3, "admin"),
+			name: "Casa Moinhos",
+			units: { reserved: 2, used: 2 },
+		};
+		const api = writableApi(obra, structureOf([towerA, tower("Torre B")]), {
+			remaining: 0,
+		});
+		let expired = false;
+		const expireOnce = (url: URL, init?: RequestInit) => {
+			if (
+				!expired ||
+				url.pathname !== `/api/projects/${obra.id}/units` ||
+				init?.method !== "PATCH"
+			) {
+				return undefined;
+			}
+			expired = false;
+			return json({}, 401);
+		};
+		const stub = stubApi(signedIn, { api: combine(expireOnce, api.handler) });
+		renderAt(`/projects/${obra.id}/locations/${towerA.id}`);
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Adicionar área comum" }),
+			).toHaveAttribute("aria-disabled", "true"),
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: "Alterar reserva" }),
+		);
+		const field = await screen.findByRole("textbox", {
+			name: "Unidades reservadas",
+		});
+		await userEvent.clear(field);
+		await userEvent.type(field, "5");
+		expired = true;
+		stub.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		const dialog = await screen.findByRole("dialog", {
+			name: "Alterar reserva",
+		});
+		expect(
+			screen.queryByRole("dialog", { name: "Duplicar a Torre A" }),
+		).not.toBeInTheDocument();
+		const restored = screen.getByRole("textbox", {
+			name: "Unidades reservadas",
+		});
+		expect(restored).toHaveValue("5");
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled(),
+		);
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		await waitFor(() => expect(dialog).not.toBeInTheDocument());
+		expect(
+			screen.queryByRole("dialog", { name: "Duplicar a Torre A" }),
+		).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Adicionar área comum" }),
+			).toHaveFocus(),
+		);
+	});
+
+	test("reopens it inside the floor's Duplicar on the floor page", async () => {
+		await expireReservationFromDuplicate(
+			"Ações do andar",
+			"Duplicar andar",
+			"Duplicar o 9º andar",
+		);
+
+		await screen.findByRole("dialog", { name: "Alterar reserva" });
+		expect(
+			screen.getByRole("textbox", { name: "Unidades reservadas" }),
+		).toHaveValue("5");
+		expect(
+			screen.getByRole("heading", {
+				name: "Duplicar o 9º andar",
+				hidden: true,
+			}),
+		).toBeInTheDocument();
+	});
+
+	test("shows the current reserve in another row's Alterar reserva once the restored one is cancelled", async () => {
+		await expireReservationFromDuplicate(
+			"Ações do andar",
+			"Duplicar andar",
+			"Duplicar o 9º andar",
+		);
+		await screen.findByRole("dialog", { name: "Alterar reserva" });
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Alterar reserva" }),
+			).not.toBeInTheDocument(),
+		);
+		await userEvent.keyboard("{Escape}");
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Duplicar o 9º andar" }),
+			).not.toBeInTheDocument(),
+		);
+		const [unitRowReservation] = screen.getAllByRole("button", {
+			name: "Alterar reserva",
+		});
+		if (!unitRowReservation) throw new Error("no Alterar reserva");
+		await userEvent.click(unitRowReservation);
+
+		expect(
+			await screen.findByRole("textbox", { name: "Unidades reservadas" }),
+		).toHaveValue("2");
+	});
+
+	test("reopens it inside the unit's Duplicar, not the floor's, on the floor page", async () => {
+		await expireReservationFromDuplicate(
+			"Ações da unidade 901",
+			"Duplicar unidade",
+			"Duplicar a unidade 901",
+		);
+
+		await screen.findByRole("dialog", { name: "Alterar reserva" });
+		expect(
+			screen.getByRole("textbox", { name: "Unidades reservadas" }),
+		).toHaveValue("5");
+		expect(
+			screen.getByRole("heading", {
+				name: "Duplicar a unidade 901",
+				hidden: true,
+			}),
+		).toBeInTheDocument();
+		expect(
+			screen.queryByRole("heading", {
+				name: "Duplicar o 9º andar",
+				hidden: true,
+			}),
 		).not.toBeInTheDocument();
 	});
 });

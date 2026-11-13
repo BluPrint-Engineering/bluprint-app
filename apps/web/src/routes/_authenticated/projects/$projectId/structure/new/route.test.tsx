@@ -270,7 +270,7 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 			expect(
 				await screen.findByText(
-					"Usa 12 das 150 unidades que restam nesta obra. Depois de criar, sobram 138.",
+					"Usa 16 das 150 unidades que restam nesta obra. Depois de criar, sobram 134.",
 				),
 			).toBeInTheDocument();
 			const facade = screen.getByRole("list", { name: "Fachada da Torre A" });
@@ -1190,7 +1190,7 @@ describe("structure wizard", () => {
 			await describeTower("3", "4");
 
 			const alert = await screen.findByText(
-				"Esta estrutura tem 12 unidades e a obra tem 6. Tire 6 unidades ou peça mais reserva ao admin da construtora.",
+				"Esta estrutura tem 16 unidades e a obra tem 6. Tire 10 unidades ou peça mais reserva ao admin da construtora.",
 			);
 			expect(alert).toBeInTheDocument();
 			expect(
@@ -1199,11 +1199,33 @@ describe("structure wizard", () => {
 			const button = await createButton();
 			expect(button).toBeDisabled();
 			expect(button).toHaveAccessibleDescription(
-				/Esta estrutura tem 12 unidades/,
+				/Esta estrutura tem 16 unidades/,
 			);
 			expect(
 				screen.queryByRole("button", { name: "Alterar reserva" }),
 			).not.toBeInTheDocument();
+			await user.click(button);
+			expect(sent).toHaveLength(0);
+		});
+
+		test("counts the common areas of the plan against what remains, so nothing is sent that the server refuses (M1)", async () => {
+			const { handler, sent } = wizardApi({
+				summary: { ...OBRA, role: "manager" },
+				units: balance(10),
+			});
+			open(handler);
+			await describeTower("3", "2");
+			expect(await createButton()).toBeEnabled();
+
+			await addFloorArea("Terraço", "3");
+
+			const button = await createButton();
+			await waitFor(() => expect(button).toBeDisabled());
+			expect(
+				screen.getByText(
+					"Esta estrutura tem 11 unidades e a obra tem 10. Tire 1 unidade ou peça mais reserva ao admin da construtora.",
+				),
+			).toBeInTheDocument();
 			await user.click(button);
 			expect(sent).toHaveLength(0);
 		});
@@ -1218,7 +1240,7 @@ describe("structure wizard", () => {
 
 			expect(
 				await screen.findByText(
-					"Esta estrutura tem 12 unidades e a reserva da obra acabou. Peça mais reserva ao admin da construtora.",
+					"Esta estrutura tem 16 unidades e a reserva da obra acabou. Peça mais reserva ao admin da construtora.",
 				),
 			).toBeInTheDocument();
 			expect(screen.getByText("A reserva da obra acabou.")).toBeInTheDocument();
@@ -1235,7 +1257,7 @@ describe("structure wizard", () => {
 
 			expect(
 				await screen.findByText(
-					/Esta estrutura tem 12 unidades e a obra tem 6\. Tire 6 unidades ou aumente a reserva\./,
+					/Esta estrutura tem 16 unidades e a obra tem 6\. Tire 10 unidades ou aumente a reserva\./,
 				),
 			).toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
@@ -1253,7 +1275,7 @@ describe("structure wizard", () => {
 
 			expect(
 				await screen.findByText(
-					"Usa 12 das 16 unidades que restam nesta obra. Depois de criar, sobram 4.",
+					"Usa 16 das 16 unidades que restam nesta obra. Depois de criar, sobram 0.",
 				),
 			).toBeInTheDocument();
 			expect(unitsReads.length).toBeGreaterThan(readsBefore);
@@ -1306,7 +1328,7 @@ describe("structure wizard", () => {
 			await describeTower("3", "4");
 			expect(await createButton()).toBeDisabled();
 
-			await typeInto("Unidades por andar", "2");
+			await typeInto("Último andar", "1");
 
 			expect(await createButton()).toBeEnabled();
 			expect(
@@ -1321,17 +1343,17 @@ describe("structure wizard", () => {
 			const { handler, sent, setUnits } = wizardApi({
 				create: () => {
 					setUnits(balance(5));
-					return problem(409, NO_UNITS_LEFT, { requested: 12, available: 5 });
+					return problem(409, NO_UNITS_LEFT, { requested: 16, available: 5 });
 				},
 			});
 			open(handler);
 			await describeTower("3", "4");
-			await screen.findByText(/Usa 12 das 150 unidades/);
+			await screen.findByText(/Usa 16 das 150 unidades/);
 			await user.click(await createButton());
 
 			expect(
 				await screen.findByText(
-					/Esta estrutura tem 12 unidades e a obra tem 5\. Tire 7 unidades ou aumente a reserva\./,
+					/Esta estrutura tem 16 unidades e a obra tem 5\. Tire 11 unidades ou aumente a reserva\./,
 				),
 			).toBeInTheDocument();
 			expect(
@@ -1344,6 +1366,7 @@ describe("structure wizard", () => {
 			expect(screen.queryByText(/Nada foi salvo/)).not.toBeInTheDocument();
 			expect(sent).toHaveLength(1);
 
+			await typeInto("Último andar", "1");
 			await typeInto("Unidades por andar", "1");
 
 			expect(await createButton()).toBeEnabled();
@@ -1353,7 +1376,7 @@ describe("structure wizard", () => {
 			const { handler, sent } = wizardApi({
 				unitsResponse: () => json({}, 500),
 				create: () =>
-					problem(409, NO_UNITS_LEFT, { requested: 12, available: 5 }),
+					problem(409, NO_UNITS_LEFT, { requested: 16, available: 5 }),
 			});
 			open(handler);
 			await describeTower("3", "4");
@@ -1361,7 +1384,7 @@ describe("structure wizard", () => {
 
 			expect(
 				await screen.findByText(
-					/Esta estrutura tem 12 unidades e a obra tem 5\. Tire 7 unidades ou aumente a reserva\./,
+					/Esta estrutura tem 16 unidades e a obra tem 5\. Tire 11 unidades ou aumente a reserva\./,
 				),
 			).toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
@@ -1568,7 +1591,7 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 			expect(
 				await screen.findByText(
-					"Usa 12 das 150 unidades que restam nesta obra. Depois de criar, sobram 138.",
+					"Usa 16 das 150 unidades que restam nesta obra. Depois de criar, sobram 134.",
 				),
 			).toBeInTheDocument();
 			expect(await createButton()).toBeEnabled();
@@ -1637,10 +1660,10 @@ describe("structure wizard", () => {
 			expect(button).toBeDisabled();
 			const alert = await screen.findByRole("alert");
 			expect(alert).toHaveTextContent(
-				"Esta estrutura tem 12 unidades e a obra tem 6. Tire 6 unidades ou peça mais reserva ao admin da construtora.",
+				"Esta estrutura tem 16 unidades e a obra tem 6. Tire 10 unidades ou peça mais reserva ao admin da construtora.",
 			);
 			expect(button).toHaveAccessibleDescription(
-				/Esta estrutura tem 12 unidades/,
+				/Esta estrutura tem 16 unidades/,
 			);
 			expect(
 				within(alert.parentElement as HTMLElement).getByRole("button", {

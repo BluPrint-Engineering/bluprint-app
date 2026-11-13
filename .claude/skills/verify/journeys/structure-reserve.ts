@@ -9,10 +9,12 @@ export default async function structureReserve({ page, shot, expect, query }) {
 	const add = page.getByRole("button", { name: "Adicionar unidade" });
 	await expect(add).toBeDisabled();
 	await expect(add).toHaveAccessibleDescription("A reserva da obra acabou. Alterar reserva");
-	await expect(page.getByRole("button", { name: "Adicionar área comum" })).toBeEnabled();
+	const addArea = page.getByRole("button", { name: "Adicionar área comum" });
+	await expect(addArea).toBeDisabled();
+	await expect(addArea).toHaveAccessibleDescription("A reserva da obra acabou. Alterar reserva");
 	await shot("f5b-reserve-over-admin");
 
-	await page.getByRole("button", { name: "Alterar reserva" }).click();
+	await page.getByRole("button", { name: "Alterar reserva" }).first().click();
 	await expect(page.getByRole("dialog", { name: "Alterar reserva" })).toBeVisible();
 	await shot("f5b-alter-reserve");
 
@@ -21,7 +23,7 @@ export default async function structureReserve({ page, shot, expect, query }) {
 	await page.getByRole("menuitem", { name: "Duplicar unidade" }).click();
 	const duplicate = page.getByRole("dialog", { name: "Duplicar a unidade 101" });
 	await expect(duplicate).toBeVisible();
-	await expect(duplicate.getByRole("alert")).toHaveText("Duplicar a unidade 101 cria 1 unidade e a reserva da obra acabou. Alterar reserva");
+	await expect(duplicate.getByRole("alert")).toHaveText("Duplicar a unidade 101 usa 1 unidade e a reserva da obra acabou. Alterar reserva");
 	await expect(duplicate.getByRole("button", { name: "Duplicar", exact: true })).toBeDisabled();
 	await page.waitForTimeout(300);
 	await shot("r9b-duplicate-reserve-over");
@@ -31,6 +33,11 @@ export default async function structureReserve({ page, shot, expect, query }) {
 	await shot("r9b-duplicate-alter-reserve");
 
 	await page.goto(`/projects/${row.project}`);
+	const facadeArea = page.getByRole("button", { name: "Adicionar área comum" });
+	await expect(facadeArea).toBeDisabled();
+	await expect(facadeArea).toHaveAccessibleDescription("A reserva da obra acabou. Alterar reserva");
+	await shot("l8-facade-area-reserve-over");
+
 	await page.getByRole("link", { name: "Adicionar andares" }).click();
 	await expect(page.getByRole("heading", { level: 1, name: "Adicionar andares" })).toBeVisible();
 	await page.getByRole("textbox", { name: "Último andar" }).fill("4");

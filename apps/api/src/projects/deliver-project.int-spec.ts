@@ -14,7 +14,7 @@ import {
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { INestApplication } from "@nestjs/common";
 import { Test } from "@nestjs/testing";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import request from "supertest";
 import { configureApp, nestApplicationOptions } from "../app";
 import { AppModule } from "../app.module";
@@ -110,8 +110,22 @@ async function reset() {
 		.where(eq(project.id, sibling));
 	await db
 		.delete(location)
-		.where(and(eq(location.projectId, active), eq(location.type, "unit")));
-	await seedUnits(active, 250);
+		.where(
+			and(
+				eq(location.projectId, active),
+				inArray(location.type, ["unit", "common_area"]),
+			),
+		);
+	await seedUnits(active, 247);
+	await db.insert(location).values(
+		["Hall", "Garagem", "Salão de festas"].map((name, at) => ({
+			projectId: active,
+			parentId: floorId,
+			type: "common_area" as const,
+			name,
+			position: 1000 + at,
+		})),
+	);
 }
 
 async function seedUnits(projectId: string, count: number, from = 0) {
@@ -126,12 +140,17 @@ async function seedUnits(projectId: string, count: number, from = 0) {
 	);
 }
 
-const countUnitsOf = async (projectId: string) =>
+const countUsedOf = async (projectId: string) =>
 	(
 		await db
 			.select({ id: location.id })
 			.from(location)
-			.where(and(eq(location.projectId, projectId), eq(location.type, "unit")))
+			.where(
+				and(
+					eq(location.projectId, projectId),
+					inArray(location.type, ["unit", "common_area"]),
+				),
+			)
 	).length;
 
 function deliver(person: Person, projectId: string) {
@@ -297,7 +316,7 @@ describe("POST /api/projects/:id/delivery", () => {
 		expect((await rowOf(active)).lastActivityAt).toEqual(before);
 	});
 
-	test("the reservation becomes the units the project used and the rest returns to the free ones", async () => {
+	test("the reservation becomes the units and common areas the project used and the rest returns to the free ones", async () => {
 		const before = organizationUnitsSchema.parse(
 			(await admin.agent.get(ORGANIZATION_UNITS)).body,
 		);
@@ -367,7 +386,12 @@ describe("POST /api/projects/:id/delivery", () => {
 	test("a project that used nothing returns its whole reservation", async () => {
 		await db
 			.delete(location)
-			.where(and(eq(location.projectId, active), eq(location.type, "unit")));
+			.where(
+				and(
+					eq(location.projectId, active),
+					inArray(location.type, ["unit", "common_area"]),
+				),
+			);
 
 		const res = await deliver(admin, active);
 
@@ -492,7 +516,7 @@ describe("a delivered project refuses every write", () => {
 				status: 409,
 				code: PROJECT_DELIVERED,
 			});
-			expect(await countUnitsOf(active)).toBe(250);
+			expect(await countUsedOf(active)).toBe(250);
 		},
 	);
 });
@@ -508,7 +532,7 @@ describe("delivering while the project is being written", () => {
 
 		const row = await rowOf(active);
 		expect(row.status).toBe("delivered");
-		expect(row.reservedUnits).toBe(await countUnitsOf(active));
+		expect(row.reservedUnits).toBe(await countUsedOf(active));
 		for (const attempt of attempts) {
 			if (attempt.status === "rejected") {
 				expect((attempt.reason as ProblemException).problem.code).toBe(

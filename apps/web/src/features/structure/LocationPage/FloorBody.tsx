@@ -3,8 +3,7 @@ import type {
 	StructureFloor,
 	StructureTower,
 } from "@bluprint/shared";
-import { AddRow } from "../components/AddRow";
-import { AddUnitRow } from "../components/AddUnitRow";
+import { AddReservedRow } from "../components/AddReservedRow";
 import { LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
 import type { Adding } from "../components/useAdding";
@@ -77,9 +76,14 @@ export function FloorBody({
 				empty="Nenhuma unidade neste andar."
 				footer={
 					canEdit && (
-						<AddUnitRow
+						<AddReservedRow
 							project={project}
 							adding={adding}
+							kind="floor-unit"
+							type="unit"
+							scope="tower"
+							label="Adicionar unidade"
+							reopensReservation
 							parentId={floor.id}
 							towerName={towerName}
 							suggestion={nextUnitName(
@@ -100,8 +104,8 @@ export function FloorBody({
 					items={areas}
 					footer={
 						canEdit && (
-							<AddRow
-								projectId={projectId}
+							<AddReservedRow
+								project={project}
 								adding={adding}
 								kind="floor-area"
 								type="common_area"

@@ -236,7 +236,7 @@ export const organizations: SeedOrganization[] = [
 		projects: [
 			{
 				name: "Residencial Jardins",
-				reservedUnits: 120,
+				reservedUnits: 150,
 				structure: casaMoinhos,
 				members: [
 					{ email: "carla@horizonte.test", role: "manager" },
@@ -280,7 +280,7 @@ export const organizations: SeedOrganization[] = [
 			{ name: "Torre Atlântica", reservedUnits: 80, members: [] },
 			{
 				name: "Residencial Vila Nova",
-				reservedUnits: 12,
+				reservedUnits: 15,
 				delivered: {
 					by: "carla@horizonte.test",
 					at: new Date("2026-09-18T14:30:00-03:00"),

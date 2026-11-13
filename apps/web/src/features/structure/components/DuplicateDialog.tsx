@@ -24,6 +24,7 @@ import {
 	availableUnitsOf,
 	isProjectDelivered,
 	projectQueryOptions,
+	reservationDraft,
 } from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
@@ -40,10 +41,10 @@ import {
 	findDuplicateSource,
 	locationsCopied,
 	renumberedUnitNames,
+	reserveUsedByCopy,
 	StaleCopyError,
 	sourceName,
 	suggestedCopyName,
-	unitsCopied,
 } from "../duplicate";
 import {
 	copiedUnitsTakenText,
@@ -113,7 +114,7 @@ function DuplicateContent({
 	const [problem, setProblem] = useState<string>();
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		(variables) => (typeof variables === "number" ? variables : undefined),
+		(variables) => duplicateReservation(variables, locationOf(source)),
 	);
 	const [reserving, setReserving] = useState(restoredReservation !== undefined);
 	const alterReservation = useRef<HTMLButtonElement>(null);
@@ -123,7 +124,7 @@ function DuplicateContent({
 	const title = duplicateTitle(source.type, sourceName(source));
 	const towerName = several ? source.tower.name : undefined;
 
-	const toCreate = unitsCopied(source);
+	const toCreate = reserveUsedByCopy(source);
 	const remaining = units.data?.remaining;
 	const over = remaining !== undefined && toCreate > remaining;
 	const locations = locationsCopied(source);
@@ -319,10 +320,28 @@ function DuplicateContent({
 					onOpenChange={setReserving}
 					returnFocus={alterReservation}
 					onSaved={() => void units.refetch()}
+					opener={duplicateOpener(locationOf(source))}
 				/>
 			)}
 		</>
 	);
+}
+
+function duplicateOpener(locationId: string): string {
+	return `duplicate:${locationId}`;
+}
+
+export function duplicateReservation(
+	variables: unknown,
+	locationId: string,
+): { reserved: number; ours: boolean } | undefined {
+	const draft = reservationDraft(variables);
+	if (draft === undefined) return undefined;
+	if (draft.opener === undefined)
+		return { reserved: draft.reserved, ours: false };
+	return draft.opener === duplicateOpener(locationId)
+		? { reserved: draft.reserved, ours: true }
+		: undefined;
 }
 
 function duplicateName(

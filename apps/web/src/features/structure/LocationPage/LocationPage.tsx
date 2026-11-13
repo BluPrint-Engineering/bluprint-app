@@ -231,7 +231,7 @@ function LocationView({
 			<PageMain>
 				{tower && (
 					<TowerBody
-						projectId={projectId}
+						project={project}
 						tower={tower}
 						towerName={towerName}
 						adding={adding}

@@ -26,7 +26,7 @@ export function planLine(
 	return `${uses} Depois de ${verb}, ${sobram(remaining - units)}.`;
 }
 
-export function addUnitLine(remaining: number): string {
+export function addOneLine(remaining: number): string {
 	if (remaining <= 0) return remainingLine(remaining);
 	return remaining === 1
 		? "Usa 1 da única unidade que resta nesta obra."
@@ -81,10 +81,11 @@ export function typologyNameTakenText(names: string[]): string {
 }
 
 export function duplicateLine(units: number, remaining: number): string {
-	if (remaining === 1 && units === 1) {
-		return "Cria 1 unidade, a única que resta nesta obra. Depois, sobram 0.";
-	}
-	return `Cria ${plural(units, "unidade", "unidades")} das ${remaining} que restam nesta obra. Depois, ${sobram(remaining - units)}.`;
+	const uses =
+		remaining === 1
+			? "Usa 1 da única unidade que resta nesta obra."
+			: `Usa ${units} das ${remaining} unidades que restam nesta obra.`;
+	return `${uses} Depois, ${sobram(remaining - units)}.`;
 }
 
 export function duplicateOverText(
@@ -96,5 +97,5 @@ export function duplicateOverText(
 		remaining <= 0
 			? "a reserva da obra acabou"
 			: `${remaining === 1 ? "resta" : "restam"}${NBSP}${remaining}`;
-	return `${title} cria ${plural(units, "unidade", "unidades")} e ${left}.`;
+	return `${title} usa ${plural(units, "unidade", "unidades")} e ${left}.`;
 }

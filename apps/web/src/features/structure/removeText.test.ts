@@ -79,7 +79,7 @@ describe("hasChildren", () => {
 });
 
 describe("confirmParagraphs", () => {
-	test("counts the units and the common area of a floor and returns the units to the reservation", () => {
+	test("counts the units and the common area of a floor and returns all of them to the reservation", () => {
 		expect(
 			confirmParagraphs("floor", "9º andar", {
 				floors: 0,
@@ -88,7 +88,7 @@ describe("confirmParagraphs", () => {
 			}),
 		).toEqual([
 			"O 9º andar não tem pins, plantas nem dados. As 4 unidades e a área comum dele também são excluídas.",
-			"As 4 unidades voltam para a reserva da obra.",
+			"As 5 unidades voltam para a reserva da obra.",
 		]);
 	});
 
@@ -101,7 +101,7 @@ describe("confirmParagraphs", () => {
 			}),
 		).toEqual([
 			"A Torre B não tem pins, plantas nem dados. Os 10 andares, as 20 unidades e a área comum dela também são excluídos.",
-			"As 20 unidades voltam para a reserva da obra.",
+			"As 21 unidades voltam para a reserva da obra.",
 		]);
 	});
 
@@ -118,16 +118,20 @@ describe("confirmParagraphs", () => {
 		]);
 	});
 
-	test("leaves out a zero count and the reservation paragraph when there is no unit", () => {
+	test("says a single common area goes back to the reservation", () => {
 		expect(
 			confirmParagraphs("floor", "Térreo", {
 				floors: 0,
 				units: 0,
-				commonAreas: 2,
+				commonAreas: 1,
 			}),
 		).toEqual([
-			"O Térreo não tem pins, plantas nem dados. As 2 áreas comuns dele também são excluídas.",
+			"O Térreo não tem pins, plantas nem dados. A área comum dele também é excluída.",
+			"A área comum volta para a reserva da obra.",
 		]);
+	});
+
+	test("leaves out a zero count and the reservation paragraph when nothing below uses the reservation", () => {
 		expect(
 			confirmParagraphs("tower", "Torre A", {
 				floors: 1,

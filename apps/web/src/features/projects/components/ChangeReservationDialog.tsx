@@ -33,6 +33,7 @@ import {
 	availableUnitsOf,
 	isProjectDelivered,
 	isReservationRefusal,
+	reservationDraft,
 	useChangeReservationMutation,
 	usedUnitsOf,
 } from "../api";
@@ -66,6 +67,7 @@ interface ChangeReservationDialogProps {
 	onOpenChange: (open: boolean) => void;
 	returnFocus: RefObject<HTMLElement | null>;
 	onSaved?: () => void;
+	opener?: string | undefined;
 }
 
 function Figure({
@@ -96,14 +98,16 @@ export function ChangeReservationDialog({
 	onOpenChange,
 	returnFocus,
 	onSaved,
+	opener,
 }: ChangeReservationDialogProps) {
 	const desktop = useIsDesktop();
 	const units = useQuery({ ...organizationUnitsQueryOptions, enabled: open });
 	const { used, reserved } = project.units;
 	const formId = useId();
-	const restored = useSessionDraft("change-reservation", (variables) =>
-		typeof variables === "number" ? String(variables) : undefined,
-	);
+	const restored = useSessionDraft("change-reservation", (variables) => {
+		const draft = reservationDraft(variables);
+		return open && draft ? String(draft.reserved) : undefined;
+	});
 	const clearDraft = useClearSessionDraft("change-reservation");
 	const [typed, setTyped] = useState(restored ?? String(reserved));
 	const [touched, setTouched] = useState(false);
@@ -140,15 +144,13 @@ export function ChangeReservationDialog({
 	const saving = change.isPending;
 
 	const { reset } = change;
-	const opened = useRef(open);
 	useEffect(() => {
-		if (open) opened.current = true;
-		if (open || saving || (restored !== undefined && !opened.current)) return;
+		if (open || saving) return;
 		setTyped(String(reserved));
 		setTouched(false);
 		setRefused(undefined);
 		reset();
-	}, [open, saving, reserved, reset, restored]);
+	}, [open, saving, reserved, reset]);
 
 	const wanted = parseUnits(typed);
 	const invalid = reservationError(figures, wanted);
@@ -170,7 +172,7 @@ export function ChangeReservationDialog({
 	function submit() {
 		setTouched(true);
 		if (blocked || wanted === undefined) return;
-		change.mutate(wanted);
+		change.mutate({ reserved: wanted, opener });
 	}
 
 	const context =
