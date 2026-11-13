@@ -78,7 +78,7 @@ test.describe("desktop scrolling", () => {
 		await page.getByLabel("Último andar").fill("30");
 		await page.getByLabel("Unidades por andar").fill("4");
 		await page.getByRole("button", { name: "Tirar regra 1" }).click();
-		await page.evaluate(() => window.scrollTo(0, 0));
+		await page.mouse.wheel(0, -10000);
 		const preview = page.getByRole("complementary", { name: "Prévia" });
 		await expect(
 			preview.getByText("ficam sem tipologia", { exact: false }),
@@ -96,13 +96,11 @@ test.describe("desktop scrolling", () => {
 			})
 			.toBeLessThanOrEqual(576);
 		const facade = preview.getByRole("list", { name: "Fachada da Torre A" });
-		const facadeViewportHeight = await facade.evaluate((list) => {
-			let scroller = list.parentElement;
-			while (scroller && getComputedStyle(scroller).overflowY !== "auto") {
-				scroller = scroller.parentElement;
-			}
-			return scroller?.offsetHeight ?? 0;
-		});
+		const facadeScroller = facade.locator(
+			"xpath=ancestor::*[contains(@class, 'overflow-y-auto')][1]",
+		);
+		const facadeViewportHeight =
+			(await facadeScroller.boundingBox())?.height ?? 0;
 		expect(facadeViewportHeight).toBeGreaterThanOrEqual(180);
 		const heading = preview.getByRole("heading", { name: "Prévia" });
 		const headingBox = await heading.boundingBox();
