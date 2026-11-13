@@ -183,7 +183,8 @@ export function StructureWizard({
 	const preview = useMemo(() => buildPlan(draft, identity), [draft]);
 	const remaining = units.data?.remaining ?? availableUnitsOf(create.error);
 	const admin = project.role === "admin";
-	const over = remaining !== undefined && preview.counts.units > remaining;
+	const reserveUsed = preview.counts.units + preview.counts.commonAreas;
+	const over = remaining !== undefined && reserveUsed > remaining;
 	const tooLarge = preview.locations.length > MAX_LOCATIONS_PER_REQUEST;
 	const blocked = over || tooLarge;
 
@@ -293,7 +294,7 @@ export function StructureWizard({
 			: {
 					state: "ready",
 					text: planLine(
-						preview.counts.units,
+						reserveUsed,
 						remaining,
 						extend ? "adicionar" : "criar",
 					),
@@ -312,7 +313,7 @@ export function StructureWizard({
 			<AlertDescription>
 				{over && remaining !== undefined ? (
 					<>
-						{overReserveText(preview.counts.units, remaining, admin)}
+						{overReserveText(reserveUsed, remaining, admin)}
 						{admin && (
 							<>
 								{" "}

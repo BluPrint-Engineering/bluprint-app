@@ -96,7 +96,7 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "A project's units",
 		description:
-			"How many units the project reserved (`reserved`), how many exist in its structure (`used`) and how many it can still create (`remaining`, reserved minus used). Anyone linked to the project can read it, and the visibility is the project's: a project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`.",
+			"How many units the project reserved (`reserved`), how many it has used (`used`: the units and common areas that exist in its structure) and how many it can still create (`remaining`, reserved minus used). Anyone linked to the project can read it, and the visibility is the project's: a project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`.",
 	})
 	@ZodResponse({
 		status: 200,
@@ -159,7 +159,7 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "Change a project's reservation",
 		description:
-			"Sets how many units the project reserves and answers its updated summary. Restricted to the organization's `admin`; a `manager` or an `assistant` of the project gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. The reservation can go as low as the units the project uses and as high as its current reservation plus the organization's free units; below the first it answers `409 RESERVATION_BELOW_USED` with `used`, above the second `409 NO_UNITS_LEFT` with `requested` (how many units the reservation grows by) and `available` (the free units), and changes nothing. A delivered project answers `409 PROJECT_DELIVERED`: delivery already set its reservation to the units it used. The project is locked, then the organization, so a change never races a creation or another change into reserving more than the contracted units.",
+			"Sets how many units the project reserves and answers its updated summary. Restricted to the organization's `admin`; a `manager` or an `assistant` of the project gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. The reservation can go as low as the units the project uses (its units and common areas) and as high as its current reservation plus the organization's free units; below the first it answers `409 RESERVATION_BELOW_USED` with `used`, above the second `409 NO_UNITS_LEFT` with `requested` (how many units the reservation grows by) and `available` (the free units), and changes nothing. A delivered project answers `409 PROJECT_DELIVERED`: delivery already set its reservation to the units it used. The project is locked, then the organization, so a change never races a creation or another change into reserving more than the contracted units.",
 	})
 	@ZodResponse({
 		status: 200,
@@ -181,7 +181,7 @@ export class ProjectsController {
 	@ApiOperation({
 		summary: "Deliver a project",
 		description:
-			"Hands the project over: it becomes `delivered`, records who delivered it and when (`delivery`), and its reservation becomes the units it used, so the unused part returns to the organization's free units in the same transaction. Delivery is final: there is no route to reopen a project (ADR 0069). Allowed to the organization's `admin` and to a project's `manager`; an `assistant` gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. A project already delivered answers `409 PROJECT_DELIVERED`. Delivering does not move the last activity. The project is locked, then the organization, so a delivery never races a unit creation or a reservation change into leaving a project using more units than it reserves.",
+			"Hands the project over: it becomes `delivered`, records who delivered it and when (`delivery`), and its reservation becomes the units it used, its units and common areas, so the unused part returns to the organization's free units in the same transaction. Delivery is final: there is no route to reopen a project (ADR 0069). Allowed to the organization's `admin` and to a project's `manager`; an `assistant` gets 403. The visibility is the list's: a project the caller cannot see answers `404 PROJECT_NOT_FOUND`, revealing nothing. A project already delivered answers `409 PROJECT_DELIVERED`. Delivering does not move the last activity. The project is locked, then the organization, so a delivery never races a unit creation or a reservation change into leaving a project using more units than it reserves.",
 	})
 	@ZodResponse({
 		status: 200,

@@ -25,6 +25,7 @@ import {
 	AssistantMenuItem,
 	NO_FLOORS_DESCRIPTION,
 } from "../components/AddFloorsLink";
+import { AddReservedRow } from "../components/AddReservedRow";
 import { AddRow } from "../components/AddRow";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
 import { ListCard, ListRow, LocationList } from "../components/LocationList";
@@ -136,13 +137,13 @@ function areaItems(
 }
 
 function ProjectAreas({
-	projectId,
+	project,
 	title,
 	items,
 	adding,
 	canEdit,
 }: {
-	projectId: string;
+	project: ProjectSummary;
 	title: string;
 	items: ReturnType<typeof areaItems>;
 	adding: Adding;
@@ -151,13 +152,13 @@ function ProjectAreas({
 	if (!canEdit && items.length === 0) return null;
 	return (
 		<LocationList
-			projectId={projectId}
+			projectId={project.id}
 			title={title}
 			items={items}
 			footer={
 				canEdit && (
-					<AddRow
-						projectId={projectId}
+					<AddReservedRow
+						project={project}
 						adding={adding}
 						kind="project-area"
 						type="common_area"
@@ -165,6 +166,7 @@ function ProjectAreas({
 						label="Adicionar área comum"
 						suggestion=""
 						scope="project"
+						reopensReservation
 					/>
 				)
 			}
@@ -173,20 +175,21 @@ function ProjectAreas({
 }
 
 function SingleTower({
-	projectId,
+	project,
 	structure,
 	tower,
 	adding,
 	towerOpener,
 	canEdit,
 }: {
-	projectId: string;
+	project: ProjectSummary;
 	structure: Structure;
 	tower: StructureTower;
 	adding: Adding;
 	towerOpener: Ref<HTMLButtonElement>;
 	canEdit: boolean;
 }) {
+	const projectId = project.id;
 	const items = [
 		...areaItems(projectId, tower.commonAreas, "tower", canEdit),
 		...areaItems(projectId, structure.commonAreas, "project", canEdit),
@@ -261,7 +264,7 @@ function SingleTower({
 				)}
 			</section>
 			<ProjectAreas
-				projectId={projectId}
+				project={project}
 				title="Áreas comuns"
 				items={items}
 				adding={adding}
@@ -272,18 +275,19 @@ function SingleTower({
 }
 
 function SeveralTowers({
-	projectId,
+	project,
 	structure,
 	adding,
 	towerOpener,
 	canEdit,
 }: {
-	projectId: string;
+	project: ProjectSummary;
 	structure: Structure;
 	adding: Adding;
 	towerOpener: Ref<HTMLButtonElement>;
 	canEdit: boolean;
 }) {
+	const projectId = project.id;
 	return (
 		<div className="grid gap-(--space-6) md:gap-(--space-8)">
 			{(canEdit || structure.towers.length > 0) && (
@@ -312,7 +316,7 @@ function SeveralTowers({
 				</section>
 			)}
 			<ProjectAreas
-				projectId={projectId}
+				project={project}
 				title="Áreas comuns da obra"
 				items={areaItems(projectId, structure.commonAreas, "project", canEdit)}
 				adding={adding}
@@ -382,7 +386,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 		const [onlyTower] = structure.towers;
 		return structure.towers.length === 1 && onlyTower ? (
 			<SingleTower
-				projectId={project.id}
+				project={project}
 				structure={structure}
 				tower={onlyTower}
 				adding={adding}
@@ -391,7 +395,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 			/>
 		) : (
 			<SeveralTowers
-				projectId={project.id}
+				project={project}
 				structure={structure}
 				adding={adding}
 				towerOpener={towerOpener}

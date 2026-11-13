@@ -9,6 +9,23 @@ const twoUnits: SeedStructure = {
 	],
 };
 
+const twoUnitsAndTwoHalls: SeedStructure = {
+	towers: [
+		{
+			name: "Torre A",
+			floors: [
+				{ name: "1º andar", units: ["101", "102"], commonAreas: ["Hall"] },
+			],
+		},
+	],
+	commonAreas: ["Guarita"],
+};
+
+const deliveredOn = {
+	by: "ana@alfa.test",
+	at: new Date("2026-01-01T00:00:00Z"),
+};
+
 const organization: SeedOrganization = {
 	name: "Alfa",
 	licenses: [100, 50],
@@ -89,7 +106,42 @@ describe("assertReservationsFit", () => {
 		};
 
 		expect(() => assertReservationsFit(short)).toThrow(
-			'"Torre A" seeds 2 units but reserves 1',
+			'"Torre A" seeds 2 units and common areas but reserves 1',
+		);
+	});
+
+	test("accepts a delivered project that reserves its units and common areas", () => {
+		const delivered = {
+			...organization,
+			projects: [
+				{
+					name: "Torre B",
+					reservedUnits: 4,
+					delivered: deliveredOn,
+					structure: twoUnitsAndTwoHalls,
+					members: [],
+				},
+			],
+		};
+
+		expect(() => assertReservationsFit(delivered)).not.toThrow();
+	});
+
+	test("refuses a project that reserves fewer than its units and common areas, naming it", () => {
+		const short = {
+			...organization,
+			projects: [
+				{
+					name: "Torre A",
+					reservedUnits: 3,
+					structure: twoUnitsAndTwoHalls,
+					members: [],
+				},
+			],
+		};
+
+		expect(() => assertReservationsFit(short)).toThrow(
+			'"Torre A" seeds 4 units and common areas but reserves 3',
 		);
 	});
 

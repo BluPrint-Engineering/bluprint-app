@@ -12,6 +12,7 @@ import {
 	PROJECT_DELIVERED,
 	PROJECT_NOT_FOUND,
 	problemDetailsSchema,
+	projectUnitsBalanceSchema,
 	ROOM_ID_TAKEN,
 	structureSchema,
 	subtreeRoomsSchema,
@@ -175,6 +176,11 @@ async function readTypologies(projectId: string) {
 async function readStructure(projectId: string) {
 	const res = await admin.agent.get(structurePath(projectId));
 	return structureSchema.parse(res.body);
+}
+
+async function readBalance(projectId: string) {
+	const res = await admin.agent.get(`/api/projects/${projectId}/units`);
+	return projectUnitsBalanceSchema.parse(res.body);
 }
 
 async function countLocations(projectId: string) {
@@ -536,7 +542,7 @@ describe("POST /api/projects/:id/structure", () => {
 	});
 
 	it("takes a request of 5000 locations", async () => {
-		const projectId = await newProject(0);
+		const projectId = await newProject(5000);
 		const areas = Array.from({ length: 5000 }, (_, i) =>
 			entry(null, "common_area", `Área ${i}`, i),
 		);
@@ -598,17 +604,158 @@ describe("POST /api/projects/:id/structure", () => {
 			expect(tower.id).toBeDefined();
 		});
 
-		it("does not charge for towers, floors or common areas", async () => {
+		it("does not charge for towers or floors", async () => {
 			const projectId = await newProject(0);
 			const tower = entry(null, "tower", "Torre A");
 
 			const res = await create(manager, projectId, [
 				tower,
 				entry(tower.id, "floor", "1º andar"),
-				entry(null, "common_area", "Guarita"),
 			]);
 
 			expect(res.status).toBe(201);
+		});
+
+		describe("with common areas", () => {
+			async function projectWithEightUsed() {
+				const projectId = await newProject(10);
+				const built = building({ floors: 2, unitsPerFloor: 4 });
+				expect((await create(manager, projectId, built.locations)).status).toBe(
+					201,
+				);
+				return { projectId, ...built };
+			}
+
+			it("charges a common area like a unit and creates nothing when the request does not fit", async () => {
+				const { projectId } = await projectWithEightUsed();
+				const tower = entry(null, "tower", "Torre B");
+				const floor = entry(tower.id, "floor", "1º andar");
+
+				const res = await create(manager, projectId, [
+					tower,
+					floor,
+					entry(floor.id, "unit", "101"),
+					entry(floor.id, "unit", "102", 1),
+					entry(tower.id, "common_area", "Hall", 1),
+				]);
+
+				expect(res.status).toBe(409);
+				expect(res.body).toMatchObject({
+					code: NO_UNITS_LEFT,
+					requested: 3,
+					available: 2,
+				});
+				expect((await readStructure(projectId)).counts).toEqual({
+					towers: 1,
+					floors: 2,
+					units: 8,
+					commonAreas: 0,
+				});
+				expect(await readBalance(projectId)).toEqual({
+					reserved: 10,
+					used: 8,
+					remaining: 2,
+				});
+			});
+
+			it("charges the repeated request once", async () => {
+				const { projectId, locations } = await projectWithEightUsed();
+				const floor = locations[1]!;
+				const twoUnits = [
+					entry(floor.id, "unit", "105", 4),
+					entry(floor.id, "unit", "106", 5),
+				];
+
+				const first = await create(manager, projectId, twoUnits);
+				const again = await create(manager, projectId, twoUnits);
+
+				expect(first.status).toBe(201);
+				expect(again.status).toBe(201);
+				expect(await readBalance(projectId)).toEqual({
+					reserved: 10,
+					used: 10,
+					remaining: 0,
+				});
+			});
+
+			it("refuses a common area when the reservation is full and takes it once a unit is removed", async () => {
+				const { projectId, tower, locations } = await projectWithEightUsed();
+				const floor = locations[1]!;
+				await create(manager, projectId, [
+					entry(floor.id, "unit", "105", 4),
+					entry(floor.id, "unit", "106", 5),
+				]);
+				const hall = entry(tower.id, "common_area", "Hall", 2);
+
+				const full = await create(manager, projectId, [hall]);
+				const removed = await manager.agent.delete(
+					`/api/projects/${projectId}/locations/${locations[2]!.id}`,
+				);
+				const usedAfterRemoval = (await readBalance(projectId)).used;
+				const fits = await create(manager, projectId, [hall]);
+
+				expect(full.status).toBe(409);
+				expect(full.body).toMatchObject({
+					code: NO_UNITS_LEFT,
+					requested: 1,
+					available: 0,
+				});
+				expect(removed.status).toBe(200);
+				expect(usedAfterRemoval).toBe(9);
+				expect(fits.status).toBe(201);
+				expect(await readBalance(projectId)).toEqual({
+					reserved: 10,
+					used: 10,
+					remaining: 0,
+				});
+			});
+
+			it("lets exactly one of two simultaneous common areas take the last unit", async () => {
+				const projectId = await newProject(1);
+
+				const answers = await Promise.all([
+					create(manager, projectId, [entry(null, "common_area", "Guarita")]),
+					create(manager, projectId, [entry(null, "common_area", "Portaria")]),
+				]);
+
+				expect(answers.map((res) => res.status).sort()).toEqual([201, 409]);
+				expect((await readStructure(projectId)).counts.commonAreas).toBe(1);
+			});
+
+			it("charges the common areas of a copy", async () => {
+				const projectId = await newProject(5);
+				const tower = entry(null, "tower", "Torre A");
+				const floor = entry(tower.id, "floor", "1º andar");
+				expect(
+					(
+						await create(manager, projectId, [
+							tower,
+							floor,
+							entry(floor.id, "unit", "101"),
+							entry(floor.id, "unit", "102", 1),
+							entry(floor.id, "common_area", "Hall", 2),
+						])
+					).status,
+				).toBe(201);
+				const copy = entry(tower.id, "floor", "2º andar", 1);
+
+				const res = await manager.agent.post(structurePath(projectId)).send({
+					copy: true,
+					locations: [
+						copy,
+						entry(copy.id, "unit", "201"),
+						entry(copy.id, "unit", "202", 1),
+						entry(copy.id, "common_area", "Hall", 2),
+					],
+				});
+
+				expect(res.status).toBe(409);
+				expect(res.body).toMatchObject({
+					code: NO_UNITS_LEFT,
+					requested: 3,
+					available: 2,
+				});
+			});
 		});
 
 		it("never lets simultaneous requests pass the reservation", async () => {

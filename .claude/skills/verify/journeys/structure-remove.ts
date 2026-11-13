@@ -87,7 +87,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	const dialog = page.getByRole("alertdialog");
 	await expect(dialog.getByRole("heading", { name: "Excluir o 10º andar?" })).toBeVisible();
 	await expect(dialog.getByText("O 10º andar não tem pins, plantas nem dados. As 2 unidades e a área comum dele também são excluídas.")).toBeVisible();
-	await expect(dialog.getByText("As 2 unidades voltam para a reserva da obra.")).toBeVisible();
+	await expect(dialog.getByText("As 3 unidades voltam para a reserva da obra.")).toBeVisible();
 	await settle();
 	await shot("r2-confirm-floor");
 	await dialog.getByRole("button", { name: "Excluir" }).click();

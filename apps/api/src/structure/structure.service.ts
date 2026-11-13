@@ -71,7 +71,7 @@ export class StructureService {
 		const roomIdsInUse = await this.locations.findRoomIds(
 			locations.flatMap(({ rooms }) => rooms?.map(({ id }) => id) ?? []),
 		);
-		const { freshTypologies, fresh, newUnits, counts } = planCreation(request, {
+		const { freshTypologies, fresh, newUsed, counts } = planCreation(request, {
 			locations: inProject,
 			typologies: storedTypologies,
 			locationIdsElsewhere,
@@ -80,7 +80,7 @@ export class StructureService {
 			roomIdsInUse,
 		});
 
-		await this.units.assertAvailable(projectId, newUnits);
+		await this.units.assertAvailable(projectId, newUsed);
 		await this.typologies.insertAll(projectId, freshTypologies);
 		await this.locations.insertAll(
 			projectId,

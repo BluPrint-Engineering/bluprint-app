@@ -22,7 +22,7 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 	await expect(status.getByRole("heading", { level: 3, name: "Status da obra" })).toBeVisible();
 	await expect(status.getByText("Em andamento")).toBeVisible();
 	await expect(page.getByRole("navigation", { name: "Seções da configuração" })).toHaveCount(device === "desktop" ? 1 : 0);
-	const used = (await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type = 'unit'", [projectId]))[0].n;
+	const used = (await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type IN ('unit', 'common_area')", [projectId]))[0].n;
 	const reserved = (await query("SELECT reserved_units AS n FROM project WHERE id = $1", [projectId]))[0].n;
 	await expect(card.getByText("Unidades", { exact: true })).toBeVisible();
 	await expect(card.getByText(`Usa ${used} de ${reserved} reservadas`)).toBeVisible();
@@ -138,7 +138,7 @@ export default async function projectConfiguration({ page, shot, expect, query, 
 		await page.getByRole("link", { name: new RegExp(target) }).click();
 		await page.getByRole("link", { name: "Configuração da obra" }).click();
 		const targetId = new URL(page.url()).pathname.split("/")[2];
-		const targetUsed = (await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type = 'unit'", [targetId]))[0].n;
+		const targetUsed = (await query("SELECT count(*)::int AS n FROM location WHERE project_id = $1 AND type IN ('unit', 'common_area')", [targetId]))[0].n;
 		const targetReserved = (await query("SELECT reserved_units AS n FROM project WHERE id = $1", [targetId]))[0].n;
 		const freeBefore = (await (await page.request.get("/api/organization/units")).json()).free;
 		const activityBefore = (await query("SELECT last_activity_at FROM project WHERE id = $1", [targetId]))[0].last_activity_at.toISOString();

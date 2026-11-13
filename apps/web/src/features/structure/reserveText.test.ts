@@ -1,5 +1,5 @@
 import {
-	addUnitLine,
+	addOneLine,
 	createdToast,
 	nameTakenText,
 	overReserveText,
@@ -8,19 +8,17 @@ import {
 
 const plain = (text: string) => text.replace(/ /g, " ");
 
-describe("addUnitLine", () => {
+describe("addOneLine", () => {
 	test("says the one unit it uses of what remains", () => {
-		expect(addUnitLine(12)).toBe(
-			"Usa 1 das 12 unidades que restam nesta obra.",
-		);
+		expect(addOneLine(12)).toBe("Usa 1 das 12 unidades que restam nesta obra.");
 	});
 
 	test("says the only unit left in the singular", () => {
-		expect(addUnitLine(1)).toBe("Usa 1 da única unidade que resta nesta obra.");
+		expect(addOneLine(1)).toBe("Usa 1 da única unidade que resta nesta obra.");
 	});
 
 	test("says the reserva is over when nothing remains", () => {
-		expect(addUnitLine(0)).toBe("A reserva da obra acabou.");
+		expect(addOneLine(0)).toBe("A reserva da obra acabou.");
 	});
 });
 

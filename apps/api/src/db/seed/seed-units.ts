@@ -1,5 +1,5 @@
 import type { SeedOrganization } from "./fixture";
-import { countUnits } from "./seed-structure";
+import { countUsed } from "./seed-structure";
 
 export function assertReservationsFit(organization: SeedOrganization): void {
 	const contracted = organization.licenses.reduce(
@@ -18,11 +18,11 @@ export function assertReservationsFit(organization: SeedOrganization): void {
 	}
 
 	for (const seedProject of organization.projects) {
-		const used = countUnits(seedProject.structure);
+		const used = countUsed(seedProject.structure);
 
 		if (seedProject.reservedUnits < used) {
 			throw new Error(
-				`"${seedProject.name}" seeds ${used} units but reserves ${seedProject.reservedUnits}; a reservation never drops below the units its project uses.`,
+				`"${seedProject.name}" seeds ${used} units and common areas but reserves ${seedProject.reservedUnits}; a reservation never drops below the units its project uses.`,
 			);
 		}
 

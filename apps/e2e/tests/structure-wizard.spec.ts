@@ -80,7 +80,7 @@ test("a new account reserves units for a project, builds its structure with the 
 	).toBeVisible();
 	await expect(
 		page.getByText(
-			"Usa 12 das 75 unidades que restam nesta obra. Depois de criar, sobram 63.",
+			"Usa 17 das 75 unidades que restam nesta obra. Depois de criar, sobram 58.",
 		),
 	).toBeVisible();
 
@@ -157,7 +157,7 @@ test("a project whose reservation is smaller than the plan cannot be sent", asyn
 
 	await expect(
 		page.getByText(
-			/Esta estrutura tem 12 unidades e a obra tem\s5\. Tire 7 unidades ou aumente a reserva\./,
+			/Esta estrutura tem 16 unidades e a obra tem\s5\. Tire 11 unidades ou aumente a reserva\./,
 		),
 	).toBeVisible();
 	await expect(

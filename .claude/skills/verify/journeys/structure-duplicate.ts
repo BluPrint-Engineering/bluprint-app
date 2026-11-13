@@ -26,7 +26,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await expect(dialogOf("Duplicar o 10º andar")).toBeVisible();
 	await expect(field()).toHaveValue("11º andar");
 	await expect(page.getByText("Único na torre.")).toBeVisible();
-	await expect(page.getByText(/^Cria 2 unidades das \d+ que restam nesta obra\. Depois, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText(/^Usa 3 das \d+ unidades que restam nesta obra\. Depois, sobram\s\d+\.$/)).toBeVisible();
 	await settle();
 	await shot("r9a-duplicate-floor");
 	await field().fill("9º andar");
@@ -63,7 +63,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await expect(dialogOf("Duplicar a unidade 903")).toBeVisible();
 	await expect(field()).toHaveValue("905");
 	await expect(field()).toHaveClass(/font-mono/);
-	await expect(page.getByText(/^Cria 1 unidade das \d+ que restam nesta obra\. Depois, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText(/^Usa 1 das \d+ unidades que restam nesta obra\. Depois, sobram\s\d+\.$/)).toBeVisible();
 	await settle();
 	await shot("r9a-duplicate-unit");
 	await page.keyboard.press("Enter");
@@ -83,7 +83,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await page.getByRole("menuitem", { name: "Duplicar torre" }).click();
 	await expect(dialogOf("Duplicar a Torre A")).toBeVisible();
 	await expect(field()).toHaveValue("Torre C");
-	await expect(page.getByRole("alert").filter({ hasText: /^Duplicar a Torre A cria 51 unidades e restam\s\d+\.\s*Alterar reserva$/ })).toBeVisible();
+	await expect(page.getByRole("alert").filter({ hasText: /^Duplicar a Torre A usa 67 unidades e restam\s\d+\.\s*Alterar reserva$/ })).toBeVisible();
 	await expect(page.getByRole("button", { name: "Duplicar", exact: true })).toBeDisabled();
 	await settle();
 	await shot("r9b-duplicate-tower-over");
@@ -94,7 +94,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	await page.getByRole("menuitem", { name: "Duplicar torre" }).click();
 	await expect(dialogOf("Duplicar a Torre B")).toBeVisible();
 	await expect(field()).toHaveValue("Torre C");
-	await expect(page.getByText(/^Cria 22 unidades das \d+ que restam nesta obra\. Depois, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText(/^Usa 33 das \d+ unidades que restam nesta obra\. Depois, sobram\s\d+\.$/)).toBeVisible();
 	await settle();
 	await shot("r9a-duplicate-tower");
 	await page.keyboard.press("Enter");

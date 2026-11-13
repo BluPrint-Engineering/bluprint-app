@@ -89,7 +89,7 @@ async function setReserved(projectId: string, reservedUnits: number) {
 		.where(eq(project.id, projectId));
 }
 
-async function seedUnits(projectId: string, count: number) {
+async function seedUnits(projectId: string, count: number, commonAreas = 0) {
 	const [tower] = await db
 		.insert(location)
 		.values({ projectId, type: "tower", name: "Torre A", position: 0 })
@@ -111,6 +111,16 @@ async function seedUnits(projectId: string, count: number) {
 			type: "unit" as const,
 			name: `10${position + 1}`,
 			position,
+		})),
+	);
+	if (commonAreas === 0) return;
+	await db.insert(location).values(
+		Array.from({ length: commonAreas }, (_, at) => ({
+			projectId,
+			parentId: tower!.id,
+			type: "common_area" as const,
+			name: `Hall ${at + 1}`,
+			position: at + 1,
 		})),
 	);
 }
@@ -164,7 +174,7 @@ beforeAll(async () => {
 		{ projectId: active, userId: manager.userId, role: "manager" },
 		{ projectId: active, userId: assistant.userId, role: "assistant" },
 	]);
-	await seedUnits(active, 250);
+	await seedUnits(active, 247, 3);
 });
 
 afterAll(async () => {
@@ -238,7 +248,7 @@ describe("PATCH /api/projects/:id/units", () => {
 		expect(await reservedOf(active)).toBe(400);
 	});
 
-	test("below the units the project uses answers 409 with them and changes nothing", async () => {
+	test("below the units and common areas the project uses answers 409 with them and changes nothing", async () => {
 		const res = await change(admin, active, { reserved: 249 });
 
 		expect(res.status).toBe(409);

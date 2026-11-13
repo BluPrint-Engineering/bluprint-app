@@ -40,10 +40,10 @@ import {
 	findDuplicateSource,
 	locationsCopied,
 	renumberedUnitNames,
+	reserveUsedByCopy,
 	StaleCopyError,
 	sourceName,
 	suggestedCopyName,
-	unitsCopied,
 } from "../duplicate";
 import {
 	copiedUnitsTakenText,
@@ -123,7 +123,7 @@ function DuplicateContent({
 	const title = duplicateTitle(source.type, sourceName(source));
 	const towerName = several ? source.tower.name : undefined;
 
-	const toCreate = unitsCopied(source);
+	const toCreate = reserveUsedByCopy(source);
 	const remaining = units.data?.remaining;
 	const over = remaining !== undefined && toCreate > remaining;
 	const locations = locationsCopied(source);

@@ -374,20 +374,20 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 			expect((await create(manager, projectId, [third])).status).toBe(201);
 		});
 
-		it("gives back the places of every unit of a removed floor and tower", async () => {
+		it("gives back the places of every unit and common area of a removed floor and tower", async () => {
 			const projectId = await newProject(100);
 			const { a, byName } = await twoTowers(projectId);
-			expect((await balanceOf(projectId)).used).toBe(8);
+			expect((await balanceOf(projectId)).used).toBe(10);
 
 			await remove(
 				manager,
 				projectId,
 				byName("1º andar", "floor", a.tower.id).id,
 			);
-			expect((await balanceOf(projectId)).used).toBe(6);
+			expect((await balanceOf(projectId)).used).toBe(8);
 
 			await remove(manager, projectId, a.tower.id);
-			expect((await balanceOf(projectId)).used).toBe(4);
+			expect((await balanceOf(projectId)).used).toBe(5);
 		});
 	});
 

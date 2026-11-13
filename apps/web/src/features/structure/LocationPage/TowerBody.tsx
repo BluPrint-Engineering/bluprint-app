@@ -1,4 +1,4 @@
-import type { StructureTower } from "@bluprint/shared";
+import type { ProjectSummary, StructureTower } from "@bluprint/shared";
 import { Layers, ListPlus } from "lucide-react";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import {
 	AddFloorsLink,
 	NO_FLOORS_DESCRIPTION,
 } from "../components/AddFloorsLink";
-import { AddRow } from "../components/AddRow";
+import { AddReservedRow } from "../components/AddReservedRow";
 import { Facade, FacadeCard } from "../components/Facade";
 import { LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
@@ -14,18 +14,19 @@ import type { Adding } from "../components/useAdding";
 import { NO_CHILDREN } from "../removeText";
 
 export function TowerBody({
-	projectId,
+	project,
 	tower,
 	towerName,
 	adding,
 	canEdit,
 }: {
-	projectId: string;
+	project: ProjectSummary;
 	tower: StructureTower;
 	towerName: string | undefined;
 	adding: Adding;
 	canEdit: boolean;
 }) {
+	const projectId = project.id;
 	const showAreas = canEdit || tower.commonAreas.length > 0;
 	const areas = showAreas && (
 		<LocationList
@@ -51,8 +52,8 @@ export function TowerBody({
 			}))}
 			footer={
 				canEdit && (
-					<AddRow
-						projectId={projectId}
+					<AddReservedRow
+						project={project}
 						adding={adding}
 						kind="tower-area"
 						type="common_area"

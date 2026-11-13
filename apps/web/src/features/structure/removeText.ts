@@ -119,14 +119,21 @@ export function confirmParagraphs(
 ): string[] {
 	const lead = capitalize(withArticle(type, name));
 	const content = `${lead} não tem pins, plantas nem dados.`;
-	const reserve =
-		counts.units === 0
-			? []
-			: [
-					counts.units === 1
-						? "A unidade volta para a reserva da obra."
-						: `As ${counts.units} unidades voltam para a reserva da obra.`,
-				];
+	return [
+		`${content} ${cascade(type, counts)}`.trim(),
+		...reserveParagraph(counts),
+	];
+}
 
-	return [`${content} ${cascade(type, counts)}`.trim(), ...reserve];
+function reserveParagraph({ units, commonAreas }: ChildCounts): string[] {
+	const returned = units + commonAreas;
+	if (returned === 0) return [];
+	if (returned > 1) {
+		return [`As ${returned} unidades voltam para a reserva da obra.`];
+	}
+	return [
+		units === 1
+			? "A unidade volta para a reserva da obra."
+			: "A área comum volta para a reserva da obra.",
+	];
 }

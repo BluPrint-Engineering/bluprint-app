@@ -20,7 +20,7 @@ export default async function structureWizard({ page, shot, expect, query }) {
 		await continueTo("Áreas comuns");
 		await continueTo("Tipologias");
 		await continueTo("Prévia");
-		await expect(page.getByText("Esta estrutura tem 124 unidades e a obra tem 120. Tire 4 unidades ou aumente a reserva.")).toBeVisible();
+		await expect(page.getByText("Esta estrutura tem 156 unidades e a obra tem 120. Tire 36 unidades ou aumente a reserva.")).toBeVisible();
 		await expect(page.getByRole("button", { name: "Alterar reserva" })).toBeVisible();
 		await expect(page.getByRole("button", { name: "Criar estrutura" })).toBeDisabled();
 		await shot("reserve-over-admin");
@@ -55,7 +55,7 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	await expect(page.getByRole("button", { name: "Tirar Sala da Tipologia A" })).toBeVisible();
 	await shot("w3-typologies");
 	await continueTo("Prévia");
-	await expect(page.getByText(`Esta estrutura tem 48 unidades e a obra tem ${reserve}.`)).toBeVisible();
+	await expect(page.getByText(`Esta estrutura tem 62 unidades e a obra tem ${reserve}.`)).toBeVisible();
 	await expect(page.getByRole("button", { name: "Criar estrutura" })).toBeDisabled();
 	await shot("w4c-over");
 
@@ -76,7 +76,7 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	await continueTo("Prévia");
 	await expect(page.getByText(/Tipologia A: 12/)).toBeVisible();
 	await expect(page.getByText("1 torre · 4 andares · 12 unidades")).toBeVisible();
-	await expect(page.getByText(`Usa 12 das ${reserve} unidades que restam nesta obra. Depois de criar, sobram ${reserve - 12}.`)).toBeVisible();
+	await expect(page.getByText(`Usa 17 das ${reserve} unidades que restam nesta obra. Depois de criar, sobram ${reserve - 17}.`)).toBeVisible();
 	await shot("w4-preview");
 	await page.getByRole("button", { name: "Criar estrutura" }).click();
 

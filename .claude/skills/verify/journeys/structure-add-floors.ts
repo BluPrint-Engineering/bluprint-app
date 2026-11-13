@@ -37,7 +37,7 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 		await page.getByRole("button", { name: "Continuar · Prévia" }).click();
 	}
 	await expect(page.getByText("Torre B ganha 2 andares e 4 unidades")).toBeVisible();
-	await expect(page.getByText(/^Usa 4 das \d+ unidades que restam nesta obra\. Depois de adicionar, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText(/^Usa 6 das \d+ unidades que restam nesta obra\. Depois de adicionar, sobram\s\d+\.$/)).toBeVisible();
 	await shot("w9-preview");
 
 	await page.getByRole("button", { name: "Adicionar 2 andares" }).click();
