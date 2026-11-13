@@ -996,3 +996,80 @@ describe("actions that must not come back", () => {
 		).not.toBeInTheDocument();
 	});
 });
+
+describe("restoring a reserva change", () => {
+	afterEach(() => {
+		localStorage.clear();
+		vi.unstubAllGlobals();
+		onlineManager.setOnline(true);
+	});
+
+	test("reopens it from the tower's add-area row, not from Duplicar, and returns focus to that row", async () => {
+		const towerA = tower("Torre A", [floor("9º andar", ["901", "902"])]);
+		const obra = {
+			...project(3, "admin"),
+			name: "Casa Moinhos",
+			units: { reserved: 2, used: 2 },
+		};
+		const api = writableApi(obra, structureOf([towerA, tower("Torre B")]), {
+			remaining: 0,
+		});
+		let expired = false;
+		const expireOnce = (url: URL, init?: RequestInit) => {
+			if (
+				!expired ||
+				url.pathname !== `/api/projects/${obra.id}/units` ||
+				init?.method !== "PATCH"
+			) {
+				return undefined;
+			}
+			expired = false;
+			return json({}, 401);
+		};
+		const stub = stubApi(signedIn, { api: combine(expireOnce, api.handler) });
+		renderAt(`/projects/${obra.id}/locations/${towerA.id}`);
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Adicionar área comum" }),
+			).toHaveAttribute("aria-disabled", "true"),
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: "Alterar reserva" }),
+		);
+		const field = await screen.findByRole("textbox", {
+			name: "Unidades reservadas",
+		});
+		await userEvent.clear(field);
+		await userEvent.type(field, "5");
+		expired = true;
+		stub.setSession(null);
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await screen.findByLabelText("E-mail");
+		await signInAs("ana@horizonte.test");
+
+		const dialog = await screen.findByRole("dialog", {
+			name: "Alterar reserva",
+		});
+		expect(
+			screen.queryByRole("dialog", { name: "Duplicar a Torre A" }),
+		).not.toBeInTheDocument();
+		const restored = screen.getByRole("textbox", {
+			name: "Unidades reservadas",
+		});
+		expect(restored).toHaveValue("5");
+		await waitFor(() =>
+			expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled(),
+		);
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		await waitFor(() => expect(dialog).not.toBeInTheDocument());
+		expect(
+			screen.queryByRole("dialog", { name: "Duplicar a Torre A" }),
+		).not.toBeInTheDocument();
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Adicionar área comum" }),
+			).toHaveFocus(),
+		);
+	});
+});

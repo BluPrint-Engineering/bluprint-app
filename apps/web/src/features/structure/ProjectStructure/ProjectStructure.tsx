@@ -166,7 +166,6 @@ function ProjectAreas({
 						label="Adicionar área comum"
 						suggestion=""
 						scope="project"
-						reopensReservation
 					/>
 				)
 			}

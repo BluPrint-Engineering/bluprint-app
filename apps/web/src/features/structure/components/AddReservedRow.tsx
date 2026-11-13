@@ -2,6 +2,7 @@ import type { ProjectSummary } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { useSessionDraft } from "@/features/auth";
+import { reservationDraft } from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import { projectUnitsQueryOptions } from "../api";
 import { addOneLine } from "../reserveText";
@@ -25,10 +26,17 @@ export function AddReservedRow({
 	const admin = project.role === "admin";
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		(variables) => (typeof variables === "number" ? variables : undefined),
+		(variables) => {
+			const draft = reservationDraft(variables);
+			const ours =
+				draft?.opener === undefined
+					? reopensReservation
+					: draft.opener === row.kind;
+			return ours ? draft : undefined;
+		},
 	);
 	const [reserving, setReserving] = useState(
-		admin && reopensReservation && restoredReservation !== undefined,
+		admin && restoredReservation !== undefined,
 	);
 	const alterReservation = useRef<HTMLButtonElement>(null);
 	const addButton = useRef<HTMLButtonElement>(null);
@@ -84,6 +92,7 @@ export function AddReservedRow({
 							if (result.isError) savedAt.current = undefined;
 						});
 					}}
+					opener={row.kind}
 				/>
 			)}
 		</>

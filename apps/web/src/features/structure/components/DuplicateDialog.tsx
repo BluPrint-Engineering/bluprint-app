@@ -24,6 +24,7 @@ import {
 	availableUnitsOf,
 	isProjectDelivered,
 	projectQueryOptions,
+	reservationDraft,
 } from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
@@ -113,7 +114,7 @@ function DuplicateContent({
 	const [problem, setProblem] = useState<string>();
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		(variables) => (typeof variables === "number" ? variables : undefined),
+		duplicateReservation,
 	);
 	const [reserving, setReserving] = useState(restoredReservation !== undefined);
 	const alterReservation = useRef<HTMLButtonElement>(null);
@@ -319,10 +320,21 @@ function DuplicateContent({
 					onOpenChange={setReserving}
 					returnFocus={alterReservation}
 					onSaved={() => void units.refetch()}
+					opener={DUPLICATE_OPENER}
 				/>
 			)}
 		</>
 	);
+}
+
+const DUPLICATE_OPENER = "duplicate";
+
+export function duplicateReservation(variables: unknown): number | undefined {
+	const draft = reservationDraft(variables);
+	if (draft?.opener !== undefined && draft.opener !== DUPLICATE_OPENER) {
+		return undefined;
+	}
+	return draft?.reserved;
 }
 
 function duplicateName(

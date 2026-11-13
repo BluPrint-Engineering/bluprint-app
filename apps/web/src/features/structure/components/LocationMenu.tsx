@@ -21,7 +21,11 @@ import { duplicateMenuLabel } from "../duplicateText";
 import { removeLabel, renameLabel } from "../naming";
 import { type ChildCounts, hasChildren } from "../removeText";
 import { useRemoveLocation } from "../useRemoveLocation";
-import { DuplicateDialog, type DuplicateTarget } from "./DuplicateDialog";
+import {
+	DuplicateDialog,
+	type DuplicateTarget,
+	duplicateReservation,
+} from "./DuplicateDialog";
 import { RemoveLocationDialog } from "./RemoveLocationDialog";
 import { RenameDialog, type RenameTarget } from "./RenameDialog";
 
@@ -77,7 +81,7 @@ export function LocationMenu({
 	const [renaming, setRenaming] = useState(restoredRename !== undefined);
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		(variables) => (typeof variables === "number" ? variables : undefined),
+		duplicateReservation,
 	);
 	const [duplicating, setDuplicating] = useState(
 		restoredDuplicate !== undefined ||

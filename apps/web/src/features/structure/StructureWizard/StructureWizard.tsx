@@ -15,7 +15,7 @@ import { useBottomBarHeight } from "@/lib/useBottomBarHeight";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
-import { availableUnitsOf } from "../../projects/api";
+import { availableUnitsOf, reservationDraft } from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
 	namesTakenOf,
@@ -161,7 +161,7 @@ export function StructureWizard({
 	const restored = useSessionDraft("create-structure", wizardFields);
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
-		(variables) => (typeof variables === "number" ? variables : undefined),
+		reservationDraft,
 	);
 	const [draft, setDraft] = useState<WizardDraft>(
 		restored ?? start ?? initialDraft,
