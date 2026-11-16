@@ -42,6 +42,8 @@ function bare(type: LocationType, name: string): string {
 	return name;
 }
 
+const RESERVE_COMMON_AREA = "A área comum volta para a reserva da obra.";
+
 const capitalize = (text: string) =>
 	text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -49,7 +51,8 @@ const withArticle = (type: LocationType, name: string) =>
 	`${FEMININE[type] ? "a" : "o"} ${bare(type, name)}`;
 
 export function removedText(type: LocationType, name: string): string {
-	return `${capitalize(bare(type, name))} ${FEMININE[type] ? "excluída" : "excluído"}.`;
+	const deleted = `${capitalize(bare(type, name))} ${FEMININE[type] ? "excluída" : "excluído"}.`;
+	return type === "common_area" ? `${deleted} ${RESERVE_COMMON_AREA}` : deleted;
 }
 
 const RETRY = "Confira sua conexão e tente de novo.";
@@ -134,6 +137,6 @@ function reserveParagraph({ units, commonAreas }: ChildCounts): string[] {
 	return [
 		units === 1
 			? "A unidade volta para a reserva da obra."
-			: "A área comum volta para a reserva da obra.",
+			: RESERVE_COMMON_AREA,
 	];
 }
