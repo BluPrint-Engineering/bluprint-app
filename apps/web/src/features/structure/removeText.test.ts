@@ -14,7 +14,11 @@ import {
 describe("removedText", () => {
 	test.each([
 		["unit", "904", "Unidade 904 excluída."],
-		["common_area", "Guarita", "Área comum Guarita excluída."],
+		[
+			"common_area",
+			"Guarita",
+			"Área comum Guarita excluída. A área comum volta para a reserva da obra.",
+		],
 		["floor", "9º andar", "9º andar excluído."],
 		["tower", "Torre B", "Torre B excluída."],
 	] as const)("says a %s was deleted", (type, name, text) => {

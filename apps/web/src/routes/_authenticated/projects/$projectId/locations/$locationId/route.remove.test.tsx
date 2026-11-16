@@ -235,7 +235,7 @@ describe("removing an empty location at once (R1)", () => {
 			"a common area of the floor",
 			"Ações da área comum Hall",
 			"Remover área comum",
-			"Área comum Hall excluída.",
+			"Área comum Hall excluída. A área comum volta para a reserva da obra.",
 		],
 	])("deletes %s at once", async (_label, menu, item, text) => {
 		const { ninth, several } = build();
@@ -323,7 +323,11 @@ describe("giving a common area's place back", () => {
 
 		await pick("Ações da área comum Hall", "Remover área comum");
 
-		expect(await screen.findByText("Área comum Hall excluída.")).toBeVisible();
+		expect(
+			await screen.findByText(
+				"Área comum Hall excluída. A área comum volta para a reserva da obra.",
+			),
+		).toBeVisible();
 		await waitFor(() => expect(api.state.units.remaining).toBe(6));
 	});
 });
