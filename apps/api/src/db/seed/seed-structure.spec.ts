@@ -3,6 +3,8 @@ import {
 	type SeedStructure,
 	type SeedUnitRef,
 	countUnits,
+	locationRefKey,
+	referableLocations,
 	numberedFloors,
 	unitNames,
 } from "./seed-structure";
@@ -259,5 +261,35 @@ describe("the seeded typologies", () => {
 		expect(
 			jardins().commonAreaRooms?.["Salão de festas"]?.length,
 		).toBeGreaterThan(0);
+	});
+});
+
+describe("seeded discipline exceptions", () => {
+	test("each one names a unit or common area of its own structure", () => {
+		for (const [project, structure] of seededStructures()) {
+			const known = new Set(referableLocations(structure).map(locationRefKey));
+			const named = (structure.disciplines ?? []).flatMap((entry) => [
+				...(entry.turnedOn ?? []),
+				...(entry.turnedOff ?? []),
+			]);
+
+			expect(
+				named
+					.filter((ref) => !known.has(locationRefKey(ref)))
+					.map((ref) => `${project}: ${ref.name}`),
+			).toEqual([]);
+		}
+	});
+
+	test("an exception always differs from what the discipline's default gives a unit or a common area", () => {
+		for (const [, structure] of seededStructures()) {
+			for (const entry of structure.disciplines ?? []) {
+				const redundant = entry.appliesEverywhere
+					? entry.turnedOn
+					: entry.turnedOff;
+
+				expect(redundant ?? []).toEqual([]);
+			}
+		}
 	});
 });

@@ -12,7 +12,8 @@ import {
 } from "../disciplinesText";
 
 const ROW =
-	"flex min-h-14 items-center gap-(--space-3) border-t border-border py-(--space-2) pr-(--space-4) pl-(--space-4) first:border-t-0";
+	"flex min-h-14 items-center gap-(--space-3) py-(--space-2) px-(--space-4)";
+const ITEM = "border-t border-border first:border-t-0";
 
 function DisciplineBox({
 	projectId,
@@ -38,7 +39,7 @@ function DisciplineBox({
 	}
 
 	return (
-		<li>
+		<li className={ITEM}>
 			<label htmlFor={boxId} className={`${ROW} cursor-pointer`}>
 				<Checkbox
 					id={boxId}
@@ -68,7 +69,7 @@ function DisciplineBox({
 function ReadOnlyRow({ discipline }: { discipline: LocationDiscipline }) {
 	const Icon = discipline.applies ? Check : X;
 	return (
-		<li className={ROW}>
+		<li className={`${ITEM} ${ROW}`}>
 			<Icon aria-hidden="true" className="size-4.5 shrink-0" />
 			<span className="text-base font-medium [overflow-wrap:anywhere]">
 				{discipline.name}
