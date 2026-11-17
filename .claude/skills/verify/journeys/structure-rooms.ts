@@ -92,6 +92,22 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await expect(page.getByText("Os cômodos desta unidade são só dela.")).toBeVisible();
 	await expect(page.getByRole("button", { name: "Voltar à tipologia" })).toBeHidden();
 	await shot("unit-without-type");
+	await page.getByRole("button", { name: "Trocar tipologia" }).click();
+	await change.getByRole("radio", { name: /Tipologia A/ }).click();
+	await change.getByRole("button", { name: "Trocar" }).click();
+	await expect(change).toBeHidden();
+	await page.mouse.move(0, 0);
+	await expect(page.getByText("A unidade 903 agora segue a tipologia Tipologia A.")).toBeHidden({ timeout: 10000 });
+	await menu("Área de serviço", "Renomear");
+	await rename.getByLabel("Nome").fill("Lavanderia");
+	await rename.getByRole("button", { name: "Salvar" }).click();
+	await expect(rename).toBeHidden();
+	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
+	await page.getByLabel("Adicionar cômodo").fill("Home office");
+	await page.getByLabel("Adicionar cômodo").press("Enter");
+	await expect(page.getByText("Home office")).toBeVisible();
+	await menu("Sacada", "Remover desta unidade");
+	await expect(page.getByText("3 alterações")).toBeVisible();
 
 	const hall = (await query("SELECT l.id FROM location l JOIN location f ON f.id = l.parent_id JOIN location t ON t.id = f.parent_id JOIN project p ON p.id = l.project_id JOIN organization o ON o.id = p.organization_id WHERE p.name = 'Residencial Jardins' AND o.name = 'Construtora Horizonte' AND t.name = 'Torre A' AND f.name = '2º andar' AND l.type = 'common_area' AND l.name = 'Hall'"))[0].id;
 	const typologyOf = async (id) =>
@@ -143,6 +159,22 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await expect(page.getByText("Os cômodos desta área comum são só dela.")).toBeVisible();
 	expect(await typologyOf(hall)).toBeNull();
 	await shot("common-area-without-type");
+	await changeButton.click();
+	await areaChange.getByRole("radio", { name: /Hall padrão/ }).click();
+	await areaChange.getByRole("button", { name: "Trocar" }).click();
+	await expect(areaChange).toBeHidden();
+	await page.mouse.move(0, 0);
+	await expect(page.getByText("A área comum Hall agora segue a tipologia Hall padrão.")).toBeHidden({ timeout: 10000 });
+	await menu("Circulação", "Renomear");
+	await rename.getByLabel("Nome").fill("Corredor");
+	await rename.getByRole("button", { name: "Salvar" }).click();
+	await expect(rename).toBeHidden();
+	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
+	await page.getByLabel("Adicionar cômodo").fill("Lixeira");
+	await page.getByLabel("Adicionar cômodo").press("Enter");
+	await expect(page.getByText("Lixeira")).toBeVisible();
+	await menu("Elevadores", "Remover desta área comum");
+	await expect(page.getByText("3 alterações")).toBeVisible();
 
 	const area = (await query("SELECT l.id FROM location l JOIN project p ON p.id = l.project_id JOIN organization o ON o.id = p.organization_id WHERE p.name = 'Residencial Jardins' AND o.name = 'Construtora Horizonte' AND l.type = 'common_area' AND l.name = 'Salão de festas'"))[0].id;
 	await page.goto(`/projects/${jardins}/locations/${area}`);
