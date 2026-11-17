@@ -232,6 +232,7 @@ function LocationView({
 				{tower && (
 					<TowerBody
 						project={project}
+						location={location}
 						tower={tower}
 						towerName={towerName}
 						adding={adding}
@@ -241,6 +242,7 @@ function LocationView({
 				{floor && floorTower && (
 					<FloorBody
 						project={project}
+						location={location}
 						tower={floorTower}
 						floor={floor}
 						towerName={towerName}

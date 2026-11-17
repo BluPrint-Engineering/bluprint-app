@@ -460,6 +460,7 @@ describe("GET /api/projects/:id/locations/:locationId", () => {
 			changes: 0,
 			rooms: [],
 			droppedRooms: [],
+			disciplines: [],
 		});
 	});
 

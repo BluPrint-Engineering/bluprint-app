@@ -4,10 +4,19 @@ import { UnitsModule } from "../units/units.module";
 import { DisciplinesController } from "./disciplines.controller";
 import { DisciplinesRepository } from "./disciplines.repository";
 import { DisciplinesService } from "./disciplines.service";
+import { LocationDisciplinesController } from "./location-disciplines.controller";
+import { LocationDisciplinesRepository } from "./location-disciplines.repository";
+import { LocationDisciplinesService } from "./location-disciplines.service";
 
 @Module({
 	imports: [ProjectsModule, UnitsModule],
-	controllers: [DisciplinesController],
-	providers: [DisciplinesService, DisciplinesRepository],
+	controllers: [DisciplinesController, LocationDisciplinesController],
+	providers: [
+		DisciplinesService,
+		DisciplinesRepository,
+		LocationDisciplinesService,
+		LocationDisciplinesRepository,
+	],
+	exports: [LocationDisciplinesService],
 })
 export class DisciplinesModule {}
