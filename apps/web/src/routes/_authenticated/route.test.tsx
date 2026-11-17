@@ -708,7 +708,7 @@ describe("actions that must not come back", () => {
 			stub.setSession(null);
 			await userEvent.click(pintura);
 			await screen.findByLabelText("E-mail");
-			await signInAs("ana@horizonte.test");
+			await signInAgain();
 
 			expect(
 				await screen.findByRole("checkbox", { name: "Pintura" }),
