@@ -1,5 +1,5 @@
 import {
-	type CreateStructure,
+	type CreateStructureRequest,
 	LOCATION_NAME_TAKEN,
 	NO_UNITS_LEFT,
 	PROJECT_DELIVERED,
@@ -58,7 +58,7 @@ function sectionOf(title: string) {
 	return section;
 }
 
-function bodyOf(call: CreateStructure | undefined) {
+function bodyOf(call: CreateStructureRequest | undefined) {
 	const [entry] = call?.locations ?? [];
 	if (!entry) throw new Error("No location was sent.");
 	return entry;

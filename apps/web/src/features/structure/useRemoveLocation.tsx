@@ -1,5 +1,5 @@
 import {
-	type CreateStructure,
+	type CreateStructureRequest,
 	LOCATION_NAME_TAKEN,
 	type LocationDetail,
 	type LocationType,
@@ -36,7 +36,7 @@ export interface RemoveRequest {
 	afterRemoval?: (() => void | Promise<void>) | undefined;
 }
 
-function recreation(removed: LocationDetail): CreateStructure {
+function recreation(removed: LocationDetail): CreateStructureRequest {
 	const parentId = removed.ancestors.at(-1)?.id ?? null;
 	const holdsRooms = removed.type === "unit" || removed.type === "common_area";
 	const followsTypology = removed.type === "unit" && removed.typology !== null;
@@ -65,6 +65,10 @@ function recreation(removed: LocationDetail): CreateStructure {
 						({ typologyRoomId }) => typologyRoomId,
 					),
 				}),
+				disciplines: removed.disciplines.map(({ id, applies }) => ({
+					disciplineId: id,
+					applies,
+				})),
 			},
 		],
 	};
@@ -85,7 +89,10 @@ export function useRemoveLocation(projectId: string) {
 	const queryClient = useQueryClient();
 	const create = useRecreateStructureMutation(projectId);
 
-	async function undo({ type, name }: LocationDetail, body: CreateStructure) {
+	async function undo(
+		{ type, name }: LocationDetail,
+		body: CreateStructureRequest,
+	) {
 		try {
 			await create.mutateAsync(body);
 		} catch (error) {

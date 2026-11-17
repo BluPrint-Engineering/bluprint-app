@@ -54,6 +54,13 @@ export class DisciplinesService {
 		await this.projects.beginStructureWrite(userId, projectId);
 		await this.units.lockEditable(projectId);
 
+		return this.addExtra(projectId, { id, name, appliesEverywhere });
+	}
+
+	async addExtra(
+		projectId: string,
+		{ id, name, appliesEverywhere }: CreateDiscipline,
+	): Promise<Discipline> {
 		const existing = await this.disciplines.find(id);
 		if (existing) {
 			if (existing.projectId !== projectId) {

@@ -151,6 +151,7 @@ describe("removing an empty location at once (R1)", () => {
 							{ id: own.id, name: "Lavanderia" },
 						],
 						droppedRooms: [taken.typologyRoomId],
+						disciplines: [],
 					},
 				],
 			},
@@ -184,6 +185,92 @@ describe("removing an empty location at once (R1)", () => {
 				name: "902",
 				position: 1,
 				rooms: [{ id: own.id, name: "Sala" }],
+				disciplines: [],
+			},
+		]);
+	});
+
+	const PINTURA = "0190c000-0000-7000-8000-0000000000d1";
+	const PISCINA = "0190c000-0000-7000-8000-0000000000d2";
+	const HIDRAULICA = "0190c000-0000-7000-8000-0000000000d3";
+
+	test.each([
+		[
+			"a unit with Piscina turned on",
+			"902",
+			"Ações da unidade 902",
+			"Remover unidade",
+			[
+				{ id: HIDRAULICA, name: "Hidráulica", applies: true },
+				{ id: PINTURA, name: "Pintura", applies: true },
+				{ id: PISCINA, name: "Piscina", applies: true },
+			],
+		],
+		[
+			"a common area with Pintura turned off",
+			"Hall",
+			"Ações da área comum Hall",
+			"Remover área comum",
+			[
+				{ id: HIDRAULICA, name: "Hidráulica", applies: true },
+				{ id: PINTURA, name: "Pintura", applies: false },
+				{ id: PISCINA, name: "Piscina", applies: false },
+			],
+		],
+	])(
+		"brings %s back with the disciplines it read before",
+		async (_label, name, menu, item, disciplines) => {
+			const { ninth, several } = build();
+			const removed = [...ninth.units, ...ninth.commonAreas].find(
+				(each) => each.name === name,
+			);
+			const api = writableApi(obra(), several, {
+				details: { [removed?.id ?? ""]: { disciplines } },
+			});
+			stubApi(signedIn, { api: api.handler });
+			renderAt(pathOf(ninth.id));
+			await pick(menu, item);
+
+			await user.click(await screen.findByRole("button", { name: "Desfazer" }));
+
+			await waitFor(() => expect(api.created).toHaveLength(1));
+			expect(api.created[0]?.locations[0]?.disciplines).toEqual(
+				disciplines.map(({ id, applies }) => ({ disciplineId: id, applies })),
+			);
+		},
+	);
+
+	test("brings an empty floor back without Hidráulica when it was turned off", async () => {
+		const { tenth, towerA, several } = build();
+		const api = writableApi(obra(), several, {
+			details: {
+				[tenth.id]: {
+					position: 1,
+					disciplines: [
+						{ id: HIDRAULICA, name: "Hidráulica", applies: false },
+						{ id: PINTURA, name: "Pintura", applies: false },
+					],
+				},
+			},
+		});
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(tenth.id));
+		await pick("Ações do andar", "Remover andar");
+
+		await user.click(await screen.findByRole("button", { name: "Desfazer" }));
+
+		await waitFor(() => expect(api.created).toHaveLength(1));
+		expect(api.created[0]?.locations).toEqual([
+			{
+				id: tenth.id,
+				parentId: towerA.id,
+				type: "floor",
+				name: "10º andar",
+				position: 1,
+				disciplines: [
+					{ disciplineId: HIDRAULICA, applies: false },
+					{ disciplineId: PINTURA, applies: false },
+				],
 			},
 		]);
 	});

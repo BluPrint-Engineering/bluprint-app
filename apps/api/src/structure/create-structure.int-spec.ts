@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { Server } from "node:http";
 import {
+	DISCIPLINE_ID_TAKEN,
+	DISCIPLINE_IS_GENERAL,
+	DISCIPLINE_LIMIT_REACHED,
+	DISCIPLINE_NAME_TAKEN,
+	DISCIPLINE_NOT_FOUND,
+	disciplineListSchema,
 	LOCATION_ID_TAKEN,
 	LOCATION_NAME_TAKEN,
 	LOCATION_NOT_FOUND,
@@ -36,6 +42,7 @@ import {
 	projectMember,
 	user,
 } from "../db/schema";
+import { insertDefaultDisciplines } from "../disciplines/default-disciplines";
 import { location } from "./location.entity";
 
 const SIGN_UP = "/api/auth/sign-up/email";
@@ -1692,19 +1699,47 @@ describe("GET /api/projects/:id/locations/:locationId/subtree-rooms", () => {
 			[tower, floor, otherFloor, unit, bare, hall, towerArea, upper],
 		);
 		expect(res.status).toBe(201);
-		return { projectId, tower, floor, unit, bare, hall, towerArea, upper };
+		return {
+			projectId,
+			tower,
+			floor,
+			otherFloor,
+			unit,
+			bare,
+			hall,
+			towerArea,
+			upper,
+		};
 	}
 
-	it("lists every unit and common area below a tower with their rooms", async () => {
-		const { projectId, tower, unit, bare, hall, towerArea, upper } =
-			await buildTower();
+	it("lists the tower, its floors and every unit and common area below it with their rooms", async () => {
+		const {
+			projectId,
+			tower,
+			floor,
+			otherFloor,
+			unit,
+			bare,
+			hall,
+			towerArea,
+			upper,
+		} = await buildTower();
 
 		const res = await manager.agent.get(subtreePath(projectId, tower.id));
 
 		expect(res.status).toBe(200);
 		const { locations } = subtreeRoomsSchema.parse(res.body);
 		expect(locations.map(({ id }) => id).sort()).toEqual(
-			[unit.id, bare.id, hall.id, towerArea.id, upper.id].sort(),
+			[
+				tower.id,
+				floor.id,
+				otherFloor.id,
+				unit.id,
+				bare.id,
+				hall.id,
+				towerArea.id,
+				upper.id,
+			].sort(),
 		);
 		const found = locations.find(({ id }) => id === unit.id)!;
 		expect(found.rooms.map(({ name }) => name)).toEqual(["Sala", "Varanda"]);
@@ -1713,6 +1748,13 @@ describe("GET /api/projects/:id/locations/:locationId/subtree-rooms", () => {
 			id: bare.id,
 			rooms: [],
 			droppedRooms: [],
+			disciplines: [],
+		});
+		expect(locations.find(({ id }) => id === floor.id)).toEqual({
+			id: floor.id,
+			rooms: [],
+			droppedRooms: [],
+			disciplines: [],
 		});
 		expect(
 			locations.find(({ id }) => id === hall.id)!.rooms.map(({ name }) => name),
@@ -1730,10 +1772,59 @@ describe("GET /api/projects/:id/locations/:locationId/subtree-rooms", () => {
 				.parse(ofFloor.body)
 				.locations.map(({ id }) => id)
 				.sort(),
-		).toEqual([unit.id, bare.id, hall.id].sort());
+		).toEqual([floor.id, unit.id, bare.id, hall.id].sort());
 		expect(
 			subtreeRoomsSchema.parse(ofUnit.body).locations.map(({ id }) => id),
 		).toEqual([unit.id]);
+	});
+
+	it("lists the exceptions stored at each location, tower and floor included", async () => {
+		const { projectId, tower, floor, unit, bare, hall } = await buildTower();
+		await insertDefaultDisciplines(db, projectId);
+		const catalog = disciplineListSchema.parse(
+			(await admin.agent.get(`/api/projects/${projectId}/disciplines`)).body,
+		).items;
+		const hidraulica = catalog.find(({ name }) => name === "Hidráulica")!.id;
+		const eletrica = catalog.find(({ name }) => name === "Elétrica")!.id;
+		const turn = async (
+			locationId: string,
+			disciplineId: string,
+			applies: boolean,
+		) =>
+			expect(
+				(
+					await admin.agent
+						.put(
+							`/api/projects/${projectId}/locations/${locationId}/disciplines/${disciplineId}`,
+						)
+						.send({ applies })
+				).status,
+			).toBe(200);
+		await turn(tower.id, eletrica, false);
+		await turn(floor.id, hidraulica, false);
+		await turn(unit.id, hidraulica, false);
+		await turn(unit.id, eletrica, false);
+		await turn(hall.id, eletrica, true);
+
+		const res = await manager.agent.get(subtreePath(projectId, tower.id));
+
+		const disciplinesOf = Object.fromEntries(
+			subtreeRoomsSchema
+				.parse(res.body)
+				.locations.map(({ id, disciplines }) => [id, disciplines]),
+		);
+		expect(disciplinesOf[tower.id]).toEqual([
+			{ disciplineId: eletrica, applies: false },
+		]);
+		expect(disciplinesOf[floor.id]).toEqual([
+			{ disciplineId: hidraulica, applies: false },
+		]);
+		expect(disciplinesOf[unit.id]).toEqual([
+			{ disciplineId: hidraulica, applies: false },
+			{ disciplineId: eletrica, applies: false },
+		]);
+		expect(disciplinesOf[bare.id]).toEqual([]);
+		expect(disciplinesOf[hall.id]).toEqual([]);
 	});
 
 	it("answers LOCATION_NOT_FOUND for a location of another project or none", async () => {
@@ -1762,5 +1853,320 @@ describe("GET /api/projects/:id/locations/:locationId/subtree-rooms", () => {
 		expect(problemOf(unseen.body).code).toBe(PROJECT_NOT_FOUND);
 		expect(outside.status).toBe(404);
 		expect(anonymous.status).toBe(401);
+	});
+});
+
+describe("POST /api/projects/:id/structure with disciplines", () => {
+	type Applies = Record<string, boolean>;
+
+	async function projectWithCatalog(reservedUnits = 10): Promise<string> {
+		const projectId = await newProject(reservedUnits);
+		await insertDefaultDisciplines(db, projectId);
+		return projectId;
+	}
+
+	async function addDiscipline(
+		projectId: string,
+		name: string,
+		appliesEverywhere: boolean,
+	): Promise<string> {
+		const id = randomUUID();
+		const res = await admin.agent
+			.post(`/api/projects/${projectId}/disciplines`)
+			.send({ id, name, appliesEverywhere });
+		expect(res.status).toBe(201);
+		return id;
+	}
+
+	async function catalogOf(projectId: string) {
+		const res = await admin.agent.get(`/api/projects/${projectId}/disciplines`);
+		return disciplineListSchema.parse(res.body).items;
+	}
+
+	async function idOf(projectId: string, name: string): Promise<string> {
+		return (await catalogOf(projectId)).find((item) => item.name === name)!.id;
+	}
+
+	async function appliesAt(
+		projectId: string,
+		locationId: string,
+	): Promise<Applies> {
+		const { disciplines } = await readLocation(projectId, locationId);
+		return Object.fromEntries(
+			disciplines.map(({ name, applies }) => [name, applies]),
+		);
+	}
+
+	function site() {
+		const tower = entry(null, "tower", "Torre A");
+		const floor = entry(tower.id, "floor", "1º andar");
+		const u101 = entry(floor.id, "unit", "101", 0);
+		const u102 = entry(floor.id, "unit", "102", 1);
+		const hall = entry(floor.id, "common_area", "Hall", 2);
+		return { tower, floor, u101, u102, hall };
+	}
+
+	const send = (projectId: string, body: object) =>
+		manager.agent.post(structurePath(projectId)).send(body);
+
+	it("gives every location only the default when the request says nothing of disciplines", async () => {
+		const projectId = await projectWithCatalog();
+		await addDiscipline(projectId, "Pintura", true);
+		await addDiscipline(projectId, "Piscina", false);
+		const { tower, floor, u101, hall } = site();
+
+		const res = await send(projectId, {
+			locations: [tower, floor, u101, hall],
+		});
+
+		expect(res.status).toBe(201);
+		const aboveUnits = {
+			Hidráulica: true,
+			Elétrica: true,
+			Pintura: false,
+			Piscina: false,
+		};
+		const holder = {
+			Hidráulica: true,
+			Elétrica: true,
+			Pintura: true,
+			Piscina: false,
+		};
+		expect(await appliesAt(projectId, tower.id)).toEqual(aboveUnits);
+		expect(await appliesAt(projectId, floor.id)).toEqual(aboveUnits);
+		expect(await appliesAt(projectId, u101.id)).toEqual(holder);
+		expect(await appliesAt(projectId, hall.id)).toEqual(holder);
+	});
+
+	it("creates a new discipline with the locations and gives each location its list", async () => {
+		const projectId = await projectWithCatalog();
+		const piscina = await addDiscipline(projectId, "Piscina", false);
+		const hidraulica = await idOf(projectId, "Hidráulica");
+		const gesso = randomUUID();
+		const { tower, floor, u101, u102, hall } = site();
+
+		const res = await send(projectId, {
+			disciplines: [{ id: gesso, name: "Gesso", appliesEverywhere: true }],
+			locations: [
+				{ ...tower, disciplines: [{ disciplineId: gesso, applies: true }] },
+				{
+					...floor,
+					disciplines: [{ disciplineId: hidraulica, applies: false }],
+				},
+				{ ...u101, disciplines: [{ disciplineId: gesso, applies: false }] },
+				{
+					...u102,
+					disciplines: [
+						{ disciplineId: gesso, applies: true },
+						{ disciplineId: hidraulica, applies: true },
+					],
+				},
+				{ ...hall, disciplines: [{ disciplineId: piscina, applies: true }] },
+			],
+		});
+
+		expect(res.status).toBe(201);
+		expect(
+			(await catalogOf(projectId)).map(({ name, appliesEverywhere }) => [
+				name,
+				appliesEverywhere,
+			]),
+		).toEqual([
+			["Geral", true],
+			["Hidráulica", true],
+			["Elétrica", true],
+			["Piscina", false],
+			["Gesso", true],
+		]);
+		expect(await appliesAt(projectId, tower.id)).toEqual({
+			Hidráulica: true,
+			Elétrica: true,
+			Piscina: false,
+			Gesso: true,
+		});
+		expect(await appliesAt(projectId, floor.id)).toEqual({
+			Hidráulica: false,
+			Elétrica: true,
+			Piscina: false,
+			Gesso: false,
+		});
+		expect(await appliesAt(projectId, u101.id)).toEqual({
+			Hidráulica: true,
+			Elétrica: true,
+			Piscina: false,
+			Gesso: false,
+		});
+		expect(await appliesAt(projectId, u102.id)).toEqual({
+			Hidráulica: true,
+			Elétrica: true,
+			Piscina: false,
+			Gesso: true,
+		});
+		expect(await appliesAt(projectId, hall.id)).toEqual({
+			Hidráulica: true,
+			Elétrica: true,
+			Piscina: true,
+			Gesso: true,
+		});
+	});
+
+	function gessoRequest(gesso: string) {
+		const { tower, floor, u101, u102 } = site();
+		return {
+			body: {
+				disciplines: [{ id: gesso, name: "Gesso", appliesEverywhere: true }],
+				locations: [
+					tower,
+					floor,
+					{ ...u101, disciplines: [{ disciplineId: gesso, applies: false }] },
+					u102,
+				],
+			},
+			u101,
+			u102,
+		};
+	}
+
+	it("refuses the request beyond the reservation and leaves no discipline behind", async () => {
+		const projectId = await projectWithCatalog(1);
+		const { body } = gessoRequest(randomUUID());
+
+		const res = await send(projectId, body);
+
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body).code).toBe(NO_UNITS_LEFT);
+		expect((await catalogOf(projectId)).map(({ name }) => name)).toEqual([
+			"Geral",
+			"Hidráulica",
+			"Elétrica",
+		]);
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("creates the discipline once and leaves the exceptions alone when the request is sent again", async () => {
+		const projectId = await projectWithCatalog();
+		const gesso = randomUUID();
+		const { body, u101, u102 } = gessoRequest(gesso);
+		expect((await send(projectId, body)).status).toBe(201);
+		const turnedOn = await admin.agent
+			.put(
+				`/api/projects/${projectId}/locations/${u101.id}/disciplines/${gesso}`,
+			)
+			.send({ applies: true });
+		expect(turnedOn.status).toBe(200);
+
+		const again = await send(projectId, body);
+
+		expect(again.status).toBe(201);
+		expect(
+			(await catalogOf(projectId)).filter(({ name }) => name === "Gesso"),
+		).toHaveLength(1);
+		expect((await appliesAt(projectId, u101.id)).Gesso).toBe(true);
+		expect((await appliesAt(projectId, u102.id)).Gesso).toBe(true);
+	});
+
+	it("refuses an exception for General, for a discipline that does not exist or for another project's, and creates nothing", async () => {
+		const projectId = await projectWithCatalog();
+		const other = await projectWithCatalog();
+		const elsewhere = await addDiscipline(other, "Piscina", false);
+		const general = await idOf(projectId, "Geral");
+
+		const attempts: [string, number, string][] = [
+			[general, 409, DISCIPLINE_IS_GENERAL],
+			[randomUUID(), 400, DISCIPLINE_NOT_FOUND],
+			[elsewhere, 400, DISCIPLINE_NOT_FOUND],
+		];
+		for (const [disciplineId, status, code] of attempts) {
+			const { tower, floor, u101 } = site();
+			const res = await send(projectId, {
+				disciplines: [
+					{ id: randomUUID(), name: "Gesso", appliesEverywhere: true },
+				],
+				locations: [
+					tower,
+					floor,
+					{ ...u101, disciplines: [{ disciplineId, applies: true }] },
+				],
+			});
+
+			expect(res.status).toBe(status);
+			expect(problemOf(res.body).code).toBe(code);
+		}
+		expect((await catalogOf(projectId)).map(({ name }) => name)).toEqual([
+			"Geral",
+			"Hidráulica",
+			"Elétrica",
+		]);
+		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("refuses a discipline beyond the ten extras, a name in use and an id of another project", async () => {
+		const projectId = await projectWithCatalog();
+		for (let n = 1; n <= 10; n++) {
+			await addDiscipline(projectId, `Extra ${n}`, false);
+		}
+		const full = await send(projectId, {
+			disciplines: [
+				{ id: randomUUID(), name: "Gesso", appliesEverywhere: true },
+			],
+			locations: [site().tower],
+		});
+		const fresh = await projectWithCatalog();
+		const nameTaken = await send(fresh, {
+			disciplines: [
+				{ id: randomUUID(), name: "hidraulica", appliesEverywhere: true },
+			],
+			locations: [site().tower],
+		});
+		const idTaken = await send(fresh, {
+			disciplines: [
+				{
+					id: await idOf(projectId, "Extra 1"),
+					name: "Gesso",
+					appliesEverywhere: true,
+				},
+			],
+			locations: [site().tower],
+		});
+
+		expect(full.status).toBe(409);
+		expect(problemOf(full.body).code).toBe(DISCIPLINE_LIMIT_REACHED);
+		expect(nameTaken.status).toBe(409);
+		expect(problemOf(nameTaken.body).code).toBe(DISCIPLINE_NAME_TAKEN);
+		expect(idTaken.status).toBe(409);
+		expect(problemOf(idTaken.body).code).toBe(DISCIPLINE_ID_TAKEN);
+		expect(await countLocations(projectId)).toBe(0);
+		expect(await countLocations(fresh)).toBe(0);
+		expect(await catalogOf(fresh)).toHaveLength(3);
+	});
+
+	it("refuses a location that lists a discipline twice and more than ten disciplines", async () => {
+		const projectId = await projectWithCatalog();
+		const hidraulica = await idOf(projectId, "Hidráulica");
+		const { tower } = site();
+
+		const twice = await send(projectId, {
+			locations: [
+				{
+					...tower,
+					disciplines: [
+						{ disciplineId: hidraulica, applies: false },
+						{ disciplineId: hidraulica, applies: true },
+					],
+				},
+			],
+		});
+		const eleven = await send(projectId, {
+			disciplines: Array.from({ length: 11 }, (_, n) => ({
+				id: randomUUID(),
+				name: `Extra ${n}`,
+				appliesEverywhere: false,
+			})),
+			locations: [tower],
+		});
+
+		expect(twice.status).toBe(400);
+		expect(eleven.status).toBe(400);
+		expect(await countLocations(projectId)).toBe(0);
 	});
 });

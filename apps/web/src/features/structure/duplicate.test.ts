@@ -15,7 +15,7 @@ import {
 	copiedUnitName,
 	type DuplicateSource,
 	findDuplicateSource,
-	holderIdsCopied,
+	locationIdsCopied,
 	locationsCopied,
 	renumberedUnitNames,
 	reserveUsedByCopy,
@@ -97,7 +97,26 @@ const roomsOf = (
 	id: string,
 	rooms: SubtreeRooms["locations"][number]["rooms"],
 	droppedRooms: SubtreeRooms["locations"][number]["droppedRooms"] = [],
-): SubtreeRooms["locations"][number] => ({ id, rooms, droppedRooms });
+): SubtreeRooms["locations"][number] => ({
+	id,
+	rooms,
+	droppedRooms,
+	disciplines: [],
+});
+
+const PINTURA = "0190c000-0000-7000-8000-000000000001";
+const PISCINA = "0190c000-0000-7000-8000-000000000002";
+const HIDRAULICA = "0190c000-0000-7000-8000-000000000003";
+
+const exceptionsOf = (
+	id: string,
+	disciplines: SubtreeRooms["locations"][number]["disciplines"],
+): SubtreeRooms["locations"][number] => ({
+	id,
+	rooms: [],
+	droppedRooms: [],
+	disciplines,
+});
 
 describe("findDuplicateSource", () => {
 	test("finds a tower, a floor and a unit with the tower they sit in", () => {
@@ -193,31 +212,35 @@ describe("locationsCopied", () => {
 	});
 });
 
-describe("holderIdsCopied", () => {
-	test("lists the units and common areas of every floor and of the tower itself", () => {
+describe("locationIdsCopied", () => {
+	test("lists the source with every floor, unit and common area below it", () => {
 		const { ninth, tenth, towerA, structure } = scene();
 		const [u901, u902, u903, u904] = ninth.units;
 		const [hall, terraco] = ninth.commonAreas;
 		const [u1001, u1002] = tenth.units;
 		const [salao] = towerA.commonAreas;
 
-		expect(holderIdsCopied(sourceOf(structure, "tower", towerA.id))).toEqual([
+		expect(locationIdsCopied(sourceOf(structure, "tower", towerA.id))).toEqual([
+			towerA.id,
+			ninth.id,
 			u901?.id,
 			u902?.id,
 			u903?.id,
 			u904?.id,
 			hall?.id,
 			terraco?.id,
+			tenth.id,
 			u1001?.id,
 			u1002?.id,
 			salao?.id,
 		]);
-		expect(holderIdsCopied(sourceOf(structure, "floor", tenth.id))).toEqual([
+		expect(locationIdsCopied(sourceOf(structure, "floor", tenth.id))).toEqual([
+			tenth.id,
 			u1001?.id,
 			u1002?.id,
 		]);
 		expect(
-			holderIdsCopied(sourceOf(structure, "unit", nth(ninth.units, 2).id)),
+			locationIdsCopied(sourceOf(structure, "unit", nth(ninth.units, 2).id)),
 		).toEqual([u903?.id]);
 	});
 });
@@ -228,11 +251,12 @@ describe("assertCopyMatches", () => {
 	});
 
 	const ninthHolders = (ninth: ReturnType<typeof scene>["ninth"]) => [
+		ninth.id,
 		...ninth.units.map(({ id }) => id),
 		...ninth.commonAreas.map(({ id }) => id),
 	];
 
-	test("lets through rooms read for exactly the units and areas of the copy, in any order", () => {
+	test("lets through what was read for exactly the floor, units and areas of the copy, in any order", () => {
 		const { ninth, structure } = scene();
 		const source = sourceOf(structure, "floor", ninth.id);
 
@@ -241,7 +265,7 @@ describe("assertCopyMatches", () => {
 		).not.toThrow();
 	});
 
-	test("refuses rooms read for a unit or area missing from the cache, or without one it has", () => {
+	test("refuses what was read for a location missing from the cache, or without one it has", () => {
 		const { ninth, structure } = scene();
 		const source = sourceOf(structure, "floor", ninth.id);
 		const ids = ninthHolders(ninth);
@@ -455,6 +479,39 @@ describe("buildDuplicate of a unit", () => {
 		expect(copy).not.toHaveProperty("droppedRooms");
 	});
 
+	test("keeps the disciplines the unit turned off and on", () => {
+		const { ninth, structure } = scene();
+		const unit = nth(ninth.units, 0);
+		const below: SubtreeRooms = {
+			locations: [
+				exceptionsOf(unit.id, [
+					{ disciplineId: PINTURA, applies: false },
+					{ disciplineId: PISCINA, applies: true },
+				]),
+			],
+		};
+
+		const [copy] = buildDuplicate(
+			sourceOf(structure, "unit", unit.id),
+			"905",
+			below,
+			sequentialIds(),
+		).locations;
+
+		expect(copy).toEqual({
+			id: "new-1",
+			parentId: ninth.id,
+			type: "unit",
+			name: "905",
+			typologyId: unit.typology?.id,
+			rooms: [],
+			disciplines: [
+				{ disciplineId: PINTURA, applies: false },
+				{ disciplineId: PISCINA, applies: true },
+			],
+		});
+	});
+
 	test("leaves the typology out for a unit without one", () => {
 		const { ninth, structure } = scene();
 		const unit = nth(ninth.units, 2);
@@ -545,6 +602,63 @@ describe("buildDuplicate of a floor", () => {
 		expect(locations.find(({ name }) => name === "Hall")?.rooms).toEqual([
 			{ id: "new-7", name: "Depósito" },
 		]);
+	});
+
+	test("gives the new floor the floor's disciplines and each unit and area its original's", () => {
+		const { ninth, structure } = scene();
+		const [u901, u902] = ninth.units;
+		const hall = nth(ninth.commonAreas, 0);
+		const below: SubtreeRooms = {
+			locations: [
+				exceptionsOf(ninth.id, [{ disciplineId: HIDRAULICA, applies: false }]),
+				exceptionsOf(u901?.id ?? "", [
+					{ disciplineId: PISCINA, applies: true },
+				]),
+				exceptionsOf(u902?.id ?? "", []),
+				exceptionsOf(hall.id, [{ disciplineId: PINTURA, applies: false }]),
+			],
+		};
+
+		const { locations } = buildDuplicate(
+			sourceOf(structure, "floor", ninth.id),
+			"11º andar",
+			below,
+			sequentialIds(),
+		);
+
+		expect(
+			locations.map(({ name, disciplines }) => [name, disciplines]),
+		).toEqual([
+			["11º andar", [{ disciplineId: HIDRAULICA, applies: false }]],
+			["1101", [{ disciplineId: PISCINA, applies: true }]],
+			["1102", undefined],
+			["1103", undefined],
+			["1104", undefined],
+			["Hall", [{ disciplineId: PINTURA, applies: false }]],
+			["Terraço", undefined],
+		]);
+	});
+
+	test("turns no floor read with the rest into a room or an extra location", () => {
+		const { ninth, towerA, structure } = scene();
+		const below: SubtreeRooms = {
+			locations: [exceptionsOf(ninth.id, [])],
+		};
+
+		const { locations } = buildDuplicate(
+			sourceOf(structure, "floor", ninth.id),
+			"11º andar",
+			below,
+			sequentialIds(),
+		);
+
+		expect(locations).toHaveLength(7);
+		expect(locations[0]).toEqual({
+			id: "new-1",
+			parentId: towerA.id,
+			type: "floor",
+			name: "11º andar",
+		});
 	});
 
 	test("renumbers by the next floor when the name has no number", () => {
@@ -682,6 +796,38 @@ describe("buildDuplicate of a tower", () => {
 		expect(again.locations.map(({ id }) => id)).toEqual(
 			first.locations.map(({ id }) => id),
 		);
+	});
+
+	test("gives the tower, each floor and each location the disciplines of its original", () => {
+		const { ninth, tenth, towerA, structure } = scene();
+		const u1001 = nth(tenth.units, 0);
+		const salao = nth(towerA.commonAreas, 0);
+		const below: SubtreeRooms = {
+			locations: [
+				exceptionsOf(towerA.id, [{ disciplineId: PISCINA, applies: true }]),
+				exceptionsOf(ninth.id, [{ disciplineId: HIDRAULICA, applies: false }]),
+				exceptionsOf(u1001.id, [{ disciplineId: PINTURA, applies: false }]),
+				exceptionsOf(salao.id, [{ disciplineId: PISCINA, applies: true }]),
+			],
+		};
+
+		const { locations } = buildDuplicate(
+			sourceOf(structure, "tower", towerA.id),
+			"Torre C",
+			below,
+			sequentialIds(),
+		);
+
+		expect(
+			locations.flatMap(({ name, disciplines }) =>
+				disciplines ? [[name, disciplines]] : [],
+			),
+		).toEqual([
+			["Torre C", [{ disciplineId: PISCINA, applies: true }]],
+			["9º andar", [{ disciplineId: HIDRAULICA, applies: false }]],
+			["1001", [{ disciplineId: PINTURA, applies: false }]],
+			["Salão de festas", [{ disciplineId: PISCINA, applies: true }]],
+		]);
 	});
 
 	test("never carries pins, plans or unit data, only the structure", () => {

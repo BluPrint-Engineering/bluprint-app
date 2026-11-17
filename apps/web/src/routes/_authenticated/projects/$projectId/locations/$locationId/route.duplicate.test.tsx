@@ -225,6 +225,7 @@ describe("duplicating a floor", () => {
 							name: "Lavanderia",
 						},
 					],
+					disciplines: [],
 				},
 			],
 		});

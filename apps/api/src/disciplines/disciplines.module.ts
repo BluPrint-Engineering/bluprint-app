@@ -17,6 +17,6 @@ import { LocationDisciplinesService } from "./location-disciplines.service";
 		LocationDisciplinesService,
 		LocationDisciplinesRepository,
 	],
-	exports: [LocationDisciplinesService],
+	exports: [DisciplinesService, LocationDisciplinesService],
 })
 export class DisciplinesModule {}

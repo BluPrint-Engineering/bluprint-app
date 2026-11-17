@@ -1,5 +1,5 @@
 import {
-	type CreateStructure,
+	type CreateStructureRequest,
 	comparableLocationName,
 	LOCATION_NAME_MAX_LENGTH,
 	type NewLocation,
@@ -74,14 +74,16 @@ export class StaleCopyError extends Error {
 	}
 }
 
-export function holderIdsCopied(source: DuplicateSource): string[] {
+export function locationIdsCopied(source: DuplicateSource): string[] {
 	const ofFloor = (floor: StructureFloor) => [
+		floor.id,
 		...floor.units.map(({ id }) => id),
 		...floor.commonAreas.map(({ id }) => id),
 	];
 	switch (source.type) {
 		case "tower":
 			return [
+				source.tower.id,
 				...source.tower.floors.flatMap(ofFloor),
 				...source.tower.commonAreas.map(({ id }) => id),
 			];
@@ -96,7 +98,7 @@ export function assertCopyMatches(
 	source: DuplicateSource,
 	below: SubtreeRooms,
 ): void {
-	const expected = new Set(holderIdsCopied(source));
+	const expected = new Set(locationIdsCopied(source));
 	const read = below.locations.map(({ id }) => id);
 	if (read.length !== expected.size || read.some((id) => !expected.has(id))) {
 		throw new StaleCopyError();
@@ -207,9 +209,14 @@ export function buildDuplicate(
 	name: string,
 	below: SubtreeRooms,
 	idFor: (key: string) => string,
-): CreateStructure {
+): CreateStructureRequest {
 	const roomsOf = new Map(below.locations.map((entry) => [entry.id, entry]));
 	const locations: NewLocation[] = [];
+
+	const disciplines = (sourceId: string) => {
+		const found = roomsOf.get(sourceId)?.disciplines ?? [];
+		return found.length > 0 ? { disciplines: found } : {};
+	};
 
 	const rooms = (sourceId: string) => {
 		const found = roomsOf.get(sourceId);
@@ -243,6 +250,7 @@ export function buildDuplicate(
 			...(position !== undefined && { position }),
 			...(unit.typology && { typologyId: unit.typology.id }),
 			...rooms(unit.id),
+			...disciplines(unit.id),
 		});
 	};
 
@@ -258,6 +266,7 @@ export function buildDuplicate(
 			name: area.name,
 			position,
 			...rooms(area.id),
+			...disciplines(area.id),
 		});
 	};
 
@@ -275,6 +284,7 @@ export function buildDuplicate(
 			type: "floor",
 			name: floorName,
 			...(position !== undefined && { position }),
+			...disciplines(floor.id),
 		});
 		floor.units.forEach((unit, at) => {
 			addUnit(unit, id, unitName(unit.name), at);
@@ -308,7 +318,13 @@ export function buildDuplicate(
 		case "tower": {
 			const { tower } = source;
 			const id = idFor(`location:${tower.id}`);
-			locations.push({ id, parentId: null, type: "tower", name });
+			locations.push({
+				id,
+				parentId: null,
+				type: "tower",
+				name,
+				...disciplines(tower.id),
+			});
 			tower.floors.forEach((floor, at) => {
 				addFloor(floor, id, floor.name, at, (unitName) => unitName);
 			});
