@@ -3,6 +3,7 @@ import {
 	MAX_UNITS_PER_FLOOR,
 	type StructureTower,
 	sameLocationName,
+	sameRoomName,
 	type Typology,
 } from "@bluprint/shared";
 import { describeTower, newFloorsLead } from "./towerNow";
@@ -371,7 +372,7 @@ export function extendedDraft(
 function freeTypologyName(taken: string[]): string {
 	for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
 		const name = `Tipologia ${letter}`;
-		if (!taken.some((other) => sameLocationName(other, name))) return name;
+		if (!taken.some((other) => sameRoomName(other, name))) return name;
 	}
 	return "";
 }
@@ -656,8 +657,7 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 			errors[id] = "Informe o nome da tipologia.";
 		} else if (
 			draft.typologies.some(
-				(other, at) =>
-					at < index && sameLocationName(other.name, typology.name),
+				(other, at) => at < index && sameRoomName(other.name, typology.name),
 			)
 		) {
 			errors[id] = "Já existe outra tipologia com esse nome.";

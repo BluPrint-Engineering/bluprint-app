@@ -43,6 +43,10 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await expect(page.getByRole("textbox", { name: "Novo cômodo" })).toBeVisible();
 	await expect(page.getByText(/^Salvar muda as \d+ unidades da Tipologia A\./)).toBeVisible();
 	await shot("c2-editing");
+	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Sála");
+	await page.keyboard.press("Enter");
+	await expect(page.getByText("Esta tipologia já tem esse cômodo.")).toBeVisible();
+	await shot("c2-accent-duplicate");
 	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Lavanderia");
 	await page.keyboard.press("Enter");
 	await page.getByRole("button", { name: "Salvar" }).click();
@@ -61,9 +65,9 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await menu("Duplex", "Renomear");
 	await expect(page.getByRole("dialog", { name: "Renomear a tipologia" })).toBeVisible();
 	await shot("rename-open");
-	await page.getByRole("textbox", { name: "Nome" }).fill("tipologia a");
+	await page.getByRole("textbox", { name: "Nome" }).fill("tipologÍa a");
 	await page.keyboard.press("Enter");
-	await expect(page.getByText("Já existe a tipologia tipologia a nesta obra.")).toBeVisible();
+	await expect(page.getByText("Já existe a tipologia tipologÍa a nesta obra.")).toBeVisible();
 	await shot("rename-taken");
 	await page.getByRole("textbox", { name: "Nome" }).fill("Duplex Cobertura");
 	await page.keyboard.press("Enter");

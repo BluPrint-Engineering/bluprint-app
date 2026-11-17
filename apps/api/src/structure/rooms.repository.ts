@@ -1,7 +1,8 @@
-import { comparableLocationName, type LocationType } from "@bluprint/shared";
+import { type LocationType } from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, eq, ne, sql } from "drizzle-orm";
+import { comparableNameSql } from "../db/comparable-name";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import { droppedRoom, room } from "./room.entity";
@@ -14,8 +15,6 @@ export interface RoomRow {
 	name: string;
 	typologyRoomId: string | null;
 }
-
-const comparableName = sql`lower(regexp_replace(btrim(${room.name}), '\\s+', ' ', 'g'))`;
 
 @Injectable()
 export class RoomsRepository {
@@ -60,7 +59,7 @@ export class RoomsRepository {
 			.where(
 				and(
 					eq(room.locationId, locationId),
-					sql`${comparableName} = ${comparableLocationName(name)}`,
+					sql`${comparableNameSql(room.name)} = ${comparableNameSql(sql`${name}::text`)}`,
 					exceptRoomId ? ne(room.id, exceptRoomId) : undefined,
 				),
 			);

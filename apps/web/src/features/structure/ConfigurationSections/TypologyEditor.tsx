@@ -1,6 +1,6 @@
 import {
 	MAX_ROOMS_PER_TYPOLOGY,
-	sameLocationName,
+	sameRoomName,
 	type Typology,
 } from "@bluprint/shared";
 import { useState } from "react";
@@ -79,9 +79,7 @@ export function TypologyEditor({
 		rooms.some((room) => room.name === name && !stored.has(room.id));
 
 	function addRoom(name: string) {
-		const taken = typology.rooms.find((room) =>
-			sameLocationName(room.name, name),
-		);
+		const taken = typology.rooms.find((room) => sameRoomName(room.name, name));
 		const brought = taken && !rooms.some((room) => room.id === taken.id);
 		setRooms((current) => [
 			...current,
@@ -119,6 +117,7 @@ export function TypologyEditor({
 				}
 			/>
 			<AddTag
+				sameName={sameRoomName}
 				label="Novo cômodo"
 				placeholder="Novo cômodo"
 				existing={rooms.map(({ name }) => name)}

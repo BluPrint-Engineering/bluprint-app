@@ -1,15 +1,8 @@
+import { namePairs } from "../structure/name-pairs";
 import { comparableRoomName, sameRoomName } from "@bluprint/shared";
 
 describe("room and discipline names", () => {
-	test.each([
-		["Suíte", "suite", true],
-		["Suíte", "SUÍTE", true],
-		["Sala de estar", "Sala  de  estar", true],
-		[" Pintura ", "pintura", true],
-		["Quarto", "Quarto 2", false],
-		["Área", "Aérea", false],
-		["Elétrica", "Eletrica", true],
-	])("%j and %j: same name is %s", (a, b, same) => {
+	test.each(namePairs)("%j and %j: same name is %s", (a, b, same) => {
 		expect(sameRoomName(a, b)).toBe(same);
 	});
 

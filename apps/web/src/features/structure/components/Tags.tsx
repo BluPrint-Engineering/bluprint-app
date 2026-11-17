@@ -50,6 +50,7 @@ export function AddTag({
 	placeholder,
 	existing,
 	duplicateMessage,
+	sameName = sameLocationName,
 	maxItems,
 	maxMessage,
 	onAdd,
@@ -58,6 +59,7 @@ export function AddTag({
 	placeholder: string;
 	existing: string[];
 	duplicateMessage: string;
+	sameName?: (a: string, b: string) => boolean;
 	maxItems?: number;
 	maxMessage?: string;
 	onAdd: (name: string) => boolean;
@@ -69,7 +71,7 @@ export function AddTag({
 		event.preventDefault();
 		const name = tidyLocationName(typed);
 		if (name === "") return;
-		if (existing.some((other) => sameLocationName(other, name))) {
+		if (existing.some((other) => sameName(other, name))) {
 			setError(duplicateMessage);
 			return;
 		}

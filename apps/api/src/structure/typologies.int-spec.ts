@@ -25,6 +25,7 @@ import { AppModule } from "../app.module";
 import { DATABASE, Database } from "../db/database.module";
 import { member, organization, project, projectMember } from "../db/schema";
 import { location } from "./location.entity";
+import { namePairs } from "./name-pairs";
 import { droppedRoom, room } from "./room.entity";
 import { typology, typologyRoom } from "./typology.entity";
 
@@ -257,6 +258,147 @@ afterAll(async () => {
 	await app.close();
 });
 
+describe("accent names across one project", () => {
+	it("preserves names, rejects duplicates and adopts an own room", async () => {
+		const w = await world();
+		const typeB = await typeOf(w, w.typeB);
+		const repeated = await manager.agent
+			.patch(path(w, `typologies/${w.typeB}`))
+			.send({
+				rooms: [...roomsOf(typeB), { id: randomUUID(), name: "suite" }],
+			});
+		expect(repeated.status).toBe(400);
+		expect(await typeOf(w, w.typeB)).toEqual(typeB);
+
+		const typeClash = await manager.agent
+			.post(path(w, "typologies"))
+			.send({ id: randomUUID(), name: "tipologia  b" });
+		expect(typeClash.status).toBe(409);
+		expect(problemOf(typeClash).code).toBe(TYPOLOGY_NAME_TAKEN);
+
+		const addClash = await manager.agent
+			.post(path(w, `locations/${w.typeBUnit}/rooms`))
+			.send({ id: randomUUID(), name: "SUITE" });
+		expect(addClash.status).toBe(409);
+		expect(problemOf(addClash).code).toBe(ROOM_NAME_TAKEN);
+		const quarto = randomUUID();
+		expect(
+			(
+				await manager.agent
+					.post(path(w, `locations/${w.typeBUnit}/rooms`))
+					.send({ id: quarto, name: "Quarto" })
+			).status,
+		).toBe(201);
+		const renameClash = await manager.agent
+			.patch(path(w, `rooms/${quarto}`))
+			.send({ name: "Suíte" });
+		expect(renameClash.status).toBe(409);
+		expect(problemOf(renameClash).code).toBe(ROOM_NAME_TAKEN);
+
+		const own = randomUUID();
+		expect(
+			(
+				await manager.agent
+					.post(path(w, `locations/${w.owner}/rooms`))
+					.send({ id: own, name: "Suite" })
+			).status,
+		).toBe(201);
+		const typeA = await typeOf(w, w.typeA);
+		const added = randomUUID();
+		expect(
+			(
+				await manager.agent
+					.patch(path(w, `typologies/${w.typeA}`))
+					.send({ rooms: [...roomsOf(typeA), { id: added, name: "Suíte" }] })
+			).status,
+		).toBe(200);
+		const adopted = await detailOf(w, w.owner);
+		expect(adopted.rooms.filter(({ name }) => name === "Suíte")).toEqual([
+			expect.objectContaining({ id: own, typologyRoomId: added }),
+		]);
+		expect(roomNames(adopted)).not.toContain("Suite");
+
+		const current = await typeOf(w, w.typeB);
+		expect(
+			(
+				await manager.agent.patch(path(w, `typologies/${w.typeB}`)).send({
+					rooms: [
+						...roomsOf(current),
+						{ id: randomUUID(), name: "Área" },
+						{ id: randomUUID(), name: "Aérea" },
+					],
+				})
+			).status,
+		).toBe(200);
+		await expect(
+			db
+				.insert(typologyRoom)
+				.values({ typologyId: w.typeB, name: "suite", position: 10 }),
+		).rejects.toThrow();
+		await expect(
+			db
+				.insert(room)
+				.values({ locationId: w.typeBUnit, name: "suite", position: 10 }),
+		).rejects.toThrow();
+		expect((await typeOf(w, w.typeB)).rooms.map(({ name }) => name)).toEqual([
+			"Suíte",
+			"Área",
+			"Aérea",
+		]);
+		expect(roomNames(await detailOf(w, w.typeBUnit))).toContain("Suíte");
+		await expect(
+			db.insert(location).values([
+				{ projectId: w.projectId, type: "tower", name: "Torre Á", position: 1 },
+				{ projectId: w.projectId, type: "tower", name: "Torre A", position: 2 },
+			]),
+		).rejects.toThrow();
+		await expect(
+			db.insert(location).values({
+				projectId: w.projectId,
+				type: "tower",
+				name: "Torre Á",
+				position: 1,
+			}),
+		).resolves.toBeDefined();
+	});
+});
+
+describe("accent comparison in unique indexes", () => {
+	it.each(namePairs)(
+		"compares %j and %j as same: %s",
+		async (first, second, same) => {
+			const w = await world();
+			const [type] = await db
+				.insert(typology)
+				.values({ projectId: w.projectId, name: first })
+				.returning();
+			const otherType = db
+				.insert(typology)
+				.values({ projectId: w.projectId, name: second });
+			if (same) await expect(otherType).rejects.toThrow();
+			else await expect(otherType).resolves.toBeDefined();
+
+			await db
+				.insert(typologyRoom)
+				.values({ typologyId: type!.id, name: first, position: 0 });
+			const otherTypeRoom = db
+				.insert(typologyRoom)
+				.values({ typologyId: type!.id, name: second, position: 1 });
+			if (same) await expect(otherTypeRoom).rejects.toThrow();
+			else await expect(otherTypeRoom).resolves.toBeDefined();
+
+			await db
+				.insert(room)
+				.values({ locationId: w.plain, name: first, position: 10 });
+			const otherRoom = db
+				.insert(room)
+				.values({ locationId: w.plain, name: second, position: 11 });
+			if (same) await expect(otherRoom).rejects.toThrow();
+			else await expect(otherRoom).resolves.toBeDefined();
+		},
+	);
+});
+
 describe("POST /api/projects/:id/typologies", () => {
 	it("creates a typology with its rooms in the order sent", async () => {
 		const w = await world();
@@ -343,6 +485,90 @@ describe("POST /api/projects/:id/typologies", () => {
 			code: TYPOLOGY_NAME_TAKEN,
 			names: ["tipologia   a"],
 		});
+	});
+
+	it("rejects a typology name differing only by an accent", async () => {
+		const w = await world();
+		await manager.agent
+			.post(path(w, "typologies"))
+			.send({ id: randomUUID(), name: "Cobertura Á" });
+		const res = await manager.agent
+			.post(path(w, "typologies"))
+			.send({ id: randomUUID(), name: "cobertura a" });
+		expect(res.status).toBe(409);
+		expect(problemOf(res).code).toBe(TYPOLOGY_NAME_TAKEN);
+	});
+
+	it("rejects adding or renaming a location room to an accent variant", async () => {
+		const w = await world();
+		const added = await manager.agent
+			.post(path(w, `locations/${w.typeBUnit}/rooms`))
+			.send({ id: randomUUID(), name: "SUITE" });
+		expect(added.status).toBe(409);
+		expect(problemOf(added).code).toBe(ROOM_NAME_TAKEN);
+		const quarto = randomUUID();
+		await manager.agent
+			.post(path(w, `locations/${w.typeBUnit}/rooms`))
+			.send({ id: quarto, name: "Quarto" });
+		const renamed = await manager.agent
+			.patch(path(w, `rooms/${quarto}`))
+			.send({ name: "suite" });
+		expect(renamed.status).toBe(409);
+		expect(problemOf(renamed).code).toBe(ROOM_NAME_TAKEN);
+		expect(roomNames(await detailOf(w, w.typeBUnit))).toEqual([
+			"Suíte",
+			"Quarto",
+		]);
+	});
+
+	it("adopts an own room across accents and keeps the typology spelling", async () => {
+		const w = await world();
+		const ownId = randomUUID();
+		expect(
+			(
+				await manager.agent
+					.post(path(w, `locations/${w.owner}/rooms`))
+					.send({ id: ownId, name: "Suite" })
+			).status,
+		).toBe(201);
+		const before = await typeOf(w, w.typeA);
+		const typeRoomId = randomUUID();
+		const updated = await manager.agent
+			.patch(path(w, `typologies/${w.typeA}`))
+			.send({
+				rooms: [
+					...roomsOf(before),
+					{ id: typeRoomId, name: "Suíte" },
+					{ id: randomUUID(), name: "Área" },
+					{ id: randomUUID(), name: "Aérea" },
+				],
+			});
+		expect(updated.status).toBe(200);
+		const detail = await detailOf(w, w.owner);
+		expect(detail.rooms.filter((entry) => entry.name === "Suíte")).toEqual([
+			expect.objectContaining({ id: ownId, typologyRoomId: typeRoomId }),
+		]);
+		expect(roomNames(detail)).not.toContain("Suite");
+		expect((await typeOf(w, w.typeA)).rooms.map(({ name }) => name)).toEqual([
+			"Sala",
+			"Cozinha",
+			"Sacada",
+			"Suíte",
+			"Área",
+			"Aérea",
+		]);
+	});
+
+	it("rejects room names that differ only by an accent", async () => {
+		const w = await world();
+		const before = await typeOf(w, w.typeB);
+		const res = await manager.agent
+			.patch(path(w, `typologies/${w.typeB}`))
+			.send({
+				rooms: [...roomsOf(before), { id: randomUUID(), name: "suite" }],
+			});
+		expect(res.status).toBe(400);
+		expect(await typeOf(w, w.typeB)).toEqual(before);
 	});
 
 	it("answers 400 for a repeated room name or id, an empty name and too many rooms", async () => {

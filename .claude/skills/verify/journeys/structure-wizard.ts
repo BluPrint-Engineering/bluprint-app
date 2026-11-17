@@ -54,6 +54,10 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
 	await expect(page.getByRole("button", { name: "Tirar Sala da Tipologia A" })).toBeVisible();
 	await shot("w3-typologies");
+	await page.getByLabel("Novo cômodo da Tipologia A").fill("Sála");
+	await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
+	await expect(page.getByText("Esse cômodo já está na tipologia.")).toBeVisible();
+	await shot("w3-accent-duplicate");
 	await continueTo("Prévia");
 	await expect(page.getByText(`Esta estrutura tem 62 unidades e a obra tem ${reserve}.`)).toBeVisible();
 	await expect(page.getByRole("button", { name: "Criar estrutura" })).toBeDisabled();

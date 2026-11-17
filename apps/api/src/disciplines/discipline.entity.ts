@@ -11,12 +11,10 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
+import { comparableNameSql } from "../db/comparable-name";
 import { project } from "../projects/project.entity";
 
 export const disciplineType = pgEnum("discipline_type", disciplineTypes);
-
-export const comparableNameSql = (name: unknown) =>
-	sql`lower(regexp_replace(btrim(immutable_unaccent(${name})), '\\s+', ' ', 'g'))`;
 
 export const discipline = pgTable(
 	"discipline",

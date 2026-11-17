@@ -11,6 +11,7 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
+import { comparableNameSql } from "../db/comparable-name";
 import { location } from "./location.entity";
 import { typologyRoom } from "./typology.entity";
 
@@ -33,7 +34,7 @@ export const room = pgTable(
 		index("room_location_id_idx").on(table.locationId),
 		uniqueIndex("room_name_unique").on(
 			table.locationId,
-			sql`lower(regexp_replace(btrim(${table.name}), '\\s+', ' ', 'g'))`,
+			comparableNameSql(table.name),
 		),
 		check(
 			"room_name_length",

@@ -10,10 +10,8 @@ import {
 	uuid,
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
+import { comparableNameSql } from "../db/comparable-name";
 import { project } from "../projects/project.entity";
-
-const nameIgnoringCaseAndSpacing = (name: unknown) =>
-	sql`lower(regexp_replace(btrim(${name}), '\\s+', ' ', 'g'))`;
 
 export const typology = pgTable(
 	"typology",
@@ -29,7 +27,7 @@ export const typology = pgTable(
 		unique("typology_id_project_id_unique").on(table.id, table.projectId),
 		uniqueIndex("typology_name_unique").on(
 			table.projectId,
-			nameIgnoringCaseAndSpacing(table.name),
+			comparableNameSql(table.name),
 		),
 		check(
 			"typology_name_length",
@@ -52,7 +50,7 @@ export const typologyRoom = pgTable(
 		index("typology_room_typology_id_idx").on(table.typologyId),
 		uniqueIndex("typology_room_name_unique").on(
 			table.typologyId,
-			nameIgnoringCaseAndSpacing(table.name),
+			comparableNameSql(table.name),
 		),
 		check(
 			"typology_room_name_length",

@@ -1,5 +1,5 @@
 import {
-	comparableLocationName,
+	comparableRoomName,
 	LOCATION_ID_TAKEN,
 	LOCATION_NAME_TAKEN,
 	LOCATION_PARENT_INVALID,
@@ -55,12 +55,10 @@ function planTypologies(
 		rooms.some((room) => inUse.storedRooms.has(room.id));
 	if (fresh.some(idTaken)) throw idTakenProblem();
 
-	const claimed = new Set(
-		stored.map(({ name }) => comparableLocationName(name)),
-	);
+	const claimed = new Set(stored.map(({ name }) => comparableRoomName(name)));
 	const clashes = new Set<string>();
 	for (const { name } of fresh) {
-		const key = comparableLocationName(name);
+		const key = comparableRoomName(name);
 		if (claimed.has(key)) clashes.add(name);
 		claimed.add(key);
 	}

@@ -1,4 +1,9 @@
-import type { DroppedRoom, LocationDetail, Room } from "@bluprint/shared";
+import {
+	type DroppedRoom,
+	type LocationDetail,
+	type Room,
+	sameRoomName,
+} from "@bluprint/shared";
 import { Ellipsis, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -99,6 +104,8 @@ function AddRoomRow({
 		const invalid = roomNameError(name);
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
+		if (location.rooms.some((room) => sameRoomName(room.name, trimmed)))
+			return setError(roomNameTakenText(holder, trimmed));
 		if (attempt.current?.name !== trimmed) {
 			attempt.current = { id: uuidV7(), name: trimmed };
 		}
@@ -364,6 +371,7 @@ export function RoomsCard({
 					locationId={location.id}
 					holder={holder}
 					room={renaming}
+					rooms={rooms}
 					onClose={() => setRenaming(undefined)}
 				/>
 			)}

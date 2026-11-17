@@ -120,6 +120,13 @@
       "when": 1794583400000,
       "tag": "0016_reserve_common_areas",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1794879548341,
+      "tag": "0017_peaceful_chamber",
+      "breakpoints": true
     }
   ]
 }

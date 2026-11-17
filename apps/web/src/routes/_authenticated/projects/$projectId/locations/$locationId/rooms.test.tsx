@@ -336,6 +336,19 @@ describe("adding a room (U3)", () => {
 		expect(
 			await screen.findByText("Já existe o cômodo Banheiro nesta área comum."),
 		).toBeInTheDocument();
+		expect(writes).toEqual([]);
+		const field = screen.getByRole("textbox", { name: "Adicionar cômodo" });
+		await userEvent.clear(field);
+		await userEvent.type(field, "Banheíro{Enter}");
+		expect(
+			screen.getByText("Já existe o cômodo Banheíro nesta área comum."),
+		).toBeInTheDocument();
+		expect(writes).toEqual([]);
+		await userEvent.clear(field);
+		await userEvent.type(field, "Lavabo{Enter}");
+		expect(
+			await screen.findByText("Já existe o cômodo Lavabo nesta área comum."),
+		).toBeInTheDocument();
 		expect(writes[0]?.path).toBe(`/locations/${hall.id}/rooms`);
 	});
 });
