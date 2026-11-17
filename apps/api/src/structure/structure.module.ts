@@ -1,4 +1,5 @@
 import { Module } from "@nestjs/common";
+import { DisciplinesModule } from "../disciplines/disciplines.module";
 import { ProjectsModule } from "../projects/projects.module";
 import { UnitsModule } from "../units/units.module";
 import { LocationContent } from "./location-content";
@@ -13,7 +14,7 @@ import { TypologiesRepository } from "./typologies.repository";
 import { TypologiesService } from "./typologies.service";
 
 @Module({
-	imports: [ProjectsModule, UnitsModule],
+	imports: [DisciplinesModule, ProjectsModule, UnitsModule],
 	controllers: [StructureController, TypologiesController, RoomsController],
 	providers: [
 		LocationContent,

@@ -65,6 +65,7 @@ const detail = (
 	changes: 0,
 	rooms: [],
 	droppedRooms: [],
+	disciplines: [],
 });
 
 describe("describeLocation", () => {

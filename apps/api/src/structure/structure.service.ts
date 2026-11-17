@@ -14,6 +14,7 @@ import {
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
+import { LocationDisciplinesService } from "../disciplines/location-disciplines.service";
 import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
 import { UnitsService } from "../units/units.service";
@@ -43,6 +44,7 @@ export class StructureService {
 		private readonly locations: StructureRepository,
 		private readonly typologies: TypologiesRepository,
 		private readonly content: LocationContent,
+		private readonly locationDisciplines: LocationDisciplinesService,
 	) {}
 
 	@Transactional()
@@ -289,7 +291,7 @@ export class StructureService {
 		if (!found) throw locationNotFound();
 
 		const holdsRooms = found.type === "unit" || found.type === "common_area";
-		const [ancestors, children, rooms, droppedRooms, changes] =
+		const [ancestors, children, rooms, droppedRooms, changes, disciplines] =
 			await Promise.all([
 				found.parentId
 					? this.locations.listAncestorsFromTop(projectId, found.parentId)
@@ -300,6 +302,7 @@ export class StructureService {
 				found.typology
 					? this.locations.countUnitChanges(projectId, found.id)
 					: new Map<string, number>(),
+				this.locationDisciplines.resolve(projectId, found),
 			]);
 
 		return {
@@ -311,6 +314,7 @@ export class StructureService {
 			changes: changes.get(found.id) ?? 0,
 			rooms,
 			droppedRooms,
+			disciplines,
 		};
 	}
 }

@@ -1,4 +1,8 @@
-import type { ProjectSummary, StructureTower } from "@bluprint/shared";
+import type {
+	LocationDetail,
+	ProjectSummary,
+	StructureTower,
+} from "@bluprint/shared";
 import { Layers, ListPlus } from "lucide-react";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
@@ -12,15 +16,18 @@ import { LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
 import type { Adding } from "../components/useAdding";
 import { NO_CHILDREN } from "../removeText";
+import { DisciplinesCard } from "./DisciplinesCard";
 
 export function TowerBody({
 	project,
+	location,
 	tower,
 	towerName,
 	adding,
 	canEdit,
 }: {
 	project: ProjectSummary;
+	location: LocationDetail;
 	tower: StructureTower;
 	towerName: string | undefined;
 	adding: Adding;
@@ -28,7 +35,7 @@ export function TowerBody({
 }) {
 	const projectId = project.id;
 	const showAreas = canEdit || tower.commonAreas.length > 0;
-	const areas = showAreas && (
+	const areasList = showAreas && (
 		<LocationList
 			projectId={projectId}
 			title="Áreas comuns da torre"
@@ -68,6 +75,17 @@ export function TowerBody({
 		/>
 	);
 
+	const side = (
+		<div className="grid content-start gap-(--space-6)">
+			<DisciplinesCard
+				projectId={projectId}
+				location={location}
+				editable={canEdit}
+			/>
+			{areasList}
+		</div>
+	);
+
 	if (tower.floors.length === 0) {
 		return (
 			<div className="grid gap-(--space-6)">
@@ -89,19 +107,13 @@ export function TowerBody({
 						</Button>
 					)}
 				</StateBlock>
-				{areas}
+				{side}
 			</div>
 		);
 	}
 
 	return (
-		<div
-			className={
-				showAreas
-					? "grid gap-(--space-6) md:grid-cols-[minmax(0,1fr)_320px] md:items-start md:gap-(--space-8)"
-					: "grid gap-(--space-6)"
-			}
-		>
+		<div className="grid gap-(--space-6) md:grid-cols-[minmax(0,1fr)_320px] md:items-start md:gap-(--space-8)">
 			<section aria-label="Fachada" className="min-w-0">
 				<FacadeCard>
 					<Facade
@@ -112,7 +124,7 @@ export function TowerBody({
 					/>
 				</FacadeCard>
 			</section>
-			{areas}
+			{side}
 		</div>
 	);
 }

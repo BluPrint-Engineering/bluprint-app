@@ -60,6 +60,18 @@ const apartmentRooms = [
 const casaMoinhos: SeedStructure = {
 	commonAreas: ["Guarita"],
 	commonAreaRooms: { "Salão de festas": ["Cozinha", "Banheiro"] },
+	disciplines: [
+		{
+			name: "Pintura",
+			appliesEverywhere: true,
+			turnedOff: [{ tower: "Torre A", floor: "9º andar", name: "904" }],
+		},
+		{
+			name: "Piscina",
+			appliesEverywhere: false,
+			turnedOn: [{ tower: "Torre A", name: "Salão de festas" }],
+		},
+	],
 	typologies: [
 		{ name: "Tipologia A", rooms: apartmentRooms },
 		{

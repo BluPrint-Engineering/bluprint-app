@@ -1,3 +1,7 @@
+import { EXTRA_DISCIPLINE_COLORS } from "@bluprint/shared";
+import { sql } from "drizzle-orm";
+import { discipline } from "../../disciplines/discipline.entity";
+import { locationDiscipline } from "../../disciplines/location-discipline.entity";
 import { location } from "../../structure/location.entity";
 import { droppedRoom, room } from "../../structure/room.entity";
 import { typology, typologyRoom } from "../../structure/typology.entity";
@@ -35,6 +39,19 @@ export interface SeedTower {
 	commonAreas?: string[];
 }
 
+export interface SeedLocationRef {
+	tower: string;
+	floor?: string;
+	name: string;
+}
+
+export interface SeedDiscipline {
+	name: string;
+	appliesEverywhere: boolean;
+	turnedOn?: SeedLocationRef[];
+	turnedOff?: SeedLocationRef[];
+}
+
 export interface SeedStructure {
 	towers: SeedTower[];
 	commonAreas?: string[];
@@ -42,6 +59,25 @@ export interface SeedStructure {
 	typologyOf?: (unit: SeedUnitRef) => string | undefined;
 	unitChanges?: SeedUnitChange[];
 	commonAreaRooms?: Record<string, string[]>;
+	disciplines?: SeedDiscipline[];
+}
+
+export const locationRefKey = ({ tower, floor, name }: SeedLocationRef) =>
+	JSON.stringify([tower, floor ?? null, name]);
+
+export function referableLocations(
+	structure: SeedStructure,
+): SeedLocationRef[] {
+	return structure.towers.flatMap((tower) => [
+		...(tower.commonAreas ?? []).map((name) => ({ tower: tower.name, name })),
+		...tower.floors.flatMap((floor) =>
+			[...floor.units, ...(floor.commonAreas ?? [])].map((name) => ({
+				tower: tower.name,
+				floor: floor.name,
+				name,
+			})),
+		),
+	]);
 }
 
 export function sameTypology(
@@ -190,7 +226,8 @@ export async function insertStructure(
 
 	const unitAndAreaRows: Insertable[] = [];
 	const rowOwners: (
-		{ kind: "unit"; ref: SeedUnitRef } | { kind: "area"; name: string }
+		| { kind: "unit"; ref: SeedUnitRef }
+		| { kind: "area"; name: string; tower: string; floor: string }
 	)[] = [];
 	for (const [index, { tower, floor }] of placed.entries()) {
 		const parentId = floorIds[index]!;
@@ -209,7 +246,7 @@ export async function insertStructure(
 		});
 		(floor.commonAreas ?? []).forEach((name, i) => {
 			unitAndAreaRows.push(area(parentId, name, floor.units.length + i));
-			rowOwners.push({ kind: "area", name });
+			rowOwners.push({ kind: "area", name, tower, floor: floor.name });
 		});
 	}
 	const unitAndAreaIds = await insertLevel(unitAndAreaRows);
@@ -262,6 +299,60 @@ export async function insertStructure(
 	for (const chunk of inChunks(roomRows)) await db.insert(room).values(chunk);
 	for (const chunk of inChunks(droppedRows)) {
 		await db.insert(droppedRoom).values(chunk);
+	}
+
+	const idsByRef = new Map<string, string>();
+	structure.towers
+		.flatMap((tower) =>
+			(tower.commonAreas ?? []).map((name) => ({ tower: tower.name, name })),
+		)
+		.forEach((ref, i) => idsByRef.set(locationRefKey(ref), towerAreaIds[i]!));
+	rowOwners.forEach((owner, index) => {
+		const ref =
+			owner.kind === "unit"
+				? {
+						tower: owner.ref.tower,
+						floor: owner.ref.floor,
+						name: owner.ref.name,
+					}
+				: { tower: owner.tower, floor: owner.floor, name: owner.name };
+		idsByRef.set(locationRefKey(ref), unitAndAreaIds[index]!);
+	});
+	await insertDisciplines(db, projectId, structure, idsByRef);
+}
+
+async function insertDisciplines(
+	db: Pick<Database, "insert">,
+	projectId: string,
+	structure: SeedStructure,
+	idsByRef: Map<string, string>,
+): Promise<void> {
+	for (const [index, seed] of (structure.disciplines ?? []).entries()) {
+		const [inserted] = await db
+			.insert(discipline)
+			.values({
+				projectId,
+				name: seed.name,
+				color: EXTRA_DISCIPLINE_COLORS[index]!,
+				type: "extra",
+				hasOwnPlan: false,
+				appliesEverywhere: seed.appliesEverywhere,
+				createdAt: sql`clock_timestamp()`,
+			})
+			.returning({ id: discipline.id });
+		const exceptions = [
+			...(seed.turnedOn ?? []).map((ref) => ({ ref, applies: true })),
+			...(seed.turnedOff ?? []).map((ref) => ({ ref, applies: false })),
+		];
+		if (exceptions.length === 0) continue;
+		await db.insert(locationDiscipline).values(
+			exceptions.map(({ ref, applies }) => ({
+				locationId: idsByRef.get(locationRefKey(ref))!,
+				disciplineId: inserted!.id,
+				projectId,
+				applies,
+			})),
+		);
 	}
 }
 
