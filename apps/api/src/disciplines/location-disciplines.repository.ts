@@ -7,6 +7,8 @@ import { location } from "../structure/location.entity";
 import { discipline } from "./discipline.entity";
 import { locationDiscipline } from "./location-discipline.entity";
 
+const INSERT_CHUNK = 1000;
+
 export interface LocationDisciplineRow {
 	id: string;
 	name: string;
@@ -123,8 +125,11 @@ export class LocationDisciplinesRepository {
 			applies: boolean;
 		}[],
 	): Promise<void> {
-		if (values.length === 0) return;
-		await this.txHost.tx.insert(locationDiscipline).values(values);
+		for (let start = 0; start < values.length; start += INSERT_CHUNK) {
+			await this.txHost.tx
+				.insert(locationDiscipline)
+				.values(values.slice(start, start + INSERT_CHUNK));
+		}
 	}
 
 	async clearException(
