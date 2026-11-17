@@ -40,5 +40,5 @@ Preconditions:
 - The total counts only projects in progress: the status filter defaults to `Em andamento`, and the 3 delivered projects of Construtora Horizonte appear only under `Entregue` or `Todas`.
 - The phone list loads its next page when the last card scrolls into view; assert on the card count, not on a scroll position.
 - The free units line is a link to `/units` only when some unit is free or some reservation is unused; `Nenhuma unidade livre. Fale com a BluPrint.` is plain text.
-- On the phone the bar is `position: fixed`, so a full-page `shot` draws it at the viewport's bottom, in the middle of a long list; it is not a layout bug.
-- A full-page `shot` does not scroll, so a phone capture right after landing still shows `Carregar mais` under 12 cards.
+- On the phone the bar is `position: fixed`. `shot` grows the viewport to the page's scroll height, so the bar sits at the bottom of that tall viewport, over the end of the list.
+- That same growth puts the list's end in view, so a phone `shot` on landing can start loading the next page before the image is taken.

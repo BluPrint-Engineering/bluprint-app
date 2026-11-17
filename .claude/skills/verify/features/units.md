@@ -38,5 +38,5 @@ Preconditions:
 
 - Read the numbers from the two API routes; do not hard-code the seed's.
 - Both devices run in one instance, so the second device starts from the first one's saved reservations: pick rows from the API, never by name.
-- The desktop footer and the phone bar are sticky or fixed, so a full-page `shot` draws them in the middle of a long list; it is not a layout bug.
+- `shot` grows the viewport to the page's scroll height. The desktop save footer is `sticky`, so it stays at the end of the list; the phone bar is `position: fixed`, so it sits at the bottom of that tall viewport, over the end of the page.
 - The unit tests and the journey need Postgres on `localhost:5432`; never start it from a journey.
