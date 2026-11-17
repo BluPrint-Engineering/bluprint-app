@@ -538,7 +538,7 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 			shows: [
 				holder === "unit"
 					? "Trocar a tipologia da 903"
-					: "Trocar a tipologia do Hall",
+					: "Trocar a tipologia da área comum Hall",
 			],
 			focusAfterCancel: byRole("button", "Trocar tipologia"),
 			focusAfterSave: byRole("button", "Trocar tipologia"),

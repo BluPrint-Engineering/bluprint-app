@@ -130,7 +130,9 @@ const changeButton = () =>
 
 async function openTypeDialog() {
 	await userEvent.click(changeButton());
-	return screen.findByRole("dialog", { name: "Trocar a tipologia do Hall" });
+	return screen.findByRole("dialog", {
+		name: "Trocar a tipologia da área comum Hall",
+	});
 }
 
 afterEach(() => {

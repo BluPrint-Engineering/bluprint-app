@@ -15,7 +15,7 @@ const HOLDERS = {
 		inThis: "nesta área comum",
 		ofThis: "desta área comum",
 		inThe: "na área comum",
-		typologyOf: (name: string) => `do ${name}`,
+		typologyOf: (name: string) => `da área comum ${name}`,
 	},
 } as const satisfies Record<RoomHolder, object>;
 

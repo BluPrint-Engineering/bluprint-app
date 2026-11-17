@@ -110,7 +110,7 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await page.keyboard.press("Escape");
 
 	await changeButton.click();
-	const areaChange = page.getByRole("dialog", { name: "Trocar a tipologia do Hall" });
+	const areaChange = page.getByRole("dialog", { name: "Trocar a tipologia da área comum Hall" });
 	await expect(areaChange.getByRole("radio")).toHaveCount(4);
 	await expect(areaChange.getByRole("radio", { name: /Hall padrão/ })).toBeChecked();
 	await expect(areaChange.getByRole("radio", { name: /Corredor/ })).toBeVisible();

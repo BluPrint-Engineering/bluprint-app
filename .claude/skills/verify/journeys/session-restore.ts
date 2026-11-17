@@ -40,7 +40,7 @@ export default async function sessionRestore({ page, shot, expect, query, accoun
 	await page.goto(`/projects/${row.project}/locations/${hall}`);
 	const changeButton = page.getByRole("button", { name: "Trocar tipologia" });
 	await changeButton.click();
-	const change = page.getByRole("dialog", { name: "Trocar a tipologia do Hall" });
+	const change = page.getByRole("dialog", { name: "Trocar a tipologia da área comum Hall" });
 	await change.getByRole("radio", { name: /Corredor/ }).click();
 	await page.context().clearCookies();
 	await change.getByRole("button", { name: "Trocar" }).click();
