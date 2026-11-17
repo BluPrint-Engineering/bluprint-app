@@ -1,5 +1,5 @@
 import { NO_UNITS_LEFT, PROJECT_DELIVERED } from "@bluprint/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -585,6 +585,30 @@ describe("removing a location with children (R2)", () => {
 		);
 		await waitFor(() => {
 			expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument();
+		});
+	});
+
+	test("keeps the confirmation open across a switch between the phone and desktop layouts", async () => {
+		const { ninth, several } = build();
+		const api = writableApi(obra(), several);
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(ninth.id));
+
+		await pick("Ações do andar", "Remover andar");
+		await screen.findByRole("alertdialog");
+
+		act(() => setViewport("phone"));
+		expect(await screen.findByRole("alertdialog")).toBeVisible();
+
+		act(() => setViewport("desktop"));
+		const dialog = await screen.findByRole("alertdialog");
+		expect(
+			within(dialog).getByRole("heading", { name: "Excluir o 9º andar?" }),
+		).toBeVisible();
+
+		await user.click(within(dialog).getByRole("button", { name: "Excluir" }));
+		await waitFor(() => {
+			expect(api.removed).toEqual([ninth.id]);
 		});
 	});
 

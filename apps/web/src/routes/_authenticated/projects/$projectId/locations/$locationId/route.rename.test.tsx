@@ -1,5 +1,5 @@
 import { LOCATION_NAME_TAKEN, PROJECT_DELIVERED } from "@bluprint/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { nth } from "@/test/nth";
@@ -136,7 +136,7 @@ describe("the page menu", () => {
 		},
 	);
 
-	test("sits in the back-link row on the phone and beside the title on the desktop", async () => {
+	test("renders the menu once on the phone and on the desktop", async () => {
 		const { towerA, several } = build();
 		stubApi(signedIn, { api: writableApi(obra(), several).handler });
 		setViewport("phone");
@@ -146,13 +146,10 @@ describe("the page menu", () => {
 			name: "Ações da torre",
 		});
 
-		const backRow = screen.getByRole("link", {
-			name: "Casa Moinhos",
-		}).parentElement;
-		expect(backRow).toContainElement(button);
-		expect(
-			screen.getAllByRole("button", { name: "Ações da torre" }),
-		).toHaveLength(1);
+		act(() => setViewport("desktop"));
+		expect(screen.getAllByRole("button", { name: "Ações da torre" })).toEqual([
+			button,
+		]);
 	});
 
 	test("is absent from a delivered obra", async () => {
@@ -518,6 +515,29 @@ describe("renaming from a list", () => {
 		expect(
 			await screen.findByRole("link", { name: "Salão" }),
 		).toBeInTheDocument();
+	});
+});
+
+describe("across a layout switch", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("keeps the rename dialog open when the window crosses the phone breakpoint", async () => {
+		const { towerA, several } = build();
+		stubApi(signedIn, { api: writableApi(obra(), several).handler });
+		renderAt(pathOf(towerA.id));
+
+		await renameFrom("Ações da torre", "Renomear torre");
+
+		act(() => setViewport("phone"));
+		expect(await screen.findByRole("dialog")).toBeVisible();
+		act(() => setViewport("desktop"));
+		expect(
+			within(await screen.findByRole("dialog")).getByRole("heading", {
+				name: "Renomear a torre",
+			}),
+		).toBeVisible();
 	});
 });
 

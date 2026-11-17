@@ -5,7 +5,7 @@ import {
 	type ProjectAccessRole,
 	TYPOLOGY_ROOM_INVALID,
 } from "@bluprint/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { nth } from "@/test/nth";
@@ -75,6 +75,29 @@ async function typeName(dialog: HTMLElement, name: string) {
 
 const submit = (dialog: HTMLElement) =>
 	user.click(within(dialog).getByRole("button", { name: "Duplicar" }));
+
+describe("across a layout switch", () => {
+	afterEach(() => {
+		vi.unstubAllGlobals();
+	});
+
+	test("keeps the duplicate dialog open when the window crosses the phone breakpoint", async () => {
+		const { towerA, several } = build();
+		stubApi(signedIn, { api: writableApi(obra(), several).handler });
+		renderAt(pathOf(towerA.id));
+
+		await openDuplicate("Ações da torre", "Duplicar torre");
+
+		act(() => setViewport("phone"));
+		expect(await screen.findByRole("dialog")).toBeVisible();
+		act(() => setViewport("desktop"));
+		expect(
+			within(await screen.findByRole("dialog")).getByRole("heading", {
+				name: "Duplicar a Torre A",
+			}),
+		).toBeVisible();
+	});
+});
 
 describe("duplicating a tower (R9a)", () => {
 	afterEach(() => {

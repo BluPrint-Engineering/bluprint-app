@@ -84,7 +84,15 @@ for (const device of devices) {
 	const shot = async (name: string) => {
 		shots += 1;
 		const file = resolve(out, `${run}-${device}-${String(shots).padStart(2, "0")}-${name}.png`);
-		await page.screenshot({ path: file, fullPage: true });
+		const viewport = page.viewportSize();
+		const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+		const grow = viewport !== null && scrollHeight > viewport.height;
+		if (grow) await page.setViewportSize({ width: viewport.width, height: scrollHeight });
+		try {
+			await page.screenshot({ path: file });
+		} finally {
+			if (grow) await page.setViewportSize(viewport);
+		}
 		note(`shot ${basename(file)} at ${page.url()}`);
 		return file;
 	};

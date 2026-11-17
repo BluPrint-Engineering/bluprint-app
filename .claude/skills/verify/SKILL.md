@@ -50,7 +50,7 @@ Ports and database come from `.env.local` (slot n: API `3100+10n`, web `5273+10n
 A journey is a `.ts` file whose default export receives `{ page, context, shot, note, expect, query, device, accounts, baseURL }`:
 
 - `page`, `context`: Playwright, with `baseURL` set, so `page.goto("/projects")` works.
-- `shot(name)`: full-page screenshot into the evidence dir, numbered in order.
+- `shot(name)`: full-page screenshot into the evidence dir, numbered in order. It grows the viewport height to the page's scroll height for the capture and restores it, so a page taller than the viewport is captured whole without a width change.
 - `note(line)`: appends a line to the device log.
 - `expect`: Playwright's `expect`, web-first assertions included.
 - `query(sql, params)`: rows from the instance database, on a read-only connection, for proving side effects.

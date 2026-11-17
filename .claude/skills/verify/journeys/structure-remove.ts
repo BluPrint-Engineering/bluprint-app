@@ -118,7 +118,6 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	await settle();
 	await shot("r2-floor-deleted");
 
-	await page.setViewportSize({ width: page.viewportSize().width, height: 1600 });
 	await menu("Ações da torre").click();
 	await items(["Renomear torre", "Adicionar andares", "Adicionar área comum", "Duplicar torre", "Remover torre"]);
 	await settle();
