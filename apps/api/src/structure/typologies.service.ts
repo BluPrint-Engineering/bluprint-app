@@ -51,7 +51,7 @@ export class TypologiesService {
 	async create(
 		userId: string,
 		projectId: string,
-		{ id, name, rooms }: CreateTypology,
+		{ id, name, locationType, rooms }: CreateTypology,
 	): Promise<Typology> {
 		await this.beginWrite(userId, projectId);
 
@@ -74,7 +74,9 @@ export class TypologiesService {
 			throw typologyNameTaken(name);
 		}
 
-		await this.typologies.insertAll(projectId, [{ id, name, rooms }]);
+		await this.typologies.insertAll(projectId, [
+			{ id, name, locationType, rooms },
+		]);
 
 		return this.readOne(projectId, id);
 	}
@@ -96,11 +98,13 @@ export class TypologiesService {
 			}
 			await this.typologies.rename(typologyId, name);
 		}
-		const updatedUnits = rooms ? await this.changeRooms(typologyId, rooms) : 0;
+		const updatedLocationCount = rooms
+			? await this.changeRooms(typologyId, rooms)
+			: 0;
 
 		return {
 			typology: await this.readOne(projectId, typologyId),
-			updatedUnitCount: updatedUnits,
+			updatedLocationCount,
 		};
 	}
 
@@ -115,11 +119,11 @@ export class TypologiesService {
 			throw typologyNotFound();
 		}
 
-		if ((await this.typologies.countUnits(typologyId)) > 0) {
+		if ((await this.typologies.countLocations(typologyId)) > 0) {
 			throw new ProblemException({
 				status: 409,
 				code: TYPOLOGY_IN_USE,
-				detail: "Units still follow this typology.",
+				detail: "Locations still follow this typology.",
 			});
 		}
 		await this.typologies.delete(typologyId);
@@ -172,12 +176,12 @@ export class TypologiesService {
 				status: 409,
 				code: ROOM_NAME_TAKEN,
 				detail:
-					"A unit already has a room of one of these names that the typology cannot take over.",
+					"A location already has a room of one of these names that the typology cannot take over.",
 				names: clashes,
 			});
 		}
 
-		for (const id of await this.typologies.renameRoomsInUnits(
+		for (const id of await this.typologies.renameRoomsInLocations(
 			plan.renamedIds,
 		)) {
 			changed.add(id);
@@ -188,14 +192,14 @@ export class TypologiesService {
 		)) {
 			changed.add(id);
 		}
-		for (const id of await this.typologies.addRoomsToUnits(
+		for (const id of await this.typologies.addRoomsToLocations(
 			typologyId,
 			plan.addedIds,
 		)) {
 			changed.add(id);
 		}
 		if (plan.reordered) {
-			for (const id of await this.typologies.unitIdsOf(typologyId)) {
+			for (const id of await this.typologies.locationIdsOf(typologyId)) {
 				changed.add(id);
 			}
 		}
@@ -223,18 +227,19 @@ export class TypologiesService {
 		const [types, rooms, usage] = await Promise.all([
 			this.typologies.list(projectId),
 			this.typologies.listRooms(projectId),
-			this.typologies.countUnitsByType(projectId),
+			this.typologies.countLocationsByTypology(projectId),
 		]);
 
 		return {
-			typologies: types.map(({ id, name }) => ({
+			typologies: types.map(({ id, name, locationType }) => ({
 				id,
 				name,
+				locationType,
 				rooms: rooms
 					.filter((candidate) => candidate.typologyId === id)
 					.map((candidate) => ({ id: candidate.id, name: candidate.name })),
-				unitCount: usage.get(id)?.units ?? 0,
-				changedUnitCount: usage.get(id)?.changed ?? 0,
+				locationCount: usage.get(id)?.locations ?? 0,
+				changedLocationCount: usage.get(id)?.changed ?? 0,
 			})),
 		};
 	}

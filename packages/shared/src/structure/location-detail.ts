@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { locationDisciplineListSchema } from "../disciplines/location-disciplines.js";
 import { locationTypeSchema } from "./location-type.js";
-import { typologyRefSchema, unitChangesSchema } from "./typology-ref.js";
+import { locationChangesSchema, typologyRefSchema } from "./typology-ref.js";
 
 export const locationRefSchema = z.object({
 	id: z.uuid(),
@@ -22,13 +22,13 @@ export const roomSchema = z.object({
 	}),
 	renamed: z.boolean().meta({
 		description:
-			"Whether a room that came from the typology was renamed in this unit, so a rename in the type no longer reaches it.",
+			"Whether a room that came from the typology was renamed in this location, so a rename in the type no longer reaches it.",
 	}),
 });
 
 export const droppedRoomSchema = z.object({
 	typologyRoomId: z.uuid().meta({
-		description: "The room of the typology that this unit took out.",
+		description: "The room of the typology that this location took out.",
 	}),
 	name: z.string().meta({
 		description: "The room's name in the typology.",
@@ -55,16 +55,16 @@ export const locationDetailSchema = z.object({
 	}),
 	typology: typologyRefSchema.nullable().meta({
 		description:
-			"The typology a unit follows. Null for a unit without one and for every other kind of location.",
+			"The typology a unit or a common area follows, always one of its own kind. Null for one without a typology, and for a tower and a floor.",
 	}),
-	changes: unitChangesSchema,
+	changes: locationChangesSchema,
 	rooms: z.array(roomSchema).meta({
 		description:
 			"The rooms of a unit or a common area: the ones that came from the typology first, in the order of the type, then the ones only this location has. Empty for a tower and a floor.",
 	}),
 	droppedRooms: z.array(droppedRoomSchema).meta({
 		description:
-			"The rooms of the typology this unit took out, in the order of the type. Empty for anything but a unit with a typology.",
+			"The rooms of the typology this location took out, in the order of the type. Empty for anything but a unit or a common area with a typology.",
 	}),
 	disciplines: locationDisciplineListSchema,
 });

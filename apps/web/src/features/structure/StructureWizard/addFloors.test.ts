@@ -84,7 +84,9 @@ describe("extendedDraft", () => {
 			tower("Torre B", [
 				...numberedFloors(1, 2, 3).map((each) => ({
 					...each,
-					commonAreas: [{ id: `hall-${each.name}`, name: "Hall" }],
+					commonAreas: [
+						{ id: `hall-${each.name}`, name: "Hall", typology: null },
+					],
 				})),
 				floor("Cobertura", ["301"]),
 			]),

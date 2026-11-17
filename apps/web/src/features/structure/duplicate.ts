@@ -4,6 +4,7 @@ import {
 	LOCATION_NAME_MAX_LENGTH,
 	type NewLocation,
 	type Structure,
+	type StructureCommonArea,
 	type StructureFloor,
 	type StructureTower,
 	type StructureUnit,
@@ -255,7 +256,7 @@ export function buildDuplicate(
 	};
 
 	const addArea = (
-		area: { id: string; name: string },
+		area: StructureCommonArea,
 		parentId: string,
 		position: number,
 	) => {
@@ -265,6 +266,7 @@ export function buildDuplicate(
 			type: "common_area",
 			name: area.name,
 			position,
+			...(area.typology && { typologyId: area.typology.id }),
 			...rooms(area.id),
 			...disciplines(area.id),
 		});

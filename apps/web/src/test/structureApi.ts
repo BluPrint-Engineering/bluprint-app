@@ -11,6 +11,7 @@ import {
 	type RemovedCounts,
 	type Room,
 	type Structure,
+	type StructureCommonArea,
 	type StructureFloor,
 	type StructureTower,
 	type StructureUnit,
@@ -25,6 +26,20 @@ const nextId = () =>
 	`0190b000-0000-7000-8000-${String(++sequence).padStart(12, "0")}`;
 
 const named = (name: string) => ({ id: nextId(), name });
+
+export interface AreaSpec {
+	name: string;
+	typology?: string;
+}
+
+function areaOf(spec: string | AreaSpec): StructureCommonArea {
+	const { name, typology } = typeof spec === "string" ? { name: spec } : spec;
+	return {
+		id: nextId(),
+		name,
+		typology: typology ? { id: typologyId(typology), name: typology } : null,
+	};
+}
 
 const typologyIds = new Map<string, string>();
 
@@ -80,13 +95,13 @@ export function disciplineOf(name: string, applies = true): LocationDiscipline {
 export function floor(
 	name: string,
 	units: (string | UnitSpec)[] = [],
-	commonAreas: string[] = [],
+	commonAreas: (string | AreaSpec)[] = [],
 ): StructureFloor {
 	return {
 		id: nextId(),
 		name,
 		units: units.map(unitOf),
-		commonAreas: commonAreas.map(named),
+		commonAreas: commonAreas.map(areaOf),
 	};
 }
 
@@ -110,19 +125,19 @@ export function numberedFloors(
 export function tower(
 	name: string,
 	floors: StructureFloor[] = [],
-	commonAreas: string[] = [],
+	commonAreas: (string | AreaSpec)[] = [],
 ): StructureTower {
-	return { id: nextId(), name, floors, commonAreas: commonAreas.map(named) };
+	return { id: nextId(), name, floors, commonAreas: commonAreas.map(areaOf) };
 }
 
 export function structureOf(
 	towers: StructureTower[],
-	commonAreas: string[] = [],
+	commonAreas: (string | AreaSpec)[] = [],
 ): Structure {
 	const floors = towers.flatMap((t) => t.floors);
 	return {
 		towers,
-		commonAreas: commonAreas.map(named),
+		commonAreas: commonAreas.map(areaOf),
 		counts: {
 			towers: towers.length,
 			floors: floors.length,
@@ -176,8 +191,11 @@ export function locationIn(
 		...details[node.id],
 	});
 
+	const areaAt = (area: StructureCommonArea, ancestors: LocationRef[]) =>
+		at("common_area", area, ancestors, [], { typology: area.typology });
+
 	for (const area of structure.commonAreas) {
-		if (area.id === locationId) return at("common_area", area, [], []);
+		if (area.id === locationId) return areaAt(area, []);
 	}
 	for (const t of structure.towers) {
 		const towerRef = ref("tower", t);
@@ -193,7 +211,7 @@ export function locationIn(
 			);
 		}
 		for (const a of t.commonAreas) {
-			if (a.id === locationId) return at("common_area", a, [towerRef], []);
+			if (a.id === locationId) return areaAt(a, [towerRef]);
 		}
 		for (const f of t.floors) {
 			const floorRef = ref("floor", f);
@@ -217,9 +235,7 @@ export function locationIn(
 				}
 			}
 			for (const a of f.commonAreas) {
-				if (a.id === locationId) {
-					return at("common_area", a, [towerRef, floorRef], []);
-				}
+				if (a.id === locationId) return areaAt(a, [towerRef, floorRef]);
 			}
 		}
 	}
@@ -311,14 +327,14 @@ function applyCreation(structure: Structure, body: CreateStructureRequest) {
 				.find((f) => f.id === parentId)
 				?.units.push({ id, name, typology: null, changes: 0 });
 		} else if (parentId === null) {
-			structure.commonAreas.push({ id, name });
+			structure.commonAreas.push({ id, name, typology: null });
 		} else {
 			const parent =
 				structure.towers.find((t) => t.id === parentId) ??
 				structure.towers
 					.flatMap((t) => t.floors)
 					.find((f) => f.id === parentId);
-			parent?.commonAreas.push({ id, name });
+			parent?.commonAreas.push({ id, name, typology: null });
 		}
 	}
 	recount(structure);
@@ -608,14 +624,19 @@ export function writableApi(
 export function typologyOf(
 	name: string,
 	rooms: string[],
-	usage: { units?: number; changed?: number } = {},
+	usage: {
+		locations?: number;
+		changed?: number;
+		locationType?: Typology["locationType"];
+	} = {},
 ): Typology {
 	return {
 		id: typologyId(name),
 		name,
+		locationType: usage.locationType ?? "unit",
 		rooms: rooms.map(named),
-		unitCount: usage.units ?? 0,
-		changedUnitCount: usage.changed ?? 0,
+		locationCount: usage.locations ?? 0,
+		changedLocationCount: usage.changed ?? 0,
 	};
 }
 

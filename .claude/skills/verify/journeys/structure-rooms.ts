@@ -82,6 +82,7 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await page.getByRole("button", { name: "Trocar tipologia" }).click();
 	const change = page.getByRole("dialog", { name: "Trocar a tipologia da 903" });
 	await expect(change.getByRole("radio", { name: /Tipologia B/ })).toBeVisible();
+	await expect(change.getByRole("radio", { name: /Hall padrão/ })).toHaveCount(0);
 	await expect(change.getByRole("button", { name: "Trocar" })).toBeDisabled();
 	await shot("change-type-dialog");
 	await change.getByRole("radio", { name: /Sem tipologia/ }).click();
@@ -92,9 +93,62 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await expect(page.getByRole("button", { name: "Voltar à tipologia" })).toBeHidden();
 	await shot("unit-without-type");
 
+	const hall = (await query("SELECT l.id FROM location l JOIN location f ON f.id = l.parent_id JOIN location t ON t.id = f.parent_id JOIN project p ON p.id = l.project_id JOIN organization o ON o.id = p.organization_id WHERE p.name = 'Residencial Jardins' AND o.name = 'Construtora Horizonte' AND t.name = 'Torre A' AND f.name = '2º andar' AND l.type = 'common_area' AND l.name = 'Hall'"))[0].id;
+	const typologyOf = async (id) =>
+		(await query("SELECT t.name FROM location l LEFT JOIN typology t ON t.id = l.typology_id WHERE l.id = $1", [id]))[0].name;
+	const changeButton = page.getByRole("button", { name: "Trocar tipologia" });
+	await page.goto(`/projects/${jardins}/locations/${hall}`);
+	await expect(page.getByRole("heading", { level: 1, name: "Hall" })).toBeVisible();
+	await expect(page.getByText("Os cômodos acompanham a tipologia Hall padrão. O que foi mudado só nesta área comum continua assim quando a tipologia muda.")).toBeVisible();
+	await expect(page.getByText("3 alterações")).toBeVisible();
+	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem").filter({ hasText: "Lixeira" })).toContainText("Só desta área comum");
+	await expect(page.getByRole("list", { name: "Tirados desta área comum" }).getByText("Elevadores")).toBeVisible();
+	await shot("common-area-with-changes");
+	await page.getByRole("button", { name: "Ações do cômodo Escada" }).click();
+	await expect(page.getByRole("menuitem", { name: "Remover desta área comum" })).toBeVisible();
+	await shot("common-area-room-menu");
+	await page.keyboard.press("Escape");
+
+	await changeButton.click();
+	const areaChange = page.getByRole("dialog", { name: "Trocar a tipologia do Hall" });
+	await expect(areaChange.getByRole("radio")).toHaveCount(4);
+	await expect(areaChange.getByRole("radio", { name: /Hall padrão/ })).toBeChecked();
+	await expect(areaChange.getByRole("radio", { name: /Corredor/ })).toBeVisible();
+	await expect(areaChange.getByRole("radio", { name: /Salão de festas/ })).toBeVisible();
+	await expect(areaChange.getByRole("radio", { name: /Sem tipologia/ })).toContainText("Cômodos só desta área comum");
+	await shot("common-area-change-type-dialog");
+	await page.keyboard.press("Escape");
+	await expect(areaChange).toBeHidden();
+	await expect(changeButton).toBeFocused();
+
+	await page.getByRole("button", { name: "Voltar à tipologia" }).click();
+	await expect(page.getByText("A área comum Hall voltou à tipologia Hall padrão.")).toBeVisible();
+	await expect(page.getByRole("button", { name: "Voltar à tipologia" })).toBeHidden();
+	expect(await roomNames(hall)).toEqual(["Circulação", "Escada", "Elevadores"]);
+	await shot("common-area-returned-to-type");
+
+	await changeButton.click();
+	await areaChange.getByRole("radio", { name: /Corredor/ }).click();
+	await areaChange.getByRole("button", { name: "Trocar" }).click();
+	await expect(page.getByText("A área comum Hall agora segue a tipologia Corredor.")).toBeVisible();
+	await expect(areaChange).toBeHidden();
+	await expect(changeButton).toBeFocused();
+	expect(await typologyOf(hall)).toBe("Corredor");
+	expect(await roomNames(hall)).toEqual(["Circulação"]);
+
+	await changeButton.click();
+	await areaChange.getByRole("radio", { name: /Sem tipologia/ }).click();
+	await areaChange.getByRole("button", { name: "Trocar" }).click();
+	await expect(page.getByText("A área comum Hall ficou sem tipologia.")).toBeVisible();
+	await expect(page.getByText("Os cômodos desta área comum são só dela.")).toBeVisible();
+	expect(await typologyOf(hall)).toBeNull();
+	await shot("common-area-without-type");
+
 	const area = (await query("SELECT l.id FROM location l JOIN project p ON p.id = l.project_id JOIN organization o ON o.id = p.organization_id WHERE p.name = 'Residencial Jardins' AND o.name = 'Construtora Horizonte' AND l.type = 'common_area' AND l.name = 'Salão de festas'"))[0].id;
 	await page.goto(`/projects/${jardins}/locations/${area}`);
 	await expect(page.getByRole("heading", { level: 1, name: "Salão de festas" })).toBeVisible();
+	await expect(page.getByText("Os cômodos acompanham a tipologia Salão de festas.")).toBeVisible();
+	await expect(page.getByRole("button", { name: "Voltar à tipologia" })).toHaveCount(0);
 	await shot("common-area");
 	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
 	await page.getByLabel("Adicionar cômodo").fill("Banheiro");

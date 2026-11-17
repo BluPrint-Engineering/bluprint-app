@@ -34,6 +34,8 @@ export default async function structureConfiguration({ page, shot, expect, query
 		(await query("SELECT count(*)::int AS n FROM typology_room r JOIN typology t ON t.id = r.typology_id WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0].n;
 	const unitsA = await unitsOf("Tipologia A");
 	await expect(tipologias.getByText(`${plural(await roomsOf("Tipologia A"), "cômodo", "cômodos")} · ${plural(unitsA, "unidade", "unidades")}`)).toBeVisible();
+	await expect(tipologias.getByText(`3 cômodos · ${plural(await unitsOf("Hall padrão"), "área comum", "áreas comuns")}`)).toBeVisible();
+	await expect(tipologias.getByText("1 cômodo · 0 áreas comuns")).toBeVisible();
 	await page.getByRole("button", { name: "Ações da Tipologia A" }).click();
 	await expect(page.getByRole("menuitem", { name: "Excluir (só sem unidades)" })).toHaveAttribute("aria-disabled", "true");
 	await shot("menu-in-use");

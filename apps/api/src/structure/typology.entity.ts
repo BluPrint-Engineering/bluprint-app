@@ -1,3 +1,4 @@
+import type { TypologyLocationType } from "@bluprint/shared";
 import { sql } from "drizzle-orm";
 import {
 	check,
@@ -12,6 +13,7 @@ import {
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { comparableNameSql } from "../db/comparable-name";
 import { project } from "../projects/project.entity";
+import { locationType } from "./location-type.enum";
 
 export const typology = pgTable(
 	"typology",
@@ -21,10 +23,19 @@ export const typology = pgTable(
 			.notNull()
 			.references(() => project.id, { onDelete: "cascade" }),
 		name: text().notNull(),
+		locationType: locationType().$type<TypologyLocationType>().notNull(),
 		createdAt: createdAt(),
 	},
 	(table) => [
-		unique("typology_id_project_id_unique").on(table.id, table.projectId),
+		unique("typology_id_project_id_location_type_unique").on(
+			table.id,
+			table.projectId,
+			table.locationType,
+		),
+		check(
+			"typology_location_type",
+			sql`${table.locationType} in ('unit', 'common_area')`,
+		),
 		uniqueIndex("typology_name_unique").on(
 			table.projectId,
 			comparableNameSql(table.name),

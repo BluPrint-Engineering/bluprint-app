@@ -8,7 +8,7 @@ import type { LocationRow, StructureRow } from "./location-row";
 
 export function buildStructure(
 	rowsInStoredOrder: StructureRow[],
-	changesByUnit: ReadonlyMap<string, number>,
+	changesByLocation: ReadonlyMap<string, number>,
 ): Structure {
 	const childrenOf = new Map<string | null, StructureRow[]>();
 	for (const row of rowsInStoredOrder) {
@@ -21,9 +21,10 @@ export function buildStructure(
 		(childrenOf.get(parentId) ?? []).filter((child) => child.type === type);
 
 	const commonAreasOf = (parentId: string | null): StructureCommonArea[] =>
-		childrenOfType(parentId, "common_area").map(({ id, name }) => ({
+		childrenOfType(parentId, "common_area").map(({ id, name, typology }) => ({
 			id,
 			name,
+			typology,
 		}));
 
 	const floorOf = ({ id, name }: StructureRow): StructureFloor => ({
@@ -33,7 +34,7 @@ export function buildStructure(
 			id: unit.id,
 			name: unit.name,
 			typology: unit.typology,
-			changes: changesByUnit.get(unit.id) ?? 0,
+			changes: changesByLocation.get(unit.id) ?? 0,
 		})),
 		commonAreas: commonAreasOf(id),
 	});

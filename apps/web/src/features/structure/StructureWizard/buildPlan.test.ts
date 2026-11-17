@@ -445,6 +445,7 @@ describe("buildPlan typologies", () => {
 			{
 				id: "typology:a",
 				name: "Tipologia A",
+				locationType: "unit",
 				rooms: [
 					{ id: "typology:a:room:0", name: "Sala" },
 					{ id: "typology:a:room:1", name: "Cozinha" },
@@ -453,6 +454,7 @@ describe("buildPlan typologies", () => {
 			{
 				id: "typology:b",
 				name: "Cobertura",
+				locationType: "unit",
 				rooms: [{ id: "typology:b:room:0", name: "Terraço" }],
 			},
 		]);

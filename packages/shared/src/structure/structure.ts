@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { typologyRefSchema, unitChangesSchema } from "./typology-ref.js";
+import { locationChangesSchema, typologyRefSchema } from "./typology-ref.js";
 
 const locationName = z.string().meta({
 	description: "The location's name, free text of 1 to 60 characters.",
@@ -12,12 +12,16 @@ export const structureUnitSchema = z.object({
 	typology: typologyRefSchema.nullable().meta({
 		description: "The typology the unit follows, or null when it has none.",
 	}),
-	changes: unitChangesSchema,
+	changes: locationChangesSchema,
 });
 
 export const structureCommonAreaSchema = z.object({
 	id: z.uuid(),
 	name: locationName,
+	typology: typologyRefSchema.nullable().meta({
+		description:
+			"The typology the common area follows, or null when it has none.",
+	}),
 });
 
 export const structureFloorSchema = z.object({

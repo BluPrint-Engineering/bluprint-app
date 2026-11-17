@@ -347,7 +347,7 @@ describe("POST /api/projects/:id/locations/:locationId/move", () => {
 			const structure = await readStructure(projectId);
 			expect(unitNames(structure)).toEqual(["102", "101"]);
 			expect(structure.towers[0]!.floors[0]!.commonAreas).toEqual([
-				{ id: hall.id, name: "Hall" },
+				{ id: hall.id, name: "Hall", typology: null },
 			]);
 		});
 

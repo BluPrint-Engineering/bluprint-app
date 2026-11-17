@@ -155,6 +155,7 @@ async function createWith(
 const typologyOf = (name: string, rooms: string[]): NewTypology => ({
 	id: randomUUID(),
 	name,
+	locationType: "unit",
 	rooms: rooms.map((room) => ({ id: randomUUID(), name: room })),
 });
 
@@ -958,13 +959,13 @@ describe("POST /api/projects/:id/structure with typologies", () => {
 		const listed = await readTypologies(projectId);
 		expect(listed.find((type) => type.id === typeA.id)).toMatchObject({
 			name: "Tipologia A",
-			unitCount: 1,
-			changedUnitCount: 0,
+			locationCount: 1,
+			changedLocationCount: 0,
 			rooms: typeA.rooms,
 		});
 		expect(listed.find((type) => type.id === typeB.id)).toMatchObject({
 			name: "Tipologia B",
-			unitCount: 1,
+			locationCount: 1,
 		});
 	});
 
@@ -985,7 +986,7 @@ describe("POST /api/projects/:id/structure with typologies", () => {
 		const detail = await readLocation(projectId, bare.id);
 		expect(detail.typology).toBeNull();
 		expect(detail.rooms).toEqual([]);
-		expect((await readTypologies(projectId))[0]!.unitCount).toBe(0);
+		expect((await readTypologies(projectId))[0]!.locationCount).toBe(0);
 	});
 
 	it("creates a typology with no rooms", async () => {

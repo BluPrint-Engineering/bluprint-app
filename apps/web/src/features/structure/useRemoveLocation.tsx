@@ -39,7 +39,7 @@ export interface RemoveRequest {
 function recreation(removed: LocationDetail): CreateStructureRequest {
 	const parentId = removed.ancestors.at(-1)?.id ?? null;
 	const holdsRooms = removed.type === "unit" || removed.type === "common_area";
-	const followsTypology = removed.type === "unit" && removed.typology !== null;
+	const { typology } = removed;
 
 	return {
 		typologies: [],
@@ -50,8 +50,7 @@ function recreation(removed: LocationDetail): CreateStructureRequest {
 				type: removed.type,
 				name: removed.name,
 				position: removed.position,
-				...(followsTypology &&
-					removed.typology && { typologyId: removed.typology.id }),
+				...(typology && { typologyId: typology.id }),
 				...(holdsRooms && {
 					rooms: removed.rooms.map(({ id, name, typologyRoomId, renamed }) => ({
 						id,
@@ -60,7 +59,7 @@ function recreation(removed: LocationDetail): CreateStructureRequest {
 						...(renamed && { renamed }),
 					})),
 				}),
-				...(followsTypology && {
+				...(typology && {
 					droppedRooms: removed.droppedRooms.map(
 						({ typologyRoomId }) => typologyRoomId,
 					),

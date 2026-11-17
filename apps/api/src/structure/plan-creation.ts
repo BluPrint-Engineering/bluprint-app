@@ -8,6 +8,7 @@ import {
 	ROOM_ID_TAKEN,
 	type StructureCounts,
 	TYPOLOGY_ID_TAKEN,
+	TYPOLOGY_KIND_MISMATCH,
 	TYPOLOGY_NAME_TAKEN,
 	TYPOLOGY_NOT_FOUND,
 	TYPOLOGY_ROOM_INVALID,
@@ -16,12 +17,7 @@ import {
 import { ProblemException } from "../common/problems/problem.exception";
 import { nameKey } from "./location-names";
 import { canHoldChild } from "./location-pairs";
-import type { LocationRow } from "./location-row";
-
-export interface StoredTypology {
-	id: string;
-	name: string;
-}
+import type { LocationRow, StoredTypology } from "./location-row";
 
 export interface TypologyIdsInUse {
 	typesElsewhere: ReadonlySet<string>;
@@ -134,7 +130,7 @@ function assertRoomsFit(
 			status: 400,
 			code: TYPOLOGY_ROOM_INVALID,
 			detail:
-				"The rooms of a unit do not account for every room of its typology, once, under the typology's name unless renamed.",
+				"The rooms of a location do not account for every room of its typology, once, under the typology's name unless renamed.",
 		});
 	}
 }
@@ -168,10 +164,12 @@ export function planCreation(
 		names.set(id, name);
 		typeRoomNames.set(typologyId, names);
 	}
-	const knownTypologies = new Set([
-		...storedTypologies.map(({ id }) => id),
-		...requestedTypologies.map(({ id }) => id),
-	]);
+	const typologyKinds = new Map(
+		[...freshTypologies, ...storedTypologies].map(({ id, locationType }) => [
+			id,
+			locationType,
+		]),
+	);
 
 	for (const entry of requested) {
 		const existing = stored.get(entry.id);
@@ -190,15 +188,23 @@ export function planCreation(
 
 	const known = new Map<string, Pick<LocationRow, "type" | "parentId">>(stored);
 	for (const entry of requested) {
-		if (
-			entry.typologyId !== undefined &&
-			!knownTypologies.has(entry.typologyId)
-		) {
-			throw new ProblemException({
-				status: 400,
-				code: TYPOLOGY_NOT_FOUND,
-				detail: "A unit follows a typology that does not exist in the project.",
-			});
+		if (entry.typologyId !== undefined) {
+			const kind = typologyKinds.get(entry.typologyId);
+			if (kind === undefined) {
+				throw new ProblemException({
+					status: 400,
+					code: TYPOLOGY_NOT_FOUND,
+					detail:
+						"A location follows a typology that does not exist in the project.",
+				});
+			}
+			if (kind !== entry.type) {
+				throw new ProblemException({
+					status: 400,
+					code: TYPOLOGY_KIND_MISMATCH,
+					detail: "A location follows a typology of another kind.",
+				});
+			}
 		}
 
 		const parent = entry.parentId === null ? null : known.get(entry.parentId);

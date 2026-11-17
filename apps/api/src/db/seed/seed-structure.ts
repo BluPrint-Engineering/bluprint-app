@@ -1,4 +1,7 @@
-import { EXTRA_DISCIPLINE_COLORS } from "@bluprint/shared";
+import {
+	EXTRA_DISCIPLINE_COLORS,
+	type TypologyLocationType,
+} from "@bluprint/shared";
 import { sql } from "drizzle-orm";
 import { discipline } from "../../disciplines/discipline.entity";
 import { locationDiscipline } from "../../disciplines/location-discipline.entity";
@@ -10,6 +13,7 @@ import type { Database } from "../database.module";
 export interface SeedTypology {
 	name: string;
 	rooms: string[];
+	locationType?: TypologyLocationType;
 }
 
 export interface SeedUnitRef {
@@ -19,12 +23,25 @@ export interface SeedUnitRef {
 	stack: number;
 }
 
-export interface SeedUnitChange {
-	tower: string;
-	unit: string;
+export interface SeedRoomChanges {
 	addedRooms?: string[];
 	droppedRooms?: string[];
 	renamedRooms?: Record<string, string>;
+}
+
+export interface SeedUnitChange extends SeedRoomChanges {
+	tower: string;
+	unit: string;
+}
+
+export interface SeedAreaRef {
+	tower?: string;
+	floor?: string;
+	name: string;
+}
+
+export interface SeedCommonAreaChange extends SeedRoomChanges {
+	area: SeedAreaRef;
 }
 
 export interface SeedFloor {
@@ -59,11 +76,29 @@ export interface SeedStructure {
 	typologyOf?: (unit: SeedUnitRef) => string | undefined;
 	unitChanges?: SeedUnitChange[];
 	commonAreaRooms?: Record<string, string[]>;
+	commonAreaTypologyOf?: (area: SeedAreaRef) => string | undefined;
+	commonAreaChanges?: SeedCommonAreaChange[];
 	disciplines?: SeedDiscipline[];
 }
 
-export const locationRefKey = ({ tower, floor, name }: SeedLocationRef) =>
-	JSON.stringify([tower, floor ?? null, name]);
+export const locationRefKey = ({ tower, floor, name }: SeedAreaRef) =>
+	JSON.stringify([tower ?? null, floor ?? null, name]);
+
+export function commonAreasOf(structure: SeedStructure): SeedAreaRef[] {
+	return [
+		...(structure.commonAreas ?? []).map((name) => ({ name })),
+		...structure.towers.flatMap((tower) => [
+			...(tower.commonAreas ?? []).map((name) => ({ tower: tower.name, name })),
+			...tower.floors.flatMap((floor) =>
+				(floor.commonAreas ?? []).map((name) => ({
+					tower: tower.name,
+					floor: floor.name,
+					name,
+				})),
+			),
+		]),
+	];
+}
 
 export function referableLocations(
 	structure: SeedStructure,
@@ -173,14 +208,23 @@ export async function insertStructure(
 		return inserted.map((row) => row.id);
 	};
 
-	const area = (parentId: string | null, name: string, position: number) =>
-		({
+	const typologyIds = await insertTypologies(db, projectId, structure);
+
+	const area = (
+		parentId: string | null,
+		ref: SeedAreaRef,
+		position: number,
+	) => {
+		const typeName = structure.commonAreaTypologyOf?.(ref);
+		return {
 			projectId,
 			parentId,
 			type: "common_area",
-			name,
+			name: ref.name,
 			position,
-		}) satisfies Insertable;
+			typologyId: typeName ? typologyIds.get(typeName)!.id : null,
+		} satisfies Insertable;
+	};
 
 	const roots = [
 		...structure.towers.map(
@@ -193,7 +237,7 @@ export async function insertStructure(
 					position,
 				}) satisfies Insertable,
 		),
-		...(structure.commonAreas ?? []).map((name, i) => area(null, name, i)),
+		...(structure.commonAreas ?? []).map((name, i) => area(null, { name }, i)),
 	];
 	const rootIds = await insertLevel(roots);
 	const towerIds = rootIds.slice(0, structure.towers.length);
@@ -212,13 +256,15 @@ export async function insertStructure(
 	);
 	const towerAreaRows = structure.towers.flatMap((tower, towerIndex) =>
 		(tower.commonAreas ?? []).map((name, i) =>
-			area(towerIds[towerIndex]!, name, tower.floors.length + i),
+			area(
+				towerIds[towerIndex]!,
+				{ tower: tower.name, name },
+				tower.floors.length + i,
+			),
 		),
 	);
 	const floorIds = await insertLevel(floorRows);
 	const towerAreaIds = await insertLevel(towerAreaRows);
-
-	const typologyIds = await insertTypologies(db, projectId, structure);
 
 	const placed = structure.towers.flatMap((tower) =>
 		tower.floors.map((floor) => ({ tower: tower.name, floor })),
@@ -245,7 +291,13 @@ export async function insertStructure(
 			rowOwners.push({ kind: "unit", ref });
 		});
 		(floor.commonAreas ?? []).forEach((name, i) => {
-			unitAndAreaRows.push(area(parentId, name, floor.units.length + i));
+			unitAndAreaRows.push(
+				area(
+					parentId,
+					{ tower, floor: floor.name, name },
+					floor.units.length + i,
+				),
+			);
 			rowOwners.push({ kind: "area", name, tower, floor: floor.name });
 		});
 	}
@@ -253,29 +305,11 @@ export async function insertStructure(
 
 	const roomRows: (typeof room.$inferInsert)[] = [];
 	const droppedRows: (typeof droppedRoom.$inferInsert)[] = [];
-	const addAreaRooms = (locationId: string, areaName: string) => {
-		(structure.commonAreaRooms?.[areaName] ?? []).forEach((name, position) =>
-			roomRows.push({ locationId, name, position }),
-		);
-	};
-	(structure.commonAreas ?? []).forEach((name, i) =>
-		addAreaRooms(rootIds[structure.towers.length + i]!, name),
-	);
-	structure.towers
-		.flatMap((tower) => tower.commonAreas ?? [])
-		.forEach((name, i) => addAreaRooms(towerAreaIds[i]!, name));
-	rowOwners.forEach((owner, index) => {
-		const locationId = unitAndAreaIds[index]!;
-		if (owner.kind === "area") {
-			addAreaRooms(locationId, owner.name);
-			return;
-		}
-		const typeName = structure.typologyOf?.(owner.ref);
-		const change = structure.unitChanges?.find(
-			(candidate) =>
-				candidate.tower === owner.ref.tower &&
-				candidate.unit === owner.ref.name,
-		);
+	const addFollowedRooms = (
+		locationId: string,
+		typeName: string | undefined,
+		change: SeedRoomChanges | undefined,
+	) => {
 		const typed = typeName ? typologyIds.get(typeName) : undefined;
 		let position = 0;
 		for (const [typeRoomName, typologyRoomId] of typed?.rooms ?? []) {
@@ -295,6 +329,50 @@ export async function insertStructure(
 		for (const name of change?.addedRooms ?? []) {
 			roomRows.push({ locationId, name, position: position++ });
 		}
+	};
+	const addAreaRooms = (locationId: string, ref: SeedAreaRef) => {
+		const typeName = structure.commonAreaTypologyOf?.(ref);
+		if (typeName === undefined) {
+			(structure.commonAreaRooms?.[ref.name] ?? []).forEach((name, position) =>
+				roomRows.push({ locationId, name, position }),
+			);
+			return;
+		}
+		addFollowedRooms(
+			locationId,
+			typeName,
+			structure.commonAreaChanges?.find(
+				(candidate) => locationRefKey(candidate.area) === locationRefKey(ref),
+			),
+		);
+	};
+	(structure.commonAreas ?? []).forEach((name, i) =>
+		addAreaRooms(rootIds[structure.towers.length + i]!, { name }),
+	);
+	structure.towers
+		.flatMap((tower) =>
+			(tower.commonAreas ?? []).map((name) => ({ tower: tower.name, name })),
+		)
+		.forEach((ref, i) => addAreaRooms(towerAreaIds[i]!, ref));
+	rowOwners.forEach((owner, index) => {
+		const locationId = unitAndAreaIds[index]!;
+		if (owner.kind === "area") {
+			addAreaRooms(locationId, {
+				tower: owner.tower,
+				floor: owner.floor,
+				name: owner.name,
+			});
+			return;
+		}
+		addFollowedRooms(
+			locationId,
+			structure.typologyOf?.(owner.ref),
+			structure.unitChanges?.find(
+				(candidate) =>
+					candidate.tower === owner.ref.tower &&
+					candidate.unit === owner.ref.name,
+			),
+		);
 	});
 	for (const chunk of inChunks(roomRows)) await db.insert(room).values(chunk);
 	for (const chunk of inChunks(droppedRows)) {
@@ -365,7 +443,11 @@ async function insertTypologies(
 	for (const seed of structure.typologies ?? []) {
 		const [inserted] = await db
 			.insert(typology)
-			.values({ projectId, name: seed.name })
+			.values({
+				projectId,
+				name: seed.name,
+				locationType: seed.locationType ?? "unit",
+			})
 			.returning({ id: typology.id });
 		const insertedRooms =
 			seed.rooms.length === 0

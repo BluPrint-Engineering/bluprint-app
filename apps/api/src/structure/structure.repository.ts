@@ -12,7 +12,10 @@ import type {
 	StructureRow,
 } from "./location-row";
 import { droppedRoom, room } from "./room.entity";
-import { type UnitChangesRow, unitChangesQuery } from "./unit-changes";
+import {
+	type LocationChangesRow,
+	locationChangesQuery,
+} from "./location-changes";
 import { typology, typologyRoom } from "./typology.entity";
 
 const INSERT_CHUNK = 1000;
@@ -221,15 +224,15 @@ export class StructureRepository {
 		return found && { ...toStructureRow(found), position: found.position };
 	}
 
-	async countUnitChanges(
+	async countLocationChanges(
 		projectId: string,
-		unitId?: string,
+		locationId?: string,
 	): Promise<ReadonlyMap<string, number>> {
-		const { rows } = await this.txHost.tx.execute<UnitChangesRow>(
-			unitChangesQuery(projectId, unitId),
+		const { rows } = await this.txHost.tx.execute<LocationChangesRow>(
+			locationChangesQuery(projectId, locationId),
 		);
 
-		return new Map(rows.map((row) => [row.unit_id, row.n]));
+		return new Map(rows.map((row) => [row.location_id, row.n]));
 	}
 
 	async roomsByLocation(locationIds: string[]): Promise<Map<string, Room[]>> {

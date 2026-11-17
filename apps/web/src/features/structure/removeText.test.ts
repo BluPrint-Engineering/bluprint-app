@@ -155,7 +155,7 @@ describe("child counts", () => {
 		typology: null,
 		changes: 0,
 	});
-	const area = (name: string) => ({ id: name, name });
+	const area = (name: string) => ({ id: name, name, typology: null });
 	const floor = (name: string, units: string[], areas: string[]) => ({
 		id: name,
 		name,

@@ -59,7 +59,6 @@ const apartmentRooms = [
 
 const casaMoinhos: SeedStructure = {
 	commonAreas: ["Guarita"],
-	commonAreaRooms: { "Salão de festas": ["Cozinha", "Banheiro"] },
 	disciplines: [
 		{
 			name: "Pintura",
@@ -100,6 +99,31 @@ const casaMoinhos: SeedStructure = {
 			],
 		},
 		{ name: "Duplex", rooms: ["Sala", "Quarto", "Banheiro"] },
+		{
+			name: "Hall padrão",
+			locationType: "common_area",
+			rooms: ["Circulação", "Escada", "Elevadores"],
+		},
+		{
+			name: "Salão de festas",
+			locationType: "common_area",
+			rooms: ["Cozinha", "Banheiro"],
+		},
+		{ name: "Corredor", locationType: "common_area", rooms: ["Circulação"] },
+	],
+	commonAreaTypologyOf: ({ name }) =>
+		name === "Hall"
+			? "Hall padrão"
+			: name === "Salão de festas"
+				? "Salão de festas"
+				: undefined,
+	commonAreaChanges: [
+		{
+			area: { tower: "Torre A", floor: "2º andar", name: "Hall" },
+			addedRooms: ["Lixeira"],
+			droppedRooms: ["Elevadores"],
+			renamedRooms: { Circulação: "Corredor" },
+		},
 	],
 	typologyOf: ({ tower, floor, name, stack }) => {
 		if (floor === "Cobertura") return "Cobertura";

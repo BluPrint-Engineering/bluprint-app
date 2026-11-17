@@ -12,24 +12,29 @@ import { isProjectDelivered } from "../../projects/api";
 import { typologiesQueryOptions, useChangeTypologyMutation } from "../api";
 import { FormDialog } from "../components/FormDialog";
 import { plural } from "../plural";
+import { holderText } from "./holderText";
+import type { RoomHolder } from "./roomNames";
 
 const NONE = "none";
 
 export function ChangeTypologyDialog({
 	projectId,
-	unit,
+	location,
+	holder,
 	onClose,
 	returnFocus,
 }: {
 	projectId: string;
-	unit: LocationDetail;
+	location: LocationDetail;
+	holder: RoomHolder;
 	onClose: () => void;
 	returnFocus: () => HTMLElement | null | undefined;
 }) {
 	const formId = useId();
 	const typologies = useQuery(typologiesQueryOptions(projectId));
-	const change = useChangeTypologyMutation(projectId, unit.id);
-	const current = unit.typology?.id ?? NONE;
+	const change = useChangeTypologyMutation(projectId, location.id);
+	const text = holderText(holder);
+	const current = location.typology?.id ?? NONE;
 	const restored = useSessionDraft("change-typology", (variables) =>
 		variables === null || typeof variables === "string" ? variables : undefined,
 	);
@@ -51,8 +56,8 @@ export function ChangeTypologyDialog({
 			onSuccess: (changed) => {
 				toast.success(
 					changed.typology
-						? `A unidade ${unit.name} agora segue a tipologia ${changed.typology.name}.`
-						: `A unidade ${unit.name} ficou sem tipologia.`,
+						? text.nowFollows(location.name, changed.typology.name)
+						: text.leftWithoutTypology(location.name),
 				);
 				close();
 			},
@@ -66,8 +71,8 @@ export function ChangeTypologyDialog({
 
 	return (
 		<FormDialog
-			title={`Trocar a tipologia da ${unit.name}`}
-			description="Os cômodos passam a ser os da tipologia escolhida. Cômodo com pins continua na unidade."
+			title={text.changeTypologyTitle(location.name)}
+			description={text.changeTypologyDescription}
 			submitLabel="Trocar"
 			pendingLabel="Trocando…"
 			pending={change.isPending}
@@ -116,21 +121,23 @@ export function ChangeTypologyDialog({
 					disabled={change.isPending}
 					onValueChange={setChoice}
 				>
-					{typologies.data.typologies.map((type) => (
-						<RadioGroupItem key={type.id} value={type.id}>
-							<span className="grid">
-								<span>{type.name}</span>
-								<span className="text-sm text-muted-foreground">
-									{plural(type.rooms.length, "cômodo", "cômodos")}
+					{typologies.data.typologies
+						.filter((type) => type.locationType === holder)
+						.map((type) => (
+							<RadioGroupItem key={type.id} value={type.id}>
+								<span className="grid">
+									<span>{type.name}</span>
+									<span className="text-sm text-muted-foreground">
+										{plural(type.rooms.length, "cômodo", "cômodos")}
+									</span>
 								</span>
-							</span>
-						</RadioGroupItem>
-					))}
+							</RadioGroupItem>
+						))}
 					<RadioGroupItem value={NONE}>
 						<span className="grid">
 							<span>Sem tipologia</span>
 							<span className="text-sm text-muted-foreground">
-								Cômodos só desta unidade
+								{text.ownRoomsOption}
 							</span>
 						</span>
 					</RadioGroupItem>

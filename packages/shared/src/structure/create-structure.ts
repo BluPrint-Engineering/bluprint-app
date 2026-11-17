@@ -2,7 +2,11 @@ import { z } from "zod";
 import { createDisciplineSchema } from "../disciplines/create-discipline.js";
 import { MAX_EXTRA_DISCIPLINES } from "../disciplines/discipline-colors.js";
 import { locationRoomNameSchema } from "./location-rooms.js";
-import { locationTypeSchema } from "./location-type.js";
+import {
+	followsTypologies,
+	locationTypeSchema,
+	typologyLocationTypeSchema,
+} from "./location-type.js";
 import { structureCountsSchema } from "./structure.js";
 import { roomNameSchema, typologyNameSchema } from "./typology-ref.js";
 
@@ -47,11 +51,11 @@ export const newLocationRoomSchema = z.object({
 	name: locationRoomNameSchema,
 	typologyRoomId: z.uuid().optional().meta({
 		description:
-			"The room of the unit's typology this one came from. Left out for a room only this location has.",
+			"The room of the location's typology this one came from. Left out for a room only this location has.",
 	}),
 	renamed: z.boolean().optional().meta({
 		description:
-			"Whether the room came from the typology and was renamed in this unit. Needs `typologyRoomId`.",
+			"Whether the room came from the typology and was renamed in this location. Needs `typologyRoomId`.",
 	}),
 });
 
@@ -85,17 +89,17 @@ export const newLocationSchema = z.object({
 	}),
 	typologyId: z.uuid().optional().meta({
 		description:
-			"The typology a unit follows: one that already exists in the project or one listed in `typologies` of this request. Without `rooms`, the unit is born with the rooms of that typology. Only a unit takes one; left out, the unit has none.",
+			"The typology a unit or a common area follows: one of its own kind that already exists in the project or is listed in `typologies` of this request. Without `rooms`, the location is born with the rooms of that typology. Only a unit or a common area takes one; left out, the location has none.",
 	}),
 	rooms: z
 		.array(newLocationRoomSchema)
 		.optional()
 		.meta({
-			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION} unless the request is a \`copy\`, so a location removed by mistake comes back as it was and a copy keeps what the original changed. Given, even empty, they are the location's rooms exactly; left out, a unit is born with the rooms of its typology and a common area with none. A unit that follows a typology lists each room of it once, here or in \`droppedRooms\`, and a room of the typology that was not renamed carries the typology's name for it.`,
+			description: `The rooms of a unit or a common area in their stored order, at most ${MAX_ROOMS_PER_LOCATION} unless the request is a \`copy\`, so a location removed by mistake comes back as it was and a copy keeps what the original changed. Given, even empty, they are the location's rooms exactly; left out, a location is born with the rooms of its typology, or with none when it follows no typology. A location that follows a typology lists each room of it once, here or in \`droppedRooms\`, and a room of the typology that was not renamed carries the typology's name for it.`,
 		}),
 	droppedRooms: z.array(z.uuid()).max(MAX_ROOMS_PER_LOCATION).optional().meta({
 		description:
-			"The rooms of the unit's typology that the unit took out, by their id in the typology. Only a unit with a `typologyId` that lists its `rooms` takes them.",
+			"The rooms of the location's typology that the location took out, by their id in the typology. Only a location with a `typologyId` that lists its `rooms` takes them.",
 	}),
 	disciplines: z.array(newLocationDisciplineSchema).optional().meta({
 		description:
@@ -118,6 +122,7 @@ export const newTypologySchema = z.object({
 		example: "0190a000-0000-7000-8000-0000000000a1",
 	}),
 	name: typologyNameSchema,
+	locationType: typologyLocationTypeSchema,
 	rooms: z
 		.array(newTypologyRoomSchema)
 		.max(MAX_ROOMS_PER_TYPOLOGY)
@@ -140,7 +145,7 @@ export const createStructureSchema = z
 			.max(MAX_TYPOLOGIES_PER_REQUEST)
 			.default([])
 			.meta({
-				description: `The typologies (*tipologias*) to create with their rooms, at most ${MAX_TYPOLOGIES_PER_REQUEST}. A unit of \`locations\` may follow one of them. Left out, none is created.`,
+				description: `The typologies (*tipologias*) to create with their rooms, at most ${MAX_TYPOLOGIES_PER_REQUEST}. A unit or a common area of \`locations\` may follow one of its own kind. Left out, none is created.`,
 			}),
 		locations: z
 			.array(newLocationSchema)
@@ -170,6 +175,9 @@ export const createStructureSchema = z
 		});
 
 		const seenTypes = new Set<string>();
+		const requestedKinds = new Map(
+			typologies.map(({ id, locationType }) => [id, locationType]),
+		);
 		const seenRooms = new Set<string>();
 		typologies.forEach((typology, typeIndex) => {
 			if (seenTypes.has(typology.id)) {
@@ -217,12 +225,24 @@ export const createStructureSchema = z
 			}
 			seen.add(entry.id);
 
-			if (entry.typologyId !== undefined && entry.type !== "unit") {
-				ctx.addIssue({
-					code: "custom",
-					path: ["locations", index, "typologyId"],
-					message: "Only a unit follows a typology.",
-				});
+			if (entry.typologyId !== undefined) {
+				const requestedKind = requestedKinds.get(entry.typologyId);
+				if (!followsTypologies(entry.type)) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["locations", index, "typologyId"],
+						message: "Only a unit or a common area follows a typology.",
+					});
+				} else if (
+					requestedKind !== undefined &&
+					requestedKind !== entry.type
+				) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["locations", index, "typologyId"],
+						message: "A location follows a typology of its own kind.",
+					});
+				}
 			}
 
 			if (
@@ -241,14 +261,15 @@ export const createStructureSchema = z
 				ctx.addIssue({
 					code: "custom",
 					path: ["locations", index, "droppedRooms"],
-					message: "Only a unit that follows a typology takes rooms out.",
+					message: "Only a location that follows a typology takes rooms out.",
 				});
 			}
 			if (entry.droppedRooms !== undefined && entry.rooms === undefined) {
 				ctx.addIssue({
 					code: "custom",
 					path: ["locations", index, "droppedRooms"],
-					message: "A unit lists the rooms it took out only with its rooms.",
+					message:
+						"A location lists the rooms it took out only with its rooms.",
 				});
 			}
 
@@ -304,7 +325,7 @@ export const createStructureSchema = z
 						code: "custom",
 						path: ["locations", index, "rooms", roomIndex, "typologyRoomId"],
 						message:
-							"A room that follows the typology needs a unit that follows one.",
+							"A room that follows the typology needs a location that follows one.",
 					});
 				}
 				if (room.typologyRoomId !== undefined) {

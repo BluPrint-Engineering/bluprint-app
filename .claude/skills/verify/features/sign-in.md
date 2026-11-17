@@ -32,12 +32,12 @@ Preconditions:
 - **Session proof.** `(await context.cookies()).find((c) => c.name === "better-auth.session_token")?.httpOnly` is `true`; `await (await page.request.get("/api/auth/get-session")).json()` has `user.email` equal to the signed-in e-mail; `query('SELECT count(*)::int AS n FROM "session" s JOIN "user" u ON u.id = s.user_id WHERE u.email = $1', [email])` grew by one.
 - **Already signed in.** With `--as admin`, `await page.goto("/login")`; the URL becomes `/projects`. `await page.reload()` and `/api/auth/get-session` still returns Ana.
 
-- **Expired session on a location page.** `bun .claude/skills/verify/scripts/drive.ts .claude/skills/verify/journeys/session-restore.ts --as admin` proves `auth-expired-restore` on `Residencial Jardins`: `Renomear andar` on Torre B's `10º andar` comes back filled in `Renomear o andar` alone, `Cancelar` focuses `Ações do andar` and a reload opens nothing; `Adicionar` > `Torre` on the façade comes back with `Nome da torre` filled and `Cancelar` focuses `Adicionar`. Nothing is saved, so the seed is unchanged.
+- **Expired session on a location page.** `bun .claude/skills/verify/scripts/drive.ts .claude/skills/verify/journeys/session-restore.ts --as admin` proves `auth-expired-restore` on `Residencial Jardins`: `Renomear andar` on Torre B's `10º andar` comes back filled in `Renomear o andar` alone, `Cancelar` focuses `Ações do andar` and a reload opens nothing; `Trocar tipologia` on the `Hall` of Torre A's `3º andar` comes back as `Trocar a tipologia do Hall` with `Corredor` chosen, `Cancelar` focuses `Trocar tipologia`, a reload opens nothing and the `Hall` still follows `Hall padrão`; `Adicionar` > `Torre` on the façade comes back with `Nome da torre` filled and `Cancelar` focuses `Adicionar`. Nothing is saved, so the seed is unchanged.
 - **Expire by hand.** `await page.context().clearCookies()` right before the save; the save answers 401 and the URL becomes `/login?redirect=…`.
 
 ## Gotchas
 
 - `getByLabel("Senha")` without `{ exact: true }` also matches the show-password toggle.
 - Sign-in allows 5 attempts per minute per client IP, failed ones included. `drive.ts` gives every device run its own IP, so each device has its own budget of 5: the full journey spends 2 and `--as admin|manager|assistant` spends 1 more, and other drives in the instance never exhaust it.
-- `auth-expired-restore` spends 2 sign-ins of the device's budget of 5 on top of the 1 of `--as admin`.
+- `auth-expired-restore` spends 3 sign-ins of the device's budget of 5 on top of the 1 of `--as admin`.
 - A journey that hits `Muitas tentativas seguidas. Aguarde um minuto e tente de novo.` on purpose (`auth-rate-limit`) makes all its attempts on one device; it is the limit working, not a broken login.

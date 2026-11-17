@@ -104,7 +104,7 @@ export function TypologyNameDialog({
 		};
 		if (target.mode === "create") {
 			create.mutate(
-				{ id: newId, name: trimmed, rooms: [] },
+				{ id: newId, name: trimmed, locationType: "unit", rooms: [] },
 				{
 					...handlers,
 					onSuccess: (created) => {

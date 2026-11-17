@@ -6,7 +6,8 @@ import { comparableNameSql } from "../db/comparable-name";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import { room } from "./room.entity";
-import { unitChangesQuery } from "./unit-changes";
+import { locationChangesQuery } from "./location-changes";
+import type { StoredTypology } from "./location-row";
 import { typology, typologyRoom } from "./typology.entity";
 
 const INSERT_CHUNK = 1000;
@@ -25,7 +26,7 @@ export interface TypeRoomValue {
 
 export interface TypologyUsageRow extends Record<string, unknown> {
 	typology_id: string;
-	units: number;
+	locations: number;
 	changed: number;
 }
 
@@ -33,9 +34,13 @@ export interface TypologyUsageRow extends Record<string, unknown> {
 export class TypologiesRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
 
-	list(projectId: string): Promise<{ id: string; name: string }[]> {
+	list(projectId: string): Promise<StoredTypology[]> {
 		return this.txHost.tx
-			.select({ id: typology.id, name: typology.name })
+			.select({
+				id: typology.id,
+				name: typology.name,
+				locationType: typology.locationType,
+			})
 			.from(typology)
 			.where(eq(typology.projectId, projectId))
 			.orderBy(asc(typology.id));
@@ -56,22 +61,22 @@ export class TypologiesRepository {
 			.orderBy(asc(typologyRoom.position), asc(typologyRoom.id));
 	}
 
-	async countUnitsByType(
+	async countLocationsByTypology(
 		projectId: string,
-	): Promise<Map<string, { units: number; changed: number }>> {
+	): Promise<Map<string, { locations: number; changed: number }>> {
 		const { rows } = await this.txHost.tx.execute<TypologyUsageRow>(sql`
-			with changes as (${unitChangesQuery(projectId)})
-			select u.typology_id, count(*)::int as units, count(changes.unit_id)::int as changed
-			from ${location} u
-			left join changes on changes.unit_id = u.id
-			where u.project_id = ${projectId} and u.typology_id is not null
-			group by u.typology_id
+			with changes as (${locationChangesQuery(projectId)})
+			select l.typology_id, count(*)::int as locations, count(changes.location_id)::int as changed
+			from ${location} l
+			left join changes on changes.location_id = l.id
+			where l.project_id = ${projectId} and l.typology_id is not null
+			group by l.typology_id
 		`);
 
 		return new Map(
 			rows.map((row) => [
 				row.typology_id,
-				{ units: row.units, changed: row.changed },
+				{ locations: row.locations, changed: row.changed },
 			]),
 		);
 	}
@@ -101,9 +106,14 @@ export class TypologiesRepository {
 
 	async insertAll(projectId: string, typologies: NewTypology[]): Promise<void> {
 		if (typologies.length === 0) return;
-		await this.txHost.tx
-			.insert(typology)
-			.values(typologies.map(({ id, name }) => ({ id, projectId, name })));
+		await this.txHost.tx.insert(typology).values(
+			typologies.map(({ id, name, locationType }) => ({
+				id,
+				projectId,
+				name,
+				locationType,
+			})),
+		);
 
 		const rooms = typologies.flatMap(({ id, rooms }) =>
 			rooms.map((entry, position) => ({
@@ -120,10 +130,10 @@ export class TypologiesRepository {
 		}
 	}
 
-	async giveUnitsTheirRooms(
-		units: { id: string; typologyId: string }[],
+	async giveLocationsTheirRooms(
+		locations: { id: string; typologyId: string }[],
 	): Promise<void> {
-		if (units.length === 0) return;
+		if (locations.length === 0) return;
 		const typeRooms = await this.txHost.tx
 			.select({
 				id: typologyRoom.id,
@@ -134,11 +144,11 @@ export class TypologiesRepository {
 			.from(typologyRoom)
 			.where(
 				inArray(typologyRoom.typologyId, [
-					...new Set(units.map(({ typologyId }) => typologyId)),
+					...new Set(locations.map(({ typologyId }) => typologyId)),
 				]),
 			);
 
-		const rows = units.flatMap(({ id, typologyId }) =>
+		const rows = locations.flatMap(({ id, typologyId }) =>
 			typeRooms
 				.filter((typeRoom) => typeRoom.typologyId === typologyId)
 				.map((typeRoom) => ({
@@ -154,12 +164,17 @@ export class TypologiesRepository {
 				.values(rows.slice(start, start + INSERT_CHUNK));
 		}
 	}
+
 	async find(
 		projectId: string,
 		typologyId: string,
-	): Promise<{ id: string; name: string } | undefined> {
+	): Promise<StoredTypology | undefined> {
 		const [found] = await this.txHost.tx
-			.select({ id: typology.id, name: typology.name })
+			.select({
+				id: typology.id,
+				name: typology.name,
+				locationType: typology.locationType,
+			})
 			.from(typology)
 			.where(
 				and(eq(typology.id, typologyId), eq(typology.projectId, projectId)),
@@ -194,13 +209,13 @@ export class TypologiesRepository {
 			.where(eq(typology.id, typologyId));
 	}
 
-	async countUnits(typologyId: string): Promise<number> {
+	async countLocations(typologyId: string): Promise<number> {
 		const [found] = await this.txHost.tx
-			.select({ units: count() })
+			.select({ locations: count() })
 			.from(location)
 			.where(eq(location.typologyId, typologyId));
 
-		return found?.units ?? 0;
+		return found?.locations ?? 0;
 	}
 
 	async delete(typologyId: string): Promise<void> {
@@ -215,7 +230,7 @@ export class TypologiesRepository {
 			.orderBy(asc(typologyRoom.position), asc(typologyRoom.id));
 	}
 
-	async unitIdsOf(typologyId: string): Promise<string[]> {
+	async locationIdsOf(typologyId: string): Promise<string[]> {
 		const rows = await this.txHost.tx
 			.select({ id: location.id })
 			.from(location)
@@ -280,18 +295,18 @@ export class TypologiesRepository {
 		addedIds: string[],
 	): Promise<string[]> {
 		const { rows } = await this.txHost.tx.execute<{ name: string }>(sql`
-			with units as (
+			with followers as (
 				select id from ${location} where typology_id = ${typologyId}
 			),
 			predicted as (
 				select r.location_id, tr.name
 				from ${room} r
 				join ${typologyRoom} tr on tr.id = r.typology_room_id
-				where r.location_id in (select id from units) and not r.renamed
+				where r.location_id in (select id from followers) and not r.renamed
 				union all
 				select r.location_id, r.name
 				from ${room} r
-				where r.location_id in (select id from units)
+				where r.location_id in (select id from followers)
 					and (r.renamed or r.typology_room_id is null)
 					and not (
 						r.typology_room_id is null
@@ -303,7 +318,7 @@ export class TypologiesRepository {
 					)
 				union all
 				select u.id, a.name
-				from units u
+				from followers u
 				cross join ${typologyRoom} a
 				where a.id = any(${uuidList(addedIds)})
 			)
@@ -316,7 +331,7 @@ export class TypologiesRepository {
 		return [...new Set(rows.map(({ name }) => name))];
 	}
 
-	async renameRoomsInUnits(renamedIds: string[]): Promise<string[]> {
+	async renameRoomsInLocations(renamedIds: string[]): Promise<string[]> {
 		if (renamedIds.length === 0) return [];
 		const stale = and(
 			inArray(room.typologyRoomId, renamedIds),
@@ -364,7 +379,7 @@ export class TypologiesRepository {
 		return rows.map(({ location_id }) => location_id);
 	}
 
-	async addRoomsToUnits(
+	async addRoomsToLocations(
 		typologyId: string,
 		addedIds: string[],
 	): Promise<string[]> {

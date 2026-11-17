@@ -575,7 +575,12 @@ describe("DELETE /api/projects/:id/locations/:locationId", () => {
 				name,
 			}));
 			const typologies = [
-				{ id: unit.typologyId, name: "Tipologia A", rooms: typeRooms },
+				{
+					id: unit.typologyId,
+					name: "Tipologia A",
+					locationType: "unit",
+					rooms: typeRooms,
+				},
 			];
 			const created = await manager.agent
 				.post(structurePath(projectId))

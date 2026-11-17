@@ -29,7 +29,7 @@ export const renameRoomSchema = z.object({
 export const changeTypologySchema = z.object({
 	typologyId: z.uuid().nullable().meta({
 		description:
-			"The typology the unit follows from now on, one of the project's. Null leaves the unit without one, keeping its current rooms as rooms only it has.",
+			"The typology the location follows from now on, one of the project's of the location's own kind. Null leaves the location without one, keeping its current rooms as rooms only it has.",
 	}),
 });
 
@@ -39,7 +39,7 @@ export const roomParamsSchema = projectParamsSchema.extend({
 
 export const droppedRoomParamsSchema = locationParamsSchema.extend({
 	typologyRoomId: z.uuid().meta({
-		description: "The room of the typology that the unit took out.",
+		description: "The room of the typology that the location took out.",
 	}),
 });
 

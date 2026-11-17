@@ -163,6 +163,73 @@ describe("removing an empty location at once (R1)", () => {
 		});
 	});
 
+	test("brings a Hall back following the same typology, with its renamed, own and taken-out rooms", async () => {
+		const second = floor(
+			"2º andar",
+			["201"],
+			[{ name: "Hall", typology: "Hall padrão" }],
+		);
+		const hall = nth(second.commonAreas, 0);
+		const renamed = room("Corredor", { fromType: true, renamed: true });
+		const kept = room("Escada", { fromType: true });
+		const own = room("Lixeira");
+		const taken = droppedRoom("Elevadores");
+		const api = writableApi(
+			obra(),
+			structureOf([tower("Torre A", [second]), tower("Torre B")]),
+			{
+				details: {
+					[hall.id]: {
+						position: 1,
+						rooms: [renamed, kept, own],
+						droppedRooms: [taken],
+						changes: 3,
+					},
+				},
+			},
+		);
+		stubApi(signedIn, { api: api.handler });
+		renderAt(pathOf(second.id));
+		await pick("Ações da área comum Hall", "Remover área comum");
+
+		await user.click(await screen.findByRole("button", { name: "Desfazer" }));
+
+		expect(
+			await screen.findByRole("button", { name: "Ações da área comum Hall" }),
+		).toBeInTheDocument();
+		expect(api.created).toEqual([
+			{
+				typologies: [],
+				locations: [
+					{
+						id: hall.id,
+						parentId: second.id,
+						type: "common_area",
+						name: "Hall",
+						position: 1,
+						typologyId: hall.typology?.id,
+						rooms: [
+							{
+								id: renamed.id,
+								name: "Corredor",
+								typologyRoomId: renamed.typologyRoomId,
+								renamed: true,
+							},
+							{
+								id: kept.id,
+								name: "Escada",
+								typologyRoomId: kept.typologyRoomId,
+							},
+							{ id: own.id, name: "Lixeira" },
+						],
+						droppedRooms: [taken.typologyRoomId],
+						disciplines: [],
+					},
+				],
+			},
+		]);
+	});
+
 	test("brings a unit without a typology back with its rooms and none taken out", async () => {
 		const { ninth, several } = build();
 		const unit = nth(ninth.units, 1);

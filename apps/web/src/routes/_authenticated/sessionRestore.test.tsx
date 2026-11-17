@@ -396,7 +396,7 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 	const ninth = floor(
 		"9º andar",
 		[{ name: "903", typology: "Tipologia A", changes: 1 }],
-		["Hall"],
+		[{ name: "Hall", typology: "Hall padrão" }],
 	);
 	const towerA = tower("Torre A", [ninth]);
 	const structure = structureOf([towerA]);
@@ -404,11 +404,21 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 	if (!located) throw new Error("fixture");
 	const typeA = typologyOf("Tipologia A", ["Sala", "Cozinha"]);
 	const typeB = typologyOf("Tipologia B", ["Suíte"]);
-	const sala = room("Sala", { fromType: holder === "unit" });
+	const hallPadrao = typologyOf("Hall padrão", ["Sala", "Cozinha"], {
+		locationType: "common_area",
+	});
+	const corredor = typologyOf("Corredor", ["Circulação"], {
+		locationType: "common_area",
+	});
+	const typologies = [typeA, hallPadrao, typeB, corredor];
+	const [current, other] =
+		holder === "unit" ? [typeA, typeB] : [hallPadrao, corredor];
+	const sala = room("Sala", { fromType: true });
 	const lavanderia = room("Lavanderia");
 	const own: Partial<LocationDetail> = {
 		rooms: [sala, lavanderia],
-		droppedRooms: holder === "unit" ? [droppedRoom("Cozinha")] : [],
+		droppedRooms: [droppedRoom("Cozinha")],
+		changes: 1,
 	};
 	const details: Record<string, Partial<LocationDetail>> = {
 		[located.id]: own,
@@ -464,7 +474,7 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 			method === "PUT" &&
 			url.pathname === `${base}/locations/${located.id}/typology`
 		) {
-			const chosen = [typeA, typeB].find((each) => each.id === body.typologyId);
+			const chosen = typologies.find((each) => each.id === body.typologyId);
 			own.typology = chosen ? { id: chosen.id, name: chosen.name } : null;
 			return detail();
 		}
@@ -474,7 +484,7 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 	const server = expiringServer(
 		combine(
 			rooms,
-			typologiesApi(ADMIN_PROJECT.id, { typologies: [typeA, typeB] }),
+			typologiesApi(ADMIN_PROJECT.id, { typologies }),
 			api.handler,
 		),
 	);
@@ -514,8 +524,28 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 			request: `PATCH ${base}/rooms/${lavanderia.id}`,
 		},
 	};
+	if (remaining > 0) {
+		const radio = (name: string) => () =>
+			screen.findByRole("radio", { name: new RegExp(`^${name}`) });
+		entries.changeTypology = {
+			open: click("button", "Trocar tipologia"),
+			fill: async () => user.click(await radio(other.name)()),
+			expectTyped: async () => expect(await radio(other.name)()).toBeChecked(),
+			expectCurrent: async () =>
+				expect(await radio(current.name)()).toBeChecked(),
+			submit: click("button", "Trocar"),
+			cancel: CANCEL,
+			shows: [
+				holder === "unit"
+					? "Trocar a tipologia da 903"
+					: "Trocar a tipologia do Hall",
+			],
+			focusAfterCancel: byRole("button", "Trocar tipologia"),
+			focusAfterSave: byRole("button", "Trocar tipologia"),
+			request: `PUT ${base}/locations/${located.id}/typology`,
+		};
+	}
 	if (holder === "unit" && remaining > 0) {
-		const radio = (name: RegExp) => () => screen.findByRole("radio", { name });
 		Object.assign(entries, {
 			duplicate: {
 				open: () => pick(pageMenu, "Duplicar unidade"),
@@ -526,20 +556,6 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 				focusAfterCancel: byRole("button", pageMenu),
 				focusAfterSave: byRole("button", pageMenu),
 				request: `POST ${base}/structure`,
-			},
-			changeTypology: {
-				open: click("button", "Trocar tipologia"),
-				fill: async () => user.click(await radio(/^Tipologia B/)()),
-				expectTyped: async () =>
-					expect(await radio(/^Tipologia B/)()).toBeChecked(),
-				expectCurrent: async () =>
-					expect(await radio(/^Tipologia A/)()).toBeChecked(),
-				submit: click("button", "Trocar"),
-				cancel: CANCEL,
-				shows: ["Trocar a tipologia da 903"],
-				focusAfterCancel: byRole("button", "Trocar tipologia"),
-				focusAfterSave: byRole("button", "Trocar tipologia"),
-				request: `PUT ${base}/locations/${located.id}/typology`,
 			},
 		} satisfies Record<string, Entry>);
 	}
@@ -794,9 +810,10 @@ function configurationPage(): Page {
 			const created: Typology = {
 				id: String(body.id),
 				name: String(body.name),
+				locationType: "unit",
 				rooms: [],
-				unitCount: 0,
-				changedUnitCount: 0,
+				locationCount: 0,
+				changedLocationCount: 0,
 			};
 			typologies = [...typologies, created];
 			return json(created, 201);
@@ -815,7 +832,7 @@ function configurationPage(): Page {
 					: each,
 			);
 			const typology = typologies.find((each) => each.id === one[1]);
-			return json({ typology, updatedUnitCount: 0 });
+			return json({ typology, updatedLocationCount: 0 });
 		}
 		return undefined;
 	};
@@ -1169,6 +1186,7 @@ const ROWS: [number, keyof typeof PAGES, string, SessionDraftKind][] = [
 	[42, "tower", "addAreaFromMenu", "create-structure"],
 	[43, "facade", "addAreaFromMenu", "create-structure"],
 	[44, "facadeBlank", "addTower", "create-structure"],
+	[45, "commonArea", "changeTypology", "change-typology"],
 ];
 
 describe("a submission lost to an expired session", () => {
@@ -1214,7 +1232,7 @@ async function runPlainFocus(page: Page, key: string) {
 }
 
 const PLAIN_FOCUS_ROWS = ROWS.filter(([row]) =>
-	[5, 6, 7, 32, 33, 34, 36, 37, 42, 43].includes(row),
+	[5, 6, 7, 32, 33, 34, 36, 37, 42, 43, 45].includes(row),
 );
 
 describe("a form opened and closed without any session loss", () => {
@@ -1273,10 +1291,22 @@ describe("an action without fields lost to an expired session", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test.each([
+	const ACTIONS = [
 		[
 			"removing a room",
 			() => pick("Ações do cômodo Lavanderia", "Remover cômodo"),
+			"DELETE",
+			"/rooms/",
+		],
+		[
+			"taking a room of the typology out",
+			(holder: "unit" | "commonArea") =>
+				pick(
+					"Ações do cômodo Sala",
+					holder === "unit"
+						? "Remover desta unidade"
+						: "Remover desta área comum",
+				),
 			"DELETE",
 			"/rooms/",
 		],
@@ -1292,14 +1322,20 @@ describe("an action without fields lost to an expired session", () => {
 			"POST",
 			"/typology/reset",
 		],
-	] as const)(
-		"does not reopen or repeat %s after signing back in",
-		async (_action, act, method, path) => {
-			const page = PAGES.unit();
+	] as const;
+
+	test.each(
+		(["unit", "commonArea"] as const).flatMap((holder) =>
+			ACTIONS.map((action) => [holder, ...action] as const),
+		),
+	)(
+		"on %s, does not reopen or repeat %s after signing back in",
+		async (holder, _action, act, method, path) => {
+			const page = PAGES[holder]();
 			renderAt(page.path);
 			await page.ready();
 			page.server.expireNextWrite();
-			await act();
+			await act(holder);
 			await screen.findByLabelText("E-mail");
 			await signInAgain();
 			await page.ready();

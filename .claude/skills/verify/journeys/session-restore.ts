@@ -31,6 +31,32 @@ export default async function sessionRestore({ page, shot, expect, query, accoun
 	await expect(page.getByRole("dialog")).toHaveCount(0);
 	await shot("location-rename-forgotten");
 
+	const hall = (
+		await query(
+			"SELECT l.id FROM location l JOIN location f ON f.id = l.parent_id JOIN location t ON t.id = f.parent_id WHERE l.project_id = $1 AND t.name = 'Torre A' AND f.name = '3º andar' AND l.type = 'common_area' AND l.name = 'Hall'",
+			[row.project],
+		)
+	)[0].id;
+	await page.goto(`/projects/${row.project}/locations/${hall}`);
+	const changeButton = page.getByRole("button", { name: "Trocar tipologia" });
+	await changeButton.click();
+	const change = page.getByRole("dialog", { name: "Trocar a tipologia do Hall" });
+	await change.getByRole("radio", { name: /Corredor/ }).click();
+	await page.context().clearCookies();
+	await change.getByRole("button", { name: "Trocar" }).click();
+	await signInAgain();
+
+	await expect(change.getByRole("radio", { name: /Corredor/ })).toBeChecked();
+	await expect(page.getByRole("dialog")).toHaveCount(1);
+	await page.waitForTimeout(300);
+	await shot("common-area-change-type-restored");
+	await change.getByRole("button", { name: "Cancelar" }).click();
+	await expect(changeButton).toBeFocused();
+	await page.reload();
+	await expect(page.getByRole("heading", { level: 1, name: "Hall" })).toBeVisible();
+	await expect(page.getByRole("dialog")).toHaveCount(0);
+	expect((await query("SELECT t.name FROM location l JOIN typology t ON t.id = l.typology_id WHERE l.id = $1", [hall]))[0].name).toBe("Hall padrão");
+
 	await page.goto(`/projects/${row.project}`);
 	await page.getByRole("button", { name: "Adicionar", exact: true }).click();
 	await page.getByRole("menuitem", { name: "Torre", exact: true }).click();

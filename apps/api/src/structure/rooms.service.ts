@@ -9,6 +9,7 @@ import {
 	ROOM_NAME_TAKEN,
 	ROOM_NOT_FOUND,
 	type RenameRoom,
+	TYPOLOGY_KIND_MISMATCH,
 	TYPOLOGY_NOT_FOUND,
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
@@ -124,83 +125,92 @@ export class RoomsService {
 	async giveBack(
 		userId: string,
 		projectId: string,
-		unitId: string,
+		locationId: string,
 		typologyRoomId: string,
 	): Promise<LocationDetail> {
 		await this.beginWrite(userId, projectId);
-		const unit = await this.findLocation(projectId, unitId);
-		this.assertKind(unit.type, ["unit"]);
+		const found = await this.findLocation(projectId, locationId);
+		this.assertKind(found.type, ROOM_HOLDERS);
 
-		const dropped = await this.rooms.findDropped(unitId, typologyRoomId);
+		const dropped = await this.rooms.findDropped(locationId, typologyRoomId);
 		if (!dropped) throw roomNotFound();
-		if (await this.rooms.nameInUse(unitId, dropped.name)) {
+		if (await this.rooms.nameInUse(locationId, dropped.name)) {
 			throw roomNameTaken(dropped.name);
 		}
 
 		await this.rooms.insert({
-			locationId: unitId,
+			locationId,
 			name: dropped.name,
 			position: dropped.position,
 			typologyRoomId,
 		});
-		await this.rooms.takeBack(unitId, typologyRoomId);
+		await this.rooms.takeBack(locationId, typologyRoomId);
 
-		return this.structure.readLocation(userId, projectId, unitId);
+		return this.structure.readLocation(userId, projectId, locationId);
 	}
 
 	@Transactional()
 	async changeTypology(
 		userId: string,
 		projectId: string,
-		unitId: string,
+		locationId: string,
 		{ typologyId }: ChangeTypology,
 	): Promise<LocationDetail> {
 		await this.beginWrite(userId, projectId);
-		const unit = await this.findLocation(projectId, unitId);
-		this.assertKind(unit.type, ["unit"]);
+		const found = await this.findLocation(projectId, locationId);
+		this.assertKind(found.type, ROOM_HOLDERS);
 
-		const current = unit.typology?.id ?? null;
+		const current = found.typology?.id ?? null;
 		if (typologyId === current) {
-			return this.structure.readLocation(userId, projectId, unitId);
+			return this.structure.readLocation(userId, projectId, locationId);
 		}
 
 		if (typologyId === null) {
-			const ordered = await this.locations.listRooms(unitId);
+			const ordered = await this.locations.listRooms(locationId);
 			await this.rooms.keepAsOwn(
-				unitId,
+				locationId,
 				ordered.map(({ id }) => id),
 			);
-			await this.rooms.setTypology(unitId, null);
+			await this.rooms.setTypology(locationId, null);
 		} else {
-			const known = await this.typologies.list(projectId);
-			if (!known.some(({ id }) => id === typologyId)) {
+			const wanted = await this.typologies.find(projectId, typologyId);
+			if (!wanted) {
 				throw new ProblemException({
 					status: 400,
 					code: TYPOLOGY_NOT_FOUND,
 					detail: "The typology does not exist in the project.",
 				});
 			}
-			await this.rooms.clear(unitId);
-			await this.rooms.setTypology(unitId, typologyId);
-			await this.typologies.giveUnitsTheirRooms([{ id: unitId, typologyId }]);
+			if (wanted.locationType !== found.type) {
+				throw new ProblemException({
+					status: 400,
+					code: TYPOLOGY_KIND_MISMATCH,
+					detail: `A ${found.type.replace("_", " ")} cannot follow a typology of another kind.`,
+				});
+			}
+			await this.rooms.clear(locationId);
+			await this.rooms.setTypology(locationId, typologyId);
+			await this.typologies.giveLocationsTheirRooms([
+				{ id: locationId, typologyId },
+			]);
 		}
 
-		return this.structure.readLocation(userId, projectId, unitId);
+		return this.structure.readLocation(userId, projectId, locationId);
 	}
 
 	@Transactional()
 	async resetToTypology(
 		userId: string,
 		projectId: string,
-		unitId: string,
+		locationId: string,
 	): Promise<LocationDetail> {
 		await this.beginWrite(userId, projectId);
-		const unit = await this.findLocation(projectId, unitId);
-		this.assertKind(unit.type, ["unit"]);
+		const found = await this.findLocation(projectId, locationId);
+		this.assertKind(found.type, ROOM_HOLDERS);
 
-		if (unit.typology) await this.rooms.restoreFromTypology(unitId);
+		if (found.typology) await this.rooms.restoreFromTypology(locationId);
 
-		return this.structure.readLocation(userId, projectId, unitId);
+		return this.structure.readLocation(userId, projectId, locationId);
 	}
 
 	private async beginWrite(userId: string, projectId: string) {

@@ -40,7 +40,7 @@ export class TypologiesController {
 	@ApiOperation({
 		summary: "A project's typologies",
 		description:
-			"Every typology (*tipologia*) of the project with its rooms in their stored order, how many units follow it and how many of those have changes against it. The visibility is the project's: a project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`.",
+			"Every typology (*tipologia*) of the project with its kind, its rooms in their stored order, how many locations follow it and how many of those have changes against it. The visibility is the project's: a project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`.",
 	})
 	@ZodResponse({
 		status: 200,
@@ -58,11 +58,11 @@ export class TypologiesController {
 	@Post("typologies")
 	@ApiOperation({
 		summary: "Create a typology",
-		description: `Creates a typology (*tipologia*) with its rooms in the order sent. The id is the client's and is kept across retries: sending the id of a typology of this project again answers the same \`201\` and changes nothing, and an id that belongs to a typology or room elsewhere answers \`409 TYPOLOGY_ID_TAKEN\`. A name already in use in the project, ignoring case and repeated spaces, answers \`409 TYPOLOGY_NAME_TAKEN\` with the clashing \`names\`. ${WRITERS}`,
+		description: `Creates a typology (*tipologia*) of units or of common areas, as \`locationType\` says, with its rooms in the order sent. The kind is fixed from then on (ADR 0080). The id is the client's and is kept across retries: sending the id of a typology of this project again answers the same \`201\` and changes nothing, and an id that belongs to a typology or room elsewhere answers \`409 TYPOLOGY_ID_TAKEN\`. A name already in use in the project, ignoring accents, case and repeated spaces, across both kinds, answers \`409 TYPOLOGY_NAME_TAKEN\` with the clashing \`names\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 201,
-		description: "The typology, without units yet.",
+		description: "The typology, without locations yet.",
 		type: TypologyDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)
@@ -77,11 +77,11 @@ export class TypologiesController {
 	@Patch("typologies/:typologyId")
 	@ApiOperation({
 		summary: "Rename a typology or change its rooms",
-		description: `Renames the typology, replaces its whole ordered list of rooms, or both. The change reaches every unit that follows the typology: a new room enters all of them, a renamed room changes in the units that did not rename it, a room taken out leaves all of them except the units that renamed it, where it stays as a room only that unit has, and a unit that already has a room of the new name of its own adopts it. The units keep the rooms only they have and the rooms they took out. The answer says how many units changed in \`updatedUnitCount\`. A name already in use in the project answers \`409 TYPOLOGY_NAME_TAKEN\`; a room id that belongs to another typology, \`409 TYPOLOGY_ID_TAKEN\`; a new room name that a unit has in a way the typology cannot take over, \`409 ROOM_NAME_TAKEN\` with the clashing \`names\`, and nothing changes. A typology that does not exist in the project answers \`404 TYPOLOGY_NOT_FOUND\`. ${WRITERS}`,
+		description: `Renames the typology, replaces its whole ordered list of rooms, or both. The kind never changes: a \`locationType\` in the body is ignored, and a body with nothing else answers the \`400\` of a body with nothing to change. The change reaches every unit or common area that follows the typology: a new room enters all of them, a renamed room changes in the locations that did not rename it, a room taken out leaves all of them except the locations that renamed it, where it stays as a room only that location has, and a location that already has a room of the new name of its own adopts it. The locations keep the rooms only they have and the rooms they took out. The answer says how many locations changed in \`updatedLocationCount\`. A name already in use in the project answers \`409 TYPOLOGY_NAME_TAKEN\`; a room id that belongs to another typology, \`409 TYPOLOGY_ID_TAKEN\`; a new room name that a location has in a way the typology cannot take over, \`409 ROOM_NAME_TAKEN\` with the clashing \`names\`, and nothing changes. A typology that does not exist in the project answers \`404 TYPOLOGY_NOT_FOUND\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
-		description: "The typology as it is now and how many units changed.",
+		description: "The typology as it is now and how many locations changed.",
 		type: UpdateTypologyResultDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)
@@ -101,7 +101,7 @@ export class TypologiesController {
 	@Delete("typologies/:typologyId")
 	@ApiOperation({
 		summary: "Delete a typology",
-		description: `Deletes a typology that no unit follows. A typology with units answers \`409 TYPOLOGY_IN_USE\`. A typology that does not exist in the project answers \`404 TYPOLOGY_NOT_FOUND\`. ${WRITERS}`,
+		description: `Deletes a typology that no location follows. A typology that a unit or a common area of any level still follows answers \`409 TYPOLOGY_IN_USE\`. A typology that does not exist in the project answers \`404 TYPOLOGY_NOT_FOUND\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
