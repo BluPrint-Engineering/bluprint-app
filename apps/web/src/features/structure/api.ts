@@ -371,6 +371,7 @@ export function useSetLocationDisciplineMutation(
 	const queryClient = useQueryClient();
 	const locationKey = locationQueryOptions(projectId, location.id).queryKey;
 	return useMutation({
+		scope: { id: `location-disciplines:${location.id}` },
 		mutationFn: ({
 			disciplineId,
 			applies,

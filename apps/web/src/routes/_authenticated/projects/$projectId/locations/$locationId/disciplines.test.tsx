@@ -214,6 +214,56 @@ describe("the Disciplinas card of a unit", () => {
 		expect(writes).toHaveLength(1);
 	});
 
+	test("ends on the server's list when two boxes are tapped and the newest answer arrives first", async () => {
+		const { handler, writes } = serverFor({ [unit201.id]: ALL_ON });
+		const held: Array<() => void> = [];
+		const answerNewestFirst: ApiHandler = (url, init) => {
+			const reply = handler(url, init);
+			if (init?.method !== "PUT" || !reply) return reply;
+			return new Promise<Response>((resolve) => {
+				held.push(() => resolve(reply));
+			});
+		};
+		await open(answerNewestFirst, unit201.id, "201");
+		await screen.findByText("3 de 3");
+
+		await userEvent.click(box("Pintura"));
+		await userEvent.click(box("Hidráulica"));
+		for (let answered = 0; answered < 2; answered++) {
+			await waitFor(() => expect(held.length).toBeGreaterThan(0));
+			held.pop()?.();
+		}
+
+		expect(await screen.findByText("1 de 3")).toBeInTheDocument();
+		await waitFor(() => expect(writes).toHaveLength(2));
+		expect(screen.getByText("1 de 3")).toBeInTheDocument();
+		expect(box("Pintura")).not.toBeChecked();
+		expect(box("Hidráulica")).not.toBeChecked();
+		expect(box("Elétrica")).toBeChecked();
+	});
+
+	test("keeps a box that saved when another box's save fails", async () => {
+		const { handler, writes } = serverFor(
+			{ [unit201.id]: ALL_ON },
+			{
+				answer: ({ disciplineId }) =>
+					disciplineId === pintura.id
+						? problem(500, "INTERNAL_ERROR")
+						: undefined,
+			},
+		);
+		await open(handler, unit201.id, "201");
+		await screen.findByText("3 de 3");
+
+		await userEvent.click(box("Pintura"));
+		await userEvent.click(box("Hidráulica"));
+
+		expect(await screen.findByText("2 de 3")).toBeInTheDocument();
+		expect(writes).toHaveLength(2);
+		expect(box("Pintura")).toBeChecked();
+		expect(box("Hidráulica")).not.toBeChecked();
+	});
+
 	test("shows an informative alert, and no Geral sentence, when none is on", async () => {
 		const { handler } = serverFor({
 			[unit201.id]: ALL_ON.map((each) => ({ ...each, applies: false })),
