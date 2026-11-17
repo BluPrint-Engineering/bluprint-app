@@ -29,7 +29,7 @@ Each feature file starts with an H1 title and one paragraph describing the user-
 
 ## Features
 
-- [Sign in](./sign-in.md): the login screen, wrong-password and rate-limit errors, the redirect back to a protected page, a session that survives reload.
+- [Sign in](./sign-in.md): the login screen, wrong-password and rate-limit errors, the redirect back to a protected page, a session that survives reload, and a save that met an expired session coming back by the entry that sent it.
 - [Sign up](./sign-up.md): self-signup scaffolding, the terms checkbox, landing signed in.
 - [Account menu and sign out](./account-menu.md): the header account menu, theme choice, signing out.
 - [Project list](./project-list.md): the Obras screen, phone infinite scroll versus desktop pagination, the admin's free units link to Unidades and `Nova obra` entry.

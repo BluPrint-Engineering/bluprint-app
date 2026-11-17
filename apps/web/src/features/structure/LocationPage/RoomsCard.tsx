@@ -5,7 +5,14 @@ import {
 	sameRoomName,
 } from "@bluprint/shared";
 import { Ellipsis, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
-import { type ReactNode, useEffect, useId, useRef, useState } from "react";
+import {
+	type ReactNode,
+	type Ref,
+	useEffect,
+	useId,
+	useRef,
+	useState,
+} from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -27,6 +34,7 @@ import {
 	useGiveRoomBackMutation,
 	useRemoveRoomMutation,
 } from "../api";
+import { useFocusOnClose } from "../components/useAdding";
 import { plural } from "../plural";
 import { RenameRoomDialog } from "./RenameRoomDialog";
 import { type RoomHolder, roomNameError, roomNameTakenText } from "./roomNames";
@@ -87,6 +95,7 @@ function AddRoomRow({
 	});
 	const clearDraft = useClearSessionDraft("add-room");
 	const [adding, setAdding] = useState(restored !== undefined);
+	const addButton = useFocusOnClose<HTMLButtonElement>(adding);
 	const [name, setName] = useState(restored ?? "");
 	const [error, setError] = useState<string>();
 	const attempt = useRef<{ id: string; name: string }>(undefined);
@@ -128,6 +137,7 @@ function AddRoomRow({
 		return (
 			<li className="border-t border-border py-(--space-1) pl-(--space-2) first:border-t-0">
 				<Button
+					ref={addButton}
 					type="button"
 					variant="ghost"
 					className="text-primary"
@@ -202,16 +212,19 @@ function RoomMenu({
 	removeLabel,
 	onRename,
 	onRemove,
+	triggerRef,
 }: {
 	room: Room;
 	removeLabel: string;
 	onRename: () => void;
 	onRemove: () => void;
+	triggerRef: Ref<HTMLButtonElement>;
 }) {
 	return (
 		<DropdownMenu>
 			<DropdownMenuTrigger asChild>
 				<Button
+					ref={triggerRef}
 					type="button"
 					variant="ghost"
 					size="icon"
@@ -254,6 +267,7 @@ export function RoomsCard({
 		return variables.roomId;
 	});
 	const [renaming, setRenaming] = useState<Room>();
+	const roomTriggers = useRef(new Map<string, HTMLButtonElement>());
 	const openedRename = useRef(false);
 	useEffect(() => {
 		if (openedRename.current || !restoredRename) return;
@@ -318,6 +332,10 @@ export function RoomsCard({
 												: "Remover desta unidade"
 										}
 										onRename={() => setRenaming(room)}
+										triggerRef={(trigger) => {
+											if (trigger) roomTriggers.current.set(room.id, trigger);
+											else roomTriggers.current.delete(room.id);
+										}}
 										onRemove={() => removeRoom(room)}
 									/>
 								)
@@ -373,6 +391,7 @@ export function RoomsCard({
 					room={renaming}
 					rooms={rooms}
 					onClose={() => setRenaming(undefined)}
+					returnFocus={() => roomTriggers.current.get(renaming.id)}
 				/>
 			)}
 		</section>

@@ -7,7 +7,7 @@ import type {
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Building2, Layers, ListPlus, Plus } from "lucide-react";
-import type { Ref } from "react";
+import type { Ref, RefObject } from "react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import {
 	NO_FLOORS_DESCRIPTION,
 } from "../components/AddFloorsLink";
 import { AddReservedRow } from "../components/AddReservedRow";
-import { AddRow } from "../components/AddRow";
+import { AddRow, useReopenRestoredAdd } from "../components/AddRow";
 import { Facade, FacadeCard, FacadeSkeleton } from "../components/Facade";
 import { ListCard, ListRow, LocationList } from "../components/LocationList";
 import { LocationMenu } from "../components/LocationMenu";
@@ -72,7 +72,7 @@ function AddMenu({
 					<Building2 className="size-4.5" aria-hidden="true" />
 					Torre
 				</DropdownMenuItem>
-				<DropdownMenuItem onSelect={() => adding.open("project-area")}>
+				<DropdownMenuItem onSelect={() => adding.open("project-area", "menu")}>
 					<Plus className="size-4.5" aria-hidden="true" />
 					Área comum da obra
 				</DropdownMenuItem>
@@ -141,12 +141,14 @@ function ProjectAreas({
 	title,
 	items,
 	adding,
+	menuButton,
 	canEdit,
 }: {
 	project: ProjectSummary;
 	title: string;
 	items: ReturnType<typeof areaItems>;
 	adding: Adding;
+	menuButton: RefObject<HTMLButtonElement | null>;
 	canEdit: boolean;
 }) {
 	if (!canEdit && items.length === 0) return null;
@@ -166,6 +168,7 @@ function ProjectAreas({
 						label="Adicionar área comum"
 						suggestion=""
 						scope="project"
+						menuButton={menuButton}
 					/>
 				)
 			}
@@ -185,7 +188,7 @@ function SingleTower({
 	structure: Structure;
 	tower: StructureTower;
 	adding: Adding;
-	towerOpener: Ref<HTMLButtonElement>;
+	towerOpener: RefObject<HTMLButtonElement | null>;
 	canEdit: boolean;
 }) {
 	const projectId = project.id;
@@ -267,6 +270,7 @@ function SingleTower({
 				title="Áreas comuns"
 				items={items}
 				adding={adding}
+				menuButton={towerOpener}
 				canEdit={canEdit}
 			/>
 		</div>
@@ -283,7 +287,7 @@ function SeveralTowers({
 	project: ProjectSummary;
 	structure: Structure;
 	adding: Adding;
-	towerOpener: Ref<HTMLButtonElement>;
+	towerOpener: RefObject<HTMLButtonElement | null>;
 	canEdit: boolean;
 }) {
 	const projectId = project.id;
@@ -319,6 +323,7 @@ function SeveralTowers({
 				title="Áreas comuns da obra"
 				items={areaItems(projectId, structure.commonAreas, "project", canEdit)}
 				adding={adding}
+				menuButton={towerOpener}
 				canEdit={canEdit}
 			/>
 		</div>
@@ -329,6 +334,7 @@ export function ProjectStructure({ project }: { project: ProjectSummary }) {
 	const query = useQuery(structureQueryOptions(project.id));
 	const adding = useAdding();
 	const towerOpener = useFocusOnClose<HTMLButtonElement>(adding.is("tower"));
+	useReopenRestoredAdd(adding, "tower", null, "tower");
 	const canEdit = project.status !== "delivered";
 
 	if (query.data) {

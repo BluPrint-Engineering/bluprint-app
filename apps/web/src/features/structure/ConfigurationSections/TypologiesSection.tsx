@@ -39,11 +39,7 @@ function typologyDraft(
 	) {
 		return undefined;
 	}
-	const rooms =
-		"rooms" in variables &&
-		Array.isArray(variables.rooms) &&
-		variables.rooms.length > 0;
-	return rooms
+	return "rooms" in variables && Array.isArray(variables.rooms)
 		? { typologyId: variables.typologyId, rooms: true }
 		: { typologyId: variables.typologyId };
 }
@@ -67,6 +63,14 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 		created ? { mode: "create" } : undefined,
 	);
 	const opened = useRef(false);
+	const newButton = useRef<HTMLButtonElement>(null);
+	const triggers = useRef(new Map<string, HTMLButtonElement>());
+	const closedEditor = useRef<string>(undefined);
+	useEffect(() => {
+		if (editingId !== undefined || closedEditor.current === undefined) return;
+		triggers.current.get(closedEditor.current)?.focus();
+		closedEditor.current = undefined;
+	}, [editingId]);
 	useEffect(() => {
 		if (opened.current || !updated || !query.data) return;
 		const typology = query.data.typologies.find(
@@ -117,7 +121,10 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 									<TypologyEditor
 										projectId={project.id}
 										typology={typology}
-										onClose={() => setEditingId(undefined)}
+										onClose={() => {
+											closedEditor.current = typology.id;
+											setEditingId(undefined);
+										}}
 									/>
 								) : (
 									<TypologyRow
@@ -126,6 +133,10 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 										onEditRooms={() => setEditingId(typology.id)}
 										onRename={() => setNaming({ mode: "rename", typology })}
 										onDelete={() => deleteTypology(typology)}
+										triggerRef={(trigger) => {
+											if (trigger) triggers.current.set(typology.id, trigger);
+											else triggers.current.delete(typology.id);
+										}}
 									/>
 								)}
 							</li>
@@ -135,6 +146,7 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 								<Button
 									type="button"
 									variant="ghost"
+									ref={newButton}
 									className="text-primary"
 									onClick={() => setNaming({ mode: "create" })}
 								>
@@ -155,6 +167,11 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 					typologies={typologies}
 					onClose={() => setNaming(undefined)}
 					onCreated={(created) => setEditingId(created.id)}
+					returnFocus={() =>
+						naming.mode === "rename"
+							? triggers.current.get(naming.typology.id)
+							: newButton.current
+					}
 				/>
 			)}
 		</SectionCard>

@@ -50,12 +50,14 @@ export function TypologyNameDialog({
 	typologies,
 	onClose,
 	onCreated,
+	returnFocus,
 }: {
 	projectId: string;
 	target: NameDialogTarget;
 	typologies: Typology[];
 	onClose: () => void;
 	onCreated: (typology: Typology) => void;
+	returnFocus: () => HTMLElement | null | undefined;
 }) {
 	const fieldId = useId();
 	const create = useCreateTypologyMutation(projectId);
@@ -140,6 +142,7 @@ export function TypologyNameDialog({
 			formId={fieldId}
 			onSubmit={submit}
 			onClose={close}
+			returnFocus={returnFocus}
 		>
 			{failed && (
 				<Alert variant="destructive">

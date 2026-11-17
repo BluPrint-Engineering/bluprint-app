@@ -334,13 +334,10 @@ function duplicateOpener(locationId: string): string {
 export function duplicateReservation(
 	variables: unknown,
 	locationId: string,
-): { reserved: number; ours: boolean } | undefined {
+): number | undefined {
 	const draft = reservationDraft(variables);
-	if (draft === undefined) return undefined;
-	if (draft.opener === undefined)
-		return { reserved: draft.reserved, ours: false };
-	return draft.opener === duplicateOpener(locationId)
-		? { reserved: draft.reserved, ours: true }
+	return draft?.opener === duplicateOpener(locationId)
+		? draft.reserved
 		: undefined;
 }
 

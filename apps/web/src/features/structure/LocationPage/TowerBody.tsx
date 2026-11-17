@@ -4,6 +4,7 @@ import type {
 	StructureTower,
 } from "@bluprint/shared";
 import { Layers, ListPlus } from "lucide-react";
+import type { RefObject } from "react";
 import { StateBlock } from "@/components/StateBlock";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ export function TowerBody({
 	tower,
 	towerName,
 	adding,
+	menuButton,
 	canEdit,
 }: {
 	project: ProjectSummary;
@@ -31,6 +33,7 @@ export function TowerBody({
 	tower: StructureTower;
 	towerName: string | undefined;
 	adding: Adding;
+	menuButton: RefObject<HTMLButtonElement | null>;
 	canEdit: boolean;
 }) {
 	const projectId = project.id;
@@ -68,6 +71,7 @@ export function TowerBody({
 						label="Adicionar área comum"
 						suggestion=""
 						scope="tower"
+						menuButton={menuButton}
 						towerName={towerName}
 					/>
 				)

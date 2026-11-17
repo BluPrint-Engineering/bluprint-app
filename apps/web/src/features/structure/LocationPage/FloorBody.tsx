@@ -87,7 +87,6 @@ export function FloorBody({
 							type="unit"
 							scope="tower"
 							label="Adicionar unidade"
-							reopensReservation
 							parentId={floor.id}
 							towerName={towerName}
 							suggestion={nextUnitName(

@@ -6,7 +6,7 @@ import {
 	Pencil,
 	Trash2,
 } from "lucide-react";
-import { type ReactNode, useRef, useState } from "react";
+import { type ReactNode, type RefObject, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -56,8 +56,8 @@ export function LocationMenu({
 	duplicate,
 	variant = "ghost",
 	movable = false,
-	reopensReservation = false,
 	removal,
+	triggerRef,
 	onCloseAutoFocus,
 	children,
 }: {
@@ -67,8 +67,8 @@ export function LocationMenu({
 	duplicate?: DuplicateTarget;
 	variant?: "ghost" | "outline";
 	movable?: boolean;
-	reopensReservation?: boolean;
 	removal: Removal;
+	triggerRef?: RefObject<HTMLButtonElement | null>;
 	onCloseAutoFocus?: (event: Event) => void;
 	children?: ReactNode;
 }) {
@@ -84,12 +84,11 @@ export function LocationMenu({
 		(variables) => duplicate && duplicateReservation(variables, duplicate.id),
 	);
 	const [duplicating, setDuplicating] = useState(
-		restoredDuplicate !== undefined ||
-			restoredReservation?.ours === true ||
-			(reopensReservation && restoredReservation !== undefined),
+		restoredDuplicate !== undefined || restoredReservation !== undefined,
 	);
 	const [confirming, setConfirming] = useState(false);
-	const trigger = useRef<HTMLButtonElement>(null);
+	const ownTrigger = useRef<HTMLButtonElement>(null);
+	const trigger = triggerRef ?? ownTrigger;
 	const move = useMoveLocationMutation(projectId);
 	const remove = useRemoveLocation(projectId);
 	const { id, type, name } = target;

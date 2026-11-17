@@ -10,6 +10,7 @@ paths:
 - **An API failure is an `ApiError`; branch and translate on `error.problem?.code`**, never on `message` or `detail`, which are English developer text ([0047](../../docs/adr/0047-errors-are-rfc-9457-problem-details.md)).
 - **`features/<x>/<Page>/` → `features/<x>/components/` → `components/`.** A file lives in its page's folder until a **second** page needs it, and in its feature until a **second** feature does — only then does it climb a level.
 - **A route is a folder**: `routes/<segment>/route.tsx` beside `route.test.tsx`, never `routes/<segment>.tsx`; `index.tsx` is only an index route.
+- **A form with fields keeps a submission that met an expired session and reopens it by the same entry; an action without fields never comes back.** Every new entry adds its row to the restoration table in `routes/_authenticated/sessionRestore.test.tsx` ([0089](../../docs/adr/0089-a-submission-kept-across-a-session-expiry-reopens-by-the-entry-that-sent-it.md)).
 - **Four constraints apply to any UI work**, checked on every PR: interface text in pt-BR; large touch targets reachable one-handed; status and discipline never signalled by colour alone (a label, icon or legend alongside); colours legible over a light floor plan in direct sun.
 
 ## An interface change carries its captures

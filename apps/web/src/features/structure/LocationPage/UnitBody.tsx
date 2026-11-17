@@ -1,6 +1,6 @@
 import type { LocationDetail } from "@bluprint/shared";
 import { LayoutGrid, Undo2 } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,7 @@ export function UnitBody({
 		variables === null || typeof variables === "string" ? variables : undefined,
 	);
 	const [changingType, setChangingType] = useState(restoredType !== undefined);
+	const changeTypeButton = useRef<HTMLButtonElement>(null);
 	const reset = useResetTypologyMutation(projectId, unit.id);
 
 	function returnToTypology() {
@@ -63,6 +64,7 @@ export function UnitBody({
 						{editable && (
 							<div className="flex flex-wrap gap-(--space-2) max-md:*:flex-1">
 								<Button
+									ref={changeTypeButton}
 									type="button"
 									variant="outline"
 									onClick={() => setChangingType(true)}
@@ -101,6 +103,7 @@ export function UnitBody({
 					projectId={projectId}
 					unit={unit}
 					onClose={() => setChangingType(false)}
+					returnFocus={() => changeTypeButton.current}
 				/>
 			)}
 		</div>

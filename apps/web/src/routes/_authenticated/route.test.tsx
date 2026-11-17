@@ -1,6 +1,6 @@
 import type { OrganizationUnits } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
-import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
@@ -13,6 +13,7 @@ import {
 	signedIn,
 	stubApi,
 } from "@/test/renderApp";
+import { expiringServer, signInAgain } from "@/test/sessionExpiry";
 import {
 	combine,
 	configurationSectionsApi,
@@ -226,74 +227,17 @@ const UNITS: OrganizationUnits = {
 	reclaimable: 100,
 };
 const ADMIN = { ...organization, role: "admin" as const };
-const OTHER_ACCOUNT = {
-	session: { id: "s2" },
-	user: {
-		id: "u2",
-		name: "Bruno Lima",
-		email: "bruno@horizonte.test",
-		image: null,
-	},
-};
-
-type Account = typeof signedIn;
-
-function newProjectApi(initial: Account) {
-	let session: Account | null = initial;
-	let nextAccount = initial;
-	let rejectCreate = true;
-	const posts: { name: string; units: number }[] = [];
-	const fetchMock = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
-		const url = new URL(String(input), "http://localhost");
-		if (url.pathname.endsWith("/get-session")) return json(session);
-		if (url.pathname.endsWith("/sign-in/email")) {
-			session = nextAccount;
-			return json({ token: "t", user: nextAccount.user });
-		}
-		if (url.pathname.endsWith("/sign-out")) {
-			session = null;
-			return json({ success: true });
-		}
-		if (url.pathname === "/api/organization") return json(ADMIN);
-		if (url.pathname === "/api/organization/units") return json(UNITS);
-		if (url.pathname === "/api/projects" && init?.method === "POST") {
-			const body = JSON.parse(String(init.body)) as {
-				name: string;
-				units: number;
-			};
-			posts.push(body);
-			if (rejectCreate) return json({}, 401);
-			return json(
-				{
-					...project(1),
-					name: body.name,
-					units: { reserved: body.units, used: 0 },
-				},
-				201,
-			);
-		}
-		if (url.pathname === "/api/projects") {
-			return json({
-				items: [],
-				total: 0,
-				counts: { active: 0, delivered: 0 },
-			});
-		}
-		return json({});
-	});
-	vi.stubGlobal("fetch", fetchMock);
-	return {
-		posts,
-		setSession(next: Account | null) {
-			session = next;
+function newProjectServer() {
+	return expiringServer(
+		(url, init) => {
+			if (url.pathname === "/api/organization/units") return json(UNITS);
+			if (url.pathname === "/api/projects" && init?.method === "POST") {
+				return json({ ...project(1), name: "Casa Moinhos" }, 201);
+			}
+			return undefined;
 		},
-		signInNext(account: Account) {
-			nextAccount = account;
-		},
-		allowCreate() {
-			rejectCreate = false;
-		},
-	};
+		{ organization: ADMIN },
+	);
 }
 
 async function fillNewProject(name: string, units: string) {
@@ -307,83 +251,11 @@ async function fillNewProject(name: string, units: string) {
 	);
 }
 
-async function signInAs(email: string) {
-	await userEvent.type(await screen.findByLabelText("E-mail"), email);
-	await userEvent.type(screen.getByLabelText("Senha"), "senha-da-conta");
-	await userEvent.click(screen.getByRole("button", { name: "Entrar" }));
-}
-
 describe("session draft", () => {
 	afterEach(() => {
 		localStorage.clear();
 		vi.unstubAllGlobals();
 		onlineManager.setOnline(true);
-	});
-
-	test("keeps what was sent when the session is gone, and does not send it again", async () => {
-		const api = newProjectApi(signedIn);
-		const { posts } = api;
-
-		const { router } = renderAt("/projects/new");
-		await fillNewProject("Casa Moinhos", "12");
-		api.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
-
-		await waitFor(() => {
-			expect(router.state.location.pathname).toBe("/login");
-		});
-		expect(router.state.location.search).toEqual({
-			redirect: "/projects/new",
-		});
-		expect(posts).toEqual([
-			expect.objectContaining({ name: "Casa Moinhos", units: 12 }),
-		]);
-
-		await signInAs("ana@horizonte.test");
-
-		expect(
-			await screen.findByRole("textbox", { name: "Nome da obra" }),
-		).toHaveValue("Casa Moinhos");
-		expect(
-			screen.getByRole("textbox", { name: "Unidades reservadas" }),
-		).toHaveValue("12");
-		expect(posts).toHaveLength(1);
-		expect(router.state.location.pathname).toBe("/projects/new");
-	});
-
-	test("drops the draft when a different account signs in, before the screen is shown", async () => {
-		const api = newProjectApi(signedIn);
-		const { router } = renderAt("/projects/new");
-		await fillNewProject("Casa Moinhos", "12");
-		api.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
-		await screen.findByLabelText("E-mail");
-
-		api.signInNext(OTHER_ACCOUNT);
-		await signInAs("bruno@horizonte.test");
-
-		expect(
-			await screen.findByRole("textbox", { name: "Nome da obra" }),
-		).toHaveValue("");
-		expect(
-			screen.getByRole("textbox", { name: "Unidades reservadas" }),
-		).toHaveValue("");
-
-		await userEvent.click(
-			screen.getByRole("button", { name: "Conta de Bruno Lima" }),
-		);
-		await userEvent.click(screen.getByRole("menuitem", { name: "Sair" }));
-		await screen.findByLabelText("E-mail");
-		api.signInNext(signedIn);
-		await signInAs("ana@horizonte.test");
-		await waitFor(() => {
-			expect(router.state.location.pathname).toBe("/projects");
-		});
-		await router.navigate({ to: "/projects/new" });
-
-		expect(
-			await screen.findByRole("textbox", { name: "Nome da obra" }),
-		).toHaveValue("");
 	});
 
 	test("keeps what was sent when the save comes long after the screen opened", async () => {
@@ -398,13 +270,13 @@ describe("session draft", () => {
 			],
 		});
 		try {
-			const api = newProjectApi(signedIn);
+			const server = newProjectServer();
 			renderAt("/projects/new");
 			await fillNewProject("Casa Moinhos", "12");
 			await act(() => vi.advanceTimersByTimeAsync(10 * 60 * 1000));
-			api.setSession(null);
+			server.expireNextWrite();
 			await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
-			await signInAs("ana@horizonte.test");
+			await signInAgain();
 
 			expect(
 				await screen.findByRole("textbox", { name: "Nome da obra" }),
@@ -414,58 +286,14 @@ describe("session draft", () => {
 		}
 	});
 
-	test("forgets the draft after the same form saves", async () => {
-		const api = newProjectApi(signedIn);
-		const { router } = renderAt("/projects/new");
-		await fillNewProject("Casa Moinhos", "12");
-		api.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-		await screen.findByDisplayValue("Casa Moinhos");
-
-		api.allowCreate();
-		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
-		await waitFor(() => {
-			expect(router.state.location.pathname).toMatch(/\/configuration$/);
-		});
-		await router.navigate({ to: "/projects/new" });
-
-		expect(
-			await screen.findByRole("textbox", { name: "Nome da obra" }),
-		).toHaveValue("");
-	});
-
-	test("forgets the draft once the restored form is left for another screen", async () => {
-		const api = newProjectApi(signedIn);
-		const { router } = renderAt("/projects/new");
-		await fillNewProject("Casa Moinhos", "12");
-		api.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-		await screen.findByDisplayValue("Casa Moinhos");
-
-		await userEvent.click(screen.getByRole("link", { name: "Obras" }));
-		await waitFor(() => {
-			expect(router.state.location.pathname).toBe("/projects");
-		});
-		await router.navigate({ to: "/projects/new" });
-
-		expect(
-			await screen.findByRole("textbox", { name: "Nome da obra" }),
-		).toHaveValue("");
-		expect(api.posts).toHaveLength(1);
-	});
-
 	test("keeps the draft when the same account signs out and comes back", async () => {
-		const api = newProjectApi(signedIn);
+		const server = newProjectServer();
 		const { router } = renderAt("/projects/new");
 		await fillNewProject("Casa Moinhos", "12");
-		api.setSession(null);
+		server.expireNextWrite();
 		await userEvent.click(screen.getByRole("button", { name: "Criar obra" }));
 		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
+		await signInAgain();
 		await screen.findByDisplayValue("Casa Moinhos");
 
 		await userEvent.click(
@@ -473,7 +301,7 @@ describe("session draft", () => {
 		);
 		await userEvent.click(screen.getByRole("menuitem", { name: "Sair" }));
 		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
+		await signInAgain();
 		await waitFor(() => {
 			expect(router.state.location.pathname).toBe("/projects");
 		});
@@ -482,7 +310,7 @@ describe("session draft", () => {
 		expect(
 			await screen.findByRole("textbox", { name: "Nome da obra" }),
 		).toHaveValue("Casa Moinhos");
-		expect(api.posts).toHaveLength(1);
+		expect(server.writes).toEqual(["POST /api/projects"]);
 	});
 });
 
@@ -695,163 +523,6 @@ describe("actions that must not come back", () => {
 		onlineManager.setOnline(true);
 	});
 
-	test("forgets a restored form when it is cancelled", async () => {
-		const handler = (url: URL, init?: RequestInit) => {
-			if (
-				url.pathname === `/api/projects/${OBRA.id}` &&
-				init?.method === "PATCH"
-			) {
-				return json({}, 401);
-			}
-			if (url.pathname === `/api/projects/${OBRA.id}`) return json(OBRA);
-			if (url.pathname === "/api/projects") {
-				return json({
-					items: [OBRA],
-					total: 1,
-					counts: { active: 1, delivered: 0 },
-				});
-			}
-			return undefined;
-		};
-		const api = stubApi(signedIn, {
-			api: combine(handler, configurationSectionsApi(OBRA.id)),
-		});
-		renderAt(CONFIG);
-		await userEvent.click(
-			await screen.findByRole("button", { name: "Renomear" }),
-		);
-		const field = screen.getByRole("textbox", { name: "Nome da obra" });
-		await userEvent.clear(field);
-		await userEvent.type(field, "Casa Nova");
-		api.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-
-		expect(
-			await screen.findByRole("textbox", { name: "Nome da obra" }),
-		).toHaveValue("Casa Nova");
-		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-		await userEvent.click(screen.getByRole("button", { name: "Renomear" }));
-		expect(screen.getByRole("textbox", { name: "Nome da obra" })).toHaveValue(
-			"Casa Moinhos",
-		);
-	});
-
-	test("keeps a restored add form closed once it is cancelled", async () => {
-		const ninth = floor("9º andar", ["901", "902"]);
-		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
-		const api = writableApi(obra, structureOf([tower("Torre A", [ninth])]), {
-			create: () => json({}, 401),
-		});
-		const stub = stubApi(signedIn, { api: api.handler });
-		renderAt(`/projects/${obra.id}/locations/${ninth.id}`);
-		await userEvent.click(
-			await screen.findByRole("button", { name: "Adicionar unidade" }),
-		);
-		const field = screen.getByRole("textbox", { name: "Adicionar unidade" });
-		await userEvent.clear(field);
-		await userEvent.type(field, "950");
-		stub.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-
-		expect(
-			await screen.findByRole("textbox", { name: "Adicionar unidade" }),
-		).toHaveValue("950");
-		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-
-		expect(
-			await screen.findByRole("button", { name: "Adicionar unidade" }),
-		).toBeInTheDocument();
-		expect(
-			screen.queryByRole("textbox", { name: "Adicionar unidade" }),
-		).not.toBeInTheDocument();
-		expect(api.created).toHaveLength(1);
-	});
-
-	test("does not reopen a restored rename after a reload once it is dismissed", async () => {
-		const ninth = floor("9º andar", ["901", "902"]);
-		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
-		const api = writableApi(obra, structureOf([tower("Torre A", [ninth])]), {
-			rename: () => json({}, 401),
-		});
-		const stub = stubApi(signedIn, { api: api.handler });
-		const path = `/projects/${obra.id}/locations/${ninth.id}`;
-		renderAt(path);
-		await userEvent.click(
-			await screen.findByRole("button", { name: "Ações da unidade 902" }),
-		);
-		await userEvent.click(screen.getByRole("menuitem", { name: "Renomear" }));
-		const field = await screen.findByRole("textbox", { name: "Nome" });
-		await userEvent.clear(field);
-		await userEvent.type(field, "950");
-		stub.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-
-		expect(await screen.findByRole("textbox", { name: "Nome" })).toHaveValue(
-			"950",
-		);
-		await userEvent.keyboard("{Escape}");
-		await waitFor(() => {
-			expect(
-				screen.queryByRole("textbox", { name: "Nome" }),
-			).not.toBeInTheDocument();
-		});
-		cleanup();
-		renderAt(path);
-		await screen.findByRole("button", { name: "Ações da unidade 902" });
-
-		expect(
-			screen.queryByRole("textbox", { name: "Nome" }),
-		).not.toBeInTheDocument();
-	});
-
-	test("does not reopen a restored duplicate after a reload once it is dismissed", async () => {
-		const towerA = tower("Torre A", [floor("1º andar", ["101", "102"])]);
-		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
-		const api = writableApi(obra, structureOf([towerA]), {
-			create: () => json({}, 401),
-		});
-		const stub = stubApi(signedIn, { api: api.handler });
-		const path = `/projects/${obra.id}/locations/${towerA.id}`;
-		renderAt(path);
-		await userEvent.click(
-			await screen.findByRole("button", { name: "Ações da torre" }),
-		);
-		await userEvent.click(
-			screen.getByRole("menuitem", { name: "Duplicar torre" }),
-		);
-		const field = await screen.findByRole("textbox", { name: "Nome" });
-		await userEvent.clear(field);
-		await userEvent.type(field, "Torre Z");
-		stub.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Duplicar" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-
-		expect(await screen.findByRole("textbox", { name: "Nome" })).toHaveValue(
-			"Torre Z",
-		);
-		await userEvent.keyboard("{Escape}");
-		await waitFor(() => {
-			expect(
-				screen.queryByRole("textbox", { name: "Nome" }),
-			).not.toBeInTheDocument();
-		});
-		cleanup();
-		renderAt(path);
-		await screen.findByRole("button", { name: "Ações da torre" });
-
-		expect(
-			screen.queryByRole("textbox", { name: "Nome" }),
-		).not.toBeInTheDocument();
-		expect(api.created).toHaveLength(1);
-	});
-
 	test("does not open the add form for an undone removal after signing back in", async () => {
 		const ninth = floor("9º andar", ["901", "902"]);
 		const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
@@ -870,7 +541,7 @@ describe("actions that must not come back", () => {
 		stub.setSession(null);
 		await userEvent.click(undo);
 		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
+		await signInAgain();
 
 		expect(
 			await screen.findByRole("button", { name: "Adicionar unidade" }),
@@ -915,7 +586,7 @@ describe("actions that must not come back", () => {
 			screen.getByRole("button", { name: "Entregar obra" }),
 		);
 		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
+		await signInAgain();
 		await screen.findByRole("heading", { level: 1, name: "Casa Moinhos" });
 
 		expect(
@@ -943,7 +614,7 @@ describe("actions that must not come back", () => {
 			screen.getByRole("menuitem", { name: "Mover para cima" }),
 		);
 		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
+		await signInAgain();
 		await screen.findByRole("button", { name: "Ações da unidade 902" });
 
 		expect(api.moved).toHaveLength(1);
@@ -990,7 +661,7 @@ describe("actions that must not come back", () => {
 			screen.getByRole("menuitem", { name: "Excluir tipologia" }),
 		);
 		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
+		await signInAgain();
 		await screen.findByText("Tipologia A");
 
 		expect(deletes).toEqual([tipologia.id]);
@@ -1037,7 +708,7 @@ describe("actions that must not come back", () => {
 			stub.setSession(null);
 			await userEvent.click(pintura);
 			await screen.findByLabelText("E-mail");
-			await signInAs("ana@horizonte.test");
+			await signInAgain();
 
 			expect(
 				await screen.findByRole("checkbox", { name: "Pintura" }),
@@ -1045,200 +716,4 @@ describe("actions that must not come back", () => {
 			expect(disciplines.writes).toHaveLength(1);
 		},
 	);
-});
-
-async function expireReservationFromDuplicate(
-	menuLabel: string,
-	menuItem: string,
-	dialogName: string,
-) {
-	const towerA = tower("Torre A", [floor("9º andar", ["901", "902"])]);
-	const floorA = towerA.floors[0];
-	const obra = {
-		...project(3, "admin"),
-		name: "Casa Moinhos",
-		units: { reserved: 2, used: 2 },
-	};
-	const api = writableApi(obra, structureOf([towerA]), { remaining: 0 });
-	let expired = false;
-	const expireOnce = (url: URL, init?: RequestInit) => {
-		if (
-			!expired ||
-			url.pathname !== `/api/projects/${obra.id}/units` ||
-			init?.method !== "PATCH"
-		) {
-			return undefined;
-		}
-		expired = false;
-		return json({}, 401);
-	};
-	const stub = stubApi(signedIn, { api: combine(expireOnce, api.handler) });
-	renderAt(`/projects/${obra.id}/locations/${floorA?.id}`);
-	await userEvent.click(await screen.findByRole("button", { name: menuLabel }));
-	await userEvent.click(screen.getByRole("menuitem", { name: menuItem }));
-	const duplicate = await screen.findByRole("dialog", { name: dialogName });
-	await userEvent.click(
-		await within(duplicate).findByRole("button", { name: "Alterar reserva" }),
-	);
-	const field = await screen.findByRole("textbox", {
-		name: "Unidades reservadas",
-	});
-	await userEvent.clear(field);
-	await userEvent.type(field, "5");
-	expired = true;
-	stub.setSession(null);
-	await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-	await screen.findByLabelText("E-mail");
-	await signInAs("ana@horizonte.test");
-}
-
-describe("restoring a reserva change", () => {
-	afterEach(() => {
-		localStorage.clear();
-		vi.unstubAllGlobals();
-		onlineManager.setOnline(true);
-	});
-
-	test("reopens it from the tower's add-area row, not from Duplicar, and returns focus to that row", async () => {
-		const towerA = tower("Torre A", [floor("9º andar", ["901", "902"])]);
-		const obra = {
-			...project(3, "admin"),
-			name: "Casa Moinhos",
-			units: { reserved: 2, used: 2 },
-		};
-		const api = writableApi(obra, structureOf([towerA, tower("Torre B")]), {
-			remaining: 0,
-		});
-		let expired = false;
-		const expireOnce = (url: URL, init?: RequestInit) => {
-			if (
-				!expired ||
-				url.pathname !== `/api/projects/${obra.id}/units` ||
-				init?.method !== "PATCH"
-			) {
-				return undefined;
-			}
-			expired = false;
-			return json({}, 401);
-		};
-		const stub = stubApi(signedIn, { api: combine(expireOnce, api.handler) });
-		renderAt(`/projects/${obra.id}/locations/${towerA.id}`);
-		await waitFor(() =>
-			expect(
-				screen.getByRole("button", { name: "Adicionar área comum" }),
-			).toHaveAttribute("aria-disabled", "true"),
-		);
-		await userEvent.click(
-			screen.getByRole("button", { name: "Alterar reserva" }),
-		);
-		const field = await screen.findByRole("textbox", {
-			name: "Unidades reservadas",
-		});
-		await userEvent.clear(field);
-		await userEvent.type(field, "5");
-		expired = true;
-		stub.setSession(null);
-		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-		await screen.findByLabelText("E-mail");
-		await signInAs("ana@horizonte.test");
-
-		const dialog = await screen.findByRole("dialog", {
-			name: "Alterar reserva",
-		});
-		expect(
-			screen.queryByRole("dialog", { name: "Duplicar a Torre A" }),
-		).not.toBeInTheDocument();
-		const restored = screen.getByRole("textbox", {
-			name: "Unidades reservadas",
-		});
-		expect(restored).toHaveValue("5");
-		await waitFor(() =>
-			expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled(),
-		);
-		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-
-		await waitFor(() => expect(dialog).not.toBeInTheDocument());
-		expect(
-			screen.queryByRole("dialog", { name: "Duplicar a Torre A" }),
-		).not.toBeInTheDocument();
-		await waitFor(() =>
-			expect(
-				screen.getByRole("button", { name: "Adicionar área comum" }),
-			).toHaveFocus(),
-		);
-	});
-
-	test("reopens it inside the floor's Duplicar on the floor page", async () => {
-		await expireReservationFromDuplicate(
-			"Ações do andar",
-			"Duplicar andar",
-			"Duplicar o 9º andar",
-		);
-
-		await screen.findByRole("dialog", { name: "Alterar reserva" });
-		expect(
-			screen.getByRole("textbox", { name: "Unidades reservadas" }),
-		).toHaveValue("5");
-		expect(
-			screen.getByRole("heading", {
-				name: "Duplicar o 9º andar",
-				hidden: true,
-			}),
-		).toBeInTheDocument();
-	});
-
-	test("shows the current reserve in another row's Alterar reserva once the restored one is cancelled", async () => {
-		await expireReservationFromDuplicate(
-			"Ações do andar",
-			"Duplicar andar",
-			"Duplicar o 9º andar",
-		);
-		await screen.findByRole("dialog", { name: "Alterar reserva" });
-		await userEvent.keyboard("{Escape}");
-		await waitFor(() =>
-			expect(
-				screen.queryByRole("dialog", { name: "Alterar reserva" }),
-			).not.toBeInTheDocument(),
-		);
-		await userEvent.keyboard("{Escape}");
-		await waitFor(() =>
-			expect(
-				screen.queryByRole("dialog", { name: "Duplicar o 9º andar" }),
-			).not.toBeInTheDocument(),
-		);
-		const [unitRowReservation] = screen.getAllByRole("button", {
-			name: "Alterar reserva",
-		});
-		if (!unitRowReservation) throw new Error("no Alterar reserva");
-		await userEvent.click(unitRowReservation);
-
-		expect(
-			await screen.findByRole("textbox", { name: "Unidades reservadas" }),
-		).toHaveValue("2");
-	});
-
-	test("reopens it inside the unit's Duplicar, not the floor's, on the floor page", async () => {
-		await expireReservationFromDuplicate(
-			"Ações da unidade 901",
-			"Duplicar unidade",
-			"Duplicar a unidade 901",
-		);
-
-		await screen.findByRole("dialog", { name: "Alterar reserva" });
-		expect(
-			screen.getByRole("textbox", { name: "Unidades reservadas" }),
-		).toHaveValue("5");
-		expect(
-			screen.getByRole("heading", {
-				name: "Duplicar a unidade 901",
-				hidden: true,
-			}),
-		).toBeInTheDocument();
-		expect(
-			screen.queryByRole("heading", {
-				name: "Duplicar o 9º andar",
-				hidden: true,
-			}),
-		).not.toBeInTheDocument();
-	});
 });
