@@ -89,6 +89,15 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await expect(tipologias.getByText("Studio")).toHaveCount(0);
 	await shot("deleted");
 
+	await menu("Tipologia A", "Editar cômodos");
+	await page.getByRole("button", { name: "Tirar Despensa" }).click();
+	await page.getByRole("button", { name: "Salvar" }).click();
+	await expect(page.getByText(`Tipologia A salva. ${plural(unitsA, "unidade atualizada", "unidades atualizadas")}.`)).toBeVisible();
+	await menu("Duplex Cobertura", "Renomear");
+	await page.getByRole("textbox", { name: "Nome" }).fill("Duplex");
+	await page.keyboard.press("Enter");
+	await expect(tipologias.getByText("Duplex", { exact: true })).toBeVisible();
+
 	await page.goto(`/projects/${await projectId("Galpão Logístico Sul")}/configuration`);
 	await expect(section("Estrutura").getByText("A obra ainda não tem estrutura.")).toBeVisible();
 	await expect(section("Estrutura").getByRole("link", { name: "Montar estrutura" })).toBeVisible();
