@@ -13,7 +13,7 @@ export const subtreeRoomsSchema = z.object({
 				}),
 				droppedRooms: z.array(droppedRoomSchema).meta({
 					description:
-						"The rooms of the typology the unit took out. Empty for a tower, a floor, a common area and a unit without a typology.",
+						"The rooms of the typology the location took out. Empty for a tower, a floor, and a unit or a common area without a typology.",
 				}),
 				disciplines: z.array(newLocationDisciplineSchema).meta({
 					description:

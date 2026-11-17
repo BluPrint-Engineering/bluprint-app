@@ -2,6 +2,7 @@ import { organizations } from "./fixture";
 import {
 	type SeedStructure,
 	type SeedUnitRef,
+	commonAreasOf,
 	countUnits,
 	locationRefKey,
 	referableLocations,
@@ -200,8 +201,79 @@ describe("the seeded typologies", () => {
 			),
 		).toBe(true);
 		expect(
-			structure.typologies?.filter((type) => !used.has(type.name)),
+			structure.typologies?.filter(
+				(type) =>
+					(type.locationType ?? "unit") === "unit" && !used.has(type.name),
+			),
 		).toHaveLength(1);
+	});
+
+	test("Residencial Jardins has Hall padrão on every floor Hall, Salão de festas on the Salão de festas, and Corredor on none", () => {
+		const structure = jardins();
+		const followed = commonAreasOf(structure).map((area) => [
+			area.name,
+			structure.commonAreaTypologyOf?.(area),
+		]);
+
+		expect(
+			structure.typologies?.filter(
+				(type) => type.locationType === "common_area",
+			),
+		).toEqual([
+			{
+				name: "Hall padrão",
+				locationType: "common_area",
+				rooms: ["Circulação", "Escada", "Elevadores"],
+			},
+			{
+				name: "Salão de festas",
+				locationType: "common_area",
+				rooms: ["Cozinha", "Banheiro"],
+			},
+			{ name: "Corredor", locationType: "common_area", rooms: ["Circulação"] },
+		]);
+		expect(new Set(followed.map(([name, type]) => `${name}: ${type}`))).toEqual(
+			new Set([
+				"Guarita: undefined",
+				"Salão de festas: Salão de festas",
+				"Garagem: undefined",
+				"Hall de entrada: undefined",
+				"Hall: Hall padrão",
+				"Terraço: undefined",
+			]),
+		);
+	});
+
+	test("Residencial Jardins has a Hall with a room added, one dropped and one renamed", () => {
+		expect(jardins().commonAreaChanges).toEqual([
+			{
+				area: { tower: "Torre A", floor: "2º andar", name: "Hall" },
+				addedRooms: ["Lixeira"],
+				droppedRooms: ["Elevadores"],
+				renamedRooms: { Circulação: "Corredor" },
+			},
+		]);
+	});
+
+	test("every typology is followed only by locations of its own kind", () => {
+		for (const [, structure] of seededStructures()) {
+			const kindOf = new Map(
+				structure.typologies?.map((type) => [
+					type.name,
+					type.locationType ?? "unit",
+				]),
+			);
+			const unitKinds = unitsOf(structure).map((unit) =>
+				kindOf.get(structure.typologyOf?.(unit) ?? ""),
+			);
+			const areaKinds = commonAreasOf(structure).flatMap((area) => {
+				const name = structure.commonAreaTypologyOf?.(area);
+				return name === undefined ? [] : [kindOf.get(name)];
+			});
+
+			expect(unitKinds.filter((kind) => kind === "common_area")).toEqual([]);
+			expect(areaKinds.filter((kind) => kind !== "common_area")).toEqual([]);
+		}
 	});
 
 	test("Residencial Jardins applies A and B to odd and even stacks of the same floor", () => {
@@ -257,10 +329,27 @@ describe("the seeded typologies", () => {
 		}
 	});
 
-	test("Residencial Jardins gives the Salão de festas rooms", () => {
-		expect(
-			jardins().commonAreaRooms?.["Salão de festas"]?.length,
-		).toBeGreaterThan(0);
+	test("every common-area change names an area that follows a typology, and the rooms it drops or renames belong to it", () => {
+		for (const [, structure] of seededStructures()) {
+			for (const change of structure.commonAreaChanges ?? []) {
+				const area = commonAreasOf(structure).find(
+					(candidate) =>
+						locationRefKey(candidate) === locationRefKey(change.area),
+				);
+				const type = structure.typologies?.find(
+					(candidate) =>
+						candidate.name === structure.commonAreaTypologyOf?.(change.area),
+				);
+
+				expect(area).toBeDefined();
+				for (const name of [
+					...(change.droppedRooms ?? []),
+					...Object.keys(change.renamedRooms ?? {}),
+				]) {
+					expect(type?.rooms).toContain(name);
+				}
+			}
+		}
 	});
 });
 

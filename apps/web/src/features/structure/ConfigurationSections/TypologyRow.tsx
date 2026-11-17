@@ -10,6 +10,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { plural } from "../plural";
+import { deleteBlockedText, followersText } from "./typologySaveText";
 
 export function TypologyRow({
 	typology,
@@ -26,7 +27,7 @@ export function TypologyRow({
 	onDelete: () => void;
 	triggerRef: Ref<HTMLButtonElement>;
 }) {
-	const inUse = typology.unitCount > 0;
+	const inUse = typology.locationCount > 0;
 
 	return (
 		<div className="flex min-h-14 items-center gap-(--space-2) py-(--space-2) pr-(--space-2) pl-(--space-4)">
@@ -36,7 +37,7 @@ export function TypologyRow({
 				</span>
 				<span className="text-sm text-muted-foreground">
 					{plural(typology.rooms.length, "cômodo", "cômodos")} ·{" "}
-					{plural(typology.unitCount, "unidade", "unidades")}
+					{followersText(typology.locationType, typology.locationCount)}
 				</span>
 			</span>
 			{editable && (
@@ -68,7 +69,9 @@ export function TypologyRow({
 							onSelect={onDelete}
 						>
 							<Trash2 aria-hidden="true" />
-							{inUse ? "Excluir (só sem unidades)" : "Excluir tipologia"}
+							{inUse
+								? deleteBlockedText(typology.locationType)
+								: "Excluir tipologia"}
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>

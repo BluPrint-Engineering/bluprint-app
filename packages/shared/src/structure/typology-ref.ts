@@ -31,9 +31,9 @@ export const typologyRefSchema = z.object({
 	}),
 });
 
-export const unitChangesSchema = z.int().nonnegative().meta({
+export const locationChangesSchema = z.int().nonnegative().meta({
 	description:
-		"How many changes the unit has against its typology, counted from what is recorded: rooms only this unit has, rooms of the type it dropped and rooms of the type it renamed. Always 0 for a unit without a typology.",
+		"How many changes the location has against its typology, counted from what is recorded: rooms only this location has, rooms of the type it dropped and rooms of the type it renamed. Always 0 for a location without a typology.",
 });
 
 export type TypologyRef = z.infer<typeof typologyRefSchema>;

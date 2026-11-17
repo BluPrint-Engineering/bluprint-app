@@ -34,6 +34,8 @@ export default async function structureConfiguration({ page, shot, expect, query
 		(await query("SELECT count(*)::int AS n FROM typology_room r JOIN typology t ON t.id = r.typology_id WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0].n;
 	const unitsA = await unitsOf("Tipologia A");
 	await expect(tipologias.getByText(`${plural(await roomsOf("Tipologia A"), "cômodo", "cômodos")} · ${plural(unitsA, "unidade", "unidades")}`)).toBeVisible();
+	await expect(tipologias.getByText(`3 cômodos · ${plural(await unitsOf("Hall padrão"), "área comum", "áreas comuns")}`)).toBeVisible();
+	await expect(tipologias.getByText("1 cômodo · 0 áreas comuns")).toBeVisible();
 	await page.getByRole("button", { name: "Ações da Tipologia A" }).click();
 	await expect(page.getByRole("menuitem", { name: "Excluir (só sem unidades)" })).toHaveAttribute("aria-disabled", "true");
 	await shot("menu-in-use");
@@ -86,6 +88,15 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await expect(page.getByText("Studio excluída.")).toBeVisible();
 	await expect(tipologias.getByText("Studio")).toHaveCount(0);
 	await shot("deleted");
+
+	await menu("Tipologia A", "Editar cômodos");
+	await page.getByRole("button", { name: "Tirar Despensa" }).click();
+	await page.getByRole("button", { name: "Salvar" }).click();
+	await expect(page.getByText(`Tipologia A salva. ${plural(unitsA, "unidade atualizada", "unidades atualizadas")}.`)).toBeVisible();
+	await menu("Duplex Cobertura", "Renomear");
+	await page.getByRole("textbox", { name: "Nome" }).fill("Duplex");
+	await page.keyboard.press("Enter");
+	await expect(tipologias.getByText("Duplex", { exact: true })).toBeVisible();
 
 	await page.goto(`/projects/${await projectId("Galpão Logístico Sul")}/configuration`);
 	await expect(section("Estrutura").getByText("A obra ainda não tem estrutura.")).toBeVisible();

@@ -109,8 +109,8 @@ async function world(
 	const types = await db
 		.insert(typology)
 		.values([
-			{ projectId, name: "Tipologia A" },
-			{ projectId, name: "Tipologia B" },
+			{ projectId, name: "Tipologia A", locationType: "unit" },
+			{ projectId, name: "Tipologia B", locationType: "unit" },
 		])
 		.returning({ id: typology.id });
 	const [typeA, typeB] = types.map((type) => type.id) as [string, string];
@@ -692,11 +692,11 @@ describe("DELETE /api/projects/:id/locations/:unitId/dropped-rooms/:typologyRoom
 		expect((await detailOf(w, w.unitA1)).droppedRooms).toHaveLength(1);
 	});
 
-	it("answers 400 LOCATION_KIND_INVALID for a location that is not a unit", async () => {
+	it("answers 400 LOCATION_KIND_INVALID for a floor", async () => {
 		const w = await world();
 
 		const res = await manager.agent.delete(
-			path(w, `locations/${w.area}/dropped-rooms/${w.typeARooms.sacada}`),
+			path(w, `locations/${w.floor}/dropped-rooms/${w.typeARooms.sacada}`),
 		);
 
 		expect(res.status).toBe(400);
@@ -818,11 +818,11 @@ describe("PUT /api/projects/:id/locations/:unitId/typology", () => {
 		]);
 	});
 
-	it("answers 400 LOCATION_KIND_INVALID for a location that is not a unit", async () => {
+	it("answers 400 LOCATION_KIND_INVALID for a floor", async () => {
 		const w = await world();
 
 		const res = await manager.agent
-			.put(path(w, `locations/${w.area}/typology`))
+			.put(path(w, `locations/${w.floor}/typology`))
 			.send({ typologyId: w.typeA });
 
 		expect(res.status).toBe(400);
@@ -912,11 +912,11 @@ describe("POST /api/projects/:id/locations/:unitId/typology/reset", () => {
 		]);
 	});
 
-	it("answers 400 LOCATION_KIND_INVALID for a location that is not a unit", async () => {
+	it("answers 400 LOCATION_KIND_INVALID for a floor", async () => {
 		const w = await world();
 
 		const res = await manager.agent.post(
-			path(w, `locations/${w.area}/typology/reset`),
+			path(w, `locations/${w.floor}/typology/reset`),
 		);
 
 		expect(res.status).toBe(400);

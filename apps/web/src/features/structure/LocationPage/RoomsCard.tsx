@@ -36,6 +36,7 @@ import {
 } from "../api";
 import { useFocusOnClose } from "../components/useAdding";
 import { plural } from "../plural";
+import { holderText } from "./holderText";
 import { RenameRoomDialog } from "./RenameRoomDialog";
 import { type RoomHolder, roomNameError, roomNameTakenText } from "./roomNames";
 
@@ -259,6 +260,7 @@ export function RoomsCard({
 }) {
 	const { rooms, droppedRooms, typology } = location;
 	const holder: RoomHolder = location.type === "unit" ? "unit" : "common_area";
+	const text = holderText(holder);
 	const restoredRename = useSessionDraft("rename-room", (variables) => {
 		if (typeof variables !== "object" || variables === null) return undefined;
 		if (!("roomId" in variables) || typeof variables.roomId !== "string") {
@@ -319,7 +321,7 @@ export function RoomsCard({
 							name={room.name}
 							badge={
 								typology && room.typologyRoomId === null
-									? "Só desta unidade"
+									? text.ownRoomBadge
 									: undefined
 							}
 							action={
@@ -329,7 +331,7 @@ export function RoomsCard({
 										removeLabel={
 											room.typologyRoomId === null
 												? "Remover cômodo"
-												: "Remover desta unidade"
+												: text.removeTypologyRoom
 										}
 										onRename={() => setRenaming(room)}
 										triggerRef={(trigger) => {
@@ -354,9 +356,9 @@ export function RoomsCard({
 			{typology && droppedRooms.length > 0 && (
 				<div className="grid gap-(--space-2)">
 					<h3 className="text-sm font-semibold text-muted-foreground">
-						Tirados desta unidade
+						{text.droppedRooms}
 					</h3>
-					<RoomList label="Tirados desta unidade">
+					<RoomList label={text.droppedRooms}>
 						{droppedRooms.map((dropped) => (
 							<RoomRow
 								key={dropped.typologyRoomId}

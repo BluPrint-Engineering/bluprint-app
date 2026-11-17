@@ -107,20 +107,22 @@ const TYPOLOGIES: TypologyList = {
 		{
 			id: nth(unit903.typology ? [unit903.typology] : [], 0).id,
 			name: "Tipologia A",
+			locationType: "unit",
 			rooms: [
 				{ id: sala.typologyRoomId ?? "", name: "Sala" },
 				{ id: cozinha.typologyRoomId ?? "", name: "Cozinha" },
 				{ id: sacada.typologyRoomId ?? "", name: "Sacada" },
 			],
-			unitCount: 2,
-			changedUnitCount: 0,
+			locationCount: 2,
+			changedLocationCount: 0,
 		},
 		{
 			id: "0190b000-0000-7000-8000-00000000f001",
 			name: "Tipologia B",
+			locationType: "unit",
 			rooms: [{ id: "0190b000-0000-7000-8000-00000000f002", name: "Suíte" }],
-			unitCount: 1,
-			changedUnitCount: 0,
+			locationCount: 1,
+			changedLocationCount: 0,
 		},
 	],
 };

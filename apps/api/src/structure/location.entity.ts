@@ -1,11 +1,9 @@
-import { locationTypes } from "@bluprint/shared";
 import { sql } from "drizzle-orm";
 import {
 	check,
 	foreignKey,
 	index,
 	integer,
-	pgEnum,
 	pgTable,
 	text,
 	unique,
@@ -14,9 +12,10 @@ import {
 } from "drizzle-orm/pg-core";
 import { createdAt, uuidV7PrimaryKey } from "../db/columns";
 import { project } from "../projects/project.entity";
+import { locationType } from "./location-type.enum";
 import { typology } from "./typology.entity";
 
-export const locationType = pgEnum("location_type", locationTypes);
+export { locationType };
 
 export const location = pgTable(
 	"location",
@@ -44,8 +43,12 @@ export const location = pgTable(
 			}).onDelete("cascade"),
 			foreignKey({
 				name: "location_typology_fk",
-				columns: [table.typologyId, table.projectId],
-				foreignColumns: [typology.id, typology.projectId],
+				columns: [table.typologyId, table.projectId, table.type],
+				foreignColumns: [
+					typology.id,
+					typology.projectId,
+					typology.locationType,
+				],
 			}),
 			index("location_project_id_idx").on(table.projectId),
 			index("location_parent_id_idx").on(table.parentId),
@@ -61,7 +64,7 @@ export const location = pgTable(
 			),
 			check(
 				"location_typology_on_unit",
-				sql`${table.typologyId} is null or ${table.type} = 'unit'`,
+				sql`${table.typologyId} is null or ${table.type} in ('unit', 'common_area')`,
 			),
 			check("location_position_non_negative", sql`${table.position} >= 0`),
 			check(

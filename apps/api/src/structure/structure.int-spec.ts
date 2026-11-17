@@ -227,9 +227,9 @@ beforeAll(async () => {
 	const types = await db
 		.insert(typology)
 		.values([
-			{ projectId, name: "Tipologia A" },
-			{ projectId, name: "Tipologia B" },
-			{ projectId: otherProjectId, name: "Tipologia A" },
+			{ projectId, name: "Tipologia A", locationType: "unit" },
+			{ projectId, name: "Tipologia B", locationType: "unit" },
+			{ projectId: otherProjectId, name: "Tipologia A", locationType: "unit" },
 		])
 		.returning({ id: typology.id });
 	typeA = types[0]!.id;
@@ -346,7 +346,9 @@ describe("GET /api/projects/:id/structure", () => {
 							id: ground,
 							name: "Térreo",
 							units: [],
-							commonAreas: [{ id: anyId, name: "Hall de entrada" }],
+							commonAreas: [
+								{ id: anyId, name: "Hall de entrada", typology: null },
+							],
 						},
 						{
 							id: ninth,
@@ -365,7 +367,7 @@ describe("GET /api/projects/:id/structure", () => {
 									changes: 0,
 								},
 							],
-							commonAreas: [{ id: hall, name: "Hall" }],
+							commonAreas: [{ id: hall, name: "Hall", typology: null }],
 						},
 						{
 							id: anyId,
@@ -376,11 +378,11 @@ describe("GET /api/projects/:id/structure", () => {
 							commonAreas: [],
 						},
 					],
-					commonAreas: [{ id: salao, name: "Salão de festas" }],
+					commonAreas: [{ id: salao, name: "Salão de festas", typology: null }],
 				},
 				{ id: towerB, name: "Torre B", floors: [], commonAreas: [] },
 			],
-			commonAreas: [{ id: guarita, name: "Guarita" }],
+			commonAreas: [{ id: guarita, name: "Guarita", typology: null }],
 			counts: { towers: 2, floors: 3, units: 3, commonAreas: 4 },
 		});
 	});
@@ -615,23 +617,25 @@ describe("GET /api/projects/:id/typologies", () => {
 				{
 					id: typeA,
 					name: "Tipologia A",
+					locationType: "unit",
 					rooms: [
 						{ id: anyId, name: "Sala" },
 						{ id: anyId, name: "Cozinha" },
 						{ id: anyId, name: "Sacada" },
 					],
-					unitCount: 2,
-					changedUnitCount: 1,
+					locationCount: 2,
+					changedLocationCount: 1,
 				},
 				{
 					id: typeB,
 					name: "Tipologia B",
+					locationType: "unit",
 					rooms: [
 						{ id: anyId, name: "Sala" },
 						{ id: anyId, name: "Suíte" },
 					],
-					unitCount: 0,
-					changedUnitCount: 0,
+					locationCount: 0,
+					changedLocationCount: 0,
 				},
 			],
 		});
@@ -645,9 +649,10 @@ describe("GET /api/projects/:id/typologies", () => {
 			{
 				id: otherProjectType,
 				name: "Tipologia A",
+				locationType: "unit",
 				rooms: [{ id: anyId, name: "Sala" }],
-				unitCount: 0,
-				changedUnitCount: 0,
+				locationCount: 0,
+				changedLocationCount: 0,
 			},
 		]);
 	});

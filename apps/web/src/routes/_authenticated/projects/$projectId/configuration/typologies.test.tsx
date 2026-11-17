@@ -36,10 +36,10 @@ const LOCKED = "A obra foi entregue: a estrutura não pode mais ser alterada.";
 const tipologiaA = typologyOf(
 	"Tipologia A",
 	["Sala", "Cozinha", "Sacada", "Quarto", "Banheiro", "Suíte", "Despensa"],
-	{ units: 44, changed: 1 },
+	{ locations: 44, changed: 1 },
 );
 const tipologiaB = typologyOf("Tipologia B", ["Sala", "Quarto"], {
-	units: 1,
+	locations: 1,
 	changed: 0,
 });
 const tipologiaC = typologyOf("Tipologia C", ["Sala"]);
@@ -134,6 +134,43 @@ describe("Tipologias on the configuration (C1)", () => {
 		expect(card().getByText("1 cômodo · 0 unidades")).toBeInTheDocument();
 		expect(
 			card().getByRole("button", { name: "Nova tipologia" }),
+		).toBeInTheDocument();
+	});
+
+	test("counts common areas, not units, on a common-area tipologia", async () => {
+		const hallPadrao = typologyOf(
+			"Hall padrão",
+			["Circulação", "Escada", "Elevadores"],
+			{ locationType: "common_area", locations: 12, changed: 1 },
+		);
+		const corredor = typologyOf("Corredor", ["Circulação"], {
+			locationType: "common_area",
+			locations: 1,
+		});
+		const { handler } = typologiesApi({
+			list: { typologies: [tipologiaA, hallPadrao, corredor] },
+		});
+		await openConfiguration(handler);
+
+		expect(card().getByText("7 cômodos · 44 unidades")).toBeInTheDocument();
+		expect(card().getByText("3 cômodos · 12 áreas comuns")).toBeInTheDocument();
+		expect(card().getByText("1 cômodo · 1 área comum")).toBeInTheDocument();
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ações da Hall padrão" }),
+		);
+		expect(
+			await screen.findByRole("menuitem", {
+				name: "Excluir (só sem áreas comuns)",
+			}),
+		).toHaveAttribute("aria-disabled", "true");
+		await userEvent.click(
+			screen.getByRole("menuitem", { name: "Editar cômodos" }),
+		);
+		expect(
+			await screen.findByText(
+				"Salvar muda as 12 áreas comuns da Hall padrão. 1 área comum com alterações mantém o que foi mudado nela.",
+			),
 		).toBeInTheDocument();
 	});
 
@@ -250,7 +287,7 @@ describe("editing a tipologia in place (C2)", () => {
 						...tipologiaA,
 						rooms: [...tipologiaA.rooms, { id: "x", name: "Lavanderia" }],
 					},
-					updatedUnitCount: 44,
+					updatedLocationCount: 44,
 				}),
 		});
 		await openConfiguration(handler);
@@ -279,7 +316,7 @@ describe("editing a tipologia in place (C2)", () => {
 
 	test("toasts how many units were updated, and closes the row", async () => {
 		const { handler } = typologiesApi({
-			answer: () => json({ typology: tipologiaA, updatedUnitCount: 44 }),
+			answer: () => json({ typology: tipologiaA, updatedLocationCount: 44 }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -302,7 +339,7 @@ describe("editing a tipologia in place (C2)", () => {
 
 	test("takes a room out of the list that is sent", async () => {
 		const { handler, writes } = typologiesApi({
-			answer: () => json({ typology: tipologiaA, updatedUnitCount: 43 }),
+			answer: () => json({ typology: tipologiaA, updatedLocationCount: 43 }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -325,7 +362,7 @@ describe("editing a tipologia in place (C2)", () => {
 
 	test("brings a room back with the id it had when the same name is added again", async () => {
 		const { handler, writes } = typologiesApi({
-			answer: () => json({ typology: tipologiaA, updatedUnitCount: 0 }),
+			answer: () => json({ typology: tipologiaA, updatedLocationCount: 0 }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
@@ -460,7 +497,7 @@ describe("renaming a tipologia", () => {
 			answer: () =>
 				json({
 					typology: { ...tipologiaB, name: "Tipologia Z" },
-					updatedUnitCount: 0,
+					updatedLocationCount: 0,
 				}),
 		});
 		await openConfiguration(handler);

@@ -93,7 +93,7 @@ export class StructureService {
 			projectId,
 			await this.placeAmongSiblings(projectId, inProject, fresh),
 		);
-		await this.typologies.giveUnitsTheirRooms(
+		await this.typologies.giveLocationsTheirRooms(
 			fresh.flatMap(({ id, typologyId, rooms }) =>
 				typologyId === undefined || rooms !== undefined
 					? []
@@ -255,7 +255,7 @@ export class StructureService {
 
 		const [rows, changes] = await Promise.all([
 			this.locations.listByProject(projectId),
-			this.locations.countUnitChanges(projectId),
+			this.locations.countLocationChanges(projectId),
 		]);
 
 		return buildStructure(rows, changes);
@@ -307,7 +307,7 @@ export class StructureService {
 				holdsRooms ? this.locations.listRooms(found.id) : [],
 				found.typology ? this.locations.listDroppedRooms(found.id) : [],
 				found.typology
-					? this.locations.countUnitChanges(projectId, found.id)
+					? this.locations.countLocationChanges(projectId, found.id)
 					: new Map<string, number>(),
 				this.locationDisciplines.resolve(projectId, found),
 			]);

@@ -118,7 +118,8 @@ export default async function structure({ page, shot, expect, query }) {
 
 	await page.goto(`/projects/${jardins}/locations/${await locationId("Residencial Jardins", "common_area", "Salão de festas")}`);
 	await expect(page.getByRole("heading", { level: 2, name: "Cômodos" })).toBeVisible();
-	await expect(page.getByRole("heading", { level: 2, name: "Tipologia" })).toHaveCount(0);
+	await expect(page.getByRole("heading", { level: 2, name: "Tipologia" })).toBeVisible();
+	await expect(page.getByText("Os cômodos acompanham a tipologia Salão de festas. O que foi mudado só nesta área comum continua assim quando a tipologia muda.")).toBeVisible();
 	await expect(page.getByRole("list", { name: "Cômodos" }).getByRole("listitem")).toHaveCount(3);
 	await shot("common-area-rooms");
 

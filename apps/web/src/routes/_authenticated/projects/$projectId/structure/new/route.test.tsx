@@ -1066,6 +1066,7 @@ describe("structure wizard", () => {
 				{
 					id: expect.stringMatching(UUID),
 					name: "Tipologia A",
+					locationType: "unit",
 					rooms: [
 						{ id: expect.stringMatching(UUID), name: "Sala" },
 						{ id: expect.stringMatching(UUID), name: "Cozinha" },

@@ -89,6 +89,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	await page.getByRole("button", { name: "Desfazer" }).click();
 	await expect(menu("Ações da área comum Hall")).toBeVisible();
 	await expect.poll(() => exceptions(hall)).toEqual(["Pintura:false"]);
+	expect(await query("SELECT t.name AS typology, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id AND r.typology_room_id IS NOT NULL) AS rooms FROM location l JOIN typology t ON t.id = l.typology_id WHERE l.id = $1", [hall])).toEqual([{ typology: "Hall padrão", rooms: 3 }]);
 
 	await menu("Ações do andar").click();
 	await items(["Renomear andar", "Mover para cima", "Mover para baixo", "Duplicar andar", "Remover andar"]);

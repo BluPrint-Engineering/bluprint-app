@@ -91,12 +91,12 @@ export class RoomsController {
 
 	@Delete("locations/:locationId/dropped-rooms/:typologyRoomId")
 	@ApiOperation({
-		summary: "Give back a room taken out of a unit",
-		description: `Brings back a room of the typology that this unit took out, with the name and place it has in the typology. A room that the unit did not take out answers \`404 ROOM_NOT_FOUND\`; a name already in use in the unit, \`409 ROOM_NAME_TAKEN\`. Only a unit takes this: \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
+		summary: "Give back a room taken out of a location",
+		description: `Brings back a room of the typology that this unit or common area took out, with the name and place it has in the typology. A room that the location did not take out answers \`404 ROOM_NOT_FOUND\`; a name already in use in the location, \`409 ROOM_NAME_TAKEN\`. A tower or a floor answers \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
-		description: "The unit with its rooms as they are now.",
+		description: "The location with its rooms as they are now.",
 		type: LocationDetailDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)
@@ -114,12 +114,12 @@ export class RoomsController {
 
 	@Put("locations/:locationId/typology")
 	@ApiOperation({
-		summary: "Change a unit's typology",
-		description: `Makes the unit follow another typology of the project: the unit starts over on the rooms of the new one, and the changes it had against the old one are gone. A \`null\` typology leaves the unit without one and keeps its current rooms as rooms only it has. Sending the typology the unit already has changes nothing. A typology that does not exist in the project answers \`400 TYPOLOGY_NOT_FOUND\`; a location that is not a unit, \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
+		summary: "Change the typology of a unit or a common area",
+		description: `Makes the unit or common area follow another typology of the project, of its own kind: the location starts over on the rooms of the new one, and the changes it had against the old one are gone. A \`null\` typology leaves the location without one and keeps its current rooms as rooms only it has. Sending the typology the location already has changes nothing. A typology that does not exist in the project answers \`400 TYPOLOGY_NOT_FOUND\`; a typology of another kind, a unit typology for a common area or the reverse, \`400 TYPOLOGY_KIND_MISMATCH\` (ADR 0080); a tower or a floor, \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
-		description: "The unit with its typology and rooms as they are now.",
+		description: "The location with its typology and rooms as they are now.",
 		type: LocationDetailDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)
@@ -139,12 +139,12 @@ export class RoomsController {
 	@Post("locations/:locationId/typology/reset")
 	@HttpCode(200)
 	@ApiOperation({
-		summary: "Return a unit to its typology",
-		description: `Undoes the three kinds of change a unit has against its typology: the rooms only it has go, the rooms it took out come back and the rooms it renamed take the name of the typology again. A unit without a typology has nothing to return to and stays as it is. A location that is not a unit answers \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
+		summary: "Return a unit or a common area to its typology",
+		description: `Undoes the three kinds of change a unit or a common area has against its typology: the rooms only it has go, the rooms it took out come back and the rooms it renamed take the name of the typology again. A location without a typology has nothing to return to and stays as it is. A tower or a floor answers \`400 LOCATION_KIND_INVALID\`. ${WRITERS}`,
 	})
 	@ZodResponse({
 		status: 200,
-		description: "The unit with its rooms as they are now.",
+		description: "The location with its rooms as they are now.",
 		type: LocationDetailDto,
 	})
 	@ApiErrorResponses(400, 401, 404, 409)

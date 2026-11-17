@@ -951,7 +951,7 @@ describe("common area page", () => {
 		vi.unstubAllGlobals();
 	});
 
-	test("shows only the rooms card, with no typology (U5)", async () => {
+	test("shows its rooms as its own when it follows no typology (U5)", async () => {
 		stubApi(signedIn, {
 			api: api(typedStructure, OBRA, {
 				[salao.id]: { rooms: [room("Cozinha"), room("Banheiro")] },
@@ -964,15 +964,15 @@ describe("common area page", () => {
 			await screen.findByRole("heading", { level: 1, name: "Salão de festas" }),
 		).toBeInTheDocument();
 		expect(
-			screen.queryByRole("heading", { level: 2, name: "Tipologia" }),
-		).not.toBeInTheDocument();
+			within(sectionOf("Tipologia")).getByText("Sem tipologia"),
+		).toBeInTheDocument();
 		expect(
 			within(sectionOf("Cômodos"))
 				.getAllByRole("listitem")
 				.map((item) => item.textContent),
 		).toEqual(["Cozinha", "Banheiro", "Adicionar cômodo"]);
 		expect(screen.getByText("2 cômodos")).toBeInTheDocument();
-		expect(screen.queryByText("Só desta unidade")).not.toBeInTheDocument();
+		expect(screen.queryByText("Só desta área comum")).not.toBeInTheDocument();
 	});
 
 	test("offers only the add row to a common area without rooms yet", async () => {

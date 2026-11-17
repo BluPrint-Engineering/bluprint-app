@@ -60,9 +60,9 @@ export const updateTypologySchema = z
 
 export const updateTypologyResultSchema = z.object({
 	typology: typologySchema,
-	updatedUnitCount: z.int().nonnegative().meta({
+	updatedLocationCount: z.int().nonnegative().meta({
 		description:
-			"How many units of the typology changed: the ones that got a new room, lost one, took a new room name or now list their rooms in another order. A unit that renamed a room keeps its name, and a unit that has a room only it has keeps it. 0 when only the name of the typology changed.",
+			"How many locations of the typology changed: the ones that got a new room, lost one, took a new room name or now list their rooms in another order. A location that renamed a room keeps its name, and a location that has a room only it has keeps it. 0 when only the name of the typology changed.",
 	}),
 });
 

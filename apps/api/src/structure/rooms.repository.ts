@@ -139,25 +139,28 @@ export class RoomsRepository {
 			);
 	}
 
-	async setTypology(unitId: string, typologyId: string | null): Promise<void> {
+	async setTypology(
+		locationId: string,
+		typologyId: string | null,
+	): Promise<void> {
 		await this.txHost.tx
 			.update(location)
 			.set({ typologyId })
-			.where(eq(location.id, unitId));
+			.where(eq(location.id, locationId));
 	}
 
-	async clear(unitId: string): Promise<void> {
-		await this.txHost.tx.delete(room).where(eq(room.locationId, unitId));
+	async clear(locationId: string): Promise<void> {
+		await this.txHost.tx.delete(room).where(eq(room.locationId, locationId));
 		await this.txHost.tx
 			.delete(droppedRoom)
-			.where(eq(droppedRoom.locationId, unitId));
+			.where(eq(droppedRoom.locationId, locationId));
 	}
 
-	async keepAsOwn(unitId: string, orderedIds: string[]): Promise<void> {
+	async keepAsOwn(locationId: string, orderedIds: string[]): Promise<void> {
 		await this.txHost.tx
 			.update(room)
 			.set({ typologyRoomId: null, renamed: false })
-			.where(eq(room.locationId, unitId));
+			.where(eq(room.locationId, locationId));
 		for (const [position, id] of orderedIds.entries()) {
 			await this.txHost.tx
 				.update(room)
@@ -166,19 +169,22 @@ export class RoomsRepository {
 		}
 		await this.txHost.tx
 			.delete(droppedRoom)
-			.where(eq(droppedRoom.locationId, unitId));
+			.where(eq(droppedRoom.locationId, locationId));
 	}
 
-	async restoreFromTypology(unitId: string): Promise<void> {
+	async restoreFromTypology(locationId: string): Promise<void> {
 		await this.txHost.tx
 			.delete(room)
 			.where(
-				and(eq(room.locationId, unitId), sql`${room.typologyRoomId} is null`),
+				and(
+					eq(room.locationId, locationId),
+					sql`${room.typologyRoomId} is null`,
+				),
 			);
 		await this.txHost.tx
 			.update(room)
 			.set({ name: sql`${room.id}::text` })
-			.where(and(eq(room.locationId, unitId), eq(room.renamed, true)));
+			.where(and(eq(room.locationId, locationId), eq(room.renamed, true)));
 		await this.txHost.tx
 			.update(room)
 			.set({
@@ -189,7 +195,7 @@ export class RoomsRepository {
 			.from(typologyRoom)
 			.where(
 				and(
-					eq(room.locationId, unitId),
+					eq(room.locationId, locationId),
 					eq(room.typologyRoomId, typologyRoom.id),
 					eq(room.renamed, true),
 				),
@@ -199,10 +205,10 @@ export class RoomsRepository {
 			select ${droppedRoom.locationId}, ${typologyRoom.name}, ${typologyRoom.position}, ${typologyRoom.id}
 			from ${droppedRoom}
 			join ${typologyRoom} on ${typologyRoom.id} = ${droppedRoom.typologyRoomId}
-			where ${droppedRoom.locationId} = ${unitId}
+			where ${droppedRoom.locationId} = ${locationId}
 		`);
 		await this.txHost.tx
 			.delete(droppedRoom)
-			.where(eq(droppedRoom.locationId, unitId));
+			.where(eq(droppedRoom.locationId, locationId));
 	}
 }

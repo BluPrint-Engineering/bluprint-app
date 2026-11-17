@@ -216,6 +216,7 @@ export function buildPlan(
 			.map(({ key, rooms }) => ({
 				id: typologyIdOf(key),
 				name: typologyNames.get(key) ?? "",
+				locationType: "unit" as const,
 				rooms: rooms.map((name, at) => ({
 					id: idFor(`${typologyIdKey(key)}:room:${at}`),
 					name,

@@ -98,8 +98,8 @@ export function TypologyEditor({
 		update.mutate(
 			{ typologyId: typology.id, rooms },
 			{
-				onSuccess: ({ updatedUnitCount }) => {
-					toast.success(savedText(typology.name, updatedUnitCount));
+				onSuccess: ({ updatedLocationCount }) => {
+					toast.success(savedText(typology, updatedLocationCount));
 					onClose();
 				},
 			},

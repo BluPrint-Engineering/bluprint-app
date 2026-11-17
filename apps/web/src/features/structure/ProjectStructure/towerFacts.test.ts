@@ -22,7 +22,11 @@ function floor(
 				changes: 0,
 			};
 		}),
-		commonAreas: commonAreas.map((area) => ({ id: id(), name: area })),
+		commonAreas: commonAreas.map((area) => ({
+			id: id(),
+			name: area,
+			typology: null,
+		})),
 	};
 }
 
@@ -34,7 +38,11 @@ function tower(
 		id: id(),
 		name: "Torre A",
 		floors,
-		commonAreas: commonAreas.map((area) => ({ id: id(), name: area })),
+		commonAreas: commonAreas.map((area) => ({
+			id: id(),
+			name: area,
+			typology: null,
+		})),
 	};
 }
 

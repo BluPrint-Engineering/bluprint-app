@@ -60,6 +60,7 @@ export default async function structureDuplicate({ page, shot, expect, query }) 
 	expect(copiedUnits["1101"]).toEqual(tenthBUnits["1001"]);
 	expect(copiedUnits["1102"]).toEqual(tenthBUnits["1002"]);
 	expect(copiedUnits.Hall).toEqual(tenthBUnits.Hall);
+	expect(await query("SELECT t.name AS typology, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id AND r.typology_room_id IS NOT NULL) AS rooms FROM location l JOIN typology t ON t.id = l.typology_id WHERE l.parent_id = $1 AND l.name = 'Hall'", [copy])).toEqual([{ typology: "Hall padrão", rooms: 3 }]);
 
 	await page.getByRole("link", { name: "Torre B", exact: true }).click();
 	await expect(page.getByRole("heading", { level: 1, name: "Torre B" })).toBeVisible();

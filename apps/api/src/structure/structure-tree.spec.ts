@@ -43,20 +43,22 @@ describe("buildStructure", () => {
 			"Torre A",
 			"Torre B",
 		]);
-		expect(structure.commonAreas).toEqual([{ id: "guarita", name: "Guarita" }]);
+		expect(structure.commonAreas).toEqual([
+			{ id: "guarita", name: "Guarita", typology: null },
+		]);
 		const [towerA, towerB] = structure.towers;
 		expect(towerA!.floors.map((floor) => floor.name)).toEqual([
 			"Térreo",
 			"1º andar",
 		]);
 		expect(towerA!.commonAreas).toEqual([
-			{ id: "a-salao", name: "Salão de festas" },
+			{ id: "a-salao", name: "Salão de festas", typology: null },
 		]);
 		expect(towerA!.floors[0]).toEqual({
 			id: "a-ground",
 			name: "Térreo",
 			units: [],
-			commonAreas: [{ id: "a-hall", name: "Hall de entrada" }],
+			commonAreas: [{ id: "a-hall", name: "Hall de entrada", typology: null }],
 		});
 		expect(towerA!.floors[1]!.units.map((unit) => unit.name)).toEqual([
 			"102",

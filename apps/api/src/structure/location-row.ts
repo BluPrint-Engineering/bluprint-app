@@ -1,4 +1,9 @@
-import type { LocationType, NewLocation, TypologyRef } from "@bluprint/shared";
+import type {
+	LocationType,
+	NewLocation,
+	TypologyLocationType,
+	TypologyRef,
+} from "@bluprint/shared";
 
 export interface LocationRow {
 	id: string;
@@ -19,6 +24,12 @@ export interface SiblingRow {
 	id: string;
 	type: LocationType;
 	position: number;
+}
+
+export interface StoredTypology {
+	id: string;
+	name: string;
+	locationType: TypologyLocationType;
 }
 
 export type PlacedLocation = NewLocation & { position: number };

@@ -604,6 +604,69 @@ describe("buildDuplicate of a floor", () => {
 		]);
 	});
 
+	test("keeps the typology and the changes of a Hall that follows one", () => {
+		const hallFloor = floor(
+			"2º andar",
+			["201"],
+			[{ name: "Hall", typology: "Hall padrão" }, "Depósito"],
+		);
+		const towerA = tower("Torre A", [hallFloor]);
+		const hall = nth(hallFloor.commonAreas, 0);
+		const below: SubtreeRooms = {
+			locations: [
+				roomsOf(
+					hall.id,
+					[
+						{
+							id: "r1",
+							name: "Corredor",
+							typologyRoomId: "type-circulacao",
+							renamed: true,
+						},
+						{
+							id: "r2",
+							name: "Escada",
+							typologyRoomId: "type-escada",
+							renamed: false,
+						},
+						{ id: "r3", name: "Lixeira", typologyRoomId: null, renamed: false },
+					],
+					[{ typologyRoomId: "type-elevadores", name: "Elevadores" }],
+				),
+			],
+		};
+
+		const { locations } = buildDuplicate(
+			sourceOf(structureOf([towerA]), "floor", hallFloor.id),
+			"3º andar",
+			below,
+			sequentialIds(),
+		);
+
+		expect(locations.find(({ name }) => name === "Hall")).toEqual({
+			id: "new-3",
+			parentId: "new-1",
+			type: "common_area",
+			name: "Hall",
+			position: 1,
+			typologyId: hall.typology?.id,
+			rooms: [
+				{
+					id: "new-4",
+					name: "Corredor",
+					typologyRoomId: "type-circulacao",
+					renamed: true,
+				},
+				{ id: "new-5", name: "Escada", typologyRoomId: "type-escada" },
+				{ id: "new-6", name: "Lixeira" },
+			],
+			droppedRooms: ["type-elevadores"],
+		});
+		expect(
+			locations.find(({ name }) => name === "Depósito"),
+		).not.toHaveProperty("typologyId");
+	});
+
 	test("gives the new floor the floor's disciplines and each unit and area its original's", () => {
 		const { ninth, structure } = scene();
 		const [u901, u902] = ninth.units;
@@ -762,6 +825,58 @@ describe("buildDuplicate of a tower", () => {
 			["unit", "1002", "new-9"],
 			["common_area", "Salão de festas", "new-1"],
 		]);
+	});
+
+	test("keeps the typology and the changes of a Salão of the tower that follows one", () => {
+		const towerA = tower(
+			"Torre A",
+			[floor("1º andar", ["101"])],
+			[{ name: "Salão de festas", typology: "Salão de festas" }],
+		);
+		const salao = nth(towerA.commonAreas, 0);
+		const below: SubtreeRooms = {
+			locations: [
+				roomsOf(
+					salao.id,
+					[
+						{
+							id: "r1",
+							name: "Dança",
+							typologyRoomId: "type-pista",
+							renamed: true,
+						},
+						{ id: "r2", name: "Palco", typologyRoomId: null, renamed: false },
+					],
+					[{ typologyRoomId: "type-copa", name: "Copa" }],
+				),
+			],
+		};
+
+		const { locations } = buildDuplicate(
+			sourceOf(structureOf([towerA]), "tower", towerA.id),
+			"Torre B",
+			below,
+			sequentialIds(),
+		);
+
+		expect(locations.find(({ name }) => name === "Salão de festas")).toEqual({
+			id: "new-4",
+			parentId: "new-1",
+			type: "common_area",
+			name: "Salão de festas",
+			position: 1,
+			typologyId: salao.typology?.id,
+			rooms: [
+				{
+					id: "new-5",
+					name: "Dança",
+					typologyRoomId: "type-pista",
+					renamed: true,
+				},
+				{ id: "new-6", name: "Palco" },
+			],
+			droppedRooms: ["type-copa"],
+		});
 	});
 
 	test("keeps the order of floors, units and areas as positions", () => {
