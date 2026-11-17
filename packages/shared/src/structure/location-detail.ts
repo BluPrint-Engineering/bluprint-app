@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { locationDisciplineListSchema } from "../disciplines/location-disciplines.js";
 import { locationTypeSchema } from "./location-type.js";
 import { typologyRefSchema, unitChangesSchema } from "./typology-ref.js";
 
@@ -65,6 +66,7 @@ export const locationDetailSchema = z.object({
 		description:
 			"The rooms of the typology this unit took out, in the order of the type. Empty for anything but a unit with a typology.",
 	}),
+	disciplines: locationDisciplineListSchema,
 });
 
 export type LocationRef = z.infer<typeof locationRefSchema>;
