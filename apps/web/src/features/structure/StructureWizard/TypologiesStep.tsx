@@ -1,6 +1,7 @@
 import {
 	MAX_ROOMS_PER_TYPOLOGY,
 	MAX_TYPOLOGIES_PER_REQUEST,
+	sameRoomName,
 } from "@bluprint/shared";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -122,6 +123,7 @@ function TypologyCard({
 				}
 			/>
 			<AddTag
+				sameName={sameRoomName}
 				label={`Novo cômodo da ${label}`}
 				placeholder="Novo cômodo"
 				existing={typology.rooms}

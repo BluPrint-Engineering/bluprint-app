@@ -1,4 +1,8 @@
-import { ROOM_NAME_MAX_LENGTH, type Room } from "@bluprint/shared";
+import {
+	ROOM_NAME_MAX_LENGTH,
+	type Room,
+	sameRoomName,
+} from "@bluprint/shared";
 import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -14,12 +18,14 @@ export function RenameRoomDialog({
 	locationId,
 	holder,
 	room,
+	rooms,
 	onClose,
 }: {
 	projectId: string;
 	locationId: string;
 	holder: RoomHolder;
 	room: Room;
+	rooms: Room[];
 	onClose: () => void;
 }) {
 	const fieldId = useId();
@@ -46,6 +52,12 @@ export function RenameRoomDialog({
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
 		if (trimmed === room.name) return close();
+		if (
+			rooms.some(
+				(other) => other.id !== room.id && sameRoomName(other.name, trimmed),
+			)
+		)
+			return setError(roomNameTakenText(holder, trimmed));
 
 		rename.mutate(
 			{ roomId: room.id, name: trimmed },

@@ -1,7 +1,8 @@
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { comparableLocationName, type NewTypology } from "@bluprint/shared";
+import { type NewTypology } from "@bluprint/shared";
 import { and, asc, count, eq, inArray, ne, sql } from "drizzle-orm";
+import { comparableNameSql } from "../db/comparable-name";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "./location.entity";
 import { room } from "./room.entity";
@@ -9,9 +10,6 @@ import { unitChangesQuery } from "./unit-changes";
 import { typology, typologyRoom } from "./typology.entity";
 
 const INSERT_CHUNK = 1000;
-
-const comparable = (name: unknown) =>
-	sql`lower(regexp_replace(btrim(${name}), '\\s+', ' ', 'g'))`;
 
 const uuidList = (ids: string[]) =>
 	sql`array[${sql.join(
@@ -181,7 +179,7 @@ export class TypologiesRepository {
 			.where(
 				and(
 					eq(typology.projectId, projectId),
-					sql`${comparable(typology.name)} = ${comparableLocationName(name)}`,
+					sql`${comparableNameSql(typology.name)} = ${comparableNameSql(sql`${name}::text`)}`,
 					exceptTypologyId ? ne(typology.id, exceptTypologyId) : undefined,
 				),
 			);
@@ -300,7 +298,7 @@ export class TypologiesRepository {
 						and exists (
 							select 1 from ${typologyRoom} a
 							where a.id = any(${uuidList(addedIds)})
-								and ${comparable(sql`a.name`)} = ${comparable(sql`r.name`)}
+								and ${comparableNameSql(sql`a.name`)} = ${comparableNameSql(sql`r.name`)}
 						)
 					)
 				union all
@@ -311,7 +309,7 @@ export class TypologiesRepository {
 			)
 			select min(name) as name
 			from predicted
-			group by location_id, ${comparable(sql`name`)}
+			group by location_id, ${comparableNameSql(sql`name`)}
 			having count(*) > 1
 		`);
 
@@ -359,7 +357,7 @@ export class TypologiesRepository {
 				and u.id = r.location_id
 				and u.typology_id = ${typologyId}
 				and r.typology_room_id is null
-				and ${comparable(sql`r.name`)} = ${comparable(sql`a.name`)}
+				and ${comparableNameSql(sql`r.name`)} = ${comparableNameSql(sql`a.name`)}
 			returning r.location_id
 		`);
 

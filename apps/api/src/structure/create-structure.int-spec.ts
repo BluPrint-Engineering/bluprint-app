@@ -1034,6 +1034,7 @@ describe("POST /api/projects/:id/structure with typologies", () => {
 
 	it.each([
 		["case", "tipologia a"],
+		["accent", "TipologÍa A"],
 		["repeated spaces", "Tipologia    A"],
 		["the ends", "  Tipologia A "],
 	])(
@@ -1078,6 +1079,24 @@ describe("POST /api/projects/:id/structure with typologies", () => {
 		expect(res.status).toBe(409);
 		expect(problemOf(res.body).code).toBe(TYPOLOGY_NAME_TAKEN);
 		expect(await countLocations(projectId)).toBe(0);
+	});
+
+	it("refuses accent variants of typology names in one request and creates nothing", async () => {
+		const projectId = await newProject(10);
+		const { tower, floor } = floorWith();
+		const res = await createWith(
+			manager,
+			projectId,
+			[typologyOf("Tipologia Á", []), typologyOf("Tipologia A", [])],
+			[tower, floor],
+		);
+		expect(res.status).toBe(409);
+		expect(problemOf(res.body)).toMatchObject({
+			code: TYPOLOGY_NAME_TAKEN,
+			names: ["Tipologia A"],
+		});
+		expect(await countLocations(projectId)).toBe(0);
+		expect(await readTypologies(projectId)).toHaveLength(0);
 	});
 
 	it("lets two projects each have their own typology of the same name", async () => {

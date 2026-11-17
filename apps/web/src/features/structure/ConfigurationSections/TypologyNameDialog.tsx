@@ -1,5 +1,5 @@
 import type { Typology } from "@bluprint/shared";
-import { TYPOLOGY_NAME_MAX_LENGTH } from "@bluprint/shared";
+import { sameRoomName, TYPOLOGY_NAME_MAX_LENGTH } from "@bluprint/shared";
 import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
@@ -47,11 +47,13 @@ export type NameDialogTarget =
 export function TypologyNameDialog({
 	projectId,
 	target,
+	typologies,
 	onClose,
 	onCreated,
 }: {
 	projectId: string;
 	target: NameDialogTarget;
+	typologies: Typology[];
 	onClose: () => void;
 	onCreated: (typology: Typology) => void;
 }) {
@@ -80,6 +82,14 @@ export function TypologyNameDialog({
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
 		if (target.mode === "rename" && trimmed === current) return close();
+		if (
+			typologies.some(
+				(item) =>
+					(target.mode !== "rename" || item.id !== target.typology.id) &&
+					sameRoomName(item.name, trimmed),
+			)
+		)
+			return setError(typologyNameTakenText(trimmed));
 
 		const handlers = {
 			onError: (failure: unknown) => {

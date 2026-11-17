@@ -156,7 +156,7 @@ export const createStructureSchema = z
 				}
 				seenRooms.add(room.id);
 
-				const comparable = comparableLocationName(room.name);
+				const comparable = comparableRoomName(room.name);
 				if (roomNames.has(comparable)) {
 					ctx.addIssue({
 						code: "custom",
@@ -237,7 +237,7 @@ export const createStructureSchema = z
 				}
 				seenLocationRooms.add(room.id);
 
-				const comparable = comparableLocationName(room.name);
+				const comparable = comparableRoomName(room.name);
 				if (roomNames.has(comparable)) {
 					ctx.addIssue({
 						code: "custom",

@@ -2,7 +2,8 @@ import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
-import { comparableNameSql, discipline } from "./discipline.entity";
+import { comparableNameSql } from "../db/comparable-name";
+import { discipline } from "./discipline.entity";
 
 export type DisciplineRow = typeof discipline.$inferSelect;
 

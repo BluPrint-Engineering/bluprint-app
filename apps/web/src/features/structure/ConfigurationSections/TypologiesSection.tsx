@@ -152,6 +152,7 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 					key={naming.mode === "rename" ? naming.typology.id : "create"}
 					projectId={project.id}
 					target={naming}
+					typologies={typologies}
 					onClose={() => setNaming(undefined)}
 					onCreated={(created) => setEditingId(created.id)}
 				/>

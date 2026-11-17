@@ -9,7 +9,7 @@ export const locationRoomNameSchema = z
 	.min(1)
 	.max(ROOM_NAME_MAX_LENGTH)
 	.meta({
-		description: `The room's name, trimmed, 1 to ${ROOM_NAME_MAX_LENGTH} characters. Unique in its unit or common area, ignoring case and repeated spaces; accents count.`,
+		description: `The room's name, trimmed, 1 to ${ROOM_NAME_MAX_LENGTH} characters. Unique in its unit or common area, ignoring accents, case and repeated spaces.`,
 		example: "Lavanderia",
 	});
 

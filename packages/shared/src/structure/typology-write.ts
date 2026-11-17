@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { projectParamsSchema } from "../projects/project-params.js";
 import {
-	comparableLocationName,
+	comparableRoomName,
 	MAX_ROOMS_PER_TYPOLOGY,
 	newTypologyRoomSchema,
 	newTypologySchema,
@@ -25,7 +25,7 @@ const roomsSchema = z
 			}
 			ids.add(room.id);
 
-			const comparable = comparableLocationName(room.name);
+			const comparable = comparableRoomName(room.name);
 			if (names.has(comparable)) {
 				ctx.addIssue({
 					code: "custom",

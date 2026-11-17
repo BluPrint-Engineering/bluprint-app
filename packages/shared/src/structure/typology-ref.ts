@@ -9,7 +9,7 @@ export const typologyNameSchema = z
 	.min(1)
 	.max(TYPOLOGY_NAME_MAX_LENGTH)
 	.meta({
-		description: `The typology's name, trimmed, 1 to ${TYPOLOGY_NAME_MAX_LENGTH} characters. Unique in the project, ignoring case and repeated spaces; accents count.`,
+		description: `The typology's name, trimmed, 1 to ${TYPOLOGY_NAME_MAX_LENGTH} characters. Unique in the project, ignoring accents, case and repeated spaces.`,
 		example: "Tipologia A",
 	});
 
@@ -19,7 +19,7 @@ export const roomNameSchema = z
 	.min(1)
 	.max(ROOM_NAME_MAX_LENGTH)
 	.meta({
-		description: `The room's name, trimmed, 1 to ${ROOM_NAME_MAX_LENGTH} characters. Unique in its typology, ignoring case and repeated spaces; accents count.`,
+		description: `The room's name, trimmed, 1 to ${ROOM_NAME_MAX_LENGTH} characters. Unique in its typology, ignoring accents, case and repeated spaces.`,
 		example: "Sala",
 	});
 

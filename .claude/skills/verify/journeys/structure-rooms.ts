@@ -35,9 +35,9 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
 	await expect(page.getByLabel("Adicionar cômodo")).toBeFocused();
 	await shot("add-room-form");
-	await page.getByLabel("Adicionar cômodo").fill("cozinha");
+	await page.getByLabel("Adicionar cômodo").fill("Cozínha");
 	await page.getByLabel("Adicionar cômodo").press("Enter");
-	await expect(page.getByText("Já existe o cômodo cozinha nesta unidade.")).toBeVisible();
+	await expect(page.getByText("Já existe o cômodo Cozínha nesta unidade.")).toBeVisible();
 	await shot("add-room-name-taken");
 	await page.getByLabel("Adicionar cômodo").fill("Despensa");
 	await page.getByLabel("Adicionar cômodo").press("Enter");
@@ -50,9 +50,9 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	const rename = page.getByRole("dialog", { name: "Renomear o cômodo" });
 	await expect(rename).toBeVisible();
 	await shot("rename-dialog");
-	await rename.getByLabel("Nome").fill("Dormitório 1");
+	await rename.getByLabel("Nome").fill("Dormitorio 1");
 	await rename.getByLabel("Nome").press("Enter");
-	await expect(rename.getByText("Já existe o cômodo Dormitório 1 nesta unidade.")).toBeVisible();
+	await expect(rename.getByText("Já existe o cômodo Dormitorio 1 nesta unidade.")).toBeVisible();
 	await shot("rename-name-taken");
 	await rename.getByLabel("Nome").fill("Depósito");
 	await rename.getByRole("button", { name: "Salvar" }).click();
