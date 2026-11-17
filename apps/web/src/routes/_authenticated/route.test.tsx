@@ -16,7 +16,10 @@ import {
 import {
 	combine,
 	configurationSectionsApi,
+	disciplineOf,
+	disciplinesApi,
 	floor,
+	structureApi,
 	structureOf,
 	tower,
 	typologyOf,
@@ -995,6 +998,53 @@ describe("actions that must not come back", () => {
 			screen.queryByRole("menuitem", { name: "Excluir tipologia" }),
 		).not.toBeInTheDocument();
 	});
+
+	test.each([
+		["unit", "201"],
+		["common area", "Hall"],
+		["floor", "2º andar"],
+		["tower", "Torre A"],
+	])(
+		"does not save a discipline box again after signing back in on the %s page",
+		async (_kind, title) => {
+			const second = floor("2º andar", ["201", "202"], ["Hall"]);
+			const towerA = tower("Torre A", [second]);
+			const structure = structureOf([towerA]);
+			const obra = { ...project(3, "manager"), name: "Casa Moinhos" };
+			const ids: Record<string, string> = {
+				"201": second.units[0]?.id ?? "",
+				Hall: second.commonAreas[0]?.id ?? "",
+				"2º andar": second.id,
+				"Torre A": towerA.id,
+			};
+			const listed = [disciplineOf("Hidráulica"), disciplineOf("Pintura")];
+			const details = Object.fromEntries(
+				Object.values(ids).map((id) => [id, { disciplines: listed }]),
+			);
+			const disciplines = disciplinesApi(obra.id, details, () => json({}, 401));
+			const stub = stubApi(signedIn, {
+				api: combine(
+					disciplines.handler,
+					(url) =>
+						url.pathname === `/api/projects/${obra.id}`
+							? json(obra)
+							: undefined,
+					structureApi(obra.id, structure, details),
+				),
+			});
+			renderAt(`/projects/${obra.id}/locations/${ids[title]}`);
+			const pintura = await screen.findByRole("checkbox", { name: "Pintura" });
+			stub.setSession(null);
+			await userEvent.click(pintura);
+			await screen.findByLabelText("E-mail");
+			await signInAs("ana@horizonte.test");
+
+			expect(
+				await screen.findByRole("checkbox", { name: "Pintura" }),
+			).toBeChecked();
+			expect(disciplines.writes).toHaveLength(1);
+		},
+	);
 });
 
 async function expireReservationFromDuplicate(

@@ -8,6 +8,7 @@ import {
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	locationDetailSchema,
+	locationDisciplinesSchema,
 	locationRefSchema,
 	type MoveDirection,
 	PROJECT_NOT_FOUND,
@@ -40,6 +41,7 @@ import {
 	isProjectDelivered,
 	projectQueryOptions,
 } from "../projects/api";
+import { disciplinesFailedText } from "./disciplinesText";
 import { moveFailedText } from "./removeText";
 
 export function isNotFound(error: unknown) {
@@ -358,6 +360,51 @@ function useLocationMutation<Variables>(
 					queryKey: locationQueryOptions(projectId, locationId).queryKey,
 				});
 			}
+		},
+	});
+}
+
+export function useSetLocationDisciplineMutation(
+	projectId: string,
+	location: Pick<LocationDetail, "id" | "type" | "name">,
+) {
+	const queryClient = useQueryClient();
+	const locationKey = locationQueryOptions(projectId, location.id).queryKey;
+	return useMutation({
+		mutationFn: ({
+			disciplineId,
+			applies,
+		}: {
+			disciplineId: string;
+			applies: boolean;
+		}) =>
+			apiFetch(
+				`/projects/${projectId}/locations/${location.id}/disciplines/${disciplineId}`,
+				locationDisciplinesSchema,
+				{
+					method: "PUT",
+					headers: JSON_HEADERS,
+					body: JSON.stringify({ applies }),
+				},
+			),
+		onSuccess: ({ disciplines }) => {
+			queryClient.setQueryData(
+				locationKey,
+				(current?: LocationDetail) => current && { ...current, disciplines },
+			);
+			void queryClient.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+			if (isNotFound(error)) {
+				return queryClient.invalidateQueries({ queryKey: locationKey });
+			}
+			if (error instanceof ApiError && error.status === 401) return;
+			toast.error(disciplinesFailedText(location));
 		},
 	});
 }

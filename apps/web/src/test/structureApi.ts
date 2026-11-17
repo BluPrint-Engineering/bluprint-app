@@ -3,6 +3,7 @@ import {
 	type DroppedRoom,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
+	type LocationDiscipline,
 	type LocationRef,
 	type MoveDirection,
 	type OrganizationUnits,
@@ -70,6 +71,10 @@ export function room(
 
 export function droppedRoom(name: string): DroppedRoom {
 	return { typologyRoomId: nextId(), name };
+}
+
+export function disciplineOf(name: string, applies = true): LocationDiscipline {
+	return { id: nextId(), name, applies };
 }
 
 export function floor(
@@ -166,6 +171,7 @@ export function locationIn(
 		changes: 0,
 		rooms: [],
 		droppedRooms: [],
+		disciplines: [],
 		...own,
 		...details[node.id],
 	});
@@ -619,4 +625,40 @@ export function configurationSectionsApi(
 		structureApi(projectId, structure),
 		typologiesApi(projectId, typologies),
 	);
+}
+
+export interface DisciplineWrite {
+	locationId: string;
+	disciplineId: string;
+	applies: boolean;
+}
+
+export function disciplinesApi(
+	projectId: string,
+	details: Record<string, Partial<LocationDetail>>,
+	answer?: (write: DisciplineWrite, attempt: number) => Reply | undefined,
+) {
+	const writes: DisciplineWrite[] = [];
+	const pattern = new RegExp(
+		`^/api/projects/${projectId}/locations/([^/]+)/disciplines/([^/]+)$`,
+	);
+	const handler: ApiHandler = (url, init) => {
+		const match = pattern.exec(url.pathname);
+		if (!match || init?.method !== "PUT") return undefined;
+		const { applies } = JSON.parse(String(init.body)) as { applies: boolean };
+		const write = {
+			locationId: match[1] ?? "",
+			disciplineId: match[2] ?? "",
+			applies,
+		};
+		writes.push(write);
+		const answered = answer?.(write, writes.length);
+		if (answered) return answered;
+		const disciplines = (details[write.locationId]?.disciplines ?? []).map(
+			(each) => (each.id === write.disciplineId ? { ...each, applies } : each),
+		);
+		details[write.locationId] = { ...details[write.locationId], disciplines };
+		return json({ disciplines });
+	};
+	return { handler, writes };
 }

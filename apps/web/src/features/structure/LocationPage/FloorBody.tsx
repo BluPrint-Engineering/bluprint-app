@@ -1,4 +1,5 @@
 import type {
+	LocationDetail,
 	ProjectSummary,
 	StructureFloor,
 	StructureTower,
@@ -9,10 +10,12 @@ import { LocationMenu } from "../components/LocationMenu";
 import type { Adding } from "../components/useAdding";
 import { nextUnitName } from "../naming";
 import { NO_CHILDREN } from "../removeText";
+import { DisciplinesCard } from "./DisciplinesCard";
 import { typologyLine } from "./typologyLine";
 
 export function FloorBody({
 	project,
+	location,
 	tower,
 	floor,
 	towerName,
@@ -20,6 +23,7 @@ export function FloorBody({
 	canEdit,
 }: {
 	project: ProjectSummary;
+	location: LocationDetail;
 	tower: StructureTower;
 	floor: StructureFloor;
 	towerName: string | undefined;
@@ -97,27 +101,34 @@ export function FloorBody({
 					)
 				}
 			/>
-			{(canEdit || areas.length > 0) && (
-				<LocationList
+			<div className="grid content-start gap-(--space-6)">
+				<DisciplinesCard
 					projectId={projectId}
-					title="Áreas comuns do andar"
-					items={areas}
-					footer={
-						canEdit && (
-							<AddReservedRow
-								project={project}
-								adding={adding}
-								kind="floor-area"
-								type="common_area"
-								parentId={floor.id}
-								label="Adicionar área comum"
-								suggestion=""
-								scope="floor"
-							/>
-						)
-					}
+					location={location}
+					editable={canEdit}
 				/>
-			)}
+				{(canEdit || areas.length > 0) && (
+					<LocationList
+						projectId={projectId}
+						title="Áreas comuns do andar"
+						items={areas}
+						footer={
+							canEdit && (
+								<AddReservedRow
+									project={project}
+									adding={adding}
+									kind="floor-area"
+									type="common_area"
+									parentId={floor.id}
+									label="Adicionar área comum"
+									suggestion=""
+									scope="floor"
+								/>
+							)
+						}
+					/>
+				)}
+			</div>
 		</div>
 	);
 }
