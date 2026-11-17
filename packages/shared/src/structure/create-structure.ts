@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { createDisciplineSchema } from "../disciplines/create-discipline.js";
+import { MAX_EXTRA_DISCIPLINES } from "../disciplines/discipline-colors.js";
 import { locationRoomNameSchema } from "./location-rooms.js";
 import { locationTypeSchema } from "./location-type.js";
 import { structureCountsSchema } from "./structure.js";
@@ -53,6 +55,17 @@ export const newLocationRoomSchema = z.object({
 	}),
 });
 
+export const newLocationDisciplineSchema = z.object({
+	disciplineId: z.uuid().meta({
+		description:
+			"A discipline of the project, or one listed in `disciplines` of this request. Never General.",
+	}),
+	applies: z.boolean().meta({
+		description:
+			"Whether the discipline applies at the location. Stored as an exception only when it differs from the default of the location's kind (ADR 0081).",
+	}),
+});
+
 export const newLocationSchema = z.object({
 	id: z.uuid().meta({
 		description:
@@ -84,6 +97,10 @@ export const newLocationSchema = z.object({
 		description:
 			"The rooms of the unit's typology that the unit took out, by their id in the typology. Only a unit with a `typologyId` that lists its `rooms` takes them.",
 	}),
+	disciplines: z.array(newLocationDisciplineSchema).optional().meta({
+		description:
+			"Whether each discipline applies at the location, each discipline at most once, so a copy or a location put back keeps its list. A discipline left out, or the whole field left out, follows the default of the location's kind. Ignored, like the rest of the location, when the location already exists.",
+	}),
 });
 
 export const newTypologyRoomSchema = z.object({
@@ -111,6 +128,13 @@ export const newTypologySchema = z.object({
 
 export const createStructureSchema = z
 	.object({
+		disciplines: z
+			.array(createDisciplineSchema)
+			.max(MAX_EXTRA_DISCIPLINES)
+			.default([])
+			.meta({
+				description: `The extra disciplines to create before the locations, at most ${MAX_EXTRA_DISCIPLINES}, under the rules of \`POST .../disciplines\`: an id that already belongs to this project is skipped. A location of the request may name them in its \`disciplines\`. Left out, none is created.`,
+			}),
 		typologies: z
 			.array(newTypologySchema)
 			.max(MAX_TYPOLOGIES_PER_REQUEST)
@@ -132,7 +156,19 @@ export const createStructureSchema = z
 				description: `Whether the request copies locations the project already has (*Duplicar*). A copy repeats what already exists, so neither the ${MAX_UNITS_PER_FLOOR} units under one floor nor the ${MAX_ROOMS_PER_LOCATION} rooms of a location apply to it. Left out means false.`,
 			}),
 	})
-	.superRefine(({ locations, typologies, copy }, ctx) => {
+	.superRefine(({ locations, typologies, copy, disciplines }, ctx) => {
+		const seenDisciplines = new Set<string>();
+		disciplines.forEach((discipline, index) => {
+			if (seenDisciplines.has(discipline.id)) {
+				ctx.addIssue({
+					code: "custom",
+					path: ["disciplines", index, "id"],
+					message: "Two disciplines in the request share an id.",
+				});
+			}
+			seenDisciplines.add(discipline.id);
+		});
+
 		const seenTypes = new Set<string>();
 		const seenRooms = new Set<string>();
 		typologies.forEach((typology, typeIndex) => {
@@ -224,6 +260,18 @@ export const createStructureSchema = z
 				});
 			}
 
+			const named = new Set<string>();
+			entry.disciplines?.forEach(({ disciplineId }, disciplineIndex) => {
+				if (named.has(disciplineId)) {
+					ctx.addIssue({
+						code: "custom",
+						path: ["locations", index, "disciplines", disciplineIndex],
+						message: "A location lists the same discipline twice.",
+					});
+				}
+				named.add(disciplineId);
+			});
+
 			const taken = new Set(entry.droppedRooms);
 			const roomNames = new Set<string>();
 			const typeRooms = new Set<string>();
@@ -303,8 +351,10 @@ export const createStructureResultSchema = z.object({
 });
 
 export type NewLocationRoom = z.infer<typeof newLocationRoomSchema>;
+export type NewLocationDiscipline = z.infer<typeof newLocationDisciplineSchema>;
 export type NewLocation = z.infer<typeof newLocationSchema>;
 export type NewTypologyRoom = z.infer<typeof newTypologyRoomSchema>;
 export type NewTypology = z.infer<typeof newTypologySchema>;
 export type CreateStructure = z.infer<typeof createStructureSchema>;
+export type CreateStructureRequest = z.input<typeof createStructureSchema>;
 export type CreateStructureResult = z.infer<typeof createStructureResultSchema>;

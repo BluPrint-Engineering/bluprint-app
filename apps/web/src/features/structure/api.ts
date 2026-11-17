@@ -1,6 +1,6 @@
 import {
 	type AddRoom,
-	type CreateStructure,
+	type CreateStructureRequest,
 	type CreateStructureResult,
 	type CreateTypology,
 	createStructureResultSchema,
@@ -104,7 +104,7 @@ export function typologyNamesTakenOf(error: unknown): string[] | undefined {
 		: undefined;
 }
 
-function postStructure(projectId: string, body: CreateStructure) {
+function postStructure(projectId: string, body: CreateStructureRequest) {
 	return apiFetch(
 		`/projects/${projectId}/structure`,
 		createStructureResultSchema,
@@ -167,7 +167,7 @@ function useStructureCreation<Variables>(
 export function useCreateStructureMutation(projectId: string) {
 	return useStructureCreation(
 		projectId,
-		(body: CreateStructure & { draft?: unknown; opener?: "menu" }) => {
+		(body: CreateStructureRequest & { draft?: unknown; opener?: "menu" }) => {
 			const { draft: _draft, opener: _opener, ...plan } = body;
 			return postStructure(projectId, plan);
 		},
@@ -176,7 +176,7 @@ export function useCreateStructureMutation(projectId: string) {
 }
 
 export function useRecreateStructureMutation(projectId: string) {
-	return useStructureCreation(projectId, (body: CreateStructure) =>
+	return useStructureCreation(projectId, (body: CreateStructureRequest) =>
 		postStructure(projectId, body),
 	);
 }
@@ -207,7 +207,7 @@ export function useDuplicateLocationMutation(projectId: string) {
 		}: {
 			locationId: string;
 			name: string;
-			build: (below: SubtreeRooms) => CreateStructure;
+			build: (below: SubtreeRooms) => CreateStructureRequest;
 		}) => {
 			const below = await queryClient.fetchQuery(
 				subtreeRoomsQueryOptions(projectId, locationId),

@@ -1,11 +1,13 @@
 import type { LocationType } from "@bluprint/shared";
 import { TransactionHost } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import { DatabaseAdapter } from "../db/database.module";
 import { location } from "../structure/location.entity";
 import { discipline } from "./discipline.entity";
 import { locationDiscipline } from "./location-discipline.entity";
+
+const INSERT_CHUNK = 1000;
 
 export interface LocationDisciplineRow {
 	id: string;
@@ -66,6 +68,37 @@ export class LocationDisciplinesRepository {
 			);
 	}
 
+	async exceptionsByLocation(
+		locationIds: string[],
+	): Promise<Map<string, { disciplineId: string; applies: boolean }[]>> {
+		const byLocation = new Map<
+			string,
+			{ disciplineId: string; applies: boolean }[]
+		>();
+		if (locationIds.length === 0) return byLocation;
+
+		const rows = await this.txHost.tx
+			.select({
+				locationId: locationDiscipline.locationId,
+				disciplineId: locationDiscipline.disciplineId,
+				applies: locationDiscipline.applies,
+			})
+			.from(locationDiscipline)
+			.innerJoin(discipline, eq(discipline.id, locationDiscipline.disciplineId))
+			.where(inArray(locationDiscipline.locationId, locationIds))
+			.orderBy(
+				asc(discipline.type),
+				asc(discipline.createdAt),
+				asc(discipline.id),
+			);
+		for (const { locationId, disciplineId, applies } of rows) {
+			const list = byLocation.get(locationId);
+			if (list) list.push({ disciplineId, applies });
+			else byLocation.set(locationId, [{ disciplineId, applies }]);
+		}
+		return byLocation;
+	}
+
 	async setException(values: {
 		locationId: string;
 		disciplineId: string;
@@ -82,6 +115,21 @@ export class LocationDisciplinesRepository {
 				],
 				set: { applies: values.applies },
 			});
+	}
+
+	async insertExceptions(
+		values: {
+			locationId: string;
+			disciplineId: string;
+			projectId: string;
+			applies: boolean;
+		}[],
+	): Promise<void> {
+		for (let start = 0; start < values.length; start += INSERT_CHUNK) {
+			await this.txHost.tx
+				.insert(locationDiscipline)
+				.values(values.slice(start, start + INSERT_CHUNK));
+		}
 	}
 
 	async clearException(

@@ -1,5 +1,5 @@
 import {
-	type CreateStructure,
+	type CreateStructureRequest,
 	type DroppedRoom,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
@@ -296,7 +296,7 @@ function recount(structure: Structure) {
 	};
 }
 
-function applyCreation(structure: Structure, body: CreateStructure) {
+function applyCreation(structure: Structure, body: CreateStructureRequest) {
 	for (const entry of body.locations) {
 		const { id, name, parentId } = entry;
 		if (entry.type === "tower") {
@@ -324,15 +324,20 @@ function applyCreation(structure: Structure, body: CreateStructure) {
 	recount(structure);
 }
 
-function holdersUnder(structure: Structure, id: string): string[] {
+function locationsUnder(structure: Structure, id: string): string[] {
 	const ids = (nodes: { id: string }[]) => nodes.map((node) => node.id);
 	const ofFloor = (floor: StructureFloor) => [
+		floor.id,
 		...ids(floor.units),
 		...ids(floor.commonAreas),
 	];
 	for (const tower of structure.towers) {
 		if (tower.id === id) {
-			return [...tower.floors.flatMap(ofFloor), ...ids(tower.commonAreas)];
+			return [
+				tower.id,
+				...tower.floors.flatMap(ofFloor),
+				...ids(tower.commonAreas),
+			];
 		}
 		for (const floor of tower.floors) {
 			if (floor.id === id) return ofFloor(floor);
@@ -342,7 +347,10 @@ function holdersUnder(structure: Structure, id: string): string[] {
 		...ids(structure.commonAreas),
 		...structure.towers.flatMap((tower) => [
 			...ids(tower.commonAreas),
-			...tower.floors.flatMap(ofFloor),
+			...tower.floors.flatMap((floor) => [
+				...ids(floor.units),
+				...ids(floor.commonAreas),
+			]),
 		]),
 	];
 	return leaves.includes(id) ? [id] : [];
@@ -427,7 +435,7 @@ export interface WritableApiOptions {
 		direction: MoveDirection,
 		attempt: number,
 	) => Reply | undefined;
-	create?: (body: CreateStructure, attempt: number) => Reply | undefined;
+	create?: (body: CreateStructureRequest, attempt: number) => Reply | undefined;
 	rename?: (
 		locationId: string,
 		name: string,
@@ -447,7 +455,7 @@ export function writableApi(
 			remaining: options.remaining ?? 100,
 		},
 	};
-	const created: CreateStructure[] = [];
+	const created: CreateStructureRequest[] = [];
 	const renamed: { locationId: string; name: string }[] = [];
 	const roomsRead: string[] = [];
 	const removed: string[] = [];
@@ -488,7 +496,7 @@ export function writableApi(
 				return json(state.summary);
 			}
 			if (url.pathname === `${base}/structure` && init?.method === "POST") {
-				const body = JSON.parse(String(init.body)) as CreateStructure;
+				const body = JSON.parse(String(init.body)) as CreateStructureRequest;
 				created.push(body);
 				const answered = options.create?.(body, created.length);
 				if (answered) return answered;
@@ -519,8 +527,14 @@ export function writableApi(
 					(options.subtreeRooms ?? []).map((entry) => [entry.id, entry]),
 				);
 				return json({
-					locations: holdersUnder(structure, below[1] ?? "").map(
-						(id) => given.get(id) ?? { id, rooms: [], droppedRooms: [] },
+					locations: locationsUnder(structure, below[1] ?? "").map(
+						(id) =>
+							given.get(id) ?? {
+								id,
+								rooms: [],
+								droppedRooms: [],
+								disciplines: [],
+							},
 					),
 				});
 			}

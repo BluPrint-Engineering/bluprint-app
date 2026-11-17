@@ -14,6 +14,7 @@ import {
 } from "@bluprint/shared";
 import { Transactional } from "@nestjs-cls/transactional";
 import { Injectable } from "@nestjs/common";
+import { DisciplinesService } from "../disciplines/disciplines.service";
 import { LocationDisciplinesService } from "../disciplines/location-disciplines.service";
 import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
@@ -44,6 +45,7 @@ export class StructureService {
 		private readonly locations: StructureRepository,
 		private readonly typologies: TypologiesRepository,
 		private readonly content: LocationContent,
+		private readonly disciplines: DisciplinesService,
 		private readonly locationDisciplines: LocationDisciplinesService,
 	) {}
 
@@ -83,6 +85,9 @@ export class StructureService {
 		});
 
 		await this.units.assertAvailable(projectId, newUsed);
+		for (const discipline of request.disciplines) {
+			await this.disciplines.addExtra(projectId, discipline);
+		}
 		await this.typologies.insertAll(projectId, freshTypologies);
 		await this.locations.insertAll(
 			projectId,
@@ -114,6 +119,10 @@ export class StructureService {
 					typologyRoomId,
 				})),
 			),
+		);
+		await this.locationDisciplines.giveNewLocationsTheirExceptions(
+			projectId,
+			fresh,
 		);
 
 		return { counts };
@@ -262,20 +271,18 @@ export class StructureService {
 		const subtree = await this.locations.listSubtree(projectId, locationId);
 		if (subtree.length === 0) throw locationNotFound();
 
-		const holders = subtree.filter(
-			(row) => row.type === "unit" || row.type === "common_area",
-		);
-
-		const ids = holders.map(({ id }) => id);
-		const [rooms, droppedRooms] = await Promise.all([
+		const ids = subtree.map(({ id }) => id);
+		const [rooms, droppedRooms, exceptions] = await Promise.all([
 			this.locations.roomsByLocation(ids),
 			this.locations.droppedRoomsByLocation(ids),
+			this.locationDisciplines.exceptionsByLocation(ids),
 		]);
 		return {
 			locations: ids.map((id) => ({
 				id,
 				rooms: rooms.get(id) ?? [],
 				droppedRooms: droppedRooms.get(id) ?? [],
+				disciplines: exceptions.get(id) ?? [],
 			})),
 		};
 	}

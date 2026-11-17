@@ -14,6 +14,16 @@ export default async function structureRemove({ page, shot, expect, query }) {
 		page.getByRole("button", { name: /^Ações da unidade / }).evaluateAll((buttons) => buttons.map((button) => button.getAttribute("aria-label").replace("Ações da unidade ", "")));
 	const menu = (name) => page.getByRole("button", { name, exact: true });
 	const items = (labels) => expect(page.getByRole("menuitem")).toHaveText(labels);
+	const box = (name) => page.getByRole("checkbox", { name });
+	const exceptions = async (id) =>
+		(await query("SELECT d.name, ld.applies FROM location_discipline ld JOIN discipline d ON d.id = ld.discipline_id WHERE ld.location_id = $1 ORDER BY d.name", [id])).map((r) => `${r.name}:${r.applies}`);
+	const turnAt = async (id, title, name, on) => {
+		await page.goto(`/projects/${jardins}/locations/${id}`);
+		await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+		await box(name).click();
+		await expect(box(name)).toBeChecked({ checked: on });
+		await expect.poll(async () => (await exceptions(id)).some((line) => line.startsWith(`${name}:`))).toBe(true);
+	};
 
 	const ninthA = await floorOf("Torre A", "9º andar");
 	await page.goto(`/projects/${jardins}/locations/${ninthA}`);
@@ -39,9 +49,17 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	expect(await unitsOnFloor(ninthA)).toEqual(["901", "902", "903", "904"]);
 
 	const unit903 = (await query("SELECT id FROM location WHERE parent_id = $1 AND name = '903'", [ninthA]))[0].id;
-	const detail = async () =>
-		(await query("SELECT l.typology_id, l.position, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id) AS rooms, (SELECT count(*)::int FROM dropped_room d WHERE d.location_id = l.id) AS dropped, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id AND r.renamed) AS renamed FROM location l WHERE l.id = $1", [unit903]))[0];
+	const hall = (await query("SELECT id FROM location WHERE parent_id = $1 AND name = 'Hall'", [ninthA]))[0].id;
+	await turnAt(unit903, "903", "Piscina", true);
+	await turnAt(hall, "Hall", "Pintura", false);
+	await page.goto(`/projects/${jardins}/locations/${ninthA}`);
+	await expect.poll(unitButtons).toEqual(["901", "902", "903", "904"]);
+	const detail = async () => ({
+		...(await query("SELECT l.typology_id, l.position, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id) AS rooms, (SELECT count(*)::int FROM dropped_room d WHERE d.location_id = l.id) AS dropped, (SELECT count(*)::int FROM room r WHERE r.location_id = l.id AND r.renamed) AS renamed FROM location l WHERE l.id = $1", [unit903]))[0],
+		disciplines: await exceptions(unit903),
+	});
 	const before = await detail();
+	expect(before.disciplines).toEqual(["Piscina:true"]);
 	const used = await unitCount();
 	expect(before.dropped).toBe(1);
 	await expect(page.getByRole("link", { name: /^903.*3 alterações/ })).toBeVisible();
@@ -70,6 +88,7 @@ export default async function structureRemove({ page, shot, expect, query }) {
 	await shot("r1-common-area-deleted");
 	await page.getByRole("button", { name: "Desfazer" }).click();
 	await expect(menu("Ações da área comum Hall")).toBeVisible();
+	await expect.poll(() => exceptions(hall)).toEqual(["Pintura:false"]);
 
 	await menu("Ações do andar").click();
 	await items(["Renomear andar", "Mover para cima", "Mover para baixo", "Duplicar andar", "Remover andar"]);
