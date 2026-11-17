@@ -106,7 +106,9 @@ export function ChangeReservationDialog({
 	const formId = useId();
 	const restored = useSessionDraft("change-reservation", (variables) => {
 		const draft = reservationDraft(variables);
-		return open && draft ? String(draft.reserved) : undefined;
+		return open && draft && draft.opener === opener
+			? String(draft.reserved)
+			: undefined;
 	});
 	const clearDraft = useClearSessionDraft("change-reservation");
 	const [typed, setTyped] = useState(restored ?? String(reserved));
@@ -267,7 +269,7 @@ export function ChangeReservationDialog({
 				size={size}
 				disabled={saving}
 				className={className}
-				onClick={() => onOpenChange(false)}
+				onClick={() => handleOpenChange(false)}
 			>
 				Cancelar
 			</Button>

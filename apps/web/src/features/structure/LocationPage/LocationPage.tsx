@@ -7,6 +7,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ListPlus, MapPinOff, Plus } from "lucide-react";
+import { useRef } from "react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
 import { NotFound } from "@/components/NotFound";
@@ -95,6 +96,7 @@ function LocationView({
 }) {
 	const desktop = useIsDesktop();
 	const adding = useAdding();
+	const pageMenu = useRef<HTMLButtonElement>(null);
 	const navigate = useNavigate();
 	const projectId = project.id;
 	const canEdit = project.status !== "delivered";
@@ -141,11 +143,11 @@ function LocationView({
 			projectId={projectId}
 			variant="outline"
 			label={PAGE_MENU_LABELS[location.type]}
+			triggerRef={pageMenu}
 			{...(location.type !== "common_area" && {
 				duplicate: { type: location.type, id: location.id },
 			})}
 			movable={location.type === "floor" || location.type === "unit"}
-			reopensReservation={location.type !== "floor"}
 			removal={{
 				counts: tower
 					? towerChildCounts(tower)
@@ -173,7 +175,7 @@ function LocationView({
 							Adicionar andares
 						</AddFloorsLink>
 					</DropdownMenuItem>
-					<DropdownMenuItem onSelect={() => adding.open("tower-area")}>
+					<DropdownMenuItem onSelect={() => adding.open("tower-area", "menu")}>
 						<Plus className="size-4.5" aria-hidden="true" />
 						Adicionar área comum
 					</DropdownMenuItem>
@@ -236,6 +238,7 @@ function LocationView({
 						tower={tower}
 						towerName={towerName}
 						adding={adding}
+						menuButton={pageMenu}
 						canEdit={canEdit}
 					/>
 				)}

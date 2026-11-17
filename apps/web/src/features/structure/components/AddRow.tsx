@@ -23,7 +23,12 @@ import { uuidV7 } from "@/lib/uuidV7";
 import { availableUnitsOf } from "../../projects/api";
 import { namesTakenOf, useCreateStructureMutation } from "../api";
 import { nameProblem, type Scope, takenText } from "../naming";
-import { type Adding, type AddKind, useFocusOnClose } from "./useAdding";
+import {
+	type Adding,
+	type AddKind,
+	type AddOpener,
+	useFocusOnClose,
+} from "./useAdding";
 
 const ADD_FAILED =
 	"Não foi possível adicionar. Confira sua conexão e tente de novo.";
@@ -44,6 +49,7 @@ export interface AddRowProps {
 	hintLoading?: boolean;
 	blocked?: ReactNode;
 	buttonRef?: RefObject<HTMLButtonElement | null>;
+	menuButton?: RefObject<HTMLElement | null>;
 }
 
 function AddForm({
@@ -60,8 +66,9 @@ function AddForm({
 	hintLoading,
 }: AddRowProps) {
 	const create = useCreateStructureMutation(projectId);
-	const restored = useSessionDraft("create-structure", (variables) =>
-		addedName(variables, parentId, type),
+	const restored = useSessionDraft(
+		"create-structure",
+		(variables) => restoredAdd(variables, parentId, type)?.name,
 	);
 	const clearDraft = useClearSessionDraft("create-structure");
 	const id = useRef(uuidV7());
@@ -101,6 +108,7 @@ function AddForm({
 			{
 				typologies: [],
 				locations: [{ id: id.current, parentId, type, name: name.trim() }],
+				...(adding.openedFrom === "menu" && { opener: "menu" as const }),
 			},
 			{ onSuccess: adding.close },
 		);
@@ -169,11 +177,11 @@ function AddForm({
 	);
 }
 
-function addedName(
+function restoredAdd(
 	variables: unknown,
 	parentId: string | null,
 	type: AddRowProps["type"],
-): string | undefined {
+): { name: string; from: AddOpener } | undefined {
 	if (typeof variables !== "object" || variables === null) return undefined;
 	if ("draft" in variables) return undefined;
 	if (!("locations" in variables) || !Array.isArray(variables.locations)) {
@@ -191,22 +199,40 @@ function addedName(
 	}
 	if (location.parentId !== parentId || location.type !== type)
 		return undefined;
-	return typeof location.name === "string" ? location.name : undefined;
+	if (typeof location.name !== "string") return undefined;
+	const from =
+		"opener" in variables && variables.opener === "menu" ? "menu" : "row";
+	return { name: location.name, from };
 }
 
-export function AddRow(props: AddRowProps) {
-	const { adding, kind, label, blocked, buttonRef } = props;
+export function useReopenRestoredAdd(
+	adding: Adding,
+	kind: AddKind,
+	parentId: string | null,
+	type: AddRowProps["type"],
+) {
 	const restored = useSessionDraft("create-structure", (variables) =>
-		addedName(variables, props.parentId, props.type),
+		restoredAdd(variables, parentId, type),
 	);
-	const open = adding.is(kind);
 	const reopened = useRef(false);
 	useEffect(() => {
 		if (reopened.current || restored === undefined) return;
 		reopened.current = true;
-		adding.open(kind);
+		adding.open(kind, restored.from);
 	}, [adding, kind, restored]);
-	const button = useFocusOnClose(open, buttonRef);
+}
+
+export function AddRow(props: AddRowProps) {
+	const { adding, kind, label, blocked, buttonRef, menuButton } = props;
+	useReopenRestoredAdd(adding, kind, props.parentId, props.type);
+	const open = adding.is(kind);
+	const openedFrom = useRef<AddOpener>("row");
+	useEffect(() => {
+		if (open) openedFrom.current = adding.openedFrom;
+	}, [open, adding.openedFrom]);
+	const button = useFocusOnClose(open, buttonRef, () =>
+		openedFrom.current === "menu" ? menuButton?.current : undefined,
+	);
 
 	if (open) return <AddForm {...props} />;
 

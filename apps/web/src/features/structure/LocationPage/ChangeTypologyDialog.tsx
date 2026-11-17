@@ -19,10 +19,12 @@ export function ChangeTypologyDialog({
 	projectId,
 	unit,
 	onClose,
+	returnFocus,
 }: {
 	projectId: string;
 	unit: LocationDetail;
 	onClose: () => void;
+	returnFocus: () => HTMLElement | null | undefined;
 }) {
 	const formId = useId();
 	const typologies = useQuery(typologiesQueryOptions(projectId));
@@ -73,6 +75,7 @@ export function ChangeTypologyDialog({
 			formId={formId}
 			onSubmit={submit}
 			onClose={close}
+			returnFocus={returnFocus}
 		>
 			{saveFailed && (
 				<Alert variant="destructive">

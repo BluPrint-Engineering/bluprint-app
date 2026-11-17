@@ -20,6 +20,7 @@ export function RenameRoomDialog({
 	room,
 	rooms,
 	onClose,
+	returnFocus,
 }: {
 	projectId: string;
 	locationId: string;
@@ -27,6 +28,7 @@ export function RenameRoomDialog({
 	room: Room;
 	rooms: Room[];
 	onClose: () => void;
+	returnFocus: () => HTMLElement | null | undefined;
 }) {
 	const fieldId = useId();
 	const rename = useRenameRoomMutation(projectId, locationId);
@@ -93,6 +95,7 @@ export function RenameRoomDialog({
 			formId={fieldId}
 			onSubmit={submit}
 			onClose={close}
+			returnFocus={returnFocus}
 		>
 			{failed && (
 				<Alert variant="destructive">

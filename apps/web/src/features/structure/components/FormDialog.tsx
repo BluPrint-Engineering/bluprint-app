@@ -29,6 +29,7 @@ interface FormDialogProps {
 	formId: string;
 	onSubmit: () => void;
 	onClose: () => void;
+	returnFocus: () => HTMLElement | null | undefined;
 	children: ReactNode;
 }
 
@@ -42,9 +43,15 @@ export function FormDialog({
 	formId,
 	onSubmit,
 	onClose,
+	returnFocus,
 	children,
 }: FormDialogProps) {
 	const desktop = useIsDesktop();
+
+	function focusOpener(event: Event) {
+		event.preventDefault();
+		returnFocus()?.focus();
+	}
 
 	const form = (
 		<form
@@ -92,7 +99,7 @@ export function FormDialog({
 	if (desktop) {
 		return (
 			<Dialog open onOpenChange={handleOpenChange}>
-				<DialogContent>
+				<DialogContent onCloseAutoFocus={focusOpener}>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
 						<DialogDescription>{description}</DialogDescription>
@@ -108,7 +115,7 @@ export function FormDialog({
 
 	return (
 		<Drawer open onOpenChange={handleOpenChange} dismissible={!pending}>
-			<DrawerContent>
+			<DrawerContent onCloseAutoFocus={focusOpener}>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
 					<DrawerDescription>{description}</DrawerDescription>

@@ -167,8 +167,8 @@ function useStructureCreation<Variables>(
 export function useCreateStructureMutation(projectId: string) {
 	return useStructureCreation(
 		projectId,
-		(body: CreateStructure & { draft?: unknown }) => {
-			const { draft: _draft, ...plan } = body;
+		(body: CreateStructure & { draft?: unknown; opener?: "menu" }) => {
+			const { draft: _draft, opener: _opener, ...plan } = body;
 			return postStructure(projectId, plan);
 		},
 		"create-structure",

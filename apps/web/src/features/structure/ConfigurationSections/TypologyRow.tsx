@@ -1,5 +1,6 @@
 import type { Typology } from "@bluprint/shared";
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
+import type { Ref } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	DropdownMenu,
@@ -16,12 +17,14 @@ export function TypologyRow({
 	onEditRooms,
 	onRename,
 	onDelete,
+	triggerRef,
 }: {
 	typology: Typology;
 	editable: boolean;
 	onEditRooms: () => void;
 	onRename: () => void;
 	onDelete: () => void;
+	triggerRef: Ref<HTMLButtonElement>;
 }) {
 	const inUse = typology.unitCount > 0;
 
@@ -40,6 +43,7 @@ export function TypologyRow({
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<Button
+							ref={triggerRef}
 							type="button"
 							variant="ghost"
 							size="icon"

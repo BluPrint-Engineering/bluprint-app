@@ -14,25 +14,16 @@ type AddReservedRowProps = Omit<
 > & {
 	project: ProjectSummary;
 	type: "unit" | "common_area";
-	reopensReservation?: boolean;
 };
 
-export function AddReservedRow({
-	project,
-	reopensReservation = false,
-	...row
-}: AddReservedRowProps) {
+export function AddReservedRow({ project, ...row }: AddReservedRowProps) {
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const admin = project.role === "admin";
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
 		(variables) => {
 			const draft = reservationDraft(variables);
-			const ours =
-				draft?.opener === undefined
-					? reopensReservation
-					: draft.opener === row.kind;
-			return ours ? draft : undefined;
+			return draft?.opener === row.kind ? draft : undefined;
 		},
 	);
 	const [reserving, setReserving] = useState(
