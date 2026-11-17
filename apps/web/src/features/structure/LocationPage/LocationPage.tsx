@@ -187,23 +187,33 @@ function LocationView({
 	return (
 		<>
 			<PageBand>
-				<div className="flex items-center justify-between gap-(--space-3)">
-					{band.parent.kind === "project" ? (
-						<BackLink to="/projects/$projectId" params={{ projectId }}>
-							{project.name}
-						</BackLink>
-					) : (
-						<BackLink
-							to="/projects/$projectId/locations/$locationId"
-							params={{ projectId, locationId: band.parent.id }}
-						>
-							{band.parent.name}
-						</BackLink>
-					)}
-					{!desktop && menu}
-				</div>
-				<div className="flex items-start justify-between gap-(--space-4)">
-					<div className="grid min-w-0 gap-(--space-2)">
+				<div className="grid grid-cols-[1fr_auto] items-center gap-x-(--space-3) gap-y-(--space-2) md:items-start md:gap-x-(--space-4)">
+					<div className="min-w-0 md:col-start-1 md:row-start-1">
+						{band.parent.kind === "project" ? (
+							<BackLink to="/projects/$projectId" params={{ projectId }}>
+								{project.name}
+							</BackLink>
+						) : (
+							<BackLink
+								to="/projects/$projectId/locations/$locationId"
+								params={{ projectId, locationId: band.parent.id }}
+							>
+								{band.parent.name}
+							</BackLink>
+						)}
+					</div>
+					<div className="col-start-2 row-start-1 flex items-center gap-(--space-2) md:row-start-2">
+						{desktop && canEdit && tower && tower.floors.length > 0 && (
+							<Button asChild variant="outline">
+								<AddFloorsLink projectId={projectId} towerId={tower.id}>
+									<ListPlus className="size-4.5" aria-hidden="true" />
+									Adicionar andares
+								</AddFloorsLink>
+							</Button>
+						)}
+						{menu}
+					</div>
+					<div className="col-span-2 row-start-2 grid min-w-0 gap-(--space-2) md:col-span-1 md:col-start-1">
 						<h1
 							className={cn(
 								"text-[1.75rem] leading-[1.15] font-semibold tracking-tight text-balance [overflow-wrap:anywhere] md:text-4xl",
@@ -215,19 +225,6 @@ function LocationView({
 						<p className="text-sm text-muted-foreground">{band.meta}</p>
 						{!canEdit && <LockLine>{STRUCTURE_LOCKED}</LockLine>}
 					</div>
-					{desktop && (
-						<div className="flex items-center gap-(--space-2)">
-							{canEdit && tower && tower.floors.length > 0 && (
-								<Button asChild variant="outline">
-									<AddFloorsLink projectId={projectId} towerId={tower.id}>
-										<ListPlus className="size-4.5" aria-hidden="true" />
-										Adicionar andares
-									</AddFloorsLink>
-								</Button>
-							)}
-							{menu}
-						</div>
-					)}
 				</div>
 			</PageBand>
 			<PageMain>
