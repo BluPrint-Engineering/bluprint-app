@@ -14,14 +14,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  gate:
+  api:
     # `branches` alone also matches a pull request whose head branch is named main
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
-    outputs:
-      tip: ${{ steps.tip.outputs.tip }}
     steps:
-      - name: Deploy only the commit at the tip of main
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Setup flyctl
+        uses: superfly/flyctl-actions/setup-flyctl@1.5
+
+      - &require-tip-of-main
+        name: Require the commit to still be the tip of main
         id: tip
         env:
           GH_TOKEN: ${{ github.token }}
@@ -35,20 +42,8 @@ jobs:
             echo "tip=false" >> "$GITHUB_OUTPUT"
           fi
 
-  api:
-    needs: gate
-    if: needs.gate.outputs.tip == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
-      - name: Setup flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@1.5
-
       - name: Deploy to Fly
+        if: steps.tip.outputs.tip == 'true'
         # Without --ha=false the first deploy of an app with [http_service] creates two machines
         run: flyctl deploy --remote-only --ha=false
         env:
@@ -83,7 +78,10 @@ jobs:
         env:
           VITE_ALLOW_SELF_SIGNUP: "false"
 
+      - *require-tip-of-main
+
       - name: Deploy to Cloudflare Pages
+        if: steps.tip.outputs.tip == 'true'
         working-directory: apps/web
         # The checkout is a detached HEAD, so wrangler cannot infer the branch that marks a production deploy
         run: >-

@@ -9,7 +9,7 @@ Amends [0050](0050-playwright-for-end-to-end.md), which published the E2E screen
 
 ## Consequences
 
-- **Retries stay at 2 on CI.** A failure is still classified `flaky` or `failed`, and `trace: "on-first-retry"` still records the first failed attempt, so a flake arrives with its trace.
+- **Retries stay at 2 on CI.** A failure is still classified `flaky` or `failed`. `trace: "on-first-retry"` records the first retry, and the failed first attempt keeps its screenshot and its video, so a flake arrives with evidence of both attempts.
 - **A flake is a red `ci`**, and on `main` a held deploy ([0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md)).
 - **Both projects, `video: retain-on-failure` and the `playwright-report` artifact are unchanged.** The artifact now holds screenshots of failures only.
 - **Local runs are unchanged**: `retries` is 0 off CI, so `failOnFlakyTests` has nothing to flag.
