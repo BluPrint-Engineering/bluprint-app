@@ -8,19 +8,15 @@ import { onlineManager } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { rememberFailedSubmission } from "@/features/auth";
-import {
-	type SessionDraftKind,
-	sessionDraftKinds,
-} from "@/features/auth/sessionDraft";
-import { project } from "@/test/projectsApi";
-import { json, organization, renderAt, signedIn } from "@/test/renderApp";
+import type { SessionDraftKind } from "@/features/auth/sessionDraft";
+import { project } from "./projectsApi";
+import { json, organization, renderAt, signedIn } from "./renderApp";
 import {
 	expiringServer,
 	otherAccount,
 	signInAgain,
 	signOut,
-} from "@/test/sessionExpiry";
+} from "./sessionExpiry";
 import {
 	combine,
 	droppedRoom,
@@ -33,7 +29,7 @@ import {
 	typologiesApi,
 	typologyOf,
 	writableApi,
-} from "@/test/structureApi";
+} from "./structureApi";
 
 const user = userEvent.setup({ delay: null });
 
@@ -50,6 +46,7 @@ interface Entry {
 	openedByAddress?: true;
 	shows: string[];
 	focusAfterCancel?: () => Promise<HTMLElement>;
+	focusAfterPlainCancel?: () => Promise<HTMLElement>;
 	focusAfterSave?: () => Promise<HTMLElement>;
 	request: string;
 }
@@ -78,12 +75,12 @@ function openForms(inline: string[]): string[] {
 const byRole = (role: string, name: string) => () =>
 	screen.findByRole(role, { name });
 
-async function pick(menu: string, item: string) {
+export async function pick(menu: string, item: string) {
 	await user.click(await screen.findByRole("button", { name: menu }));
 	await user.click(await screen.findByRole("menuitem", { name: item }));
 }
 
-const click = (role: string, name: string) => async () => {
+export const click = (role: string, name: string) => async () => {
 	await user.click(await screen.findByRole(role, { name }));
 };
 
@@ -137,11 +134,11 @@ async function expectRestored(page: Page, entry: Entry) {
 	await waitFor(() => expect(openForms(page.inline)).toEqual(entry.shows));
 }
 
-async function expectNothingOpen(page: Page) {
+export async function expectNothingOpen(page: Page) {
 	await waitFor(() => expect(openForms(page.inline)).toEqual([]));
 }
 
-async function expectServerValue(entry: Entry) {
+export async function expectServerValue(entry: Entry) {
 	await entry.open();
 	await entry.expectCurrent();
 	await entry.cancel();
@@ -149,9 +146,13 @@ async function expectServerValue(entry: Entry) {
 	await entry.reenter?.();
 }
 
-async function runHostileSequence(page: Page, key: string) {
+function entryOf(page: Page, key: string): Entry {
 	const entry = page.entries[key];
 	if (!entry) throw new Error(`no entry ${key}`);
+	return entry;
+}
+
+async function restoreThenCancel(page: Page, entry: Entry) {
 	renderAt(page.path);
 	await page.ready();
 
@@ -160,13 +161,28 @@ async function runHostileSequence(page: Page, key: string) {
 	expect(page.server.writes).toEqual([entry.request]);
 
 	await entry.cancel();
-	const { focusAfterCancel, focusAfterSave } = entry;
+	const { focusAfterCancel } = entry;
 	if (focusAfterCancel) {
 		await waitFor(async () => expect(await focusAfterCancel()).toHaveFocus());
 	}
 	await entry.exit?.();
 	await entry.reenter?.();
 	await expectNothingOpen(page);
+}
+
+async function runEntryRow(page: Page, key: string) {
+	const entry = entryOf(page, key);
+	await restoreThenCancel(page, entry);
+	await expectServerValue(entry);
+
+	await reload(page);
+	await expectNothingOpen(page);
+	expect(page.server.writes).toEqual([entry.request]);
+}
+
+async function runHostileSequence(page: Page, key: string) {
+	const entry = entryOf(page, key);
+	await restoreThenCancel(page, entry);
 	for (const each of Object.values(page.entries)) {
 		await expectServerValue(each);
 	}
@@ -178,6 +194,7 @@ async function runHostileSequence(page: Page, key: string) {
 	await expireOnSave(page, entry);
 	await expectRestored(page, entry);
 	await entry.submit();
+	const { focusAfterSave } = entry;
 	if (focusAfterSave) {
 		await waitFor(async () => expect(await focusAfterSave()).toHaveFocus());
 	}
@@ -194,8 +211,7 @@ async function runHostileSequence(page: Page, key: string) {
 }
 
 async function runOtherAccount(page: Page, key: string) {
-	const entry = page.entries[key];
-	if (!entry) throw new Error(`no entry ${key}`);
+	const entry = entryOf(page, key);
 	renderAt(page.path);
 	await page.ready();
 	await entry.open();
@@ -218,6 +234,25 @@ async function runOtherAccount(page: Page, key: string) {
 	await signInAgain();
 	await reload(page);
 	await expectNothingOpen(page);
+	expect(page.server.writes).toEqual([entry.request]);
+}
+
+async function runPlainFocus(page: Page, key: string) {
+	const entry = entryOf(page, key);
+	const { focusAfterSave } = entry;
+	const focusAfterCancel =
+		entry.focusAfterPlainCancel ?? entry.focusAfterCancel;
+	if (!focusAfterCancel || !focusAfterSave) throw new Error(`no focus ${key}`);
+	renderAt(page.path);
+	await page.ready();
+	await entry.open();
+	await entry.cancel();
+	await waitFor(async () => expect(await focusAfterCancel()).toHaveFocus());
+	await entry.exit?.();
+	await entry.open();
+	await entry.fill();
+	await entry.submit();
+	await waitFor(async () => expect(await focusAfterSave()).toHaveFocus());
 	expect(page.server.writes).toEqual([entry.request]);
 }
 
@@ -1108,6 +1143,7 @@ function wizardPage(adding: boolean, remaining: number): Page {
 			cancel: CANCEL,
 			shows: ["Alterar reserva"],
 			focusAfterCancel: createButton,
+			focusAfterPlainCancel: byRole("button", "Alterar reserva"),
 			focusAfterSave: createButton,
 			request: `PATCH /api/projects/${summary.id}/units`,
 		};
@@ -1121,7 +1157,7 @@ function wizardPage(adding: boolean, remaining: number): Page {
 	};
 }
 
-const PAGES = {
+export const PAGES = {
 	newProject: newProjectPage,
 	units: unitsPage,
 	wizard: () => wizardPage(false, 100),
@@ -1141,210 +1177,159 @@ const PAGES = {
 	commonArea: () => roomsPage("area", 100),
 };
 
-const ROWS: [number, keyof typeof PAGES, string, SessionDraftKind][] = [
-	[1, "newProject", "createProject", "create-project"],
-	[2, "units", "reservations", "update-reservations"],
-	[3, "configuration", "renameProject", "rename-project"],
-	[4, "configuration", "reservation", "change-reservation"],
-	[5, "configuration", "createTypology", "create-typology"],
-	[6, "configuration", "renameTypology", "update-typology"],
-	[7, "configuration", "editRooms", "update-typology"],
-	[8, "facade", "addTower", "create-structure"],
-	[9, "facade", "addArea", "create-structure"],
-	[10, "facadeExhausted", "areaRowReservation", "change-reservation"],
-	[11, "facade", "renameArea", "rename-location"],
-	[12, "tower", "renameTower", "rename-location"],
-	[13, "tower", "duplicateTower", "duplicate-location"],
-	[14, "towerExhausted", "duplicateReservation", "change-reservation"],
-	[15, "tower", "renameArea", "rename-location"],
-	[16, "tower", "addArea", "create-structure"],
-	[17, "towerExhausted", "areaRowReservation", "change-reservation"],
-	[18, "floor", "renameFloor", "rename-location"],
-	[19, "floor", "duplicateFloor", "duplicate-location"],
-	[20, "floorExhausted", "duplicateFloorReservation", "change-reservation"],
-	[21, "floor", "renameUnit", "rename-location"],
-	[22, "floor", "duplicateUnit", "duplicate-location"],
-	[23, "floorExhausted", "duplicateUnitReservation", "change-reservation"],
-	[24, "floor", "renameArea", "rename-location"],
-	[25, "floor", "addUnit", "create-structure"],
-	[26, "floor", "addArea", "create-structure"],
-	[27, "floorExhausted", "unitRowReservation", "change-reservation"],
-	[28, "floorExhausted", "areaRowReservation", "change-reservation"],
-	[29, "unit", "rename", "rename-location"],
-	[30, "unit", "duplicate", "duplicate-location"],
-	[31, "unitExhausted", "duplicateReservation", "change-reservation"],
-	[32, "unit", "changeTypology", "change-typology"],
-	[33, "unit", "addRoom", "add-room"],
-	[34, "unit", "renameRoom", "rename-room"],
-	[35, "commonArea", "rename", "rename-location"],
-	[36, "commonArea", "addRoom", "add-room"],
-	[37, "commonArea", "renameRoom", "rename-room"],
-	[38, "wizard", "create", "create-structure"],
-	[39, "wizardExhausted", "reservation", "change-reservation"],
-	[40, "addFloors", "create", "create-structure"],
-	[41, "addFloorsExhausted", "reservation", "change-reservation"],
-	[42, "tower", "addAreaFromMenu", "create-structure"],
-	[43, "facade", "addAreaFromMenu", "create-structure"],
-	[44, "facadeBlank", "addTower", "create-structure"],
-	[45, "commonArea", "changeTypology", "change-typology"],
+type PageKey = keyof typeof PAGES;
+
+const GROUP_OF_PAGE = {
+	newProject: "projects",
+	units: "projects",
+	configuration: "projects",
+	facade: "facade",
+	facadeExhausted: "facade",
+	facadeBlank: "facade",
+	tower: "tower",
+	towerExhausted: "tower",
+	floor: "floor",
+	floorExhausted: "floor",
+	unit: "rooms",
+	unitExhausted: "rooms",
+	commonArea: "rooms",
+	wizard: "wizard",
+	wizardExhausted: "wizard",
+	addFloors: "wizard",
+	addFloorsExhausted: "wizard",
+} as const satisfies Record<PageKey, string>;
+
+export type PageGroup = (typeof GROUP_OF_PAGE)[PageKey];
+
+export const PAGE_GROUPS = [...new Set(Object.values(GROUP_OF_PAGE))];
+
+export type Row = [
+	row: number,
+	page: PageKey,
+	entry: string,
+	kind: SessionDraftKind,
+	sequence: "full" | "entry",
 ];
 
-describe("a submission lost to an expired session", () => {
-	afterEach(() => {
-		localStorage.clear();
-		vi.unstubAllGlobals();
-		onlineManager.setOnline(true);
+export const ROWS: Row[] = [
+	[1, "newProject", "createProject", "create-project", "full"],
+	[2, "units", "reservations", "update-reservations", "full"],
+	[3, "configuration", "renameProject", "rename-project", "full"],
+	[4, "configuration", "reservation", "change-reservation", "full"],
+	[5, "configuration", "createTypology", "create-typology", "full"],
+	[6, "configuration", "renameTypology", "update-typology", "entry"],
+	[7, "configuration", "editRooms", "update-typology", "full"],
+	[8, "facade", "addTower", "create-structure", "entry"],
+	[9, "facade", "addArea", "create-structure", "entry"],
+	[10, "facadeExhausted", "areaRowReservation", "change-reservation", "entry"],
+	[11, "facade", "renameArea", "rename-location", "entry"],
+	[12, "tower", "renameTower", "rename-location", "entry"],
+	[13, "tower", "duplicateTower", "duplicate-location", "entry"],
+	[14, "towerExhausted", "duplicateReservation", "change-reservation", "entry"],
+	[15, "tower", "renameArea", "rename-location", "entry"],
+	[16, "tower", "addArea", "create-structure", "entry"],
+	[17, "towerExhausted", "areaRowReservation", "change-reservation", "entry"],
+	[18, "floor", "renameFloor", "rename-location", "full"],
+	[19, "floor", "duplicateFloor", "duplicate-location", "full"],
+	[
+		20,
+		"floorExhausted",
+		"duplicateFloorReservation",
+		"change-reservation",
+		"full",
+	],
+	[21, "floor", "renameUnit", "rename-location", "entry"],
+	[22, "floor", "duplicateUnit", "duplicate-location", "entry"],
+	[
+		23,
+		"floorExhausted",
+		"duplicateUnitReservation",
+		"change-reservation",
+		"entry",
+	],
+	[24, "floor", "renameArea", "rename-location", "entry"],
+	[25, "floor", "addUnit", "create-structure", "full"],
+	[26, "floor", "addArea", "create-structure", "entry"],
+	[27, "floorExhausted", "unitRowReservation", "change-reservation", "entry"],
+	[28, "floorExhausted", "areaRowReservation", "change-reservation", "entry"],
+	[29, "unit", "rename", "rename-location", "entry"],
+	[30, "unit", "duplicate", "duplicate-location", "entry"],
+	[31, "unitExhausted", "duplicateReservation", "change-reservation", "entry"],
+	[32, "unit", "changeTypology", "change-typology", "full"],
+	[33, "unit", "addRoom", "add-room", "full"],
+	[34, "unit", "renameRoom", "rename-room", "full"],
+	[35, "commonArea", "rename", "rename-location", "entry"],
+	[36, "commonArea", "addRoom", "add-room", "entry"],
+	[37, "commonArea", "renameRoom", "rename-room", "entry"],
+	[38, "wizard", "create", "create-structure", "entry"],
+	[39, "wizardExhausted", "reservation", "change-reservation", "entry"],
+	[40, "addFloors", "create", "create-structure", "entry"],
+	[41, "addFloorsExhausted", "reservation", "change-reservation", "entry"],
+	[42, "tower", "addAreaFromMenu", "create-structure", "entry"],
+	[43, "facade", "addAreaFromMenu", "create-structure", "entry"],
+	[44, "facadeBlank", "addTower", "create-structure", "entry"],
+	[45, "commonArea", "changeTypology", "change-typology", "entry"],
+];
+
+function rowsReturningFocus(rows: Row[]): Row[] {
+	const returning = rows.filter(([, page, key]) => {
+		const { focusAfterCancel, focusAfterSave } = entryOf(PAGES[page](), key);
+		return focusAfterCancel !== undefined && focusAfterSave !== undefined;
 	});
-
-	test.each(ROWS)(
-		"row %i: on %s, reopens %s alone, forgets it on cancel and returns focus",
-		async (_row, page, entry, _kind) => {
-			await runHostileSequence(PAGES[page](), entry);
-		},
-		60_000,
-	);
-
-	test.each(ROWS)(
-		"row %i: on %s, hides %s from another account",
-		async (_row, page, entry, _kind) => {
-			await runOtherAccount(PAGES[page](), entry);
-		},
-		30_000,
-	);
-});
-
-async function runPlainFocus(page: Page, key: string) {
-	const entry = page.entries[key];
-	if (!entry) throw new Error(`no entry ${key}`);
-	const { focusAfterCancel, focusAfterSave } = entry;
-	if (!focusAfterCancel || !focusAfterSave) throw new Error(`no focus ${key}`);
-	renderAt(page.path);
-	await page.ready();
-	await entry.open();
-	await entry.cancel();
-	await waitFor(async () => expect(await focusAfterCancel()).toHaveFocus());
-	await entry.exit?.();
-	await entry.open();
-	await entry.fill();
-	await entry.submit();
-	await waitFor(async () => expect(await focusAfterSave()).toHaveFocus());
-	expect(page.server.writes).toEqual([entry.request]);
+	vi.unstubAllGlobals();
+	return returning;
 }
 
-const PLAIN_FOCUS_ROWS = ROWS.filter(([row]) =>
-	[5, 6, 7, 32, 33, 34, 36, 37, 42, 43, 45].includes(row),
-);
+export function describeRestorationRows(group: PageGroup) {
+	const rows = ROWS.filter(([, page]) => GROUP_OF_PAGE[page] === group);
+	const fullRows = rows.filter(([, , , , sequence]) => sequence === "full");
+	const entryRows = rows.filter(([, , , , sequence]) => sequence === "entry");
+	const focusRows = rowsReturningFocus(rows);
 
-describe("a form opened and closed without any session loss", () => {
-	afterEach(() => {
-		localStorage.clear();
-		vi.unstubAllGlobals();
-	});
-
-	test.each(PLAIN_FOCUS_ROWS)(
-		"row %i: on %s, returns focus from %s after cancel and after save",
-		async (_row, page, entry) => {
-			await runPlainFocus(PAGES[page](), entry);
-		},
-		30_000,
-	);
-});
-
-describe("the restoration table", () => {
-	test("has a row for every kind of submission that is kept", () => {
-		const covered = new Set(ROWS.map(([, , , kind]) => kind));
-		expect(sessionDraftKinds.filter((kind) => !covered.has(kind))).toEqual([]);
-	});
-});
-
-describe("a kept reserva change without the entry that sent it", () => {
-	afterEach(() => {
-		localStorage.clear();
-		vi.unstubAllGlobals();
-	});
-
-	test.each([
-		["floorExhausted", "unitRowReservation"],
-		["towerExhausted", "areaRowReservation"],
-		["unitExhausted", "duplicateReservation"],
-	] as const)("opens nothing on %s", async (key, entryKey) => {
-		const page = PAGES[key]();
-		rememberFailedSubmission({
-			accountId: signedIn.user.id,
-			path: page.path,
-			kind: "change-reservation",
-			variables: { reserved: 5 },
+	describe("a submission lost to an expired session", () => {
+		afterEach(() => {
+			localStorage.clear();
+			vi.unstubAllGlobals();
+			onlineManager.setOnline(true);
 		});
-		renderAt(page.path);
-		await page.ready();
 
-		await expectNothingOpen(page);
-		const entry = page.entries[entryKey];
-		if (!entry) throw new Error(`no entry ${entryKey}`);
-		await expectServerValue(entry);
+		test.each(entryRows)(
+			"row %i: on %s, reopens %s alone, forgets it on cancel and returns focus",
+			async (_row, page, entry) => {
+				await runEntryRow(PAGES[page](), entry);
+			},
+			30_000,
+		);
+
+		test.each(fullRows)(
+			"row %i: on %s, reopens %s alone, keeps every other entry on the server value and sends a restored save once",
+			async (_row, page, entry) => {
+				await runHostileSequence(PAGES[page](), entry);
+			},
+			60_000,
+		);
+
+		test.each(fullRows)(
+			"row %i: on %s, hides %s from another account",
+			async (_row, page, entry) => {
+				await runOtherAccount(PAGES[page](), entry);
+			},
+			30_000,
+		);
 	});
-});
 
-describe("an action without fields lost to an expired session", () => {
-	afterEach(() => {
-		localStorage.clear();
-		vi.unstubAllGlobals();
+	describe("a form opened and closed without any session loss", () => {
+		afterEach(() => {
+			localStorage.clear();
+			vi.unstubAllGlobals();
+		});
+
+		test.each(focusRows)(
+			"row %i: on %s, returns focus from %s after cancel and after save",
+			async (_row, page, entry) => {
+				await runPlainFocus(PAGES[page](), entry);
+			},
+			30_000,
+		);
 	});
-
-	const ACTIONS = [
-		[
-			"removing a room",
-			() => pick("Ações do cômodo Lavanderia", "Remover cômodo"),
-			"DELETE",
-			"/rooms/",
-		],
-		[
-			"taking a room of the typology out",
-			(holder: "unit" | "commonArea") =>
-				pick(
-					"Ações do cômodo Sala",
-					holder === "unit"
-						? "Remover desta unidade"
-						: "Remover desta área comum",
-				),
-			"DELETE",
-			"/rooms/",
-		],
-		[
-			"giving a room back",
-			click("button", "Devolver o cômodo Cozinha"),
-			"DELETE",
-			"/dropped-rooms/",
-		],
-		[
-			"returning to the typology",
-			click("button", "Voltar à tipologia"),
-			"POST",
-			"/typology/reset",
-		],
-	] as const;
-
-	test.each(
-		(["unit", "commonArea"] as const).flatMap((holder) =>
-			ACTIONS.map((action) => [holder, ...action] as const),
-		),
-	)(
-		"on %s, does not reopen or repeat %s after signing back in",
-		async (holder, _action, act, method, path) => {
-			const page = PAGES[holder]();
-			renderAt(page.path);
-			await page.ready();
-			page.server.expireNextWrite();
-			await act(holder);
-			await screen.findByLabelText("E-mail");
-			await signInAgain();
-			await page.ready();
-			await screen.findByRole("heading", { name: "Cômodos" });
-
-			await expectNothingOpen(page);
-			expect(screen.queryByRole("menuitem")).not.toBeInTheDocument();
-			expect(page.server.writes).toHaveLength(1);
-			expect(page.server.writes[0]).toMatch(new RegExp(`^${method} .*${path}`));
-		},
-	);
-});
+}
