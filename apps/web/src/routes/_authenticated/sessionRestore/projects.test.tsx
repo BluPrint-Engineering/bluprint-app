@@ -1,3 +1,3 @@
 import { describeRestorationRows } from "@/test/sessionRestore";
 
-describeRestorationRows("projects");
+describeRestorationRows(import.meta.url);

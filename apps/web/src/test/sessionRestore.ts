@@ -1199,9 +1199,22 @@ const GROUP_OF_PAGE = {
 	addFloorsExhausted: "wizard",
 } as const satisfies Record<PageKey, string>;
 
-export type PageGroup = (typeof GROUP_OF_PAGE)[PageKey];
+type PageGroup = (typeof GROUP_OF_PAGE)[PageKey];
 
-export const PAGE_GROUPS = [...new Set(Object.values(GROUP_OF_PAGE))];
+export const PAGE_GROUPS: PageGroup[] = [
+	...new Set(Object.values(GROUP_OF_PAGE)),
+];
+
+function groupOfFile(fileUrl: string): PageGroup {
+	const name = new URL(fileUrl).pathname.replace(/^.*\/(.*)\.test\.tsx$/, "$1");
+	const group = PAGE_GROUPS.find((candidate) => candidate === name);
+	if (!group) {
+		throw new Error(
+			`${fileUrl} names no group of screens; expected one of ${PAGE_GROUPS.join(", ")}`,
+		);
+	}
+	return group;
+}
 
 export type Row = [
 	row: number,
@@ -1280,7 +1293,8 @@ function rowsReturningFocus(rows: Row[]): Row[] {
 	return returning;
 }
 
-export function describeRestorationRows(group: PageGroup) {
+export function describeRestorationRows(fileUrl: string) {
+	const group = groupOfFile(fileUrl);
 	const rows = ROWS.filter(([, page]) => GROUP_OF_PAGE[page] === group);
 	const fullRows = rows.filter(([, , , , sequence]) => sequence === "full");
 	const entryRows = rows.filter(([, , , , sequence]) => sequence === "entry");
