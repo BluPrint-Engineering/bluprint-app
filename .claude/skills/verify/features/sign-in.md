@@ -9,7 +9,7 @@ A person with an account signs in with e-mail and password at `/login` and lands
 - `auth-redirect` sends a signed-out visit to a protected route to `/login?redirect=…`, and back there after signing in.
 - `auth-already-signed-in` skips the login screen for a user with a session, and keeps the session on reload.
 - `auth-rate-limit` refuses a sixth attempt within a minute with a pt-BR message.
-- `auth-expired-restore` keeps a save with fields that meets an expired session: after signing in again as the same account the screen reopens the form by the entry that sent it, with the typed value and every other form closed, and nothing is sent again. `Cancelar` closes it, returns focus to that entry and forgets it, so a reload opens nothing. Actions without fields (remove, move, deliver) never come back. Every entry and screen is a row of `apps/web/src/test/sessionRestore.ts`, run by `apps/web/src/routes/_authenticated/sessionRestore/` (ADR 0089, ADR 0090).
+- `auth-expired-restore` keeps a save with fields that meets an expired session: after signing in again as the same account the screen reopens the form by the entry that sent it, with the typed value and every other form closed, and nothing is sent again. `Cancelar` closes it, returns focus to that entry and forgets it, so a reload opens nothing. Actions without fields (remove, move, deliver) never come back. Every entry and screen is a row of `apps/web/src/test/sessionRestore.ts`, run by `apps/web/src/routes/_authenticated/sessionRestore/` (ADR 0089, ADR 0093).
 
 ## How to get to it (user POV)
 
