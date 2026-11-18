@@ -11,6 +11,8 @@
 		"dev": "bun run --filter @bluprint/shared build && bun run --parallel --filter '*' --if-present dev",
 		"build": "bun run --filter @bluprint/shared build && bun run --filter './apps/*' --if-present build",
 		"test": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test",
+		"test:api": "bun run --filter @bluprint/shared build && bun run --filter @bluprint/api test",
+		"test:web": "bun run --filter @bluprint/shared build && bun run --filter @bluprint/web test",
 		"test:unit": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test:unit",
 		"test:int": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present test:int",
 		"typecheck": "bun run --filter @bluprint/shared build && bun run --filter '*' --if-present typecheck && tsc -p .claude/skills/bluprint-design/tsconfig.json",

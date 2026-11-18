@@ -1,6 +1,6 @@
 # PR screenshots and videos live in the PR body
 
-Superseded by [0058](0058-pr-captures-from-the-playwright-mcp.md).
+Superseded by [0058](0058-pr-captures-from-the-playwright-mcp.md). The `playwright-report` artifact now holds screenshots of failures only, per [0092](0092-e2e-screenshots-only-on-failure-and-a-flaky-test-fails-ci.md).
 
 An interface change is reviewed from the images in its PR body: a mobile and a desktop screenshot of every state it changes, and a video of every flow it changes. The CI `playwright-report` artifact ([0050](0050-playwright-for-end-to-end.md)) still holds every screenshot, but reaching it means downloading and unzipping a report per PR, and it expires after 14 days, while the review needs the few states the change touches, on the page, for as long as the PR is read.
 

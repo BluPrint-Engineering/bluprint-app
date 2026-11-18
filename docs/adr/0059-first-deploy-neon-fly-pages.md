@@ -1,5 +1,7 @@
 # First deploy: Neon São Paulo, Fly GRU, Cloudflare Pages proxying `/api`
 
+Per [0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md), the `api` and `web` jobs are now one `deploy` job that first checks the commit is still the tip of `main` and otherwise deploys nothing, so re-running an old CI run no longer redeploys its commit: a rollback is a revert commit on `main` that goes through the full run. A web deploy that fails after the API one is fixed by re-running the job, which redeploys the API too. The rest stands.
+
 Supersedes [0015](0015-hosting-and-providers-deferred.md).
 
 Production runs on three providers, all under the company email:

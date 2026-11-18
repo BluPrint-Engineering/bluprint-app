@@ -14,55 +14,68 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  api:
+  deploy:
     # `branches` alone also matches a pull request whose head branch is named main
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
     steps:
+      - name: Require the commit to still be the tip of main
+        id: tip
+        env:
+          GH_TOKEN: ${{ github.token }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          TIP=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$HEAD_SHA" = "$TIP" ]; then
+            echo "tip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Not deploying $HEAD_SHA: main has moved on to $TIP, and only the tip of main deploys"
+            echo "tip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: steps.tip.outputs.tip == 'true'
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup flyctl
+        if: steps.tip.outputs.tip == 'true'
         uses: superfly/flyctl-actions/setup-flyctl@1.5
 
-      - name: Deploy to Fly
-        # Without --ha=false the first deploy of an app with [http_service] creates two machines
-        run: flyctl deploy --remote-only --ha=false
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-  web:
-    needs: api
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.workflow_run.head_sha }}
-
       - name: Setup Bun
+        if: steps.tip.outputs.tip == 'true'
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.0
 
       - name: Setup Node
+        if: steps.tip.outputs.tip == 'true'
         uses: actions/setup-node@v4
         with:
           node-version: 24
 
       - name: Install dependencies
+        if: steps.tip.outputs.tip == 'true'
         run: bun install --frozen-lockfile
 
-      - name: Build
+      - name: Build web
+        if: steps.tip.outputs.tip == 'true'
         run: |
           bun run --filter @bluprint/shared build
           bun run --filter @bluprint/web build
         env:
           VITE_ALLOW_SELF_SIGNUP: "false"
 
-      - name: Deploy to Cloudflare Pages
+      - name: Deploy API to Fly
+        if: steps.tip.outputs.tip == 'true'
+        # Without --ha=false the first deploy of an app with [http_service] creates two machines
+        run: flyctl deploy --remote-only --ha=false
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Deploy web to Cloudflare Pages
+        if: steps.tip.outputs.tip == 'true'
         working-directory: apps/web
         # The checkout is a detached HEAD, so wrangler cannot infer the branch that marks a production deploy
         run: >-

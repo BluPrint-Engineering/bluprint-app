@@ -45,8 +45,7 @@ jobs:
       - name: Check routeTree.gen.ts is up to date
         run: git diff --exit-code -- apps/web/src/routeTree.gen.ts
 
-  test:
-    if: github.event_name == 'pull_request'
+  test-api:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -73,10 +72,21 @@ jobs:
         run: bun run --filter @bluprint/api db:migrate
 
       - name: Test
-        run: bun run test
+        run: bun run test:api
+
+  test-web:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup workspace
+        uses: ./.github/actions/setup-workspace
+
+      - name: Test
+        run: bun run test:web
 
   e2e:
-    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     container:
       image: mcr.microsoft.com/playwright:v1.63.0-noble
@@ -128,8 +138,8 @@ jobs:
 
   ci:
     # A required check that is skipped counts as passing, so without always() a failed needed job would read as green.
-    if: github.event_name == 'pull_request' && always()
-    needs: [static, test, e2e]
+    if: always()
+    needs: [static, test-api, test-web, e2e]
     runs-on: ubuntu-latest
     steps:
       - name: Require every job to have succeeded

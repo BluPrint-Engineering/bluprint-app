@@ -1,5 +1,7 @@
 # Playwright for end-to-end tests
 
+CI keeps screenshots of failures only, and a flaky test fails the run, per [0092](0092-e2e-screenshots-only-on-failure-and-a-flaky-test-fails-ci.md); the rest stands.
+
 Its Playwright browser cache and OS-dependency step are superseded by [0065](0065-e2e-runs-in-the-playwright-container-image.md): `e2e` runs in the Playwright container image; the rest stands.
 
 Running E2E inside the existing `ci` job is superseded by [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md): E2E is now its own `e2e` job behind the fan-in `ci`; the rest stands.
