@@ -12,11 +12,12 @@ export default defineConfig({
 	testDir: "./tests",
 	fullyParallel: true,
 	retries: process.env.CI ? 2 : 0,
+	failOnFlakyTests: !!process.env.CI,
 	reporter: [["html", { open: "never" }], ["list"]],
 	outputDir: "test-results",
 	use: {
 		baseURL: WEB_BASE_URL,
-		screenshot: { mode: "on", fullPage: true },
+		screenshot: { mode: "only-on-failure", fullPage: true },
 		video: process.env.E2E_VIDEO ? "on" : "retain-on-failure",
 		trace: "on-first-retry",
 	},

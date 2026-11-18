@@ -14,9 +14,26 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  api:
+  gate:
     # `branches` alone also matches a pull request whose head branch is named main
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+    steps:
+      - name: Require the ci job of the approved run to have succeeded
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
+        # A workflow concludes success when its jobs are success or skipped, so the fan-in itself is checked.
+        run: |
+          RESULT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/attempts/$ATTEMPT/jobs" --paginate --jq '[.jobs[] | select(.name == "ci") | .conclusion] | first // "missing"')
+          echo "ci job: $RESULT"
+          test "$RESULT" = "success"
+
+  api:
+    needs: gate
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

@@ -1,5 +1,7 @@
 # First deploy: Neon São Paulo, Fly GRU, Cloudflare Pages proxying `/api`
 
+Deploy also requires the `ci` job of the approved run to have succeeded, per [0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md); the rest stands.
+
 Supersedes [0015](0015-hosting-and-providers-deferred.md).
 
 Production runs on three providers, all under the company email:
