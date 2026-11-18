@@ -1,4 +1,4 @@
-name: CI
+name: CI sharding study
 
 on:
   pull_request:
