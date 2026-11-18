@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -88,7 +88,7 @@ jobs:
         uses: ./.github/actions/setup-workspace
 
       - name: Test
-        run: bun run --filter @bluprint/shared build && bun run --filter @bluprint/web test --shard=${{ matrix.shard }}/2
+        run: bun run --filter @bluprint/shared build && bun run --filter @bluprint/web test --shard=${{ matrix.shard }}/3
 
   e2e:
     strategy:
