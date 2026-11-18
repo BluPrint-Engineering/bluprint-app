@@ -1,6 +1,6 @@
 # `test` splits into `test-api` and `test-web`
 
-Amends the job list of [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md): its `test` job is replaced by two; the rest stands.
+Amends the job list of [0061](0061-ci-runs-as-parallel-jobs-behind-a-fan-in-ci.md): its `test` job is replaced by two; the rest stands. [0094](0094-test-web-runs-as-two-vitest-shards.md) shards `test-web` in two.
 
 `test` ran Jest and Vitest in one job, sharing four vCPUs, and the web suite waited on a Postgres service it never uses. `.github/workflows/ci.yml` now has:
 
