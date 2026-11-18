@@ -1,6 +1,6 @@
 # First deploy: Neon São Paulo, Fly GRU, Cloudflare Pages proxying `/api`
 
-Deploy also requires the `ci` job of the approved run to have succeeded, per [0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md); the rest stands.
+Per [0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md), deploy also skips a commit that is no longer the tip of `main`, so re-running an old CI run no longer redeploys its commit: a rollback is a revert commit on `main` that goes through the full run. The rest stands.
 
 Supersedes [0015](0015-hosting-and-providers-deferred.md).
 

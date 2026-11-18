@@ -18,22 +18,26 @@ jobs:
     # `branches` alone also matches a pull request whose head branch is named main
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push'
     runs-on: ubuntu-latest
-    permissions:
-      actions: read
+    outputs:
+      tip: ${{ steps.tip.outputs.tip }}
     steps:
-      - name: Require the ci job of the approved run to have succeeded
+      - name: Deploy only the commit at the tip of main
+        id: tip
         env:
           GH_TOKEN: ${{ github.token }}
-          RUN_ID: ${{ github.event.workflow_run.id }}
-          ATTEMPT: ${{ github.event.workflow_run.run_attempt }}
-        # A workflow concludes success when its jobs are success or skipped, so the fan-in itself is checked.
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
         run: |
-          RESULT=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$RUN_ID/attempts/$ATTEMPT/jobs" --paginate --jq '[.jobs[] | select(.name == "ci") | .conclusion] | first // "missing"')
-          echo "ci job: $RESULT"
-          test "$RESULT" = "success"
+          TIP=$(gh api "repos/$GITHUB_REPOSITORY/git/ref/heads/main" --jq .object.sha)
+          if [ "$HEAD_SHA" = "$TIP" ]; then
+            echo "tip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::Not deploying $HEAD_SHA: main has moved on to $TIP, and only the tip of main deploys"
+            echo "tip=false" >> "$GITHUB_OUTPUT"
+          fi
 
   api:
     needs: gate
+    if: needs.gate.outputs.tip == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

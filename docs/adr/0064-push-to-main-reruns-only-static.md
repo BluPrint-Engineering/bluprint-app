@@ -1,6 +1,6 @@
 # A push to `main` reruns only `static`
 
-Superseded by [0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md): a push to `main` runs every job, and deploy waits for the `ci` job.
+Superseded by [0090](0090-ci-runs-every-job-on-a-push-to-main-and-deploy-waits-for-all.md): a push to `main` runs every job, and deploy waits for the full run.
 
 Warming the Playwright browser cache on a push is superseded by [0065](0065-e2e-runs-in-the-playwright-container-image.md), since `e2e` no longer restores one; the rest stands.
 
