@@ -1,5 +1,7 @@
 # A submission kept across a session expiry reopens by the entry that sent it
 
+Amended by [0093](0093-the-restoration-table-runs-the-full-sequence-once-per-kind.md): the table is one file per screen group, every entry keeps a row that restores it alone, and the full hostile sequence runs once per kind and on an entry that opens by address instead of on every row; the rest stands.
+
 Completes the rule the app has kept since the session started to expire after 8 hours without use ([0077](0077-sessions-end-after-8-hours-without-use.md)): when a save with fields answers that the session is gone, the app keeps what was sent, one slot per account and screen (pathname and search), the latest failure replacing the earlier one, and once the same account signs in again the screen reopens that form with those values. Each form reads the slot when it opens and uses it as its initial value; it is not a live record. Nothing is sent again after the login.
 
 What this record fixes on top of that:
@@ -9,14 +11,14 @@ What this record fixes on top of that:
 - **Focus returns to the entry.** Closing a restored form, by cancelling or by saving, puts focus back on the entry that opened it; when a save removes that entry, focus stays in the form that held it.
 - **An action without fields does not come back.** Delivering, deleting, moving, undoing, removing and giving back a room, returning to the typology and deleting a typology keep nothing, reopen nothing and are not repeated.
 
-The contract is proven by a hand-written table with one row per entry and per screen (`apps/web/src/routes/_authenticated/sessionRestore.test.tsx`), each row running the same hostile sequence against the real route tree with the network replaced. A test fails when a kind of kept submission has no row. A new entry of a kind that already has rows adds its own row; review holds that line.
+The contract is proven by a hand-written table with one row per entry and per screen (now `apps/web/src/routes/_authenticated/sessionRestore/`, see 0093), each row running the same hostile sequence against the real route tree with the network replaced. A test fails when a kind of kept submission has no row. A new entry of a kind that already has rows adds its own row; review holds that line.
 
 Requirements: RNF-04, RNF-12, RF-511, RNF-21
 
 ## Consequences
 
 - **Every new form with fields that sends adds a row to the table** in the same pull request, with its screen, how it opens, what it sends and where focus returns.
-- **The table is the slowest web test file.** Each row signs in three times and opens every other entry of its screen; the cost buys the cross-entry invariants that broke in #235.
+- **The table is the slowest web test file.** Each row signs in three times and opens every other entry of its screen; the cost buys the cross-entry invariants that broke in #235. Superseded by 0093.
 - **A form dialog takes the element focus returns to** instead of relying on the element focused before it opened, which is missing when the dialog opens restored or from a menu item that closes first.
 - **The wizard keeps its own draft** ([0082](0082-the-structure-draft-lives-in-the-browser.md)); its "Alterar reserva" stays in the slot and, since the wizard's fields are not kept there, focus returns to the create button when the reservation that the structure needed is no longer shown.
 
