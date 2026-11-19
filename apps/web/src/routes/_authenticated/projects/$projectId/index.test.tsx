@@ -405,6 +405,51 @@ describe("project home", () => {
 		});
 	});
 
+	test("lists the opened project first when the visitor goes back before it finished loading", async () => {
+		const first = project(1);
+		const opened = project(2);
+		let used = false;
+		let release: () => void = () => {};
+		const detailHeld = new Promise<void>((resolve) => {
+			release = resolve;
+		});
+		stubApi(signedIn, {
+			api: (url) => {
+				if (url.pathname === "/api/projects") {
+					const items = used ? [opened, first] : [first, opened];
+					return json({ items, total: 2, counts: { active: 2, delivered: 0 } });
+				}
+				if (url.pathname === `/api/projects/${opened.id}`) {
+					return detailHeld.then(() => {
+						used = true;
+						return new Response(JSON.stringify(opened), { status: 200 });
+					});
+				}
+				return undefined;
+			},
+		});
+
+		renderAt("/projects");
+		const cards = async () =>
+			within(await screen.findByRole("list", { name: "Obras" })).getAllByRole(
+				"listitem",
+			);
+		await waitFor(async () => {
+			expect(await cards()).toHaveLength(2);
+		});
+		await userEvent.click(within(nth(await cards(), 1)).getByRole("link"));
+		await userEvent.click(await screen.findByRole("link", { name: "Obras" }));
+		await waitFor(async () => {
+			expect(nth(await cards(), 0)).toHaveTextContent(first.name);
+		});
+
+		release();
+
+		await waitFor(async () => {
+			expect(nth(await cards(), 0)).toHaveTextContent(opened.name);
+		});
+	});
+
 	test("keeps the header's frame while the project loads (P3)", async () => {
 		stubApi(signedIn, {
 			api: (url) =>
