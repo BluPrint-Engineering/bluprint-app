@@ -98,6 +98,8 @@ function retryUnlessNotFound(failures: number, error: unknown) {
 }
 
 const isListQuery = (query: Query) => query.queryKey[1] !== "detail";
+const isOrderedList = (query: Query) =>
+	isListQuery(query) && query.queryKey[1] !== "managers";
 
 export function projectQueryOptions(id: string) {
 	return queryOptions({
@@ -108,6 +110,11 @@ export function projectQueryOptions(id: string) {
 				queryKey: ["projects"],
 				type: "inactive",
 				predicate: isListQuery,
+			});
+			void client.invalidateQueries({
+				queryKey: ["projects"],
+				type: "active",
+				predicate: isOrderedList,
 			});
 			return project;
 		},
