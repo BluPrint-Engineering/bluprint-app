@@ -22,6 +22,8 @@ import {
 	type StructureUnit,
 	type SubtreeRooms,
 	sameRoomName,
+	TYPOLOGY_CHANGED,
+	TYPOLOGY_NOT_FOUND,
 	type Typology,
 	type TypologyList,
 } from "@bluprint/shared";
@@ -637,12 +639,14 @@ export function typologyOf(
 		locations?: number;
 		changed?: number;
 		locationType?: Typology["locationType"];
+		version?: number;
 	} = {},
 ): Typology {
 	return {
 		id: typologyId(name),
 		name,
 		locationType: usage.locationType ?? "unit",
+		version: usage.version ?? 1,
 		rooms: rooms.map(named),
 		locationCount: usage.locations ?? 0,
 		changedLocationCount: usage.changed ?? 0,
@@ -660,10 +664,30 @@ export function typologiesApi(
 			: undefined;
 }
 
+function typologyProblem(status: number, code: string) {
+	return json({ type: "about:blank", title: "Error", status, code }, status);
+}
+
 export interface TypologyWrite {
 	method: string;
 	path: string;
 	body: unknown;
+}
+
+function changed(found: Typology, body: Record<string, unknown>): Typology {
+	const name = typeof body.name === "string" ? body.name : found.name;
+	const rooms = Array.isArray(body.rooms)
+		? (body.rooms as Typology["rooms"])
+		: found.rooms;
+	const same =
+		name === found.name &&
+		rooms.length === found.rooms.length &&
+		rooms.every(
+			(room, index) =>
+				room.id === found.rooms[index]?.id &&
+				room.name === found.rooms[index]?.name,
+		);
+	return same ? found : { ...found, name, rooms, version: found.version + 1 };
 }
 
 export function typologyServer(
@@ -697,6 +721,7 @@ export function typologyServer(
 				name: String(body.name),
 				locationType:
 					body.locationType === "common_area" ? "common_area" : "unit",
+				version: 1,
 				rooms: (body.rooms as Typology["rooms"] | undefined) ?? [],
 				locationCount: 0,
 				changedLocationCount: 0,
@@ -706,15 +731,19 @@ export function typologyServer(
 		}
 		const id = url.pathname.slice(list.length + 1);
 		const found = typologies.find((each) => each.id === id);
-		if (!found) return undefined;
+		if (!found) {
+			return method === "PATCH"
+				? typologyProblem(404, TYPOLOGY_NOT_FOUND)
+				: undefined;
+		}
 		if (method === "PATCH" && body) {
-			const typology: Typology = {
-				...found,
-				...(typeof body.name === "string" && { name: body.name }),
-				...(Array.isArray(body.rooms) && {
-					rooms: body.rooms as Typology["rooms"],
-				}),
-			};
+			if (typeof body.version !== "number") {
+				return typologyProblem(400, "VALIDATION_FAILED");
+			}
+			if (body.version !== found.version) {
+				return typologyProblem(409, TYPOLOGY_CHANGED);
+			}
+			const typology = changed(found, body);
 			typologies = typologies.map((each) => (each.id === id ? typology : each));
 			return json({
 				typology,
@@ -733,6 +762,17 @@ export function typologyServer(
 		handler,
 		writes,
 		typologies: () => typologies,
+		saveElsewhere(
+			id: string,
+			change: { name?: string; rooms?: Typology["rooms"] },
+		) {
+			typologies = typologies.map((each) =>
+				each.id === id ? changed(each, change) : each,
+			);
+		},
+		deleteElsewhere(id: string) {
+			typologies = typologies.filter((each) => each.id !== id);
+		},
 	};
 }
 

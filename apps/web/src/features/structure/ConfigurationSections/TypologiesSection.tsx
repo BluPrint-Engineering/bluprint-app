@@ -152,7 +152,10 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 	const typologies = query.data?.typologies ?? [];
 	const searchable = typologies.length >= SEARCH_FROM;
 	const searching = searchable && search.trim() !== "";
-	const editing = editable ? editingId : undefined;
+	const editing =
+		editable && typologies.some(({ id }) => id === editingId)
+			? editingId
+			: undefined;
 
 	return (
 		<SectionCard id={TYPOLOGIES_SECTION_ID} title="Tipologias">

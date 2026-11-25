@@ -618,6 +618,7 @@ describe("GET /api/projects/:id/typologies", () => {
 					id: typeA,
 					name: "Tipologia A",
 					locationType: "unit",
+					version: 1,
 					rooms: [
 						{ id: anyId, name: "Sala" },
 						{ id: anyId, name: "Cozinha" },
@@ -630,6 +631,7 @@ describe("GET /api/projects/:id/typologies", () => {
 					id: typeB,
 					name: "Tipologia B",
 					locationType: "unit",
+					version: 1,
 					rooms: [
 						{ id: anyId, name: "Sala" },
 						{ id: anyId, name: "Suíte" },
@@ -650,6 +652,7 @@ describe("GET /api/projects/:id/typologies", () => {
 				id: otherProjectType,
 				name: "Tipologia A",
 				locationType: "unit",
+				version: 1,
 				rooms: [{ id: anyId, name: "Sala" }],
 				locationCount: 0,
 				changedLocationCount: 0,

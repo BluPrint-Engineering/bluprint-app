@@ -108,7 +108,21 @@ function typologiesApi({
 		server.handler,
 		configurationSectionsApi(OBRA.id, emptyStructure),
 	);
-	return { handler, writes: server.writes };
+	return { handler, writes: server.writes, server };
+}
+
+function listGoesOffline(api: ReturnType<typeof typologiesApi>) {
+	const state = { offline: false };
+	const handler = combine(
+		(url, init) =>
+			state.offline &&
+			(init?.method ?? "GET") === "GET" &&
+			url.pathname === `/api/projects/${OBRA.id}/typologies`
+				? problem(500, "INTERNAL_ERROR")
+				: undefined,
+		api.handler,
+	);
+	return { handler, state };
 }
 
 async function openConfiguration(handler: ApiHandler, first = "Tipologia A") {
@@ -975,7 +989,7 @@ describe("renaming a tipologia", () => {
 			{
 				method: "PATCH",
 				path: `/typologies/${tipologiaB.id}`,
-				body: { name: "Tipologia Z" },
+				body: { version: 1, name: "Tipologia Z" },
 			},
 		]);
 	});
@@ -1132,5 +1146,355 @@ describe("Tipologias of a delivered project (C9)", () => {
 		expect(
 			card().queryByRole("button", { name: /^Nova tipologia/ }),
 		).toBeNull();
+	});
+});
+
+const SUITE = { id: "0190b000-0000-7000-8000-00000000a002", name: "Suíte" };
+const CHANGED =
+	"Outra pessoa salvou enquanto você editava. Confira a lista atual antes de salvar de novo.";
+
+const tags = () =>
+	removeButtons().map((button) => button.getAttribute("aria-label"));
+
+describe("a tipologia saved by someone else meanwhile", () => {
+	async function brunoEditsRooms(
+		options: Parameters<typeof typologiesApi>[0] = {},
+	) {
+		const api = typologiesApi(options);
+		await openConfiguration(api.handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		return api;
+	}
+
+	async function brunoLosesLavabo() {
+		const api = await brunoEditsRooms();
+		api.server.saveElsewhere(tipologiaB.id, {
+			rooms: [...tipologiaB.rooms, SUITE],
+		});
+		await userEvent.click(screen.getByRole("button", { name: "Tirar Quarto" }));
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await screen.findByText("A Tipologia B mudou");
+		return api;
+	}
+
+	test("refuses the save, keeps the draft and warns without a failure alert", async () => {
+		const { writes } = await brunoLosesLavabo();
+
+		expect(writes).toHaveLength(1);
+		expect(nth(writes, 0).body).toMatchObject({ version: 1 });
+		expect(screen.getByText(CHANGED)).toBeInTheDocument();
+		expect(tags()).toEqual(["Tirar Sala", "Tirar Banheiro"]);
+		expect(screen.getByRole("button", { name: "Salvar" })).toBeEnabled();
+		expect(screen.queryByText("Não foi possível salvar")).toBeNull();
+		expect(
+			screen.getByRole("button", { name: "Ver a lista atual" }),
+		).toBeInTheDocument();
+	});
+
+	test("shows the list of the server on Ver a lista atual, and closes without sending on Salvar", async () => {
+		const { writes } = await brunoLosesLavabo();
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ver a lista atual" }),
+		);
+
+		expect(tags()).toEqual([
+			"Tirar Sala",
+			"Tirar Quarto",
+			"Tirar Banheiro",
+			"Tirar Suíte",
+		]);
+		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await waitFor(() =>
+			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+		);
+		expect(writes).toHaveLength(1);
+	});
+
+	test("writes over it with the new version when saved again without seeing the list", async () => {
+		const { writes, server } = await brunoLosesLavabo();
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("Tipologia B salva. 18 unidades atualizadas."),
+		).toBeInTheDocument();
+		expect(writes).toHaveLength(2);
+		expect(nth(writes, 1).body).toMatchObject({ version: 2 });
+		expect(
+			server
+				.typologies()
+				.find(({ id }) => id === tipologiaB.id)
+				?.rooms.map(({ name }) => name),
+		).toEqual(["Sala", "Banheiro"]);
+	});
+
+	test("tells the name the tipologia has now when someone renamed it", async () => {
+		const { server } = await brunoEditsRooms();
+		server.saveElsewhere(tipologiaB.id, { name: "Tipologia Z" });
+		await addRoom("Lavabo");
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(await screen.findByText("A Tipologia Z mudou")).toBeInTheDocument();
+		expect(tags()).toEqual([
+			"Tirar Sala",
+			"Tirar Quarto",
+			"Tirar Banheiro",
+			"Tirar Lavabo",
+		]);
+	});
+
+	test("closes as saved when only the answer of the save was lost", async () => {
+		const api = typologiesApi({
+			answer: (write, attempt) => {
+				if (attempt !== 1) return undefined;
+				api.server.saveElsewhere(tipologiaB.id, { rooms: sentRooms(write) });
+				return problem(500, "INTERNAL_ERROR");
+			},
+		});
+		await openConfiguration(api.handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		await userEvent.type(field(), "Lavabo{Enter}");
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await userEvent.click(
+			await screen.findByRole("button", { name: "Tentar de novo" }),
+		);
+
+		expect(await screen.findByText("Tipologia B salva.")).toBeInTheDocument();
+		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
+		await waitFor(() =>
+			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+		);
+		expect(api.writes).toHaveLength(2);
+		expect(nth(api.writes, 1).body).toMatchObject({ version: 1 });
+	});
+
+	test("says the save failed, not that someone else saved, when the list cannot be reloaded after the refusal", async () => {
+		const api = typologiesApi();
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		api.server.saveElsewhere(tipologiaB.id, {
+			rooms: [...tipologiaB.rooms, SUITE],
+		});
+		list.state.offline = true;
+		await userEvent.click(screen.getByRole("button", { name: "Tirar Quarto" }));
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("Não foi possível salvar"),
+		).toBeInTheDocument();
+		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
+		expect(tags()).toEqual(["Tirar Sala", "Tirar Banheiro"]);
+
+		list.state.offline = false;
+		await userEvent.click(
+			screen.getByRole("button", { name: "Tentar de novo" }),
+		);
+
+		expect(await screen.findByText("A Tipologia B mudou")).toBeInTheDocument();
+		expect(nth(api.writes, 1).body).toMatchObject({ version: 1 });
+	});
+
+	test("closes the edit and says so when someone deleted the tipologia", async () => {
+		const { server } = await brunoEditsRooms();
+		server.deleteElsewhere(tipologiaB.id);
+		await addRoom("Lavabo");
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("A Tipologia B foi excluída por outra pessoa."),
+		).toBeInTheDocument();
+		await waitFor(() => expect(card().queryByText("Tipologia B")).toBeNull());
+		expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull();
+		expect(
+			screen.getByRole("button", { name: "Nova tipologia" }),
+		).not.toHaveAttribute("aria-disabled");
+	});
+
+	test("closes the edit when someone deleted the tipologia even if the list cannot be reloaded", async () => {
+		const api = typologiesApi();
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		api.server.deleteElsewhere(tipologiaB.id);
+		list.state.offline = true;
+		await addRoom("Lavabo");
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("A Tipologia B foi excluída por outra pessoa."),
+		).toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+		);
+		expect(api.writes).toHaveLength(1);
+	});
+});
+
+describe("a tipologia renamed over an old version", () => {
+	async function brunoRenames(
+		options: Parameters<typeof typologiesApi>[0] = {},
+	) {
+		const api = typologiesApi(options);
+		await openConfiguration(api.handler);
+		await chooseFromMenu("Tipologia B", "Renomear");
+		return api;
+	}
+
+	const dialog = () =>
+		within(screen.getByRole("dialog", { name: "Renomear a tipologia" }));
+
+	async function typeName(name: string) {
+		const input = dialog().getByRole("textbox", { name: "Nome" });
+		await userEvent.clear(input);
+		await userEvent.type(input, name);
+	}
+
+	test("refuses it, keeps the name typed without offering the list, and sends the new version on the next save", async () => {
+		const { writes, server } = await brunoRenames();
+		server.saveElsewhere(tipologiaB.id, {
+			rooms: [...tipologiaB.rooms, SUITE],
+		});
+		await typeName("Tipologia Y");
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		const alert = await dialog().findByText("A Tipologia B mudou");
+		expect(alert).toBeInTheDocument();
+		expect(dialog().getByText(CHANGED)).toBeInTheDocument();
+		expect(dialog().getByRole("textbox", { name: "Nome" })).toHaveValue(
+			"Tipologia Y",
+		);
+		expect(
+			dialog().queryByRole("button", { name: "Ver a lista atual" }),
+		).toBeNull();
+		expect(nth(writes, 0).body).toEqual({ version: 1, name: "Tipologia Y" });
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Ações da Tipologia Y" }),
+			).toBeInTheDocument(),
+		);
+		expect(nth(writes, 1).body).toEqual({ version: 2, name: "Tipologia Y" });
+	});
+
+	test("says the name the tipologia has now when someone renamed it first", async () => {
+		const { server } = await brunoRenames();
+		server.saveElsewhere(tipologiaB.id, { name: "Tipologia Z" });
+		await typeName("Tipologia Y");
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await dialog().findByText("A Tipologia Z mudou"),
+		).toBeInTheDocument();
+	});
+
+	test("closes as renamed when only the answer of the rename was lost", async () => {
+		const api = typologiesApi({
+			answer: (_write, attempt) => {
+				if (attempt !== 1) return undefined;
+				api.server.saveElsewhere(tipologiaB.id, { name: "Tipologia Y" });
+				return problem(500, "INTERNAL_ERROR");
+			},
+		});
+		await openConfiguration(api.handler);
+		await chooseFromMenu("Tipologia B", "Renomear");
+		await typeName("Tipologia Y");
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+		await dialog().findByText(/Não foi possível salvar a tipologia/);
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Ações da Tipologia Y" }),
+			).toBeInTheDocument(),
+		);
+		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
+		expect(screen.queryByRole("dialog")).toBeNull();
+		expect(api.writes).toHaveLength(2);
+		expect(nth(api.writes, 1).body).toEqual({
+			version: 1,
+			name: "Tipologia Y",
+		});
+	});
+
+	test("sends the version of its own rename when the list fails to reload after it", async () => {
+		const api = typologiesApi({
+			answer: () => {
+				list.state.offline = true;
+				return undefined;
+			},
+		});
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Renomear");
+		await typeName("Tipologia Y");
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+		await chooseFromMenu("Tipologia Y", "Renomear");
+		await typeName("Tipologia X");
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(screen.queryByText("A Tipologia Y mudou")).toBeNull();
+		expect(nth(api.writes, 1).body).toEqual({
+			version: 2,
+			name: "Tipologia X",
+		});
+	});
+
+	test("says the rename failed, not that someone else saved, when the list cannot be reloaded after the refusal", async () => {
+		const api = typologiesApi();
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Renomear");
+		api.server.saveElsewhere(tipologiaB.id, {
+			rooms: [...tipologiaB.rooms, SUITE],
+		});
+		list.state.offline = true;
+		await typeName("Tipologia Y");
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await dialog().findByText(/Não foi possível salvar a tipologia/),
+		).toBeInTheDocument();
+		expect(dialog().queryByText("A Tipologia B mudou")).toBeNull();
+
+		list.state.offline = false;
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await dialog().findByText("A Tipologia B mudou"),
+		).toBeInTheDocument();
+		expect(nth(api.writes, 1).body).toEqual({
+			version: 1,
+			name: "Tipologia Y",
+		});
+	});
+
+	test("closes the dialog and says so when someone deleted the tipologia", async () => {
+		const { server } = await brunoRenames();
+		server.deleteElsewhere(tipologiaB.id);
+		await typeName("Tipologia Y");
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("A Tipologia B foi excluída por outra pessoa."),
+		).toBeInTheDocument();
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(card().queryByText("Tipologia B")).toBeNull();
 	});
 });

@@ -1,6 +1,7 @@
 import {
 	type CreateTypology,
 	ROOM_NAME_TAKEN,
+	TYPOLOGY_CHANGED,
 	TYPOLOGY_ID_TAKEN,
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
@@ -86,13 +87,22 @@ export class TypologiesService {
 		userId: string,
 		projectId: string,
 		typologyId: string,
-		{ name, rooms }: UpdateTypology,
+		{ version, name, rooms }: UpdateTypology,
 	): Promise<UpdateTypologyResult> {
 		await this.beginWrite(userId, projectId);
 		const found = await this.typologies.find(projectId, typologyId);
 		if (!found) throw typologyNotFound();
+		if (found.version !== version) {
+			throw new ProblemException({
+				status: 409,
+				code: TYPOLOGY_CHANGED,
+				detail:
+					"The typology was changed by someone else since the version sent.",
+			});
+		}
 
-		if (name !== undefined && name !== found.name) {
+		const renamed = name !== undefined && name !== found.name;
+		if (renamed) {
 			if (await this.typologies.nameInUse(projectId, name, typologyId)) {
 				throw typologyNameTaken(name);
 			}
@@ -100,11 +110,14 @@ export class TypologiesService {
 		}
 		const updatedLocationCount = rooms
 			? await this.changeRooms(typologyId, rooms)
-			: 0;
+			: null;
+		if (renamed || updatedLocationCount !== null) {
+			await this.typologies.bumpVersion(typologyId);
+		}
 
 		return {
 			typology: await this.readOne(projectId, typologyId),
-			updatedLocationCount,
+			updatedLocationCount: updatedLocationCount ?? 0,
 		};
 	}
 
@@ -134,9 +147,15 @@ export class TypologiesService {
 	private async changeRooms(
 		typologyId: string,
 		requested: { id: string; name: string }[],
-	): Promise<number> {
+	): Promise<number | null> {
 		const current = await this.typologies.roomsOf(typologyId);
 		const plan = planRoomChanges(current, requested);
+		const unchanged =
+			plan.addedIds.length === 0 &&
+			plan.removedIds.length === 0 &&
+			plan.renamedIds.length === 0 &&
+			!plan.reordered;
+		if (unchanged) return null;
 
 		const currentIds = new Set(current.map(({ id }) => id));
 		const claimed = await this.typologies.findRoomIds(plan.addedIds);
@@ -231,10 +250,11 @@ export class TypologiesService {
 		]);
 
 		return {
-			typologies: types.map(({ id, name, locationType }) => ({
+			typologies: types.map(({ id, name, locationType, version }) => ({
 				id,
 				name,
 				locationType,
+				version,
 				rooms: rooms
 					.filter((candidate) => candidate.typologyId === id)
 					.map((candidate) => ({ id: candidate.id, name: candidate.name })),

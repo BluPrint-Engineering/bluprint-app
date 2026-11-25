@@ -50,3 +50,14 @@ export function saveFailedText({ name }: Typology): string {
 export function deleteInUseText({ name, locationType }: Typology): string {
 	return `Não foi possível excluir a ${name}: ${FOLLOWERS[locationType].many} passaram a usá-la.`;
 }
+
+export function changedTitleText({ name }: Pick<Typology, "name">): string {
+	return `A ${name} mudou`;
+}
+
+export const CHANGED_TEXT =
+	"Outra pessoa salvou enquanto você editava. Confira a lista atual antes de salvar de novo.";
+
+export function deletedByOtherText({ name }: Pick<Typology, "name">): string {
+	return `A ${name} foi excluída por outra pessoa.`;
+}

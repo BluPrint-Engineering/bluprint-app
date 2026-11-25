@@ -134,6 +134,13 @@
       "when": 1794939549023,
       "tag": "0018_typology_location_type",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1795635822205,
+      "tag": "0019_typology_version",
+      "breakpoints": true
     }
   ]
 }

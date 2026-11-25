@@ -8,6 +8,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { SessionDraftKind } from "@/features/auth/sessionDraft";
+import { uuidV7 } from "@/lib/uuidV7";
 import { project } from "./projectsApi";
 import { json, organization, renderAt, signedIn } from "./renderApp";
 import {
@@ -50,6 +51,11 @@ interface Entry {
 	focusAfterPlainCancel?: () => Promise<HTMLElement>;
 	focusAfterSave?: () => Promise<HTMLElement>;
 	request: string;
+	staleRestore?: {
+		saveElsewhere: () => void;
+		expectChangedAlert: () => Promise<void>;
+		sentVersions: () => unknown[];
+	};
 }
 
 interface Page {
@@ -209,6 +215,30 @@ async function runHostileSequence(page: Page, key: string) {
 	]);
 	await reload(page);
 	await expectNothingOpen(page);
+}
+
+async function runStaleRestore(page: Page, key: string) {
+	const entry = entryOf(page, key);
+	const { staleRestore } = entry;
+	if (!staleRestore) throw new Error(`no stale restore ${key}`);
+	renderAt(page.path);
+	await page.ready();
+	await entry.open();
+	await entry.fill();
+	page.server.expireNextWrite();
+	await entry.submit();
+	await screen.findByLabelText("E-mail");
+	staleRestore.saveElsewhere();
+	await signInAgain();
+	await page.ready();
+	await expectRestored(page, entry);
+
+	await entry.submit();
+
+	await staleRestore.expectChangedAlert();
+	await entry.expectTyped();
+	expect(staleRestore.sentVersions()).toEqual([1]);
+	expect(page.server.writes).toEqual([entry.request, entry.request]);
 }
 
 async function runOtherAccount(page: Page, key: string) {
@@ -876,6 +906,20 @@ function configurationPage(): Page {
 	const base = `/api/projects/${ADMIN_PROJECT.id}`;
 	const typeA = typologyOf("Tipologia A", ["Sala"]);
 	const typologies = typologyServer(ADMIN_PROJECT.id, [typeA]);
+	const changedAlert = async () => {
+		await screen.findByText("A Tipologia A mudou");
+	};
+	const staleRestore = {
+		saveElsewhere: () =>
+			typologies.saveElsewhere(typeA.id, {
+				rooms: [...typeA.rooms, { id: uuidV7(), name: "Cozinha" }],
+			}),
+		expectChangedAlert: changedAlert,
+		sentVersions: () =>
+			typologies.writes.map(
+				({ body }) => (body as { version: unknown }).version,
+			),
+	};
 	const renameProject = (url: URL, init?: RequestInit) => {
 		if (url.pathname !== base || init?.method !== "PATCH") return undefined;
 		const body = JSON.parse(String(init.body)) as { name: string };
@@ -947,6 +991,7 @@ function configurationPage(): Page {
 				focusAfterCancel: byRole("button", "Ações da Tipologia A"),
 				focusAfterSave: byRole("button", "Ações da Tipologia Z"),
 				request: `PATCH ${base}/typologies/${typeA.id}`,
+				staleRestore,
 			},
 			editRooms: {
 				open: () => pick("Ações da Tipologia A", "Editar cômodos"),
@@ -986,6 +1031,7 @@ function configurationPage(): Page {
 				focusAfterCancel: byRole("button", "Ações da Tipologia A"),
 				focusAfterSave: byRole("button", "Ações da Tipologia A"),
 				request: `PATCH ${base}/typologies/${typeA.id}`,
+				staleRestore,
 			},
 		},
 		server,
@@ -1397,12 +1443,21 @@ function rowsReturningFocus(rows: Row[]): Row[] {
 	return returning;
 }
 
+function rowsRestoringStale(rows: Row[]): Row[] {
+	const stale = rows.filter(
+		([, page, key]) => entryOf(PAGES[page](), key).staleRestore !== undefined,
+	);
+	vi.unstubAllGlobals();
+	return stale;
+}
+
 export function describeRestorationRows(fileUrl: string) {
 	const group = groupOfFile(fileUrl);
 	const rows = ROWS.filter(([, page]) => GROUP_OF_PAGE[page] === group);
 	const fullRows = rows.filter(([, , , , sequence]) => sequence === "full");
 	const entryRows = rows.filter(([, , , , sequence]) => sequence === "entry");
 	const focusRows = rowsReturningFocus(rows);
+	const staleRows = rowsRestoringStale(rows);
 
 	describe("a submission lost to an expired session", () => {
 		afterEach(() => {
@@ -1425,6 +1480,14 @@ export function describeRestorationRows(fileUrl: string) {
 				await runHostileSequence(PAGES[page](), entry);
 			},
 			60_000,
+		);
+
+		test.each(staleRows)(
+			"row %i: on %s, sends the restored %s with the version it was opened on and meets the alert",
+			async (_row, page, entry) => {
+				await runStaleRestore(PAGES[page](), entry);
+			},
+			30_000,
 		);
 
 		test.each(fullRows)(

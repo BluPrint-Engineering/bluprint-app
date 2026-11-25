@@ -49,6 +49,11 @@ export const createTypologySchema = newTypologySchema.extend({
 
 export const updateTypologySchema = z
 	.object({
+		version: z.int().positive().meta({
+			description:
+				"The `version` of the typology as the screen read it. A different one is refused with `409 TYPOLOGY_CHANGED` and nothing changes.",
+			example: 1,
+		}),
 		name: typologyNameSchema.optional(),
 		rooms: roomsSchema.optional().meta({
 			description: `The typology's whole ordered list of rooms, at most ${MAX_ROOMS_PER_TYPOLOGY}. A room keeps the id it has; a room without a stored id is new, with an id of the client's choosing. Rooms left out of the list are taken out of the typology. Left out, the rooms stay as they are.`,

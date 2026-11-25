@@ -30,6 +30,7 @@ export interface StoredTypology {
 	id: string;
 	name: string;
 	locationType: TypologyLocationType;
+	version: number;
 }
 
 export type PlacedLocation = NewLocation & { position: number };

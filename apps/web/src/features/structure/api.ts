@@ -26,8 +26,11 @@ import {
 	type SubtreeRooms,
 	structureSchema,
 	subtreeRoomsSchema,
+	TYPOLOGY_CHANGED,
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
+	TYPOLOGY_NOT_FOUND,
+	type Typology,
 	typologyListSchema,
 	typologySchema,
 	type UpdateTypology,
@@ -305,6 +308,24 @@ export function typologiesQueryOptions(projectId: string) {
 			apiFetch(`/projects/${projectId}/typologies`, typologyListSchema),
 		retry: retryUnlessNotFound,
 	});
+}
+
+export function isTypologyChanged(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === TYPOLOGY_CHANGED;
+}
+
+export function isTypologyGone(error: unknown) {
+	return (
+		error instanceof ApiError && error.problem?.code === TYPOLOGY_NOT_FOUND
+	);
+}
+
+export function useTypologyNow(projectId: string) {
+	const queryClient = useQueryClient();
+	return (typologyId: string) =>
+		queryClient
+			.getQueryData(typologiesQueryOptions(projectId).queryKey)
+			?.typologies.find(({ id }) => id === typologyId);
 }
 
 export function isTypologyInUse(error: unknown) {
@@ -612,11 +633,25 @@ export function useCreateTypologyMutation(projectId: string) {
 	);
 }
 
-export function useUpdateTypologyMutation(projectId: string) {
+export function useUpdateTypologyMutation(
+	projectId: string,
+	onGone?: (typology: Typology) => void,
+) {
+	const queryClient = useQueryClient();
+	const now = useTypologyNow(projectId);
 	return useTypologyMutation(
 		projectId,
-		({ typologyId, ...body }: { typologyId: string } & UpdateTypology) =>
-			apiFetch(
+		async ({
+			typologyId,
+			...body
+		}: { typologyId: string } & UpdateTypology) => {
+			const known = now(typologyId);
+			const reload = () =>
+				queryClient.fetchQuery({
+					...typologiesQueryOptions(projectId),
+					staleTime: 0,
+				});
+			const result = await apiFetch(
 				`/projects/${projectId}/typologies/${typologyId}`,
 				updateTypologyResultSchema,
 				{
@@ -624,7 +659,25 @@ export function useUpdateTypologyMutation(projectId: string) {
 					headers: JSON_HEADERS,
 					body: JSON.stringify(body),
 				},
-			),
+			).catch(async (error: unknown) => {
+				if (isTypologyChanged(error)) await reload();
+				if (isTypologyGone(error)) {
+					await reload().catch(() => undefined);
+					if (known) onGone?.(known);
+				}
+				throw error;
+			});
+			queryClient.setQueryData(
+				typologiesQueryOptions(projectId).queryKey,
+				(current) =>
+					current && {
+						typologies: current.typologies.map((typology) =>
+							typology.id === result.typology.id ? result.typology : typology,
+						),
+					},
+			);
+			return result;
+		},
 		"update-typology",
 	);
 }

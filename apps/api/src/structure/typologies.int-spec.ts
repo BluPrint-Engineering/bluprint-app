@@ -7,6 +7,7 @@ import {
 	PROJECT_NOT_FOUND,
 	problemDetailsSchema,
 	ROOM_NAME_TAKEN,
+	TYPOLOGY_CHANGED,
 	TYPOLOGY_ID_TAKEN,
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
@@ -223,6 +224,18 @@ async function typeOf(w: World, typologyId: string): Promise<Typology> {
 		.typologies.find(({ id }) => id === typologyId)!;
 }
 
+async function patchTypology(
+	w: World,
+	typologyId: string,
+	body: object,
+	as = manager,
+) {
+	const { version } = await typeOf(w, typologyId);
+	return as.agent
+		.patch(path(w, `typologies/${typologyId}`))
+		.send({ version, ...body });
+}
+
 const roomsOf = (type: Typology) =>
 	type.rooms.map(({ id, name }) => ({ id, name }));
 
@@ -262,11 +275,9 @@ describe("accent names across one project", () => {
 	it("preserves names, rejects duplicates and adopts an own room", async () => {
 		const w = await world();
 		const typeB = await typeOf(w, w.typeB);
-		const repeated = await manager.agent
-			.patch(path(w, `typologies/${w.typeB}`))
-			.send({
-				rooms: [...roomsOf(typeB), { id: randomUUID(), name: "suite" }],
-			});
+		const repeated = await patchTypology(w, w.typeB, {
+			rooms: [...roomsOf(typeB), { id: randomUUID(), name: "suite" }],
+		});
 		expect(repeated.status).toBe(400);
 		expect(await typeOf(w, w.typeB)).toEqual(typeB);
 
@@ -307,9 +318,9 @@ describe("accent names across one project", () => {
 		const added = randomUUID();
 		expect(
 			(
-				await manager.agent
-					.patch(path(w, `typologies/${w.typeA}`))
-					.send({ rooms: [...roomsOf(typeA), { id: added, name: "Suíte" }] })
+				await patchTypology(w, w.typeA, {
+					rooms: [...roomsOf(typeA), { id: added, name: "Suíte" }],
+				})
 			).status,
 		).toBe(200);
 		const adopted = await detailOf(w, w.owner);
@@ -321,7 +332,7 @@ describe("accent names across one project", () => {
 		const current = await typeOf(w, w.typeB);
 		expect(
 			(
-				await manager.agent.patch(path(w, `typologies/${w.typeB}`)).send({
+				await patchTypology(w, w.typeB, {
 					rooms: [
 						...roomsOf(current),
 						{ id: randomUUID(), name: "Área" },
@@ -540,16 +551,14 @@ describe("POST /api/projects/:id/typologies", () => {
 		).toBe(201);
 		const before = await typeOf(w, w.typeA);
 		const typeRoomId = randomUUID();
-		const updated = await manager.agent
-			.patch(path(w, `typologies/${w.typeA}`))
-			.send({
-				rooms: [
-					...roomsOf(before),
-					{ id: typeRoomId, name: "Suíte" },
-					{ id: randomUUID(), name: "Área" },
-					{ id: randomUUID(), name: "Aérea" },
-				],
-			});
+		const updated = await patchTypology(w, w.typeA, {
+			rooms: [
+				...roomsOf(before),
+				{ id: typeRoomId, name: "Suíte" },
+				{ id: randomUUID(), name: "Área" },
+				{ id: randomUUID(), name: "Aérea" },
+			],
+		});
 		expect(updated.status).toBe(200);
 		const detail = await detailOf(w, w.owner);
 		expect(detail.rooms.filter((entry) => entry.name === "Suíte")).toEqual([
@@ -569,11 +578,9 @@ describe("POST /api/projects/:id/typologies", () => {
 	it("rejects room names that differ only by an accent", async () => {
 		const w = await world();
 		const before = await typeOf(w, w.typeB);
-		const res = await manager.agent
-			.patch(path(w, `typologies/${w.typeB}`))
-			.send({
-				rooms: [...roomsOf(before), { id: randomUUID(), name: "suite" }],
-			});
+		const res = await patchTypology(w, w.typeB, {
+			rooms: [...roomsOf(before), { id: randomUUID(), name: "suite" }],
+		});
 		expect(res.status).toBe(400);
 		expect(await typeOf(w, w.typeB)).toEqual(before);
 	});
@@ -670,8 +677,7 @@ describe("POST /api/projects/:id/typologies", () => {
 });
 
 describe("PATCH /api/projects/:id/typologies/:typologyId", () => {
-	const patch = (w: World, typologyId: string, body: object, as = manager) =>
-		as.agent.patch(path(w, `typologies/${typologyId}`)).send(body);
+	const patch = patchTypology;
 
 	async function listOf(w: World, typologyId: string) {
 		return roomsOf(await typeOf(w, typologyId));
@@ -988,7 +994,9 @@ describe("PATCH /api/projects/:id/typologies/:typologyId", () => {
 		const w = await world();
 		const other = await world();
 
-		const res = await patch(w, other.typeA, { name: "Outra" });
+		const res = await manager.agent
+			.patch(path(w, `typologies/${other.typeA}`))
+			.send({ version: 1, name: "Outra" });
 
 		expect(res.status).toBe(404);
 		expect(problemOf(res).code).toBe(TYPOLOGY_NOT_FOUND);
@@ -1014,16 +1022,18 @@ describe("PATCH /api/projects/:id/typologies/:typologyId", () => {
 	it("never lets two edits at once leave a unit with the same room twice", async () => {
 		const w = await world();
 		const current = await listOf(w, w.typeA);
+		const { version } = await typeOf(w, w.typeA);
 
 		const results = await Promise.all(
 			[1, 2, 3].map((index) =>
-				patch(w, w.typeA, {
+				manager.agent.patch(path(w, `typologies/${w.typeA}`)).send({
+					version,
 					rooms: [...current, { id: randomUUID(), name: `Varanda ${index}` }],
 				}),
 			),
 		);
 
-		expect(results.map(({ status }) => status)).toEqual([200, 200, 200]);
+		expect(results.map(({ status }) => status).sort()).toEqual([200, 409, 409]);
 		const names = roomNames(await detailOf(w, w.plain));
 		expect(new Set(names).size).toBe(names.length);
 	});
@@ -1080,5 +1090,163 @@ describe("DELETE /api/projects/:id/typologies/:typologyId", () => {
 		expect(shut.status).toBe(409);
 		expect(problemOf(shut).code).toBe(PROJECT_DELIVERED);
 		expect(allowed.status).toBe(200);
+	});
+});
+
+describe("TYPOLOGY_CHANGED", () => {
+	const send = (
+		w: World,
+		typologyId: string,
+		body: object,
+		as: Person = manager,
+	) => as.agent.patch(path(w, `typologies/${typologyId}`)).send(body);
+
+	const namesOf = (type: Typology) => type.rooms.map(({ name }) => name);
+
+	it("refuses an edit on a stale version and changes no typology or unit", async () => {
+		const w = await world();
+		const opened = await typeOf(w, w.typeB);
+		expect(opened.version).toBe(1);
+		const lavabo = randomUUID();
+
+		const ana = await send(w, w.typeB, {
+			version: 1,
+			rooms: [...roomsOf(opened), { id: lavabo, name: "Lavabo" }],
+		});
+		const bruno = await send(
+			w,
+			w.typeB,
+			{ version: 1, rooms: [{ id: w.rooms.suite, name: "Suíte" }] },
+			assistant,
+		);
+
+		expect(ana.status).toBe(200);
+		expect(updateTypologyResultSchema.parse(ana.body).typology.version).toBe(2);
+		expect(bruno.status).toBe(409);
+		expect(problemOf(bruno).code).toBe(TYPOLOGY_CHANGED);
+		const current = await typeOf(w, w.typeB);
+		expect(namesOf(current)).toEqual(["Suíte", "Lavabo"]);
+		expect(current.version).toBe(2);
+		expect(roomNames(await detailOf(w, w.typeBUnit))).toEqual([
+			"Suíte",
+			"Lavabo",
+		]);
+	});
+
+	it("lets the same person write over it after reading the new version", async () => {
+		const w = await world();
+		const opened = await typeOf(w, w.typeB);
+		await send(w, w.typeB, {
+			version: 1,
+			rooms: [...roomsOf(opened), { id: randomUUID(), name: "Lavabo" }],
+		});
+
+		const again = await send(
+			w,
+			w.typeB,
+			{ version: 2, rooms: [{ id: w.rooms.suite, name: "Suíte" }] },
+			assistant,
+		);
+
+		expect(again.status).toBe(200);
+		const current = await typeOf(w, w.typeB);
+		expect(namesOf(current)).toEqual(["Suíte"]);
+		expect(current.version).toBe(3);
+		expect(roomNames(await detailOf(w, w.typeBUnit))).toEqual(["Suíte"]);
+	});
+
+	it("refuses a save of rooms after another person renamed the typology", async () => {
+		const w = await world();
+		const opened = await typeOf(w, w.typeB);
+
+		const rename = await send(w, w.typeB, { version: 1, name: "Tipologia Z" });
+		const stale = await send(
+			w,
+			w.typeB,
+			{
+				version: 1,
+				rooms: [...roomsOf(opened), { id: randomUUID(), name: "Lavabo" }],
+			},
+			assistant,
+		);
+
+		expect(rename.status).toBe(200);
+		expect(stale.status).toBe(409);
+		expect(problemOf(stale).code).toBe(TYPOLOGY_CHANGED);
+		expect(namesOf(await typeOf(w, w.typeB))).toEqual(["Suíte"]);
+	});
+
+	it("refuses a rename on a stale version", async () => {
+		const w = await world();
+		const opened = await typeOf(w, w.typeB);
+		await send(w, w.typeB, {
+			version: 1,
+			rooms: [...roomsOf(opened), { id: randomUUID(), name: "Lavabo" }],
+		});
+
+		const stale = await send(
+			w,
+			w.typeB,
+			{ version: 1, name: "Tipologia Y" },
+			assistant,
+		);
+
+		expect(stale.status).toBe(409);
+		expect(problemOf(stale).code).toBe(TYPOLOGY_CHANGED);
+		expect((await typeOf(w, w.typeB)).name).toBe("Tipologia B");
+	});
+
+	it("raises the version on a rename and on a change of rooms, and only then", async () => {
+		const w = await world();
+		const opened = await typeOf(w, w.typeB);
+
+		const renamed = await send(w, w.typeB, { version: 1, name: "Tipologia Z" });
+		const same = await send(w, w.typeB, {
+			version: 2,
+			name: "Tipologia Z",
+			rooms: roomsOf(opened),
+		});
+		const changed = await send(w, w.typeB, {
+			version: 2,
+			rooms: [{ id: w.rooms.suite, name: "Suite master" }],
+		});
+
+		expect(
+			updateTypologyResultSchema.parse(renamed.body).typology.version,
+		).toBe(2);
+		expect(updateTypologyResultSchema.parse(same.body).typology.version).toBe(
+			2,
+		);
+		expect(
+			updateTypologyResultSchema.parse(changed.body).typology.version,
+		).toBe(3);
+	});
+
+	it("lets exactly one of two saves of the same version through", async () => {
+		const w = await world();
+		const opened = await typeOf(w, w.typeB);
+
+		const results = await Promise.all(
+			["Lavabo", "Varanda"].map((name) =>
+				send(w, w.typeB, {
+					version: 1,
+					rooms: [...roomsOf(opened), { id: randomUUID(), name }],
+				}),
+			),
+		);
+
+		expect(results.map(({ status }) => status).sort()).toEqual([200, 409]);
+		const current = await typeOf(w, w.typeB);
+		expect(current.version).toBe(2);
+		expect(current.rooms).toHaveLength(2);
+	});
+
+	it("answers 400 for a body without a version", async () => {
+		const w = await world();
+
+		const res = await send(w, w.typeB, { name: "Tipologia Z" });
+
+		expect(res.status).toBe(400);
+		expect((await typeOf(w, w.typeB)).name).toBe("Tipologia B");
 	});
 });

@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
 			globals: true,
 			setupFiles: "./src/test/setup.ts",
 			testTimeout: 15_000,
+			execArgv: ["--no-experimental-webstorage"],
 		},
 	};
 });
