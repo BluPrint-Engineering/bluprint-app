@@ -195,6 +195,7 @@ export function RoomSuggestField({
 					<Button
 						type="button"
 						variant="outline"
+						className="text-foreground"
 						disabled={busy || value.trim() === ""}
 						onClick={confirmTyped}
 					>
