@@ -346,17 +346,10 @@ describe("Nova disciplina on the Disciplinas card", () => {
 	});
 
 	test("retries with the same id after a lost answer even when the catalog already lists the created Gesso", async () => {
-		const server = serverFor();
+		const server = serverFor({ extras: extrasNamed(9) });
 		let lost = false;
-		let catalogReads = 0;
 		const lossy: ApiHandler = (url, init) => {
 			const reply = server.handler(url, init);
-			if (
-				url.pathname === `/api/projects/${OBRA.id}/disciplines` &&
-				(init?.method ?? "GET") === "GET"
-			) {
-				catalogReads += 1;
-			}
 			if (init?.method === "POST" && !lost) {
 				lost = true;
 				return Promise.reject(new TypeError("Failed to fetch"));
@@ -364,29 +357,32 @@ describe("Nova disciplina on the Disciplinas card", () => {
 			return reply;
 		};
 		await open(lossy, server.unit201.id, "201");
-		await screen.findByText("2 de 2");
+		await screen.findByText("11 de 11");
 
 		await fill("Gesso", "Na obra toda");
 		await user.click(createButton());
 		await within(dialog()).findByText(/Não foi possível criar a disciplina/);
-		const readsBefore = catalogReads;
 		act(() => {
 			focusManager.setFocused(false);
 			focusManager.setFocused(true);
 		});
-		await waitFor(() => expect(catalogReads).toBeGreaterThan(readsBefore));
-		await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+		expect(
+			await screen.findByText(
+				"Esta obra já tem 10 disciplinas extras, o máximo.",
+			),
+		).toBeInTheDocument();
 
 		await user.click(createButton());
 
 		expect(await screen.findByText("Disciplina Gesso criada.")).toBeVisible();
 		expect(
-			within(document.body).queryByText("Gesso já existe nesta obra."),
-		).toBeNull();
+			screen.queryByText("Gesso já existe nesta obra."),
+		).not.toBeInTheDocument();
 		expect(server.created).toHaveLength(2);
 		expect(nth(server.created, 1).id).toBe(nth(server.created, 0).id);
-		expect(await screen.findByText("3 de 3")).toBeInTheDocument();
+		expect(await screen.findByText("12 de 12")).toBeInTheDocument();
 		expect(screen.getAllByRole("checkbox", { name: "Gesso" })).toHaveLength(1);
+		expect(screen.getByRole("checkbox", { name: "Gesso" })).toBeChecked();
 	});
 
 	test("a new opening after Cancelar sends a new id", async () => {
