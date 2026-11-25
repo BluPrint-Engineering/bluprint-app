@@ -1186,6 +1186,34 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 		});
 
+		test("refuses letters for a range with a final past 26 and changes nothing", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("3", "01, 02");
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			await typeInto("Último andar", "5", 1);
+			await typeInto("Finais", "05, 30", 1);
+
+			await user.click(screen.getByRole("radio", { name: "1A, 1B" }));
+
+			expect(
+				screen.getByText(
+					"A faixa 2 da Torre A vai até o final 30. Com letras, o máximo é 26, de A a Z.",
+				),
+			).toBeInTheDocument();
+			expect(screen.getByRole("radio", { name: "101, 102" })).toBeChecked();
+			expect(
+				screen
+					.getAllByRole("textbox", { name: "Finais" })
+					.map((field) => (field as HTMLInputElement).value),
+			).toEqual(["01, 02", "05, 30"]);
+			expect(
+				within(
+					screen.getByRole("list", { name: "Fachada da Torre A" }),
+				).getByText("530"),
+			).toBeInTheDocument();
+		});
+
 		test("explains finals that are not numbers or letters", async () => {
 			const { handler } = wizardApi();
 			open(handler);

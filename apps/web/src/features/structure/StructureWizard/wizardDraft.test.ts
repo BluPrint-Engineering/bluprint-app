@@ -245,6 +245,40 @@ describe("withNumbering", () => {
 			"A faixa 1 da Torre A tem 30 finais. Com letras, o máximo é 26, de A a Z.",
 		);
 	});
+
+	test.each([
+		["27, 28", "28"],
+		["05, 30", "30"],
+	])(
+		"refuses letters when finals %s go past Z, naming the highest final",
+		(finals, highest) => {
+			const draft = draftOf(
+				{ ranges: [{ finals: "01, 02" }, { first: "13", finals }] },
+				{},
+			);
+
+			expect(withNumbering(draft, "letters")).toEqual({
+				refusal: `A faixa 2 da Torre A vai até o final ${highest}. Com letras, o máximo é 26, de A a Z.`,
+			});
+		},
+	);
+
+	test("keeps hidden finals past Z as typed through letters and back", () => {
+		const draft = draftOf({
+			ranges: [
+				{ finals: "01, 02" },
+				{ first: "13", finals: "05, 30", noUnits: true },
+			],
+		});
+
+		const letters = withNumbering(draft, "letters").draft;
+		if (!letters) throw new Error("refused");
+		expect(finalsOf(letters)).toEqual([["A, B", "05, 30"]]);
+
+		const digits = withNumbering(letters, "digits").draft;
+		if (!digits) throw new Error("refused");
+		expect(finalsOf(digits)).toEqual([["01, 02", "05, 30"]]);
+	});
 });
 
 describe("validateDraft", () => {

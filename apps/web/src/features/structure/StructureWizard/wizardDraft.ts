@@ -17,7 +17,7 @@ import {
 	readRange,
 	stackLabel,
 	towerFloors,
-	typedStackCount,
+	typedStackSpan,
 } from "./floorRanges";
 import { describeTower, newFloorsLead } from "./towerNow";
 import {
@@ -595,10 +595,16 @@ export function withNumbering(
 	if (numbering === "letters") {
 		for (const [index, tower] of draft.towers.entries()) {
 			for (const [at, range] of tower.ranges.entries()) {
-				const count = typedStackCount(range, draft.numbering) ?? 0;
-				if (count > MAX_LETTER_STACKS) {
+				const span = typedStackSpan(range, draft.numbering);
+				if (!span) continue;
+				const named = `A faixa ${at + 1} da ${towerLabel(draft, index)}`;
+				const limit = `Com letras, o máximo é ${MAX_LETTER_STACKS}, de A a Z.`;
+				if (span.count > MAX_LETTER_STACKS) {
+					return { refusal: `${named} tem ${span.count} finais. ${limit}` };
+				}
+				if (span.highest > MAX_LETTER_STACKS) {
 					return {
-						refusal: `A faixa ${at + 1} da ${towerLabel(draft, index)} tem ${count} finais. Com letras, o máximo é ${MAX_LETTER_STACKS}, de A a Z.`,
+						refusal: `${named} vai até o final ${span.highest}. ${limit}`,
 					};
 				}
 			}

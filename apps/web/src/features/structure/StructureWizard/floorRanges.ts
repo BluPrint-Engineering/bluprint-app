@@ -76,7 +76,8 @@ function typedPositions(
 
 function stackSpan(positions: number[]) {
 	const lowest = Math.min(...positions);
-	return { lowest, count: Math.max(...positions) - lowest + 1 };
+	const highest = Math.max(...positions);
+	return { lowest, highest, count: highest - lowest + 1 };
 }
 
 export function readStacks(typed: string, numbering: Numbering): StacksRead {
@@ -206,23 +207,22 @@ export function convertFinals(
 	to: Numbering,
 ): string {
 	const positions = typedPositions(typed, from);
-	if (!positions || positions.length === 0) return typed;
-	return positions
-		.map((position) =>
-			to === "letters" && position > MAX_LETTER_STACKS
-				? String(position)
-				: stackLabel(position, to),
-		)
-		.join(", ");
+	if (
+		!positions ||
+		positions.length === 0 ||
+		(to === "letters" &&
+			positions.some((position) => position > MAX_LETTER_STACKS))
+	) {
+		return typed;
+	}
+	return positions.map((position) => stackLabel(position, to)).join(", ");
 }
 
-export function typedStackCount(
+export function typedStackSpan(
 	range: RangeDraft,
 	numbering: Numbering,
-): number | undefined {
+): { count: number; highest: number } | undefined {
 	if (range.noUnits) return undefined;
 	const positions = typedPositions(range.finals, numbering);
-	return positions && positions.length > 0
-		? stackSpan(positions).count
-		: undefined;
+	return positions && positions.length > 0 ? stackSpan(positions) : undefined;
 }
