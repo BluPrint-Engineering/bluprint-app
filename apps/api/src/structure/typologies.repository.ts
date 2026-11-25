@@ -30,6 +30,13 @@ export interface TypologyUsageRow extends Record<string, unknown> {
 	changed: number;
 }
 
+export interface RoomNameUsageRow extends Record<string, unknown> {
+	key: string;
+	name: string;
+	uses: number;
+	oldest_id: string;
+}
+
 @Injectable()
 export class TypologiesRepository {
 	constructor(private readonly txHost: TransactionHost<DatabaseAdapter>) {}
@@ -60,6 +67,26 @@ export class TypologiesRepository {
 			.innerJoin(typology, eq(typology.id, typologyRoom.typologyId))
 			.where(eq(typology.projectId, projectId))
 			.orderBy(asc(typologyRoom.position), asc(typologyRoom.id));
+	}
+
+	async listRoomNameUsage(projectId: string): Promise<RoomNameUsageRow[]> {
+		const { rows } = await this.txHost.tx.execute<RoomNameUsageRow>(sql`
+			select ${comparableNameSql(sql`name`)} as key, name, count(*)::int as uses, min(id::text) as oldest_id
+			from (
+				select ${typologyRoom.name} as name, ${typologyRoom.id} as id
+				from ${typologyRoom}
+				inner join ${typology} on ${typology.id} = ${typologyRoom.typologyId}
+				where ${typology.projectId} = ${projectId}
+				union all
+				select ${room.name} as name, ${room.id} as id
+				from ${room}
+				inner join ${location} on ${location.id} = ${room.locationId}
+				where ${location.projectId} = ${projectId}
+			) used
+			group by key, name
+		`);
+
+		return rows;
 	}
 
 	async countLocationsByTypology(

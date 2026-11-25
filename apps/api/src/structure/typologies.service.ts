@@ -6,6 +6,7 @@ import {
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
 	TYPOLOGY_NOT_FOUND,
+	type RoomNames,
 	type Typology,
 	type TypologyList,
 	type UpdateTypology,
@@ -17,6 +18,7 @@ import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
 import { UnitsService } from "../units/units.service";
 import { planRoomChanges } from "./typology-room-plan";
+import { rankRoomNames } from "./room-names";
 import { TypologiesRepository } from "./typologies.repository";
 
 const typologyNameTaken = (name: string) =>
@@ -46,6 +48,14 @@ export class TypologiesService {
 		await this.projects.findVisible(userId, projectId);
 
 		return this.readAll(projectId);
+	}
+
+	async roomNames(userId: string, projectId: string): Promise<RoomNames> {
+		await this.projects.findVisible(userId, projectId);
+
+		return {
+			names: rankRoomNames(await this.typologies.listRoomNameUsage(projectId)),
+		};
 	}
 
 	@Transactional()
