@@ -699,11 +699,12 @@ describe("copying a typology through POST /api/projects/:id/typologies", () => {
 		const original = await typeOf(w, w.typeA);
 		const shown = copyOf(original, "Tipologia A (cópia)");
 
-		const shortened = await assistant.agent
-			.patch(path(w, `typologies/${w.typeA}`))
-			.send({
-				rooms: roomsOf(original).filter(({ name }) => name !== "Sacada"),
-			});
+		const shortened = await patchTypology(
+			w,
+			w.typeA,
+			{ rooms: roomsOf(original).filter(({ name }) => name !== "Sacada") },
+			assistant,
+		);
 		const res = await manager.agent.post(path(w, "typologies")).send(shown);
 
 		expect(shortened.status).toBe(200);
@@ -731,16 +732,12 @@ describe("copying a typology through POST /api/projects/:id/typologies", () => {
 			).body,
 		);
 
-		const grown = await manager.agent
-			.patch(path(w, `typologies/${created.id}`))
-			.send({
-				rooms: [...roomsOf(created), { id: randomUUID(), name: "Suíte" }],
-			});
-		const shrunk = await manager.agent
-			.patch(path(w, `typologies/${w.typeA}`))
-			.send({
-				rooms: roomsOf(original).filter(({ name }) => name !== "Cozinha"),
-			});
+		const grown = await patchTypology(w, created.id, {
+			rooms: [...roomsOf(created), { id: randomUUID(), name: "Suíte" }],
+		});
+		const shrunk = await patchTypology(w, w.typeA, {
+			rooms: roomsOf(original).filter(({ name }) => name !== "Cozinha"),
+		});
 
 		expect(grown.status).toBe(200);
 		expect(shrunk.status).toBe(200);
