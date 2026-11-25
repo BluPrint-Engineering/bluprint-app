@@ -1,6 +1,6 @@
 import { sameLocationName, tidyLocationName } from "@bluprint/shared";
 import { X } from "lucide-react";
-import { useState } from "react";
+import { type Ref, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -53,6 +53,8 @@ export function AddTag({
 	sameName = sameLocationName,
 	maxItems,
 	maxMessage,
+	disabled = false,
+	inputRef,
 	onAdd,
 }: {
 	label: string;
@@ -62,6 +64,8 @@ export function AddTag({
 	sameName?: (a: string, b: string) => boolean;
 	maxItems?: number;
 	maxMessage?: string;
+	disabled?: boolean;
+	inputRef?: Ref<HTMLInputElement>;
 	onAdd: (name: string) => boolean;
 }) {
 	const [typed, setTyped] = useState("");
@@ -69,6 +73,7 @@ export function AddTag({
 
 	function submit(event: React.FormEvent) {
 		event.preventDefault();
+		if (disabled) return;
 		const name = tidyLocationName(typed);
 		if (name === "") return;
 		if (existing.some((other) => sameName(other, name))) {
@@ -88,7 +93,9 @@ export function AddTag({
 		<form onSubmit={submit} className="grid gap-(--space-1)">
 			<div className="flex gap-(--space-2)">
 				<Input
+					ref={inputRef}
 					aria-label={label}
+					disabled={disabled}
 					placeholder={placeholder}
 					autoComplete="off"
 					enterKeyHint="done"
@@ -100,7 +107,7 @@ export function AddTag({
 						setError(undefined);
 					}}
 				/>
-				<Button type="submit" variant="outline">
+				<Button type="submit" variant="outline" disabled={disabled}>
 					Adicionar
 				</Button>
 			</div>

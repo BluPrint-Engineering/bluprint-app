@@ -1,8 +1,13 @@
-import type { Typology } from "@bluprint/shared";
+import type { Typology, TypologyLocationType } from "@bluprint/shared";
 import { sameRoomName, TYPOLOGY_NAME_MAX_LENGTH } from "@bluprint/shared";
 import { useId, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import {
+	Field,
+	FieldDescription,
+	FieldError,
+	FieldLabel,
+} from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
@@ -13,7 +18,19 @@ import {
 	useUpdateTypologyMutation,
 } from "../api";
 import { FormDialog } from "../components/FormDialog";
-import { typologyNameError, typologyNameTakenText } from "./typologyNames";
+import { TYPOLOGY_NAME_TAKEN_TEXT, typologyNameError } from "./typologyNames";
+
+export type NameDialogTarget =
+	| { mode: "create"; locationType: TypologyLocationType }
+	| { mode: "rename"; typology: Typology };
+
+const CREATE_TEXT = {
+	unit: { title: "Nova tipologia", example: "Ex.: Tipologia D, Garden." },
+	common_area: {
+		title: "Nova tipologia de área comum",
+		example: "Ex.: Hall, Corredor, Garagem.",
+	},
+} as const satisfies Record<TypologyLocationType, object>;
 
 function typologyName(
 	variables: unknown,
@@ -23,14 +40,12 @@ function typologyName(
 	if (!("name" in variables) || typeof variables.name !== "string") {
 		return undefined;
 	}
-	if (
-		"rooms" in variables &&
-		Array.isArray(variables.rooms) &&
-		variables.rooms.length > 0
-	) {
-		return undefined;
+	if (target.mode === "create") {
+		return "locationType" in variables &&
+			variables.locationType === target.locationType
+			? variables.name
+			: undefined;
 	}
-	if (target.mode === "create") return variables.name;
 	if (
 		!("typologyId" in variables) ||
 		variables.typologyId !== target.typology.id
@@ -39,10 +54,6 @@ function typologyName(
 	}
 	return variables.name;
 }
-
-export type NameDialogTarget =
-	| { mode: "create" }
-	| { mode: "rename"; typology: Typology };
 
 export function TypologyNameDialog({
 	projectId,
@@ -91,12 +102,12 @@ export function TypologyNameDialog({
 					sameRoomName(item.name, trimmed),
 			)
 		)
-			return setError(typologyNameTakenText(trimmed));
+			return setError(TYPOLOGY_NAME_TAKEN_TEXT);
 
 		const handlers = {
 			onError: (failure: unknown) => {
 				if (typologyNamesTakenOf(failure)) {
-					setError(typologyNameTakenText(trimmed));
+					setError(TYPOLOGY_NAME_TAKEN_TEXT);
 				} else if (isProjectDelivered(failure)) {
 					close();
 				}
@@ -104,12 +115,17 @@ export function TypologyNameDialog({
 		};
 		if (target.mode === "create") {
 			create.mutate(
-				{ id: newId, name: trimmed, locationType: "unit", rooms: [] },
+				{
+					id: newId,
+					name: trimmed,
+					locationType: target.locationType,
+					rooms: [],
+				},
 				{
 					...handlers,
 					onSuccess: (created) => {
-						close();
 						onCreated(created);
+						close();
 					},
 				},
 			);
@@ -125,19 +141,16 @@ export function TypologyNameDialog({
 		mutation.isError &&
 		!typologyNamesTakenOf(mutation.error) &&
 		!isProjectDelivered(mutation.error);
+	const creating = target.mode === "create" && CREATE_TEXT[target.locationType];
 
 	return (
 		<FormDialog
-			title={
-				target.mode === "create" ? "Nova tipologia" : "Renomear a tipologia"
-			}
-			description={
-				target.mode === "create"
-					? "Dê um nome. Os cômodos entram depois."
-					: "O nome novo vale em todas as unidades da tipologia."
-			}
-			submitLabel={target.mode === "create" ? "Criar" : "Salvar"}
-			pendingLabel={target.mode === "create" ? "Criando…" : "Salvando…"}
+			title={creating ? creating.title : "Renomear a tipologia"}
+			{...(!creating && {
+				description: "O nome novo vale em todos os locais da tipologia.",
+			})}
+			submitLabel={creating ? "Criar" : "Salvar"}
+			pendingLabel={creating ? "Criando…" : "Salvando…"}
 			pending={mutation.isPending}
 			formId={fieldId}
 			onSubmit={submit}
@@ -169,8 +182,17 @@ export function TypologyNameDialog({
 						setName(event.target.value);
 					}}
 				/>
-				{error && <FieldError>{error}</FieldError>}
+				{error ? (
+					<FieldError>{error}</FieldError>
+				) : (
+					creating && <FieldDescription>{creating.example}</FieldDescription>
+				)}
 			</Field>
+			{creating && (
+				<p className="text-sm text-pretty text-muted-foreground">
+					Os cômodos entram depois, no cartão da tipologia.
+				</p>
+			)}
 		</FormDialog>
 	);
 }

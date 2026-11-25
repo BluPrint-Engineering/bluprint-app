@@ -3,16 +3,23 @@ import {
 	sameRoomName,
 	type Typology,
 } from "@bluprint/shared";
-import { useState } from "react";
+import { CircleAlert, RefreshCw } from "lucide-react";
+import { type Ref, useState } from "react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
+import { isProjectDelivered } from "../../projects/api";
 import { roomNamesTakenOf, useUpdateTypologyMutation } from "../api";
-import { AddTag, Tags } from "../components/Tags";
-import { savedText, unitsChangedText } from "./typologySaveText";
+import { RoomList } from "../components/RoomList";
+import { AddTag } from "../components/Tags";
+import {
+	savedText,
+	saveFailedText,
+	unitsChangedText,
+} from "./typologySaveText";
 
 interface DraftRoom {
 	id: string;
@@ -50,11 +57,7 @@ function sameRooms(a: DraftRoom[], b: DraftRoom[]) {
 	);
 }
 
-function failureText(error: unknown) {
-	const names = roomNamesTakenOf(error);
-	if (names === undefined) {
-		return "Não foi possível salvar a tipologia. Confira sua conexão e tente de novo.";
-	}
+function roomsTakenText(names: string[]) {
 	const single = names.length === 1;
 	return `A tipologia não pode ter ${single ? "o cômodo" : "os cômodos"} ${names.join(", ")}: uma unidade já tem ${single ? "um cômodo com esse nome" : "cômodos com esses nomes"}. Renomeie ${single ? "o cômodo" : "os cômodos"} na unidade e tente de novo.`;
 }
@@ -62,10 +65,12 @@ function failureText(error: unknown) {
 export function TypologyEditor({
 	projectId,
 	typology,
+	fieldRef,
 	onClose,
 }: {
 	projectId: string;
 	typology: Typology;
+	fieldRef: Ref<HTMLInputElement>;
 	onClose: () => void;
 }) {
 	const update = useUpdateTypologyMutation(projectId);
@@ -75,8 +80,13 @@ export function TypologyEditor({
 	const clearDraft = useClearSessionDraft("update-typology");
 	const [rooms, setRooms] = useState<DraftRoom[]>(restored ?? typology.rooms);
 	const stored = new Set(typology.rooms.map(({ id }) => id));
-	const isNew = (name: string) =>
-		rooms.some((room) => room.name === name && !stored.has(room.id));
+	const saving = update.isPending;
+	const failure =
+		update.isError && !isProjectDelivered(update.error)
+			? update.error
+			: undefined;
+	const roomsTaken = failure && roomNamesTakenOf(failure);
+	const retry = failure !== undefined && roomsTaken === undefined;
 
 	function addRoom(name: string) {
 		const taken = typology.rooms.find((room) => sameRoomName(room.name, name));
@@ -88,13 +98,13 @@ export function TypologyEditor({
 		return true;
 	}
 
-	function close() {
+	function cancel() {
 		clearDraft();
 		onClose();
 	}
 
 	function save() {
-		if (sameRooms(rooms, typology.rooms)) return close();
+		if (sameRooms(rooms, typology.rooms)) return cancel();
 		update.mutate(
 			{ typologyId: typology.id, rooms },
 			{
@@ -108,10 +118,15 @@ export function TypologyEditor({
 
 	return (
 		<div className="grid gap-(--space-3) p-(--space-4)">
-			<span className="font-semibold">{typology.name}</span>
-			<Tags
-				items={rooms.map(({ name }) => name)}
-				isNew={isNew}
+			<span className="text-base font-semibold [overflow-wrap:anywhere]">
+				{typology.name}
+			</span>
+			<RoomList
+				rooms={rooms.map((room) => ({
+					...room,
+					isNew: !stored.has(room.id),
+				}))}
+				disabled={saving}
 				onRemove={(index) =>
 					setRooms((current) => current.filter((_, i) => i !== index))
 				}
@@ -121,29 +136,39 @@ export function TypologyEditor({
 				label="Novo cômodo"
 				placeholder="Novo cômodo"
 				existing={rooms.map(({ name }) => name)}
-				duplicateMessage="Esta tipologia já tem esse cômodo."
+				duplicateMessage="Esse cômodo já está na tipologia."
 				maxItems={MAX_ROOMS_PER_TYPOLOGY}
 				maxMessage={`A tipologia pode ter até ${MAX_ROOMS_PER_TYPOLOGY} cômodos.`}
+				disabled={saving}
+				inputRef={fieldRef}
 				onAdd={addRoom}
 			/>
-			{update.isError && (
-				<Alert variant="destructive">
-					<AlertDescription>{failureText(update.error)}</AlertDescription>
-				</Alert>
-			)}
 			<Alert>
 				<AlertDescription>{unitsChangedText(typology)}</AlertDescription>
 			</Alert>
+			{failure !== undefined && (
+				<Alert variant="destructive">
+					<CircleAlert aria-hidden="true" />
+					<AlertTitle>Não foi possível salvar</AlertTitle>
+					<AlertDescription>
+						{roomsTaken ? roomsTakenText(roomsTaken) : saveFailedText(typology)}
+					</AlertDescription>
+				</Alert>
+			)}
 			<div className="flex gap-(--space-2) max-md:*:flex-1">
-				<Button type="button" disabled={update.isPending} onClick={save}>
-					{update.isPending && <Spinner aria-hidden />}
-					{update.isPending ? "Salvando…" : "Salvar"}
+				<Button type="button" disabled={saving} onClick={save}>
+					{saving ? (
+						<Spinner aria-hidden />
+					) : (
+						retry && <RefreshCw className="size-4.5" aria-hidden="true" />
+					)}
+					{saving ? "Salvando…" : retry ? "Tentar de novo" : "Salvar"}
 				</Button>
 				<Button
 					type="button"
 					variant="outline"
-					disabled={update.isPending}
-					onClick={close}
+					disabled={saving}
+					onClick={cancel}
 				>
 					Cancelar
 				</Button>

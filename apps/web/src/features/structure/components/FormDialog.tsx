@@ -21,7 +21,7 @@ import { useIsDesktop } from "@/lib/useIsDesktop";
 
 interface FormDialogProps {
 	title: string;
-	description: string;
+	description?: string;
 	submitLabel: string;
 	pendingLabel: string;
 	pending: boolean;
@@ -99,10 +99,15 @@ export function FormDialog({
 	if (desktop) {
 		return (
 			<Dialog open onOpenChange={handleOpenChange}>
-				<DialogContent onCloseAutoFocus={focusOpener}>
+				<DialogContent
+					onCloseAutoFocus={focusOpener}
+					{...(description === undefined && { "aria-describedby": undefined })}
+				>
 					<DialogHeader>
 						<DialogTitle>{title}</DialogTitle>
-						<DialogDescription>{description}</DialogDescription>
+						{description !== undefined && (
+							<DialogDescription>{description}</DialogDescription>
+						)}
 					</DialogHeader>
 					{form}
 					<DialogFooter className="flex-row-reverse justify-start">
@@ -115,10 +120,15 @@ export function FormDialog({
 
 	return (
 		<Drawer open onOpenChange={handleOpenChange} dismissible={!pending}>
-			<DrawerContent onCloseAutoFocus={focusOpener}>
+			<DrawerContent
+				onCloseAutoFocus={focusOpener}
+				{...(description === undefined && { "aria-describedby": undefined })}
+			>
 				<DrawerHeader>
 					<DrawerTitle>{title}</DrawerTitle>
-					<DrawerDescription>{description}</DrawerDescription>
+					{description !== undefined && (
+						<DrawerDescription>{description}</DrawerDescription>
+					)}
 				</DrawerHeader>
 				<div className="grid px-(--page-pad) pt-(--space-2) pb-(--space-5)">
 					{form}

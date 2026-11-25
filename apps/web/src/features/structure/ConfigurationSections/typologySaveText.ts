@@ -18,15 +18,10 @@ export function followersText(
 	return plural(count, one, many);
 }
 
-export function deleteBlockedText(locationType: TypologyLocationType): string {
-	return `Excluir (só sem ${FOLLOWERS[locationType].many})`;
-}
-
 export function unitsChangedText({
 	name,
 	locationType,
 	locationCount,
-	changedLocationCount,
 }: Typology): string {
 	const { one, many, none } = FOLLOWERS[locationType];
 	if (locationCount === 0) return `${none} usa a ${name} ainda.`;
@@ -35,11 +30,7 @@ export function unitsChangedText({
 		locationCount === 1
 			? `Salvar muda 1 ${one} da ${name}.`
 			: `Salvar muda as ${locationCount} ${many} da ${name}.`;
-	if (changedLocationCount === 0) return reach;
-
-	return changedLocationCount === 1
-		? `${reach} 1 ${one} com alterações mantém o que foi mudado nela.`
-		: `${reach} ${changedLocationCount} ${many} com alterações mantêm o que foi mudado nelas.`;
+	return `${reach} Um local com alterações mantém o que foi mudado nele.`;
 }
 
 export function savedText(
@@ -50,4 +41,12 @@ export function savedText(
 	return updatedLocationCount === 0
 		? `${name} salva.`
 		: `${name} salva. ${plural(updatedLocationCount, `${one} atualizada`, `${many} atualizadas`)}.`;
+}
+
+export function saveFailedText({ name }: Typology): string {
+	return `A ${name} não mudou. Confira a conexão e tente de novo.`;
+}
+
+export function deleteInUseText({ name, locationType }: Typology): string {
+	return `Não foi possível excluir a ${name}: ${FOLLOWERS[locationType].many} passaram a usá-la.`;
 }

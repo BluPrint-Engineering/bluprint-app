@@ -515,14 +515,28 @@ function useTypologyMutation<Variables, Result>(
 }
 
 export function useCreateTypologyMutation(projectId: string) {
+	const queryClient = useQueryClient();
 	return useTypologyMutation(
 		projectId,
-		(body: CreateTypology) =>
-			apiFetch(`/projects/${projectId}/typologies`, typologySchema, {
-				method: "POST",
-				headers: JSON_HEADERS,
-				body: JSON.stringify(body),
-			}),
+		async (body: CreateTypology) => {
+			const created = await apiFetch(
+				`/projects/${projectId}/typologies`,
+				typologySchema,
+				{
+					method: "POST",
+					headers: JSON_HEADERS,
+					body: JSON.stringify(body),
+				},
+			);
+			queryClient.setQueryData(
+				typologiesQueryOptions(projectId).queryKey,
+				(current) =>
+					current && !current.typologies.some(({ id }) => id === created.id)
+						? { typologies: [...current.typologies, created] }
+						: current,
+			);
+			return created;
+		},
 		"create-typology",
 	);
 }
