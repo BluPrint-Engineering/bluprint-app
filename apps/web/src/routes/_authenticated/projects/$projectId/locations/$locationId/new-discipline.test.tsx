@@ -7,7 +7,8 @@ import {
 	PROJECT_DELIVERED,
 	type ProjectSummary,
 } from "@bluprint/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { focusManager } from "@tanstack/react-query";
+import { act, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -134,6 +135,7 @@ function extrasNamed(count: number): Discipline[] {
 }
 
 afterEach(() => {
+	focusManager.setFocused(undefined);
 	vi.unstubAllGlobals();
 	localStorage.clear();
 	toast.dismiss();
@@ -341,6 +343,50 @@ describe("Nova disciplina on the Disciplinas card", () => {
 		expect(await screen.findByText("3 de 3")).toBeInTheDocument();
 		expect(screen.getAllByRole("checkbox", { name: "Gesso" })).toHaveLength(1);
 		expect(screen.getByRole("checkbox", { name: "Gesso" })).toBeChecked();
+	});
+
+	test("retries with the same id after a lost answer even when the catalog already lists the created Gesso", async () => {
+		const server = serverFor();
+		let lost = false;
+		let catalogReads = 0;
+		const lossy: ApiHandler = (url, init) => {
+			const reply = server.handler(url, init);
+			if (
+				url.pathname === `/api/projects/${OBRA.id}/disciplines` &&
+				(init?.method ?? "GET") === "GET"
+			) {
+				catalogReads += 1;
+			}
+			if (init?.method === "POST" && !lost) {
+				lost = true;
+				return Promise.reject(new TypeError("Failed to fetch"));
+			}
+			return reply;
+		};
+		await open(lossy, server.unit201.id, "201");
+		await screen.findByText("2 de 2");
+
+		await fill("Gesso", "Na obra toda");
+		await user.click(createButton());
+		await within(dialog()).findByText(/Não foi possível criar a disciplina/);
+		const readsBefore = catalogReads;
+		act(() => {
+			focusManager.setFocused(false);
+			focusManager.setFocused(true);
+		});
+		await waitFor(() => expect(catalogReads).toBeGreaterThan(readsBefore));
+		await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
+
+		await user.click(createButton());
+
+		expect(await screen.findByText("Disciplina Gesso criada.")).toBeVisible();
+		expect(
+			within(document.body).queryByText("Gesso já existe nesta obra."),
+		).toBeNull();
+		expect(server.created).toHaveLength(2);
+		expect(nth(server.created, 1).id).toBe(nth(server.created, 0).id);
+		expect(await screen.findByText("3 de 3")).toBeInTheDocument();
+		expect(screen.getAllByRole("checkbox", { name: "Gesso" })).toHaveLength(1);
 	});
 
 	test("a new opening after Cancelar sends a new id", async () => {

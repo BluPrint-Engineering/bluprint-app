@@ -1,4 +1,6 @@
 import {
+	type CreateDiscipline,
+	createDisciplineSchema,
 	type LocationDetail,
 	type LocationDiscipline,
 	MAX_EXTRA_DISCIPLINES,
@@ -21,7 +23,6 @@ import {
 } from "../api";
 import {
 	DISCIPLINE_LIMIT_TEXT,
-	type NewDiscipline,
 	NewDisciplineDialog,
 	type NewDisciplineRefusal,
 } from "../components/NewDisciplineDialog";
@@ -100,26 +101,6 @@ function ReadOnlyRow({ discipline }: { discipline: LocationDiscipline }) {
 	);
 }
 
-function keptDiscipline(variables: unknown): NewDiscipline | undefined {
-	if (typeof variables !== "object" || variables === null) return undefined;
-	if (!("id" in variables) || typeof variables.id !== "string")
-		return undefined;
-	if (!("name" in variables) || typeof variables.name !== "string") {
-		return undefined;
-	}
-	if (
-		!("appliesEverywhere" in variables) ||
-		typeof variables.appliesEverywhere !== "boolean"
-	) {
-		return undefined;
-	}
-	return {
-		id: variables.id,
-		name: variables.name,
-		appliesEverywhere: variables.appliesEverywhere,
-	};
-}
-
 function NewDisciplineEntry({
 	projectId,
 	location,
@@ -131,18 +112,19 @@ function NewDisciplineEntry({
 }) {
 	const catalog = useQuery(disciplinesQueryOptions(projectId));
 	const create = useCreateDisciplineMutation(projectId);
-	const restored = useSessionDraft("create-discipline", keptDiscipline);
+	const restored = useSessionDraft(
+		"create-discipline",
+		(variables) => createDisciplineSchema.safeParse(variables).data,
+	);
 	const clearDraft = useClearSessionDraft("create-discipline");
-	const [dialog, setDialog] = useState<{ initial?: NewDiscipline } | null>(
+	const [dialog, setDialog] = useState<{ initial?: CreateDiscipline } | null>(
 		restored ? { initial: restored } : null,
 	);
 	const opener = useRef<HTMLButtonElement>(null);
 	const atLimit =
 		(catalog.data?.items.filter(({ type }) => type === "extra").length ?? 0) >=
 		MAX_EXTRA_DISCIPLINES;
-	const existingNames =
-		catalog.data?.items.map(({ name }) => name) ??
-		location.disciplines.map(({ name }) => name);
+	const existing = catalog.data?.items ?? location.disciplines;
 
 	function close() {
 		clearDraft();
@@ -150,7 +132,7 @@ function NewDisciplineEntry({
 	}
 
 	async function send(
-		discipline: NewDiscipline,
+		discipline: CreateDiscipline,
 	): Promise<NewDisciplineRefusal | undefined> {
 		try {
 			const created = await create.mutateAsync(discipline);
@@ -190,7 +172,7 @@ function NewDisciplineEntry({
 			)}
 			{dialog && (
 				<NewDisciplineDialog
-					existingNames={existingNames}
+					existing={existing}
 					initial={dialog.initial}
 					onCreate={send}
 					onClose={close}

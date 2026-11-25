@@ -1,31 +1,39 @@
+import type { CreateDiscipline } from "@bluprint/shared";
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, test, vi } from "vitest";
 import {
-	type NewDiscipline,
+	type ExistingDiscipline,
 	NewDisciplineDialog,
 	type NewDisciplineRefusal,
 } from "./NewDisciplineDialog";
 
 const user = userEvent.setup({ delay: null });
 
-const EXISTING = ["Geral", "Hidráulica", "Elétrica", "Pintura"];
+const EXISTING: ExistingDiscipline[] = [
+	{ id: "0190a000-0000-7000-8000-0000000000a1", name: "Geral" },
+	{ id: "0190a000-0000-7000-8000-0000000000a2", name: "Hidráulica" },
+	{ id: "0190a000-0000-7000-8000-0000000000a3", name: "Elétrica" },
+	{ id: "0190a000-0000-7000-8000-0000000000a4", name: "Pintura" },
+];
 
 type Create = (
-	discipline: NewDiscipline,
+	discipline: CreateDiscipline,
 ) => Promise<NewDisciplineRefusal | undefined>;
 
 function show({
 	onCreate = vi.fn<Create>(async () => undefined),
 	initial,
+	existing = EXISTING,
 }: {
 	onCreate?: ReturnType<typeof vi.fn<Create>>;
-	initial?: NewDiscipline;
+	initial?: CreateDiscipline;
+	existing?: ExistingDiscipline[];
 } = {}) {
 	const onClose = vi.fn();
 	render(
 		<NewDisciplineDialog
-			existingNames={EXISTING}
+			existing={existing}
 			initial={initial}
 			onCreate={onCreate}
 			onClose={onClose}
@@ -70,6 +78,25 @@ describe("the Nova disciplina dialog", () => {
 		await user.click(createButton());
 
 		expect(onCreate).toHaveBeenCalledWith(kept);
+	});
+
+	test("sends a kept submission whose own discipline the catalog already lists", async () => {
+		const kept = {
+			id: "0190a000-0000-7000-8000-0000000000d1",
+			name: "Piscina",
+			appliesEverywhere: false,
+		};
+		const { onCreate } = show({
+			initial: kept,
+			existing: [...EXISTING, { id: kept.id, name: "Piscina" }],
+		});
+
+		await user.click(createButton());
+
+		expect(onCreate).toHaveBeenCalledWith(kept);
+		expect(
+			within(dialog()).queryByText("Piscina já existe nesta obra."),
+		).not.toBeInTheDocument();
 	});
 
 	test.each([

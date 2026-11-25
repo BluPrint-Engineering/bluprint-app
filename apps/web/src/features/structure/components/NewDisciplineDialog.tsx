@@ -1,4 +1,8 @@
-import { DISCIPLINE_NAME_MAX_LENGTH, sameRoomName } from "@bluprint/shared";
+import {
+	type CreateDiscipline,
+	DISCIPLINE_NAME_MAX_LENGTH,
+	sameRoomName,
+} from "@bluprint/shared";
 import { Info, Plus } from "lucide-react";
 import { useId, useRef, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -13,10 +17,9 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { uuidV7 } from "@/lib/uuidV7";
 import { FormDialog } from "./FormDialog";
 
-export interface NewDiscipline {
+export interface ExistingDiscipline {
 	id: string;
 	name: string;
-	appliesEverywhere: boolean;
 }
 
 export type NewDisciplineRefusal =
@@ -47,7 +50,7 @@ const takenText = (name: string) => `${name} já existe nesta obra.`;
 
 function nameError(
 	name: string,
-	existingNames: readonly string[],
+	others: readonly ExistingDiscipline[],
 ): string | undefined {
 	if (name === "") return "Informe o nome.";
 	if (name.length > DISCIPLINE_NAME_MAX_LENGTH) {
@@ -56,21 +59,21 @@ function nameError(
 	if (sameRoomName(name, GENERAL)) {
 		return "Geral vale em todo local e não entra na lista.";
 	}
-	const existing = existingNames.find((each) => sameRoomName(each, name));
-	return existing === undefined ? undefined : takenText(existing);
+	const existing = others.find((each) => sameRoomName(each.name, name));
+	return existing === undefined ? undefined : takenText(existing.name);
 }
 
 export function NewDisciplineDialog({
-	existingNames,
+	existing,
 	initial,
 	onCreate,
 	onClose,
 	returnFocus,
 }: {
-	existingNames: readonly string[];
-	initial?: NewDiscipline | undefined;
+	existing: readonly ExistingDiscipline[];
+	initial?: CreateDiscipline | undefined;
 	onCreate: (
-		discipline: NewDiscipline,
+		discipline: CreateDiscipline,
 	) => Promise<NewDisciplineRefusal | undefined>;
 	onClose: () => void;
 	returnFocus: () => HTMLElement | null | undefined;
@@ -91,7 +94,10 @@ export function NewDisciplineDialog({
 	async function submit() {
 		if (sending.current || scope === undefined) return;
 		const trimmed = name.trim();
-		const invalid = nameError(trimmed, existingNames);
+		const invalid = nameError(
+			trimmed,
+			existing.filter((each) => each.id !== id),
+		);
 		if (invalid) return setError(invalid);
 
 		sending.current = true;
