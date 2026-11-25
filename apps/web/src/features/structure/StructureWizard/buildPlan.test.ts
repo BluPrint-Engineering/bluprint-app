@@ -1,24 +1,52 @@
-import { buildPlan } from "./buildPlan";
-import { initialDraft, unitName, type WizardDraft } from "./wizardDraft";
+import { buildPlan, reserveUsed } from "./buildPlan";
+import {
+	initialDraft,
+	type RangeDraft,
+	type TowerDraft,
+	type WizardDraft,
+} from "./wizardDraft";
 
 const identity = (key: string) => key;
 
+type RangeOf = Partial<Omit<RangeDraft, "key">>;
+
+type TowerOf = Partial<Omit<TowerDraft, "ranges">> &
+	RangeOf & { ranges?: RangeOf[] };
+
+const rangeOf = (range: RangeOf, at: number): RangeDraft => ({
+	key: `range-${at}`,
+	first: "1",
+	last: "3",
+	finals: "01, 02",
+	noUnits: false,
+	...range,
+});
+
 function draftOf(
-	towers: Partial<WizardDraft["towers"][number]>[],
+	towers: TowerOf[],
 	rest: Partial<WizardDraft> = {},
 ): WizardDraft {
 	return {
 		...initialDraft(),
-		towers: towers.map((tower, index) => ({
-			key: `tower-${index}`,
-			name: `Torre ${String.fromCharCode(65 + index)}`,
-			first: "1",
-			last: "3",
-			perFloor: "2",
-			ground: false,
-			hall: false,
-			...tower,
-		})),
+		towers: towers.map(
+			({ ranges, first, last, finals, noUnits, ...tower }, index) => ({
+				key: `tower-${index}`,
+				name: `Torre ${String.fromCharCode(65 + index)}`,
+				ground: false,
+				hall: false,
+				...tower,
+				ranges: (
+					ranges ?? [
+						{
+							...(first !== undefined && { first }),
+							...(last !== undefined && { last }),
+							...(finals !== undefined && { finals }),
+							...(noUnits !== undefined && { noUnits }),
+						},
+					]
+				).map(rangeOf),
+			}),
+		),
 		...rest,
 	};
 }
@@ -30,21 +58,6 @@ const namesOf = (
 	plan.locations
 		.filter((location) => location.type === type)
 		.map((location) => location.name);
-
-describe("unitName", () => {
-	test("joins the floor and the stack with two digits", () => {
-		expect(unitName(1, 0, "digits")).toBe("101");
-		expect(unitName(12, 3, "digits")).toBe("1204");
-		expect(unitName(9, 29, "digits")).toBe("930");
-	});
-
-	test("joins the floor and a letter", () => {
-		expect(unitName(1, 0, "letters")).toBe("1A");
-		expect(unitName(12, 3, "letters")).toBe("12D");
-		expect(unitName(2, 25, "letters")).toBe("2Z");
-		expect(unitName(2, 26, "letters")).toBe("2AA");
-	});
-});
 
 describe("buildPlan", () => {
 	test("names a single tower Torre A whatever the draft says", () => {
@@ -65,7 +78,7 @@ describe("buildPlan", () => {
 
 	test("names floors and numbers units by floor and stack", () => {
 		const plan = buildPlan(
-			draftOf([{ first: "9", last: "10", perFloor: "3" }]),
+			draftOf([{ first: "9", last: "10", finals: "01, 03" }]),
 			identity,
 		);
 
@@ -82,7 +95,7 @@ describe("buildPlan", () => {
 
 	test("numbers units with letters", () => {
 		const plan = buildPlan(
-			draftOf([{ first: "1", last: "2", perFloor: "2" }], {
+			draftOf([{ first: "1", last: "2", finals: "A, B" }], {
 				numbering: "letters",
 			}),
 			identity,
@@ -240,8 +253,12 @@ describe("buildPlan", () => {
 	test("leaves out a tower whose fields are not valid yet", () => {
 		const plan = buildPlan(draftOf([{}, { last: "" }]), identity);
 
-		expect(plan.towers.map((tower) => tower.valid)).toEqual([true, false]);
+		expect(plan.towers.map((tower) => tower.state)).toEqual([
+			"valid",
+			"invalid",
+		]);
 		expect(namesOf(plan, "tower")).toEqual(["Torre A"]);
+		expect(plan.complete).toBe(false);
 	});
 
 	test("asks for one id per location and reuses the same id for the same key", () => {
@@ -296,7 +313,10 @@ const typesOfUnits = (plan: ReturnType<typeof buildPlan>) =>
 
 describe("buildPlan typologies", () => {
 	test("applies the starting typology to every unit of every floor", () => {
-		const plan = buildPlan(draftOf([{ last: "2", perFloor: "2" }]), identity);
+		const plan = buildPlan(
+			draftOf([{ last: "2", finals: "01, 02" }]),
+			identity,
+		);
 
 		expect(typesOfUnits(plan)).toEqual([
 			"101:Tipologia A",
@@ -317,7 +337,7 @@ describe("buildPlan typologies", () => {
 
 	test("gives odd and even stacks their own typology", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "2", perFloor: "4" }], {
+			draftOf([{ last: "2", finals: "01, 04" }], {
 				typologies: [typeOf("a", "A"), typeOf("b", "B")],
 				rules: [
 					ruleOf("a", { finals: "01, 03" }),
@@ -347,7 +367,7 @@ describe("buildPlan typologies", () => {
 
 	test("applies a rule only inside its floor range and leaves the rest without a typology", () => {
 		const plan = buildPlan(
-			draftOf([{ first: "1", last: "4", perFloor: "1" }], {
+			draftOf([{ first: "1", last: "4", finals: "01" }], {
 				typologies: [typeOf("a", "A")],
 				rules: [ruleOf("a", { from: "2", to: "3" })],
 			}),
@@ -363,7 +383,7 @@ describe("buildPlan typologies", () => {
 
 	test("reads a blank bound as open and a floor past the last as covered by an open end", () => {
 		const plan = buildPlan(
-			draftOf([{ first: "1", last: "3", perFloor: "1" }], {
+			draftOf([{ first: "1", last: "3", finals: "01" }], {
 				typologies: [typeOf("a", "A"), typeOf("c", "Cobertura")],
 				rules: [ruleOf("c", { from: "3" }), ruleOf("a", { to: "2" })],
 			}),
@@ -375,7 +395,7 @@ describe("buildPlan typologies", () => {
 
 	test("lets the first rule that matches win", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "1", perFloor: "2" }], {
+			draftOf([{ last: "1", finals: "01, 02" }], {
 				typologies: [typeOf("a", "A"), typeOf("b", "B")],
 				rules: [ruleOf("b", { finals: "2" }), ruleOf("a")],
 			}),
@@ -389,8 +409,8 @@ describe("buildPlan typologies", () => {
 		const plan = buildPlan(
 			draftOf(
 				[
-					{ last: "1", perFloor: "1" },
-					{ last: "1", perFloor: "1" },
+					{ last: "1", finals: "01" },
+					{ last: "1", finals: "01" },
 				],
 				{
 					typologies: [typeOf("a", "A"), typeOf("b", "B")],
@@ -405,7 +425,7 @@ describe("buildPlan typologies", () => {
 
 	test("leaves a unit without a typology when no rule reaches its stack", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "1", perFloor: "3" }], {
+			draftOf([{ last: "1", finals: "01, 03" }], {
 				typologies: [typeOf("a", "A")],
 				rules: [ruleOf("a", { finals: "1" })],
 			}),
@@ -419,7 +439,7 @@ describe("buildPlan typologies", () => {
 
 	test("ignores a rule whose finals cannot be read", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "1", perFloor: "1" }], {
+			draftOf([{ last: "1", finals: "01" }], {
 				typologies: [typeOf("a", "A")],
 				rules: [ruleOf("a", { finals: "um" })],
 			}),
@@ -431,7 +451,7 @@ describe("buildPlan typologies", () => {
 
 	test("sends every typology with its rooms in order, including one no unit uses", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "1", perFloor: "1" }], {
+			draftOf([{ last: "1", finals: "01" }], {
 				typologies: [
 					typeOf("a", " Tipologia  A ", ["Sala", "Cozinha"]),
 					typeOf("b", "Cobertura", ["Terraço"]),
@@ -465,7 +485,7 @@ describe("buildPlan typologies", () => {
 
 	test("leaves a unit without a typology when its rule points at a typology that is gone", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "1", perFloor: "1" }], {
+			draftOf([{ last: "1", finals: "01" }], {
 				typologies: [],
 				rules: [ruleOf("gone")],
 			}),
@@ -477,7 +497,7 @@ describe("buildPlan typologies", () => {
 
 	test("keeps the ground floor and the halls without a typology", () => {
 		const plan = buildPlan(
-			draftOf([{ last: "1", perFloor: "1", ground: true, hall: true }]),
+			draftOf([{ last: "1", finals: "01", ground: true, hall: true }]),
 			identity,
 		);
 
@@ -487,5 +507,266 @@ describe("buildPlan typologies", () => {
 				.filter((l) => l.type !== "unit")
 				.every((location) => location.typologyId === undefined),
 		).toBe(true);
+	});
+});
+
+const unitsOf = (plan: ReturnType<typeof buildPlan>, tower = 0) =>
+	plan.towers[tower]?.floors.flatMap((floor) =>
+		floor.units.map((unit) => unit.name),
+	);
+
+describe("buildPlan from floor ranges", () => {
+	const teamRequest = () =>
+		draftOf([
+			{
+				ranges: [
+					{ first: "2", last: "10", finals: "01, 02" },
+					{ first: "11", last: "17", finals: "01" },
+				],
+			},
+		]);
+
+	test("builds the team's tower: 2º to 10º with 01 and 02, 11º to 17º with 01", () => {
+		const plan = buildPlan(teamRequest(), identity);
+
+		expect(namesOf(plan, "unit")).toEqual([
+			"201",
+			"202",
+			"301",
+			"302",
+			"401",
+			"402",
+			"501",
+			"502",
+			"601",
+			"602",
+			"701",
+			"702",
+			"801",
+			"802",
+			"901",
+			"902",
+			"1001",
+			"1002",
+			"1101",
+			"1201",
+			"1301",
+			"1401",
+			"1501",
+			"1601",
+			"1701",
+		]);
+		expect(namesOf(plan, "floor")).not.toContain("1º andar");
+		expect(namesOf(plan, "floor")).toHaveLength(16);
+		expect(plan.towers[0]).toMatchObject({ units: 25, numberedFloors: 16 });
+	});
+
+	test("fills every stack between the lowest and the highest typed", () => {
+		const plan = buildPlan(
+			draftOf([{ first: "1", last: "1", finals: "01, 04" }]),
+			identity,
+		);
+
+		expect(unitsOf(plan)).toEqual(["101", "102", "103", "104"]);
+	});
+
+	test("reads 1, 3 as 01, 03", () => {
+		const draft = draftOf([{ first: "1", last: "2", finals: "01, 03" }]);
+		const withFinals = (finals: string) => ({
+			...draft,
+			towers: draft.towers.map((tower) => ({
+				...tower,
+				ranges: tower.ranges.map((range) => ({ ...range, finals })),
+			})),
+		});
+		const short = buildPlan(withFinals("1, 3"), identity);
+		const padded = buildPlan(withFinals("01, 03"), identity);
+
+		expect(short.locations).toEqual(padded.locations);
+		expect(unitsOf(short)).toEqual(["101", "102", "103", "201", "202", "203"]);
+	});
+
+	test("fills letters from the lowest to the highest typed", () => {
+		const plan = buildPlan(
+			draftOf([{ first: "2", last: "2", finals: "A, C" }], {
+				numbering: "letters",
+			}),
+			identity,
+		);
+
+		expect(unitsOf(plan)).toEqual(["2A", "2B", "2C"]);
+	});
+
+	test("starts at the lowest stack typed instead of 01", () => {
+		const plan = buildPlan(
+			draftOf([{ first: "2", last: "3", finals: "03, 04" }]),
+			identity,
+		);
+
+		expect(unitsOf(plan)).toEqual(["203", "204", "303", "304"]);
+		expect(
+			plan.locations
+				.filter(({ type }) => type === "unit")
+				.map(({ name, position }) => [name, position]),
+		).toEqual([
+			["203", 0],
+			["204", 1],
+			["303", 0],
+			["304", 1],
+		]);
+	});
+
+	test("creates the floors of a range without units, with the hall when it is on", () => {
+		const plan = buildPlan(
+			draftOf([
+				{
+					hall: true,
+					ranges: [
+						{ first: "1", last: "2", finals: "01" },
+						{ first: "3", last: "3", noUnits: true, finals: "" },
+					],
+				},
+			]),
+			identity,
+		);
+
+		expect(namesOf(plan, "floor")).toEqual([
+			"1º andar",
+			"2º andar",
+			"3º andar",
+		]);
+		expect(plan.towers[0]?.floors.at(-1)).toMatchObject({
+			label: "3º",
+			units: [],
+			areas: [{ name: "Hall" }],
+		});
+		expect(namesOf(plan, "unit")).toEqual(["101", "201"]);
+	});
+
+	test.each([
+		["a range without finals", [{ first: "2", last: "4", finals: "" }]],
+		[
+			"two ranges on the 10º",
+			[
+				{ first: "2", last: "10", finals: "01, 02" },
+				{ first: "10", last: "17", finals: "01" },
+			],
+		],
+		["more than 30 stacks", [{ first: "1", last: "2", finals: "01, 31" }]],
+		["an incomplete range", [{ first: "2", last: "", finals: "01" }]],
+	])(
+		"builds nothing for a tower with %s and counts nothing of it",
+		(_name, ranges) => {
+			const plan = buildPlan(
+				draftOf([{ ranges }, { first: "1", last: "1", finals: "01" }], {
+					towerAreas: ["Salão de festas"],
+				}),
+				identity,
+			);
+
+			expect(plan.towers[0]).toMatchObject({ state: "invalid", floors: [] });
+			expect(namesOf(plan, "tower")).toEqual(["Torre B"]);
+			expect(plan.spend).toEqual({
+				units: 1,
+				floorHalls: 0,
+				entranceHalls: 0,
+				otherAreas: 1,
+			});
+			expect(plan.complete).toBe(false);
+		},
+	);
+
+	test("tells a tower left blank from one left incomplete", () => {
+		const plan = buildPlan(
+			draftOf([
+				{ ranges: [{ first: "", last: "", finals: "" }] },
+				{ ranges: [{ first: "2", last: "", finals: "" }] },
+			]),
+			identity,
+		);
+
+		expect(plan.towers.map(({ state }) => state)).toEqual(["blank", "invalid"]);
+	});
+
+	test("orders the floors by number whatever the order of the ranges", () => {
+		const plan = buildPlan(
+			draftOf([
+				{
+					ground: true,
+					ranges: [
+						{ first: "3", last: "4", finals: "01" },
+						{ first: "1", last: "2", finals: "01, 02" },
+					],
+				},
+			]),
+			identity,
+		);
+
+		expect(
+			plan.locations
+				.filter(({ type }) => type === "floor")
+				.map(({ name, position }) => [name, position]),
+		).toEqual([
+			["Térreo", 0],
+			["1º andar", 1],
+			["2º andar", 2],
+			["3º andar", 3],
+			["4º andar", 4],
+		]);
+	});
+
+	test("counts units, floor halls, entrance halls and the other common areas against the reserve", () => {
+		const plan = buildPlan(
+			draftOf(
+				[
+					{
+						ground: true,
+						hall: true,
+						ranges: [
+							{ first: "2", last: "10", finals: "01, 02" },
+							{ first: "11", last: "17", finals: "01" },
+						],
+					},
+					{ ground: true, first: "2", last: "10", finals: "01, 04" },
+				],
+				{
+					projectAreas: ["Guarita"],
+					towerAreas: ["Salão de festas"],
+					floorAreas: [{ key: "a", tower: 1, floor: "10", name: "Terraço" }],
+				},
+			),
+			identity,
+		);
+
+		expect(plan.spend).toEqual({
+			units: 61,
+			floorHalls: 16,
+			entranceHalls: 2,
+			otherAreas: 4,
+		});
+		expect(reserveUsed(plan.spend)).toBe(83);
+		expect(reserveUsed(plan.spend)).toBe(
+			plan.counts.units + plan.counts.commonAreas,
+		);
+	});
+
+	test("keys each location by the tower, the floor number and the stack position", () => {
+		const draft = teamRequest();
+		const plan = buildPlan(draft, identity);
+		const reordered = buildPlan(
+			{
+				...draft,
+				towers: draft.towers.map((tower) => ({
+					...tower,
+					ranges: [...tower.ranges].reverse(),
+				})),
+			},
+			identity,
+		);
+
+		expect(plan.locations.find(({ name }) => name === "1002")?.id).toBe(
+			"tower:tower-0:floor:10:unit:2",
+		);
+		expect(reordered.locations).toEqual(plan.locations);
 	});
 });

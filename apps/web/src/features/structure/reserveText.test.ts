@@ -1,9 +1,11 @@
 import {
 	addOneLine,
 	createdToast,
+	missingReserveText,
+	missingReserveTitle,
 	nameTakenText,
-	overReserveText,
-	planLine,
+	reserveDetail,
+	reserveLine,
 } from "./reserveText";
 
 const plain = (text: string) => text.replace(/ /g, " ");
@@ -22,57 +24,101 @@ describe("addOneLine", () => {
 	});
 });
 
-describe("planLine", () => {
-	test("says what the plan uses and what is left after creating", () => {
-		expect(plain(planLine(88, 150, "criar"))).toBe(
-			"Usa 88 das 150 unidades que restam nesta obra. Depois de criar, sobram 62.",
+describe("reserveLine", () => {
+	test("says what the structure uses of the reservation and what is left after creating", () => {
+		expect(plain(reserveLine(81, 400, 400, "create"))).toBe(
+			"Esta estrutura usa 81 de 400 reservadas. Depois de criar, sobram 319.",
+		);
+		expect(plain(reserveLine(80, 400, 81, "create"))).toBe(
+			"Esta estrutura usa 80 de 400 reservadas. Depois de criar, sobra 1.",
 		);
 	});
 
-	test("uses the singular when one unit is left and it all fits", () => {
-		expect(plain(planLine(1, 1, "criar"))).toBe(
-			"Usa 1 da única unidade que resta nesta obra. Depois de criar, sobram 0.",
+	test("says what the new floors use of what remains and what is left after adding", () => {
+		expect(plain(reserveLine(4, 400, 319, "add"))).toBe(
+			"Estes andares usam 4 das 319 que restam na reserva. Depois de adicionar, sobram 315.",
 		);
-		expect(plain(planLine(11, 12, "adicionar"))).toBe(
-			"Usa 11 das 12 unidades que restam nesta obra. Depois de adicionar, sobra 1.",
+		expect(plain(reserveLine(1, 400, 1, "add"))).toBe(
+			"Estes andares usam 1 da 1 que resta na reserva. Depois de adicionar, sobram 0.",
 		);
 	});
 
-	test("reads only what remains when the plan does not fit or is empty", () => {
-		expect(planLine(88, 40, "criar")).toBe("Restam 40 unidades nesta obra.");
-		expect(planLine(0, 40, "criar")).toBe("Restam 40 unidades nesta obra.");
-		expect(planLine(3, 1, "criar")).toBe("Resta 1 unidade nesta obra.");
-	});
-
-	test("says the reservation is over when nothing is left", () => {
-		expect(planLine(5, 0, "criar")).toBe("A reserva da obra acabou.");
+	test("drops what is left when the plan does not fit", () => {
+		expect(plain(reserveLine(81, 400, 30, "create"))).toBe(
+			"Esta estrutura usa 81 de 400 reservadas.",
+		);
+		expect(plain(reserveLine(4, 400, 2, "add"))).toBe(
+			"Estes andares usam 4 de 400 reservadas.",
+		);
 	});
 });
 
-describe("overReserveText", () => {
-	test("tells a manager or assistant to take units out or ask the admin", () => {
-		expect(plain(overReserveText(88, 40, false))).toBe(
-			"Esta estrutura tem 88 unidades e a obra tem 40. Tire 48 unidades ou peça mais reserva ao admin da construtora.",
+describe("reserveDetail", () => {
+	test("adds up units, floor halls, entrance halls and the other common areas", () => {
+		expect(
+			reserveDetail({
+				units: 61,
+				floorHalls: 16,
+				entranceHalls: 2,
+				otherAreas: 2,
+			}),
+		).toBe(
+			"61 unidades + 16 halls de andar + 2 halls de entrada + 2 outras áreas comuns",
 		);
 	});
 
-	test("tells the admin to raise the reservation", () => {
-		expect(plain(overReserveText(88, 40, true))).toBe(
-			"Esta estrutura tem 88 unidades e a obra tem 40. Tire 48 unidades ou aumente a reserva.",
+	test("leaves out the parts that are zero and speaks each one in the singular", () => {
+		expect(
+			reserveDetail({
+				units: 2,
+				floorHalls: 2,
+				entranceHalls: 0,
+				otherAreas: 0,
+			}),
+		).toBe("2 unidades + 2 halls de andar");
+		expect(
+			reserveDetail({
+				units: 1,
+				floorHalls: 1,
+				entranceHalls: 1,
+				otherAreas: 1,
+			}),
+		).toBe(
+			"1 unidade + 1 hall de andar + 1 hall de entrada + 1 outra área comum",
+		);
+		expect(
+			reserveDetail({
+				units: 0,
+				floorHalls: 0,
+				entranceHalls: 0,
+				otherAreas: 0,
+			}),
+		).toBe("");
+	});
+});
+
+describe("the missing reservation", () => {
+	test("counts what is missing in units, in the singular for one", () => {
+		expect(missingReserveTitle(51)).toBe("Faltam 51 unidades na reserva");
+		expect(missingReserveTitle(1)).toBe("Falta 1 unidade na reserva");
+	});
+
+	test("says what the plan uses against what the project still has", () => {
+		expect(plain(missingReserveText(81, 30, "create"))).toBe(
+			"Esta estrutura usa 81 e a obra ainda tem 30.",
+		);
+		expect(plain(missingReserveText(4, 2, "add"))).toBe(
+			"Estes andares usam 4 e a obra ainda tem 2.",
 		);
 	});
 
-	test("changes the sentence when the reservation is over", () => {
-		expect(overReserveText(88, 0, false)).toBe(
-			"Esta estrutura tem 88 unidades e a reserva da obra acabou. Peça mais reserva ao admin da construtora.",
+	test("says the reservation is over when nothing is left", () => {
+		expect(plain(missingReserveText(81, 0, "create"))).toBe(
+			"Esta estrutura usa 81 e a reserva da obra acabou.",
 		);
-		expect(overReserveText(88, 0, true)).toBe(
-			"Esta estrutura tem 88 unidades e a reserva da obra acabou. Aumente a reserva.",
+		expect(plain(missingReserveText(4, 0, "add"))).toBe(
+			"Estes andares usam 4 e a reserva da obra acabou.",
 		);
-	});
-
-	test("takes one unit out in the singular", () => {
-		expect(plain(overReserveText(5, 4, false))).toContain("Tire 1 unidade ou");
 	});
 });
 

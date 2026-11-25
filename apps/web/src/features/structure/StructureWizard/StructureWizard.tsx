@@ -4,10 +4,10 @@ import {
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Check } from "lucide-react";
+import { Check, CircleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSessionDraft } from "@/features/auth";
@@ -27,17 +27,18 @@ import { plural } from "../plural";
 import {
 	createdToast,
 	floorsAddedToast,
+	missingReserveText,
+	missingReserveTitle,
 	nameTakenText,
-	overReserveText,
-	planLine,
 	typologyNameTakenText,
 } from "../reserveText";
-import { buildPlan } from "./buildPlan";
+import { buildPlan, reserveUsed } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
 import {
 	PreviewSummary,
 	PreviewTowers,
-	type UnitsLine,
+	type ReserveBalance,
+	ReserveBox,
 	UntypedAlert,
 } from "./Preview";
 import { TowersStep } from "./TowersStep";
@@ -66,6 +67,8 @@ const EXTEND_STEP_TITLES = [
 const STEP_OF_SECTION = { towers: 0, areas: 1, types: 2 } as const;
 const LAST_STEP = STEP_TITLES.length - 1;
 const BLOCKER_ID = "wizard-blocker";
+const AREAS_DESCRIPTION =
+	"O hall de entrada e o Hall em cada andar estão no passo 1. Aqui entram as outras. Cada área comum criada usa 1 da reserva, como uma unidade.";
 const TYPES_DESCRIPTION =
 	"A lista de cômodos de cada tipo de unidade, e onde cada tipo se aplica: por final (a posição da unidade no andar: 01, 02…) e por andar.";
 
@@ -183,8 +186,8 @@ export function StructureWizard({
 	const preview = useMemo(() => buildPlan(draft, identity), [draft]);
 	const remaining = units.data?.remaining ?? availableUnitsOf(create.error);
 	const admin = project.role === "admin";
-	const reserveUsed = preview.counts.units + preview.counts.commonAreas;
-	const over = remaining !== undefined && reserveUsed > remaining;
+	const used = reserveUsed(preview.spend);
+	const over = preview.complete && remaining !== undefined && used > remaining;
 	const tooLarge = preview.locations.length > MAX_LOCATIONS_PER_REQUEST;
 	const blocked = over || tooLarge;
 
@@ -287,18 +290,19 @@ export function StructureWizard({
 		);
 	}
 
-	const unitsLine: UnitsLine = units.isPending
+	const mode = extend ? "add" : "create";
+	const balance: ReserveBalance = units.isPending
 		? { state: "loading" }
-		: remaining === undefined
-			? { state: "unknown" }
-			: {
+		: units.data
+			? {
 					state: "ready",
-					text: planLine(
-						reserveUsed,
-						remaining,
-						extend ? "adicionar" : "criar",
-					),
-				};
+					reserved: units.data.reserved,
+					remaining: units.data.remaining,
+				}
+			: { state: "unknown" };
+	const reserveBox = (
+		<ReserveBox plan={preview} balance={balance} mode={mode} />
+	);
 
 	const names = namesTakenOf(create.error);
 	const typologyNames = typologyNamesTakenOf(create.error);
@@ -310,28 +314,33 @@ export function StructureWizard({
 
 	const blocker = blocked ? (
 		<Alert variant="destructive" id={BLOCKER_ID}>
-			<AlertDescription>
-				{over && remaining !== undefined ? (
-					<>
-						{overReserveText(reserveUsed, remaining, admin)}
-						{admin && (
-							<>
-								{" "}
-								<button
-									ref={reservationButton}
-									type="button"
-									className="relative underline underline-offset-3 after:absolute after:-inset-y-3 after:inset-x-0 hover:text-foreground"
-									onClick={() => setReservationOpen(true)}
-								>
-									Alterar reserva
-								</button>
-							</>
+			{over && remaining !== undefined ? (
+				<>
+					<CircleAlert aria-hidden="true" />
+					<AlertTitle>
+						{missingReserveTitle(used - Math.max(remaining, 0))}
+					</AlertTitle>
+					<AlertDescription>
+						{missingReserveText(used, remaining, mode)}{" "}
+						{admin ? (
+							<button
+								ref={reservationButton}
+								type="button"
+								className="relative underline underline-offset-3 after:absolute after:-inset-y-3 after:inset-x-0 hover:text-foreground"
+								onClick={() => setReservationOpen(true)}
+							>
+								Alterar reserva
+							</button>
+						) : (
+							"Peça mais ao admin da construtora."
 						)}
-					</>
-				) : (
-					`Esta estrutura tem ${preview.locations.length.toLocaleString("pt-BR")} locais e o limite é ${MAX_LOCATIONS_PER_REQUEST.toLocaleString("pt-BR")} por vez. Reduza andares, unidades ou áreas comuns.`
-				)}
-			</AlertDescription>
+					</AlertDescription>
+				</>
+			) : (
+				<AlertDescription>
+					{`Esta estrutura tem ${preview.locations.length.toLocaleString("pt-BR")} locais e o limite é ${MAX_LOCATIONS_PER_REQUEST.toLocaleString("pt-BR")} por vez. Reduza andares, unidades ou áreas comuns.`}
+				</AlertDescription>
+			)}
 		</Alert>
 	) : null;
 
@@ -430,7 +439,7 @@ export function StructureWizard({
 
 	const towersDescription =
 		extend?.lead ??
-		"Cada torre com o seu número de andares e de unidades. Uma torre nova começa igual à anterior.";
+		"Cada torre com as suas faixas de andares e os finais de cada faixa. Uma torre nova começa igual à anterior, sem o Hall em cada andar.";
 
 	const content = [
 		<Section
@@ -446,7 +455,7 @@ export function StructureWizard({
 			key="areas"
 			number={2}
 			title={stepTitles[1]}
-			description="O hall de cada andar já está no passo 1. Aqui entram as outras."
+			description={AREAS_DESCRIPTION}
 			desktop={false}
 		>
 			{areasStep}
@@ -461,9 +470,12 @@ export function StructureWizard({
 			{typesStep}
 		</Section>,
 		<Section key="preview" number={4} title={stepTitles[3]} desktop={false}>
-			<PreviewSummary plan={preview} units={unitsLine} heading={heading} />
+			<PreviewSummary plan={preview} heading={heading} />
+			{reserveBox}
 			<UntypedAlert plan={preview} />
-			{!tooLarge && <PreviewTowers plan={preview} />}
+			{!tooLarge && (
+				<PreviewTowers plan={preview} extending={extend !== undefined} />
+			)}
 			{failures}
 			{note}
 		</Section>,
@@ -483,7 +495,7 @@ export function StructureWizard({
 				<Section
 					number={2}
 					title={stepTitles[1]}
-					description="O hall de cada andar já está no passo 1. Aqui entram as outras."
+					description={AREAS_DESCRIPTION}
 					desktop
 				>
 					{areasStep}
@@ -503,7 +515,8 @@ export function StructureWizard({
 			>
 				<div className="flex max-h-[calc(100dvh-48px)] flex-col gap-(--space-4) overflow-y-auto rounded-xl p-(--space-5)">
 					<h2 className="text-lg font-semibold tracking-tight">Prévia</h2>
-					<PreviewSummary plan={preview} units={unitsLine} heading={heading} />
+					<PreviewSummary plan={preview} heading={heading} />
+					{reserveBox}
 					<UntypedAlert plan={preview} />
 					{failures}
 					{blocker}
@@ -511,7 +524,12 @@ export function StructureWizard({
 					{note}
 					<div className="grid h-45 basis-[content]">
 						<div className="min-h-0 overflow-y-auto border-t border-border pt-(--space-4) pr-1">
-							{!tooLarge && <PreviewTowers plan={preview} />}
+							{!tooLarge && (
+								<PreviewTowers
+									plan={preview}
+									extending={extend !== undefined}
+								/>
+							)}
 						</div>
 					</div>
 				</div>

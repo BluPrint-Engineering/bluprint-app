@@ -54,12 +54,16 @@ test("wizard refuses typology names differing only by accents before sending", a
 	});
 	renderAt(`/projects/${obra.id}/structure/new`);
 	await userEvent.type(
-		await screen.findByRole("textbox", { name: "Último andar" }),
+		await screen.findByRole("textbox", { name: "Primeiro andar" }),
+		"1",
+	);
+	await userEvent.type(
+		screen.getByRole("textbox", { name: "Último andar" }),
 		"2",
 	);
 	await userEvent.type(
-		screen.getByRole("textbox", { name: "Unidades por andar" }),
-		"4",
+		screen.getByRole("textbox", { name: "Finais" }),
+		"01, 04",
 	);
 	await userEvent.click(screen.getByRole("button", { name: "Nova tipologia" }));
 	const names = screen.getAllByRole("textbox", { name: "Nome da tipologia" });

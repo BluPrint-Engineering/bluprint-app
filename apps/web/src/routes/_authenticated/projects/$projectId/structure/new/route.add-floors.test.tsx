@@ -54,6 +54,7 @@ function typedFloors(
 function scenario(
 	options: {
 		summary?: ProjectSummary;
+		reserved?: number;
 		remaining?: number;
 		several?: boolean;
 		towerB?: StructureTower;
@@ -81,7 +82,7 @@ function scenario(
 	);
 	const summary: ProjectSummary = {
 		...(options.summary ?? OBRA),
-		units: { reserved: 100, used: 0 },
+		units: { reserved: options.reserved ?? 100, used: 0 },
 	};
 	const api = writableApi(summary, structure, {
 		remaining: options.remaining ?? 12,
@@ -172,9 +173,18 @@ describe("adding floors to a tower (W9)", () => {
 			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
 				"",
 			);
+			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue(
+				"01, 04",
+			);
 			expect(
-				screen.getByRole("textbox", { name: "Unidades por andar" }),
-			).toHaveValue("4");
+				screen.getByText("Preencha a faixa para ver as unidades."),
+			).toBeInTheDocument();
+			expect(
+				screen.queryByRole("button", { name: "Faixa" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.queryByRole("checkbox", { name: "Andares sem unidades" }),
+			).not.toBeInTheDocument();
 			expect(
 				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
 			).toBeChecked();
@@ -236,8 +246,14 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
-					"Usa 10 das 12 unidades que restam nesta obra. Depois de adicionar, sobram 2.",
+					"Estes andares usam 10 das 12 que restam na reserva. Depois de adicionar, sobram 2.",
 				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("8 unidades + 2 halls de andar"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("8 unidades · 2 andares · finais 01, 02, 03 e 04"),
 			).toBeInTheDocument();
 			expect(
 				screen.getByText("2 áreas comuns · Tipologia A: 4 · Tipologia B: 4"),
@@ -270,13 +286,17 @@ describe("adding floors to a tower (W9)", () => {
 			await typeInto("Último andar", "12");
 
 			expect(
-				await screen.findByText(
-					"Esta estrutura tem 10 unidades e a obra tem 6. Tire 4 unidades ou peça mais reserva ao admin da construtora.",
+				await screen.findByText("Faltam 4 unidades na reserva"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					/Estes andares usam 10 e a obra ainda tem 6\. Peça mais ao admin da construtora\./,
 				),
 			).toBeInTheDocument();
 			expect(
-				screen.getByText("Restam 6 unidades nesta obra."),
+				screen.getByText("Estes andares usam 10 de 100 reservadas."),
 			).toBeInTheDocument();
+			expect(screen.queryByText(/Depois de adicionar/)).not.toBeInTheDocument();
 			const button = await addButton();
 			expect(button).toBeDisabled();
 			await user.click(button);
@@ -439,9 +459,7 @@ describe("adding floors to a tower (W9)", () => {
 			expect(
 				screen.getByText("Os andares entram na Torre B, a partir do 1º."),
 			).toBeInTheDocument();
-			expect(
-				screen.getByRole("textbox", { name: "Unidades por andar" }),
-			).toHaveValue("");
+			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue("");
 		});
 
 		test("shows the server's refusal when a name is taken and keeps the draft", async () => {
@@ -497,11 +515,72 @@ describe("adding floors to a tower (W9)", () => {
 			);
 
 			expect(
-				await screen.findByText(
-					"Esta estrutura tem 10 unidades e a obra tem 6. Tire 4 unidades ou peça mais reserva ao admin da construtora.",
-				),
+				await screen.findByText("Faltam 4 unidades na reserva"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(/Estes andares usam 10 e a obra ainda tem 6\./),
 			).toBeInTheDocument();
 			expect(await addButton()).toBeDisabled();
+		});
+
+		test.each([
+			[
+				319,
+				"Estes andares usam 4 das 319 que restam na reserva. Depois de adicionar, sobram 315.",
+				undefined,
+			],
+			[
+				2,
+				"Estes andares usam 4 de 400 reservadas.",
+				"Estes andares usam 4 e a obra ainda tem 2.",
+			],
+			[
+				0,
+				"Estes andares usam 4 de 400 reservadas.",
+				"Estes andares usam 4 e a reserva da obra acabou.",
+			],
+		])(
+			"counts units and floor halls against %i left in the reservation",
+			async (remaining, line, missing) => {
+				const { handler, towerB } = scenario({
+					summary: { ...OBRA, role: "manager" },
+					reserved: 400,
+					remaining,
+				});
+				open(handler, pathFor(towerB.id));
+				await typeInto("Último andar", "12");
+				await typeInto("Finais", "01");
+
+				expect(await screen.findByText(line)).toBeInTheDocument();
+				expect(
+					screen.getByText("2 unidades + 2 halls de andar"),
+				).toBeInTheDocument();
+				if (missing === undefined) {
+					expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+					expect(await addButton()).toBeEnabled();
+				} else {
+					const alert = await screen.findByRole("alert");
+					expect(alert).toHaveTextContent(
+						`Faltam ${4 - remaining} unidades na reserva`,
+					);
+					expect(alert).toHaveTextContent(
+						`${missing} Peça mais ao admin da construtora.`,
+					);
+					expect(await addButton()).toBeDisabled();
+				}
+			},
+		);
+
+		test("says nothing of units for a number that holds common areas", async () => {
+			const { handler, towerB } = scenario({ remaining: 3 });
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01");
+
+			const alert = await screen.findByRole("alert");
+			expect(alert).toHaveTextContent("Falta 1 unidade na reserva");
+			expect(document.body).not.toHaveTextContent(/\d+\s+unidades?\s+e a obra/);
+			expect(document.body).not.toHaveTextContent(/Tire \d/);
 		});
 	});
 
@@ -546,13 +625,19 @@ describe("adding floors to a tower (W9)", () => {
 	});
 
 	describe("who may open it", () => {
-		test("shows the lock line and no wizard on a delivered project", async () => {
+		test("shows the lock line and the delivered block, and no wizard, on a delivered project", async () => {
 			const { handler, towerB } = scenario({
 				summary: { ...OBRA, status: "delivered" },
 			});
 			open(handler, pathFor(towerB.id));
 
 			expect(await screen.findByText(LOCKED)).toBeInTheDocument();
+			expect(
+				screen.getByRole("heading", { level: 2, name: "A obra foi entregue" }),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Voltar para a obra" }),
+			).toHaveAttribute("href", `/projects/${OBRA.id}`);
 			expect(
 				screen.getByRole("heading", {
 					level: 1,
@@ -659,13 +744,11 @@ describe("adding floors to a tower (W9)", () => {
 			await typeInto("Último andar", "12");
 			await toPreviewOnPhone();
 
-			const alert = await screen.findByText(
-				"Esta estrutura tem 10 unidades e a obra tem 6. Tire 4 unidades ou peça mais reserva ao admin da construtora.",
-			);
+			const alert = await screen.findByText("Faltam 4 unidades na reserva");
 			const button = await addButton();
 			expect(button).toBeDisabled();
 			expect(button).toHaveAccessibleDescription(
-				/Esta estrutura tem 10 unidades/,
+				/^Faltam 4 unidades na reserva Estes andares usam\s10 e a obra ainda tem\s6\./,
 			);
 			expect(alert.closest("div[class*='fixed']")).toContainElement(button);
 		});

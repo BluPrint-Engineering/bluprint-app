@@ -5,10 +5,12 @@ const BLOCK =
 	"grid h-[34px] min-w-0 place-items-center overflow-hidden rounded-lg px-1 md:h-[22px] md:rounded-[4px] md:px-0.5";
 
 export function PlanFacade({ tower }: { tower: PlanTower }) {
-	if (!tower.valid) {
+	if (tower.state !== "valid") {
 		return (
-			<p className="text-sm text-destructive">
-				Confira os andares desta torre.
+			<p className="text-sm text-pretty text-muted-foreground">
+				{tower.state === "blank"
+					? "Preencha as faixas para ver os andares."
+					: "Complete as faixas desta torre para ver os andares."}
 			</p>
 		);
 	}

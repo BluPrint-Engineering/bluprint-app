@@ -11,21 +11,6 @@ function remainingLine(remaining: number): string {
 	return `Restam ${remaining} unidades nesta obra.`;
 }
 
-export function planLine(
-	units: number,
-	remaining: number,
-	verb: "criar" | "adicionar",
-): string {
-	if (remaining <= 0 || units > remaining || units === 0) {
-		return remainingLine(remaining);
-	}
-	const uses =
-		remaining === 1
-			? "Usa 1 da única unidade que resta nesta obra."
-			: `Usa ${units} das ${remaining} unidades que restam nesta obra.`;
-	return `${uses} Depois de ${verb}, ${sobram(remaining - units)}.`;
-}
-
 export function addOneLine(remaining: number): string {
 	if (remaining <= 0) return remainingLine(remaining);
 	return remaining === 1
@@ -33,26 +18,66 @@ export function addOneLine(remaining: number): string {
 		: `Usa 1 das ${remaining} unidades que restam nesta obra.`;
 }
 
-export function overReserveText(
-	units: number,
+export type ReserveMode = "create" | "add";
+
+export interface ReserveParts {
+	units: number;
+	floorHalls: number;
+	entranceHalls: number;
+	otherAreas: number;
+}
+
+export const INCOMPLETE_RESERVE =
+	"Complete as faixas para ver quanto da reserva esta estrutura usa.";
+
+const usesOf = (used: number, mode: ReserveMode) =>
+	mode === "create"
+		? `Esta estrutura usa${NBSP}${used}`
+		: `Estes andares usam${NBSP}${used}`;
+
+export function reserveLine(
+	used: number,
+	reserved: number,
 	remaining: number,
-	admin: boolean,
+	mode: ReserveMode,
 ): string {
-	const head = `Esta estrutura tem ${plural(units, "unidade", "unidades")}`;
-	if (remaining <= 0) {
-		return `${head} e a reserva da obra acabou. ${
-			admin
-				? "Aumente a reserva."
-				: "Peça mais reserva ao admin da construtora."
-		}`;
-	}
-	return `${head} e a obra tem${NBSP}${remaining}. Tire ${plural(
-		units - remaining,
-		"unidade",
-		"unidades",
-	)} ou ${
-		admin ? "aumente a reserva." : "peça mais reserva ao admin da construtora."
-	}`;
+	const ofReserved = `${usesOf(used, mode)} de ${reserved} ${
+		reserved === 1 ? "reservada" : "reservadas"
+	}.`;
+	if (used > remaining) return ofReserved;
+	const after = `Depois de ${mode === "create" ? "criar" : "adicionar"}, ${sobram(remaining - used)}.`;
+	if (mode === "create") return `${ofReserved} ${after}`;
+	const left =
+		remaining === 1 ? "da 1 que resta" : `das ${remaining} que restam`;
+	return `${usesOf(used, mode)} ${left} na reserva. ${after}`;
+}
+
+export function reserveDetail(parts: ReserveParts): string {
+	return [
+		[parts.units, "unidade", "unidades"] as const,
+		[parts.floorHalls, "hall de andar", "halls de andar"] as const,
+		[parts.entranceHalls, "hall de entrada", "halls de entrada"] as const,
+		[parts.otherAreas, "outra área comum", "outras áreas comuns"] as const,
+	]
+		.filter(([count]) => count > 0)
+		.map(([count, one, many]) => plural(count, one, many))
+		.join(" + ");
+}
+
+export function missingReserveTitle(missing: number): string {
+	return missing === 1
+		? "Falta 1 unidade na reserva"
+		: `Faltam ${missing} unidades na reserva`;
+}
+
+export function missingReserveText(
+	used: number,
+	remaining: number,
+	mode: ReserveMode,
+): string {
+	return remaining <= 0
+		? `${usesOf(used, mode)} e a reserva da obra acabou.`
+		: `${usesOf(used, mode)} e a obra ainda tem${NBSP}${remaining}.`;
 }
 
 export function createdToast(towers: number, units: number): string {

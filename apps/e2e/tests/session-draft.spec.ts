@@ -61,8 +61,10 @@ test.describe("on a floor whose reserve is spent", () => {
 		await expect(page).toHaveURL(/\/projects\/[0-9a-f-]{36}\/configuration$/);
 		await page.getByRole("link", { name: "Início da obra" }).click();
 		await page.getByRole("link", { name: "Montar estrutura" }).click();
-		await page.getByLabel("Último andar").fill("3");
-		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByLabel("Primeiro andar", { exact: true }).fill("1");
+		await page.getByLabel("Último andar", { exact: true }).fill("3");
+		await page.getByLabel("Finais", { exact: true }).fill("01, 04");
+		await page.getByRole("checkbox", { name: "Hall em cada andar" }).click();
 		await continueTo(page, "Áreas comuns");
 		await continueTo(page, "Tipologias");
 		await page.getByLabel("Novo cômodo da Tipologia A").fill("Sala");
@@ -70,7 +72,7 @@ test.describe("on a floor whose reserve is spent", () => {
 		await continueTo(page, "Prévia");
 		await expect(
 			page.getByText(
-				"Usa 16 das 16 unidades que restam nesta obra. Depois de criar, sobram 0.",
+				"Esta estrutura usa 16 de 16 reservadas. Depois de criar, sobram 0.",
 			),
 		).toBeVisible();
 		await page.getByRole("button", { name: "Criar estrutura" }).click();
