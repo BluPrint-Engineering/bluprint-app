@@ -27,7 +27,12 @@ export default async function newDiscipline({ page, shot: rawShot, expect, query
 
 	const unit903 = await locationId("unit", "903", "Torre A", "9º andar");
 	const ninth = await locationId("floor", "9º andar", "Torre A");
-	expect(await extras(), "an earlier run left its disciplines: down and up before each device").toBe(2);
+	const created = ["Gesso", "Sauna", "Impermeabilização", "Forro", "Esquadrias", "Revestimento", "Ar-condicionado", "Gás"];
+	await query("START TRANSACTION READ WRITE");
+	await query("DELETE FROM location_discipline WHERE discipline_id IN (SELECT id FROM discipline WHERE project_id = $1 AND name = ANY($2))", [jardins, created]);
+	await query("DELETE FROM discipline WHERE project_id = $1 AND name = ANY($2)", [jardins, created]);
+	await query("COMMIT");
+	expect(await extras()).toBe(2);
 	await open(unit903, "903");
 	await expect(page.getByText("3 de 4")).toBeVisible();
 	await shot("card-with-button");
