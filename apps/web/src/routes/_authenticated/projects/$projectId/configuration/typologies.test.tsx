@@ -806,7 +806,7 @@ describe("copying a tipologia", () => {
 			group("Unidades").getByText("7 cômodos · 44 unidades"),
 		).toBeInTheDocument();
 		expect(
-			card().queryByRole("textbox", { name: "Novo cômodo" }),
+			card().queryByRole("combobox", { name: /^Novo cômodo/ }),
 		).not.toBeInTheDocument();
 		await waitFor(() => expect(created).toHaveFocus());
 	});
@@ -1143,7 +1143,7 @@ describe("copying a tipologia", () => {
 			removeButtons().map((button) => button.getAttribute("aria-label")),
 		).toEqual(["Tirar Sala", "Tirar Quarto", "Tirar Banheiro", "Tirar Lavabo"]);
 		expect(
-			screen.getAllByRole("textbox", { name: "Novo cômodo" }),
+			screen.getAllByRole("combobox", { name: /^Novo cômodo/ }),
 		).toHaveLength(1);
 		expect(
 			card().getByRole("button", {
@@ -1803,7 +1803,9 @@ describe("a tipologia saved by someone else meanwhile", () => {
 		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 		await waitFor(() =>
-			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+			expect(
+				screen.queryByRole("combobox", { name: /^Novo cômodo/ }),
+			).toBeNull(),
 		);
 		expect(writes).toHaveLength(1);
 	});
@@ -1861,7 +1863,9 @@ describe("a tipologia saved by someone else meanwhile", () => {
 		expect(await screen.findByText("Tipologia B salva.")).toBeInTheDocument();
 		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
 		await waitFor(() =>
-			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+			expect(
+				screen.queryByRole("combobox", { name: /^Novo cômodo/ }),
+			).toBeNull(),
 		);
 		expect(api.writes).toHaveLength(2);
 		expect(nth(api.writes, 1).body).toMatchObject({ version: 1 });
@@ -1906,7 +1910,7 @@ describe("a tipologia saved by someone else meanwhile", () => {
 			await screen.findByText("A Tipologia B foi excluída por outra pessoa."),
 		).toBeInTheDocument();
 		await waitFor(() => expect(card().queryByText("Tipologia B")).toBeNull());
-		expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull();
+		expect(screen.queryByRole("combobox", { name: /^Novo cômodo/ })).toBeNull();
 		expect(
 			screen.getByRole("button", { name: "Nova tipologia" }),
 		).not.toHaveAttribute("aria-disabled");
@@ -1927,7 +1931,9 @@ describe("a tipologia saved by someone else meanwhile", () => {
 			await screen.findByText("A Tipologia B foi excluída por outra pessoa."),
 		).toBeInTheDocument();
 		await waitFor(() =>
-			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+			expect(
+				screen.queryByRole("combobox", { name: /^Novo cômodo/ }),
+			).toBeNull(),
 		);
 		expect(api.writes).toHaveLength(1);
 	});
