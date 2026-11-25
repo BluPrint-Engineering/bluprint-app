@@ -994,6 +994,33 @@ describe("copying a tipologia", () => {
 		expect(group("Unidades").getByText("5 tipologias")).toBeInTheDocument();
 	});
 
+	test("sends the same id again when the copy was created but its answer was lost, creating one copy", async () => {
+		const server = typologiesApi();
+		let answerLost = false;
+		const handler: ApiHandler = (url, init) => {
+			const reply = server.handler(url, init);
+			if (init?.method !== "POST" || answerLost) return reply;
+			answerLost = true;
+			return Promise.reject(new TypeError("Failed to fetch"));
+		};
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		await userEvent.clear(nameField());
+		await userEvent.type(nameField(), "Tipologia Z");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Não foi possível copiar");
+		await screen.findByText("5 tipologias");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Tipologia Z criada com 7 cômodos.");
+		expect(server.writes).toHaveLength(2);
+		expect(nth(server.writes, 1)).toEqual(nth(server.writes, 0));
+		expect(group("Unidades").getByText("5 tipologias")).toBeInTheDocument();
+	});
+
 	test("creates what the dialog showed when the original changed meanwhile", async () => {
 		const shorter = {
 			...tipologiaA,

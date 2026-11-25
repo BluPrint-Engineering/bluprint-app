@@ -324,7 +324,9 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 					key={copying.id}
 					name={copying.original.name}
 					rooms={copying.rooms}
-					takenNames={typologies.map(({ name }) => name)}
+					takenNames={typologies
+						.filter(({ id }) => id !== copying.id)
+						.map(({ name }) => name)}
 					{...(copying.name !== undefined && { initialName: copying.name })}
 					onConfirm={(name) => confirmCopy(copying, name)}
 					onClose={closeCopy}
