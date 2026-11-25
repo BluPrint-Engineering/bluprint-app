@@ -14,13 +14,25 @@ test.describe("signed-out theme layout", () => {
 			await body.ownerDocument.fonts.ready;
 		});
 
-		const layout = () =>
-			page.locator("aside, main, form, input, button").evaluateAll((elements) =>
-				elements.map((element) => {
-					const { x, y, width, height } = element.getBoundingClientRect();
-					return { x, y, width, height };
-				}),
-			);
+		const layout = async () => {
+			await page
+				.locator("body")
+				.evaluate((body) =>
+					Promise.all(
+						body.ownerDocument
+							.getAnimations()
+							.map(({ finished }: { finished: Promise<unknown> }) => finished),
+					),
+				);
+			return page
+				.locator("aside, main, form, input, button")
+				.evaluateAll((elements) =>
+					elements.map((element) => {
+						const { x, y, width, height } = element.getBoundingClientRect();
+						return { x, y, width, height };
+					}),
+				);
+		};
 		const initial = await layout();
 
 		await page.emulateMedia({ colorScheme: "dark" });

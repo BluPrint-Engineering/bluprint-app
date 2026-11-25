@@ -9,15 +9,23 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
-import { useSessionDraft } from "@/features/auth";
+import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
 import { matchesSearch } from "@/utils/matchesSearch";
 import {
 	isTypologyInUse,
 	typologiesQueryOptions,
+	useCopyTypologyMutation,
 	useDeleteTypologyMutation,
 } from "../api";
+import { CopyTypologyDialog } from "../components/CopyTypologyDialog";
 import { plural } from "../plural";
+import {
+	type CopyTarget,
+	copyRequest,
+	copyTargetOf,
+	keptCopyTarget,
+} from "./copyTarget";
 import { SectionCard, SectionNote } from "./SectionCard";
 import { SectionFailure, SectionSkeleton } from "./SectionLoad";
 import { TYPOLOGIES_SECTION_ID } from "./sectionIds";
@@ -95,12 +103,16 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 	const remove = useDeleteTypologyMutation(project.id);
 	const created = useSessionDraft("create-typology", createdDraft);
 	const updated = useSessionDraft("update-typology", updatedDraft);
+	const keptCopy = useSessionDraft("copy-typology", keptCopyTarget);
+	const copy = useCopyTypologyMutation(project.id);
+	const clearCopyDraft = useClearSessionDraft("copy-typology");
 	const [editingId, setEditingId] = useState<string>();
 	const [naming, setNaming] = useState<NameDialogTarget | undefined>(
 		created
 			? { mode: "create", locationType: created.locationType }
 			: undefined,
 	);
+	const [copying, setCopying] = useState<CopyTarget | undefined>(keptCopy);
 	const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
 	const [search, setSearch] = useState("");
 	const restoredUpdate = useRef(false);
@@ -108,6 +120,8 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 		new Map<TypologyLocationType, HTMLButtonElement>(),
 	);
 	const triggers = useRef(new Map<string, HTMLButtonElement>());
+	const rows = useRef(new Map<string, HTMLButtonElement>());
+	const copiedId = useRef<string>(undefined);
 	const newRoomField = useRef<HTMLInputElement>(null);
 	const createdNow = useRef(false);
 	const closedEditor = useRef<string>(undefined);
@@ -140,6 +154,22 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 		});
 	}
 
+	function closeCopy() {
+		clearCopyDraft();
+		setCopying(undefined);
+	}
+
+	async function confirmCopy(target: CopyTarget, name: string) {
+		const created = await copy.mutateAsync(copyRequest(target, name));
+		copiedId.current = created.id;
+		setSearch("");
+		setExpanded((current) => new Set(current).add(created.id));
+		toast.success(
+			`${created.name} criada com ${plural(created.rooms.length, "cômodo", "cômodos")}.`,
+		);
+		closeCopy();
+	}
+
 	function toggle(id: string) {
 		setExpanded((current) => {
 			const next = new Set(current);
@@ -151,6 +181,7 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 	const state = query.data ? undefined : firstLoadState(query);
 	const typologies = query.data?.typologies ?? [];
 	const searchable = typologies.length >= SEARCH_FROM;
+	if (!searchable && search !== "") setSearch("");
 	const searching = searchable && search.trim() !== "";
 	const editing =
 		editable && typologies.some(({ id }) => id === editingId)
@@ -221,10 +252,16 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 													typology={typology}
 													expanded={expanded.has(typology.id)}
 													onToggle={() => toggle(typology.id)}
+													toggleRef={(toggleButton) => {
+														if (toggleButton) {
+															rows.current.set(typology.id, toggleButton);
+														} else rows.current.delete(typology.id);
+													}}
 													{...(editable && {
 														actions: {
 															editRoomsDisabled: editing !== undefined,
 															onEditRooms: () => setEditingId(typology.id),
+															onCopy: () => setCopying(copyTargetOf(typology)),
 															onRename: () =>
 																setNaming({ mode: "rename", typology }),
 															onDelete: () => deleteTypology(typology),
@@ -281,6 +318,27 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 					})}
 					{!editable && <LockNote>{LOCKED}</LockNote>}
 				</>
+			)}
+			{copying && editable && (
+				<CopyTypologyDialog
+					key={copying.id}
+					name={copying.original.name}
+					rooms={copying.rooms}
+					takenNames={typologies
+						.filter(({ id }) => id !== copying.id)
+						.map(({ name }) => name)}
+					{...(copying.name !== undefined && { initialName: copying.name })}
+					onConfirm={(name) => confirmCopy(copying, name)}
+					onClose={closeCopy}
+					returnFocus={() => {
+						if (copiedId.current !== undefined) {
+							const row = rows.current.get(copiedId.current);
+							copiedId.current = undefined;
+							return row;
+						}
+						return triggers.current.get(copying.original.id);
+					}}
+				/>
 			)}
 			{naming && (
 				<TypologyNameDialog

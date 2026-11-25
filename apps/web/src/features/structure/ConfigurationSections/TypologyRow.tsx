@@ -1,5 +1,5 @@
 import type { Typology } from "@bluprint/shared";
-import { ChevronDown, Ellipsis, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, Copy, Ellipsis, Pencil, Trash2 } from "lucide-react";
 import type { Ref } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,14 +19,17 @@ export function TypologyRow({
 	typology,
 	expanded,
 	onToggle,
+	toggleRef,
 	actions,
 }: {
 	typology: Typology;
 	expanded: boolean;
 	onToggle: () => void;
+	toggleRef?: Ref<HTMLButtonElement>;
 	actions?: {
 		editRoomsDisabled: boolean;
 		onEditRooms: () => void;
+		onCopy: () => void;
 		onRename: () => void;
 		onDelete: () => void;
 		triggerRef: Ref<HTMLButtonElement>;
@@ -44,6 +47,7 @@ export function TypologyRow({
 				)}
 			>
 				<button
+					ref={toggleRef}
 					type="button"
 					aria-expanded={expanded}
 					onClick={onToggle}
@@ -94,6 +98,10 @@ export function TypologyRow({
 								>
 									<Pencil className="size-4.5" aria-hidden="true" />
 									Editar cômodos
+								</DropdownMenuItem>
+								<DropdownMenuItem onSelect={actions.onCopy}>
+									<Copy className="size-4.5" aria-hidden="true" />
+									Copiar
 								</DropdownMenuItem>
 								<DropdownMenuItem onSelect={actions.onRename}>
 									<Pencil className="size-4.5" aria-hidden="true" />

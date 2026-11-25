@@ -6,6 +6,13 @@ import { loadEnv } from "vite";
 import { defineConfig } from "vitest/config";
 import { z } from "zod";
 
+// Node 25+ ships its own localStorage, which shadows jsdom's and breaks without --localstorage-file
+const webstorageFlag = process.allowedNodeEnvironmentFlags.has(
+	"--experimental-webstorage",
+)
+	? ["--no-experimental-webstorage"]
+	: [];
+
 const envDir = resolve(import.meta.dirname, "../..");
 
 export default defineConfig(({ mode }) => {
@@ -41,7 +48,7 @@ export default defineConfig(({ mode }) => {
 			globals: true,
 			setupFiles: "./src/test/setup.ts",
 			testTimeout: 15_000,
-			execArgv: ["--no-experimental-webstorage"],
+			execArgv: webstorageFlag,
 		},
 	};
 });

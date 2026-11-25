@@ -676,6 +676,147 @@ describe("POST /api/projects/:id/typologies", () => {
 	});
 });
 
+describe("copying a typology through POST /api/projects/:id/typologies", () => {
+	const names = (type: Typology) => type.rooms.map(({ name }) => name);
+
+	const copyOf = (
+		original: Typology,
+		name: string,
+		rooms = roomsOf(original),
+		id = randomUUID(),
+	) => ({
+		id,
+		name,
+		locationType: original.locationType,
+		rooms: rooms.map(({ name: roomName }) => ({
+			id: randomUUID(),
+			name: roomName,
+		})),
+	});
+
+	it("creates what the caller checked, not what the original lists now", async () => {
+		const w = await world();
+		const original = await typeOf(w, w.typeA);
+		const shown = copyOf(original, "Tipologia A (cópia)");
+
+		const shortened = await patchTypology(
+			w,
+			w.typeA,
+			{ rooms: roomsOf(original).filter(({ name }) => name !== "Sacada") },
+			assistant,
+		);
+		const res = await manager.agent.post(path(w, "typologies")).send(shown);
+
+		expect(shortened.status).toBe(200);
+		expect(res.status).toBe(201);
+		const created = typologySchema.parse(res.body);
+		expect(names(created)).toEqual(["Sala", "Cozinha", "Sacada"]);
+		expect(created).toMatchObject({
+			locationType: "unit",
+			locationCount: 0,
+			changedLocationCount: 0,
+		});
+		const after = await typeOf(w, w.typeA);
+		expect(names(after)).toEqual(["Sala", "Cozinha"]);
+		expect(after.locationCount).toBe(3);
+	});
+
+	it("stays independent of the original in both directions", async () => {
+		const w = await world();
+		const original = await typeOf(w, w.typeA);
+		const created = typologySchema.parse(
+			(
+				await manager.agent
+					.post(path(w, "typologies"))
+					.send(copyOf(original, "Tipologia A (cópia)"))
+			).body,
+		);
+
+		const grown = await patchTypology(w, created.id, {
+			rooms: [...roomsOf(created), { id: randomUUID(), name: "Suíte" }],
+		});
+		const shrunk = await patchTypology(w, w.typeA, {
+			rooms: roomsOf(original).filter(({ name }) => name !== "Cozinha"),
+		});
+
+		expect(grown.status).toBe(200);
+		expect(shrunk.status).toBe(200);
+		expect(names(await typeOf(w, created.id))).toEqual([
+			"Sala",
+			"Cozinha",
+			"Sacada",
+			"Suíte",
+		]);
+		expect(names(await typeOf(w, w.typeA))).toEqual(["Sala", "Sacada"]);
+		expect(roomNames(await detailOf(w, w.plain))).toEqual(["Sala", "Sacada"]);
+	});
+
+	it("creates one copy when the answer was lost and the same body is sent again", async () => {
+		const w = await world();
+		const body = copyOf(await typeOf(w, w.typeA), "Tipologia A (cópia)");
+
+		const first = await manager.agent.post(path(w, "typologies")).send(body);
+		const again = await manager.agent.post(path(w, "typologies")).send(body);
+
+		expect(again.status).toBe(201);
+		expect(again.body).toEqual(first.body);
+		expect(await db.$count(typology, eq(typology.projectId, w.projectId))).toBe(
+			4,
+		);
+	});
+
+	it("refuses a name in use in either catalog, ignoring case and spacing", async () => {
+		const w = await world();
+		const original = await typeOf(w, w.typeA);
+		await manager.agent.post(path(w, "typologies")).send({
+			id: randomUUID(),
+			name: "Hall padrão",
+			locationType: "common_area",
+			rooms: [{ id: randomUUID(), name: "Hall" }],
+		});
+
+		const sameCatalog = await manager.agent
+			.post(path(w, "typologies"))
+			.send(copyOf(original, "tipologia  a"));
+		const otherCatalog = await manager.agent
+			.post(path(w, "typologies"))
+			.send(copyOf(original, " HALL  padrão "));
+
+		for (const res of [sameCatalog, otherCatalog]) {
+			expect(res.status).toBe(409);
+			expect(problemOf(res).code).toBe(TYPOLOGY_NAME_TAKEN);
+		}
+		expect(await db.$count(typology, eq(typology.projectId, w.projectId))).toBe(
+			4,
+		);
+	});
+
+	it("lands a common-area copy in the common-area catalog", async () => {
+		const w = await world();
+		const hall = typologySchema.parse(
+			(
+				await manager.agent.post(path(w, "typologies")).send({
+					id: randomUUID(),
+					name: "Hall padrão",
+					locationType: "common_area",
+					rooms: [{ id: randomUUID(), name: "Hall" }],
+				})
+			).body,
+		);
+
+		const res = await assistant.agent
+			.post(path(w, "typologies"))
+			.send(copyOf(hall, "Hall padrão (cópia)"));
+
+		expect(res.status).toBe(201);
+		expect(typologySchema.parse(res.body)).toMatchObject({
+			locationType: "common_area",
+			locationCount: 0,
+		});
+		expect(names(await typeOf(w, hall.id))).toEqual(["Hall"]);
+	});
+});
+
 describe("PATCH /api/projects/:id/typologies/:typologyId", () => {
 	const patch = patchTypology;
 

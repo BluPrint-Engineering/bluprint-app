@@ -275,7 +275,7 @@ describe("Tipologias in two groups (C1)", () => {
 
 		expect(
 			(await screen.findAllByRole("menuitem")).map((item) => item.textContent),
-		).toEqual(["Editar cômodos", "Renomear", "Excluir (só sem uso)"]);
+		).toEqual(["Editar cômodos", "Copiar", "Renomear", "Excluir (só sem uso)"]);
 		expect(
 			screen.getByRole("menuitem", { name: "Excluir (só sem uso)" }),
 		).toHaveAttribute("aria-disabled", "true");
@@ -455,6 +455,38 @@ describe("searching Tipologias (C5)", () => {
 		expect(card().getByText("Tipologia A")).toBeInTheDocument();
 		expect(createButton("Nova tipologia")).toBeInTheDocument();
 	});
+
+	test("forgets the search when the list drops to 6 and comes back empty at 7", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await userEvent.type(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+			"co",
+		);
+		await chooseFromMenu("Cobertura", "Excluir tipologia");
+		await screen.findByText("Cobertura excluída.");
+		await chooseFromMenu("Corredor", "Excluir tipologia");
+		await waitFor(() =>
+			expect(
+				card().queryByRole("textbox", { name: "Buscar tipologia" }),
+			).not.toBeInTheDocument(),
+		);
+
+		await userEvent.click(createButton("Nova tipologia"));
+		const dialog = await screen.findByRole("dialog", {
+			name: "Nova tipologia",
+		});
+		await userEvent.type(within(dialog).getByLabelText("Nome"), "Tipologia E");
+		await userEvent.click(
+			within(dialog).getByRole("button", { name: "Criar" }),
+		);
+
+		expect(
+			await card().findByRole("textbox", { name: "Buscar tipologia" }),
+		).toHaveValue("");
+		expect(card().getByText("Tipologia A")).toBeInTheDocument();
+		expect(card().getByText("Hall social")).toBeInTheDocument();
+	});
 });
 
 describe("creating a tipologia", () => {
@@ -580,6 +612,566 @@ describe("creating a tipologia", () => {
 			await waitFor(() => expect(createButton(name)).toHaveFocus());
 		},
 	);
+});
+
+describe("copying a tipologia", () => {
+	const copyDialog = (name = "Tipologia A") =>
+		within(screen.getByRole("dialog", { name: `Copiar ${name}` }));
+	const nameField = () =>
+		screen.getByRole("textbox", { name: "Nome da cópia" });
+	const copyList = (name = "Tipologia A") =>
+		copyDialog(name)
+			.getAllByRole("listitem")
+			.map((item) => item.textContent);
+	const typologyWrites = (writes: TypologyWrite[]) =>
+		writes.filter(({ method }) => method === "POST");
+
+	test.each<ProjectAccessRole>(["admin", "manager", "assistant"])(
+		"offers the %s Copiar between Editar cômodos and Renomear",
+		async (role) => {
+			const { handler } = typologiesApi({ summary: { ...OBRA, role } });
+			await openConfiguration(handler);
+
+			await userEvent.click(
+				screen.getByRole("button", { name: "Ações da Cobertura" }),
+			);
+
+			expect(
+				(await screen.findAllByRole("menuitem")).map(
+					(item) => item.textContent,
+				),
+			).toEqual(["Editar cômodos", "Copiar", "Renomear", "Excluir tipologia"]);
+			expect(
+				screen.getByRole("menuitem", { name: "Copiar" }),
+			).not.toHaveAttribute("aria-disabled");
+		},
+	);
+
+	test("opens with the next free name selected, what it takes and the note (C3)", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		const dialog = copyDialog();
+		expect(nameField()).toHaveValue("Tipologia A (cópia)");
+		await waitFor(() => expect(nameField()).toHaveFocus());
+		expect(nameField()).toHaveProperty("selectionStart", 0);
+		expect(nameField()).toHaveProperty(
+			"selectionEnd",
+			"Tipologia A (cópia)".length,
+		);
+		expect(
+			dialog.getByText(
+				"Único na obra, entre as tipologias de unidade e de área comum.",
+			),
+		).toBeInTheDocument();
+		expect(dialog.getByText("Leva 7 cômodos")).toBeInTheDocument();
+		expect(copyList()).toEqual([
+			"Sala",
+			"Cozinha",
+			"Sacada",
+			"Quarto",
+			"Banheiro",
+			"Suíte",
+			"Despensa",
+		]);
+		expect(
+			dialog.getByText(
+				"Depois de copiar, as duas mudam separadas. As disciplinas ficam em cada local, não na tipologia.",
+			),
+		).toBeInTheDocument();
+		expect(dialog.getByRole("button", { name: "Copiar" })).toBeEnabled();
+		expect(dialog.getByRole("button", { name: "Cancelar" })).toBeEnabled();
+		expect(writes).toEqual([]);
+	});
+
+	test("says Leva 1 cômodo for a tipologia of one", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+
+		await chooseFromMenu("Corredor", "Copiar");
+
+		expect(
+			copyDialog("Corredor").getByText("Leva 1 cômodo"),
+		).toBeInTheDocument();
+		expect(copyList("Corredor")).toEqual(["Circulação"]);
+	});
+
+	test("focuses the name with the text selected on the phone too", async () => {
+		setViewport("phone");
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		await waitFor(() => expect(nameField()).toHaveFocus());
+		expect(nameField()).toHaveProperty("selectionStart", 0);
+		expect(nameField()).toHaveProperty(
+			"selectionEnd",
+			"Tipologia A (cópia)".length,
+		);
+	});
+
+	test("stacks the buttons on the phone with Copiar above Cancelar", async () => {
+		setViewport("phone");
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		const copy = copyDialog().getByRole("button", { name: "Copiar" });
+		const cancel = copyDialog().getByRole("button", { name: "Cancelar" });
+		expect(copy.parentElement).toBe(cancel.parentElement);
+		expect(
+			copy.compareDocumentPosition(cancel) & Node.DOCUMENT_POSITION_FOLLOWING,
+		).toBeTruthy();
+	});
+
+	test("creates the copy with new ids and the rooms shown, at the end of the group, open and unused, and leaves the original alone", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		expect(
+			await screen.findByText("Tipologia A (cópia) criada com 7 cômodos."),
+		).toBeInTheDocument();
+		const [sent] = typologyWrites(writes);
+		expect(sent).toEqual({
+			method: "POST",
+			path: "/typologies",
+			body: {
+				id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+				name: "Tipologia A (cópia)",
+				locationType: "unit",
+				rooms: [
+					"Sala",
+					"Cozinha",
+					"Sacada",
+					"Quarto",
+					"Banheiro",
+					"Suíte",
+					"Despensa",
+				].map((name) => ({
+					id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+					name,
+				})),
+			},
+		});
+		const body = sent?.body as {
+			id: string;
+			rooms: { id: string }[];
+		};
+		const original = new Set([
+			tipologiaA.id,
+			...tipologiaA.rooms.map(({ id }) => id),
+		]);
+		expect(
+			[body.id, ...body.rooms.map(({ id }) => id)].filter((id) =>
+				original.has(id),
+			),
+		).toEqual([]);
+		expect(new Set(body.rooms.map(({ id }) => id)).size).toBe(7);
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		expect(rowsOf("Unidades")).toEqual([
+			"Tipologia A",
+			"Tipologia B",
+			"Cobertura",
+			"Duplex",
+		]);
+		const created = card().getByRole("button", {
+			name: /^Tipologia A \(cópia\)/,
+			expanded: true,
+		});
+		expect(within(created).getByText("7 cômodos ·")).toBeInTheDocument();
+		expect(within(created).getByText("Sem uso")).toBeInTheDocument();
+		expect(roomsUnder("Tipologia A \\(cópia\\)")).toEqual([
+			"Sala",
+			"Cozinha",
+			"Sacada",
+			"Quarto",
+			"Banheiro",
+			"Suíte",
+			"Despensa",
+		]);
+		expect(
+			group("Unidades")
+				.getAllByRole("button", { expanded: true })
+				.map((button) => button.firstElementChild?.textContent),
+		).toEqual(["Tipologia A (cópia)"]);
+		expect(group("Unidades").getByText("5 tipologias")).toBeInTheDocument();
+		expect(
+			group("Unidades").getByText("7 cômodos · 44 unidades"),
+		).toBeInTheDocument();
+		expect(
+			card().queryByRole("textbox", { name: "Novo cômodo" }),
+		).not.toBeInTheDocument();
+		await waitFor(() => expect(created).toHaveFocus());
+	});
+
+	test("lands a copy of a common-area tipologia in Áreas comuns", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Hall padrão", "Copiar");
+
+		await userEvent.click(
+			copyDialog("Hall padrão").getByRole("button", { name: "Copiar" }),
+		);
+
+		expect(
+			await screen.findByText("Hall padrão (cópia) criada com 3 cômodos."),
+		).toBeInTheDocument();
+		expect(nth(typologyWrites(writes), 0).body).toMatchObject({
+			name: "Hall padrão (cópia)",
+			locationType: "common_area",
+		});
+		expect(
+			group("Áreas comuns").getByText("Hall padrão (cópia)"),
+		).toBeInTheDocument();
+		expect(
+			group("Unidades").queryByText("Hall padrão (cópia)"),
+		).not.toBeInTheDocument();
+		expect(group("Áreas comuns").getByText("5 tipologias")).toBeInTheDocument();
+	});
+
+	test("says com 1 cômodo for a copy of one", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Corredor", "Copiar");
+
+		await userEvent.click(
+			copyDialog("Corredor").getByRole("button", { name: "Copiar" }),
+		);
+
+		expect(
+			await screen.findByText("Corredor (cópia) criada com 1 cômodo."),
+		).toBeInTheDocument();
+	});
+
+	test("suggests (cópia 2) when the first copy exists and counts the names of both catalogs", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+		await screen.findByText("Tipologia A (cópia) criada com 7 cômodos.");
+
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		expect(nameField()).toHaveValue("Tipologia A (cópia 2)");
+	});
+
+	test("sends the name trimmed", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		await userEvent.clear(nameField());
+		await userEvent.type(nameField(), "  Tipologia Z  {Enter}");
+
+		await screen.findByText("Tipologia Z criada com 7 cômodos.");
+		expect(nth(typologyWrites(writes), 0).body).toMatchObject({
+			name: "Tipologia Z",
+		});
+	});
+
+	test.each([
+		["", "Informe o nome."],
+		["  ", "Informe o nome."],
+		["tipologia  b", "Esse nome já existe nesta obra."],
+		["Hall  Padrão", "Esse nome já existe nesta obra."],
+		["TIPOLOGIA Á", "Esse nome já existe nesta obra."],
+	])(
+		"refuses %j before sending: %s, and clears it on typing (C3b)",
+		async (typed, message) => {
+			const { handler, writes } = typologiesApi();
+			await openConfiguration(handler);
+			await chooseFromMenu("Tipologia A", "Copiar");
+			await userEvent.clear(nameField());
+			if (typed !== "") await userEvent.type(nameField(), typed);
+
+			await userEvent.click(
+				copyDialog().getByRole("button", { name: "Copiar" }),
+			);
+
+			expect(await copyDialog().findByText(message)).toBeInTheDocument();
+			expect(
+				copyDialog().queryByText(
+					"Único na obra, entre as tipologias de unidade e de área comum.",
+				),
+			).not.toBeInTheDocument();
+			expect(nameField()).toHaveAttribute("aria-invalid", "true");
+			expect(writes).toEqual([]);
+
+			await userEvent.type(nameField(), "x");
+
+			expect(copyDialog().queryByText(message)).not.toBeInTheDocument();
+			expect(
+				copyDialog().getByText(
+					"Único na obra, entre as tipologias de unidade e de área comum.",
+				),
+			).toBeInTheDocument();
+		},
+	);
+
+	test("shows the same error when the server finds the name taken, keeping the dialog", async () => {
+		const { handler } = typologiesApi({
+			answer: () =>
+				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A (cópia)"] }),
+		});
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		expect(
+			await copyDialog().findByText("Esse nome já existe nesta obra."),
+		).toBeInTheDocument();
+		expect(nameField()).toHaveValue("Tipologia A (cópia)");
+		expect(copyDialog().getByRole("button", { name: "Copiar" })).toBeEnabled();
+	});
+
+	test("locks both buttons and the field while sending", async () => {
+		const pending = deferred();
+		const { handler } = typologiesApi({ answer: () => pending.promise });
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		const sending = await copyDialog().findByRole("button", {
+			name: "Copiando…",
+		});
+		expect(sending).toBeDisabled();
+		expect(
+			copyDialog().getByRole("button", { name: "Cancelar" }),
+		).toBeDisabled();
+		expect(nameField()).toBeDisabled();
+		pending.resolve(
+			new Response(
+				JSON.stringify({
+					...tipologiaA,
+					id: "0190a000-0000-7000-8000-0000000000a1",
+				}),
+				{ status: 201 },
+			),
+		);
+		await screen.findByText("Tipologia A criada com 7 cômodos.");
+	});
+
+	test("keeps the name on a network failure and sends the same ids again, creating one copy", async () => {
+		const { handler, writes } = typologiesApi({
+			answer: (_write, attempt) =>
+				attempt === 1
+					? Promise.reject(new TypeError("Failed to fetch"))
+					: undefined,
+		});
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		await userEvent.clear(nameField());
+		await userEvent.type(nameField(), "Tipologia Z");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		const alert = await screen.findByRole("alert");
+		expect(
+			within(alert).getByText("Não foi possível copiar"),
+		).toBeInTheDocument();
+		expect(
+			within(alert).getByText(
+				"A cópia não foi criada. Confira a conexão e tente de novo.",
+			),
+		).toBeInTheDocument();
+		expect(nameField()).toHaveValue("Tipologia Z");
+		expect(copyDialog().getByRole("button", { name: "Copiar" })).toBeEnabled();
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Tipologia Z criada com 7 cômodos.");
+		expect(writes).toHaveLength(2);
+		expect(nth(writes, 1)).toEqual(nth(writes, 0));
+		expect(group("Unidades").getByText("5 tipologias")).toBeInTheDocument();
+	});
+
+	test("sends the same id again when the copy was created but its answer was lost, creating one copy", async () => {
+		const server = typologiesApi();
+		let answerLost = false;
+		const handler: ApiHandler = (url, init) => {
+			const reply = server.handler(url, init);
+			if (init?.method !== "POST" || answerLost) return reply;
+			answerLost = true;
+			return Promise.reject(new TypeError("Failed to fetch"));
+		};
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		await userEvent.clear(nameField());
+		await userEvent.type(nameField(), "Tipologia Z");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Não foi possível copiar");
+		await screen.findByText("5 tipologias");
+
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Tipologia Z criada com 7 cômodos.");
+		expect(server.writes).toHaveLength(2);
+		expect(nth(server.writes, 1)).toEqual(nth(server.writes, 0));
+		expect(group("Unidades").getByText("5 tipologias")).toBeInTheDocument();
+	});
+
+	test("creates what the dialog showed when the original changed meanwhile", async () => {
+		const shorter = {
+			...tipologiaA,
+			rooms: tipologiaA.rooms.filter(({ name }) => name !== "Sacada"),
+		};
+		const { handler, writes } = typologiesApi();
+		let changed = false;
+		const { fetchMock } = await openConfiguration((url, init) =>
+			changed &&
+			url.pathname === `/api/projects/${OBRA.id}/typologies` &&
+			(init?.method ?? "GET") === "GET"
+				? json({
+						typologies: EIGHT.map((each) =>
+							each.id === tipologiaA.id ? shorter : each,
+						),
+					})
+				: handler(url, init),
+		);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		const lists = () =>
+			fetchMock.mock.calls.filter(
+				([input, init]) =>
+					String(input).endsWith("/typologies") &&
+					(init?.method ?? "GET") === "GET",
+			).length;
+		const before = lists();
+
+		changed = true;
+		window.dispatchEvent(new Event("visibilitychange"));
+		await waitFor(() => expect(lists()).toBeGreaterThan(before));
+		expect(copyDialog().getByText("Leva 7 cômodos")).toBeInTheDocument();
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Tipologia A (cópia) criada com 7 cômodos.");
+		expect(
+			sentRooms(nth(typologyWrites(writes), 0)).map(({ name }) => name),
+		).toContain("Sacada");
+		expect(
+			group("Unidades").getByText("6 cômodos · 44 unidades"),
+		).toBeInTheDocument();
+	});
+
+	test.each([
+		[
+			"Cancelar",
+			() => userEvent.click(screen.getByRole("button", { name: "Cancelar" })),
+		],
+		["Esc", () => userEvent.keyboard("{Escape}")],
+		[
+			"a tap outside",
+			() =>
+				userEvent.click(
+					document.body.querySelector("[data-slot='dialog-overlay']") ??
+						document.body,
+				),
+		],
+	])(
+		"creates nothing on %s and returns focus to the menu of the tipologia",
+		async (_how, leave) => {
+			const { handler, writes } = typologiesApi();
+			await openConfiguration(handler);
+			await chooseFromMenu("Tipologia A", "Copiar");
+
+			await leave();
+
+			await waitFor(() =>
+				expect(
+					screen.queryByRole("dialog", { name: "Copiar Tipologia A" }),
+				).not.toBeInTheDocument(),
+			);
+			expect(writes).toEqual([]);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", { name: "Ações da Tipologia A" }),
+				).toHaveFocus(),
+			);
+			expect(group("Unidades").getByText("4 tipologias")).toBeInTheDocument();
+			expect(
+				group("Unidades").getByText("7 cômodos · 44 unidades"),
+			).toBeInTheDocument();
+		},
+	);
+
+	test("starts a new dialog with a fresh suggestion and fresh ids after a cancel", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		await userEvent.clear(nameField());
+		await userEvent.type(nameField(), "Rascunho");
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+		await waitFor(() =>
+			expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+		);
+
+		await chooseFromMenu("Tipologia A", "Copiar");
+
+		expect(nameField()).toHaveValue("Tipologia A (cópia)");
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+		await screen.findByText("Tipologia A (cópia) criada com 7 cômodos.");
+		expect(typologyWrites(writes)).toHaveLength(1);
+	});
+
+	test("copies while another tipologia is in edit, which stays open", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		await addRoom("Lavabo");
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ações da Tipologia A" }),
+		);
+		expect(
+			await screen.findByRole("menuitem", { name: "Copiar" }),
+		).not.toHaveAttribute("aria-disabled");
+		await userEvent.click(screen.getByRole("menuitem", { name: "Copiar" }));
+		await userEvent.click(copyDialog().getByRole("button", { name: "Copiar" }));
+
+		await screen.findByText("Tipologia A (cópia) criada com 7 cômodos.");
+		expect(
+			removeButtons().map((button) => button.getAttribute("aria-label")),
+		).toEqual(["Tirar Sala", "Tirar Quarto", "Tirar Banheiro", "Tirar Lavabo"]);
+		expect(
+			screen.getAllByRole("textbox", { name: "Novo cômodo" }),
+		).toHaveLength(1);
+		expect(
+			card().getByRole("button", {
+				name: /^Tipologia A \(cópia\)/,
+				expanded: true,
+			}),
+		).toBeInTheDocument();
+		expect(writes.map(({ method }) => method)).toEqual(["POST"]);
+	});
+
+	test("shows the new row even when a search would have hidden it", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await userEvent.type(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+			"Tipologia A",
+		);
+		await chooseFromMenu("Tipologia A", "Copiar");
+		await userEvent.clear(nameField());
+		await userEvent.type(nameField(), "Garden{Enter}");
+
+		await screen.findByText("Garden criada com 7 cômodos.");
+
+		expect(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+		).toHaveValue("");
+		expect(group("Unidades").getByText("Garden")).toBeInTheDocument();
+	});
 });
 
 describe("editing a tipologia in place (C4)", () => {

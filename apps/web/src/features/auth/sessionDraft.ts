@@ -10,6 +10,7 @@ export const sessionDraftKinds = [
 	"rename-room",
 	"change-typology",
 	"create-typology",
+	"copy-typology",
 	"update-typology",
 	"create-discipline",
 ] as const;

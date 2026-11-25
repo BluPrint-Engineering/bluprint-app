@@ -70,6 +70,26 @@ export default async function sessionRestore({ page, shot, expect, query, accoun
 	await page.getByRole("button", { name: "Cancelar" }).click();
 	await expect(page.getByRole("button", { name: "Adicionar", exact: true })).toBeFocused();
 	await expect(page.getByLabel("Nome da torre")).toHaveCount(0);
+	await page.goto(`/projects/${row.project}/configuration`);
+	await page.getByRole("button", { name: "Ações da Tipologia B" }).click();
+	await page.getByRole("menuitem", { name: "Copiar" }).click();
+	const copy = page.getByRole("dialog", { name: "Copiar Tipologia B" });
+	await copy.getByLabel("Nome da cópia").fill("Tipologia B Garden");
+	await page.context().clearCookies();
+	await copy.getByRole("button", { name: "Copiar" }).click();
+	await signInAgain();
+
+	await expect(copy.getByLabel("Nome da cópia")).toHaveValue("Tipologia B Garden");
+	await expect(page.getByRole("dialog")).toHaveCount(1);
+	await page.waitForTimeout(300);
+	await shot("typology-copy-restored");
+	await copy.getByRole("button", { name: "Cancelar" }).click();
+	await expect(page.getByRole("button", { name: "Ações da Tipologia B" })).toBeFocused();
+	await page.reload();
+	await expect(page.getByRole("heading", { level: 3, name: "Tipologias" })).toBeVisible();
+	await expect(page.getByRole("dialog")).toHaveCount(0);
+	expect((await query("SELECT count(*)::int AS n FROM typology WHERE project_id = $1 AND name = 'Tipologia B Garden'", [row.project]))[0].n).toBe(0);
+
 	expect(
 		(await query("SELECT count(*)::int AS n FROM location l JOIN project p ON p.id = l.project_id WHERE p.id = $1 AND l.name IN ('Andar 10A', 'Torre Z')", [row.project]))[0].n,
 	).toBe(0);
