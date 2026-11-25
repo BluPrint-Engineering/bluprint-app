@@ -40,6 +40,7 @@ export class TypologiesRepository {
 				id: typology.id,
 				name: typology.name,
 				locationType: typology.locationType,
+				version: typology.version,
 			})
 			.from(typology)
 			.where(eq(typology.projectId, projectId))
@@ -174,6 +175,7 @@ export class TypologiesRepository {
 				id: typology.id,
 				name: typology.name,
 				locationType: typology.locationType,
+				version: typology.version,
 			})
 			.from(typology)
 			.where(
@@ -206,6 +208,13 @@ export class TypologiesRepository {
 		await this.txHost.tx
 			.update(typology)
 			.set({ name })
+			.where(eq(typology.id, typologyId));
+	}
+
+	async bumpVersion(typologyId: string): Promise<void> {
+		await this.txHost.tx
+			.update(typology)
+			.set({ version: sql`${typology.version} + 1` })
 			.where(eq(typology.id, typologyId));
 	}
 

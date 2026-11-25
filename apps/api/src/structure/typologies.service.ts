@@ -1,6 +1,7 @@
 import {
 	type CreateTypology,
 	ROOM_NAME_TAKEN,
+	TYPOLOGY_CHANGED,
 	TYPOLOGY_ID_TAKEN,
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
@@ -86,21 +87,39 @@ export class TypologiesService {
 		userId: string,
 		projectId: string,
 		typologyId: string,
-		{ name, rooms }: UpdateTypology,
+		{ version, name, rooms }: UpdateTypology,
 	): Promise<UpdateTypologyResult> {
 		await this.beginWrite(userId, projectId);
 		const found = await this.typologies.find(projectId, typologyId);
 		if (!found) throw typologyNotFound();
+		if (found.version !== version) {
+			throw new ProblemException({
+				status: 409,
+				code: TYPOLOGY_CHANGED,
+				detail:
+					"The typology was changed by someone else since the version sent.",
+			});
+		}
 
-		if (name !== undefined && name !== found.name) {
+		const renamed = name !== undefined && name !== found.name;
+		if (renamed) {
 			if (await this.typologies.nameInUse(projectId, name, typologyId)) {
 				throw typologyNameTaken(name);
 			}
 			await this.typologies.rename(typologyId, name);
 		}
-		const updatedLocationCount = rooms
-			? await this.changeRooms(typologyId, rooms)
-			: 0;
+		const current = rooms ? await this.typologies.roomsOf(typologyId) : [];
+		const roomsChanged =
+			rooms !== undefined &&
+			(rooms.length !== current.length ||
+				rooms.some(
+					(entry, index) =>
+						entry.id !== current[index]?.id ||
+						entry.name !== current[index]?.name,
+				));
+		const updatedLocationCount =
+			rooms && roomsChanged ? await this.changeRooms(typologyId, rooms) : 0;
+		if (renamed || roomsChanged) await this.typologies.bumpVersion(typologyId);
 
 		return {
 			typology: await this.readOne(projectId, typologyId),
@@ -231,10 +250,11 @@ export class TypologiesService {
 		]);
 
 		return {
-			typologies: types.map(({ id, name, locationType }) => ({
+			typologies: types.map(({ id, name, locationType, version }) => ({
 				id,
 				name,
 				locationType,
+				version,
 				rooms: rooms
 					.filter((candidate) => candidate.typologyId === id)
 					.map((candidate) => ({ id: candidate.id, name: candidate.name })),

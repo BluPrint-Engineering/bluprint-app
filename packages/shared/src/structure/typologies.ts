@@ -15,6 +15,11 @@ export const typologyRoomSchema = z.object({
 
 export const typologySchema = typologyRefSchema.extend({
 	locationType: typologyLocationTypeSchema,
+	version: z.int().positive().meta({
+		description:
+			"Starts at 1 and rises by 1 on every change to the typology's name or rooms. A rename or a change of rooms sends the version the screen read (ADR 0084).",
+		example: 1,
+	}),
 	rooms: z.array(typologyRoomSchema).meta({
 		description: "The typology's rooms in their stored order.",
 	}),

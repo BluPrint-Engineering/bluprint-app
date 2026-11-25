@@ -157,6 +157,50 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await page.keyboard.press("Enter");
 	await expect(tipologias.getByText("Duplex", { exact: true })).toBeVisible();
 
+	const savedElsewhere = async (typeName, newName) => {
+		const { typologies } = await (await page.request.get(`/api/projects/${jardins}/typologies`)).json();
+		const found = typologies.find((each) => each.name === typeName);
+		const res = await page.request.patch(`/api/projects/${jardins}/typologies/${found.id}`, { data: { version: found.version, name: newName } });
+		expect(res.ok()).toBe(true);
+	};
+	const stored = async (typeName) =>
+		(await query("SELECT t.version, (SELECT count(*)::int FROM typology_room r WHERE r.typology_id = t.id) AS rooms FROM typology t WHERE t.project_id = $1 AND t.name = $2", [jardins, typeName]))[0];
+	const changedText = "Outra pessoa salvou enquanto você editava. Confira a lista atual antes de salvar de novo.";
+	await expect(page.locator("[data-sonner-toast]")).toHaveCount(0, { timeout: 10000 });
+	const before = await stored("Tipologia B");
+	await menu("Tipologia B", "Editar cômodos");
+	await savedElsewhere("Tipologia B", "Tipologia Z");
+	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Lavabo");
+	await page.keyboard.press("Enter");
+	await page.getByRole("button", { name: "Salvar" }).click();
+	await expect(page.getByText("A Tipologia Z mudou")).toBeVisible();
+	await expect(page.getByText(changedText)).toBeVisible();
+	await expect(page.getByRole("button", { name: "Tirar Lavabo" })).toBeVisible();
+	await expect(page.getByRole("button", { name: "Salvar" })).toBeVisible();
+	expect(await stored("Tipologia Z")).toEqual({ version: before.version + 1, rooms: before.rooms });
+	await shot("changed-edit");
+	await page.getByRole("button", { name: "Ver a lista atual" }).click();
+	await expect(page.getByRole("button", { name: "Tirar Lavabo" })).toHaveCount(0);
+	await expect(page.getByText("A Tipologia Z mudou")).toHaveCount(0);
+	await page.getByRole("button", { name: "Salvar" }).click();
+	await expect(page.getByRole("textbox", { name: "Novo cômodo" })).toHaveCount(0);
+	expect(await stored("Tipologia Z")).toEqual({ version: before.version + 1, rooms: before.rooms });
+
+	await menu("Tipologia Z", "Renomear");
+	await savedElsewhere("Tipologia Z", "Tipologia B");
+	await page.getByRole("textbox", { name: "Nome" }).fill("Tipologia Y");
+	await page.keyboard.press("Enter");
+	const renaming = page.getByRole("dialog", { name: "Renomear a tipologia" });
+	await expect(renaming.getByText("A Tipologia B mudou")).toBeVisible();
+	await expect(renaming.getByText(changedText)).toBeVisible();
+	await expect(renaming.getByRole("textbox", { name: "Nome" })).toHaveValue("Tipologia Y");
+	await expect(renaming.getByRole("button", { name: "Ver a lista atual" })).toHaveCount(0);
+	await shot("changed-rename");
+	await page.keyboard.press("Escape");
+	await expect(tipologias.getByText("Tipologia Y")).toHaveCount(0);
+	await expect(tipologias.getByRole("button", { name: /^Tipologia B/ })).toBeVisible();
+	expect((await stored("Tipologia B")).version).toBe(before.version + 2);
+
 	await page.goto(`/projects/${await projectId("Galpão Logístico Sul")}/configuration`);
 	await expect(section("Estrutura").getByText("A obra ainda não tem estrutura.")).toBeVisible();
 	await expect(section("Estrutura").getByRole("link", { name: "Montar estrutura" })).toBeVisible();

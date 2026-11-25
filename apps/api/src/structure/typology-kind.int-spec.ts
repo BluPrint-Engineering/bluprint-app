@@ -135,6 +135,7 @@ describe("a typology of the right kind, step by step", () => {
 			id: ids.hallType,
 			name: "Hall padrão",
 			locationType: "common_area",
+			version: 1,
 			rooms: [
 				{ id: ids.circulacao, name: "Circulação" },
 				{ id: ids.elevadores, name: "Elevadores" },
@@ -243,6 +244,7 @@ describe("a typology of the right kind, step by step", () => {
 
 	it("6. renames Circulação to Passagem and adds Escada in the typology, and the Hall keeps its changes", async () => {
 		const res = await admin.patch(path(`typologies/${ids.hallType}`)).send({
+			version: (await typeOf(ids.hallType)).version,
 			rooms: [
 				{ id: ids.circulacao, name: "Passagem" },
 				{ id: ids.elevadores, name: "Elevadores" },
@@ -280,12 +282,17 @@ describe("a typology of the right kind, step by step", () => {
 	});
 
 	it("9. keeps Hall padrão a common-area typology when a PATCH tries to change its kind", async () => {
-		const alone = await admin
-			.patch(path(`typologies/${ids.hallType}`))
-			.send({ locationType: "unit" });
+		const alone = await admin.patch(path(`typologies/${ids.hallType}`)).send({
+			version: (await typeOf(ids.hallType)).version,
+			locationType: "unit",
+		});
 		const withName = await admin
 			.patch(path(`typologies/${ids.hallType}`))
-			.send({ name: "Hall padrão", locationType: "unit" });
+			.send({
+				version: (await typeOf(ids.hallType)).version,
+				name: "Hall padrão",
+				locationType: "unit",
+			});
 
 		expect(alone.status).toBe(400);
 		expect(problemDetailsSchema.parse(alone.body).code).toBe(

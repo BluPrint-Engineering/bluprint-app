@@ -26,8 +26,11 @@ import {
 	type SubtreeRooms,
 	structureSchema,
 	subtreeRoomsSchema,
+	TYPOLOGY_CHANGED,
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
+	TYPOLOGY_NOT_FOUND,
+	type Typology,
 	typologyListSchema,
 	typologySchema,
 	type UpdateTypology,
@@ -307,6 +310,24 @@ export function typologiesQueryOptions(projectId: string) {
 	});
 }
 
+export function isTypologyChanged(error: unknown) {
+	return error instanceof ApiError && error.problem?.code === TYPOLOGY_CHANGED;
+}
+
+export function isTypologyGone(error: unknown) {
+	return (
+		error instanceof ApiError && error.problem?.code === TYPOLOGY_NOT_FOUND
+	);
+}
+
+export function useTypologyNow(projectId: string) {
+	const queryClient = useQueryClient();
+	return (typologyId: string) =>
+		queryClient
+			.getQueryData(typologiesQueryOptions(projectId).queryKey)
+			?.typologies.find(({ id }) => id === typologyId);
+}
+
 export function isTypologyInUse(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === TYPOLOGY_IN_USE;
 }
@@ -563,6 +584,7 @@ function useTypologyMutation<Variables, Result>(
 	projectId: string,
 	send: (variables: Variables) => Promise<Result>,
 	kind?: "create-typology" | "update-typology",
+	onFailure?: (error: Error, variables: Variables) => Promise<void>,
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -575,12 +597,13 @@ function useTypologyMutation<Variables, Result>(
 				}),
 				queryClient.invalidateQueries({ queryKey: ["projects"] }),
 			]),
-		onError: (error) => {
+		onError: (error, variables) => {
 			if (isProjectDelivered(error)) {
 				return queryClient.invalidateQueries({
 					queryKey: projectQueryOptions(projectId).queryKey,
 				});
 			}
+			return onFailure?.(error, variables);
 		},
 	});
 }
@@ -612,7 +635,12 @@ export function useCreateTypologyMutation(projectId: string) {
 	);
 }
 
-export function useUpdateTypologyMutation(projectId: string) {
+export function useUpdateTypologyMutation(
+	projectId: string,
+	onGone?: (typology: Typology) => void,
+) {
+	const queryClient = useQueryClient();
+	const now = useTypologyNow(projectId);
 	return useTypologyMutation(
 		projectId,
 		({ typologyId, ...body }: { typologyId: string } & UpdateTypology) =>
@@ -626,6 +654,15 @@ export function useUpdateTypologyMutation(projectId: string) {
 				},
 			),
 		"update-typology",
+		async (error, { typologyId }) => {
+			const gone = isTypologyGone(error);
+			if (!gone && !isTypologyChanged(error)) return;
+			const known = now(typologyId);
+			await queryClient
+				.fetchQuery({ ...typologiesQueryOptions(projectId), staleTime: 0 })
+				.catch(() => undefined);
+			if (gone && known) onGone?.(known);
+		},
 	);
 }
 

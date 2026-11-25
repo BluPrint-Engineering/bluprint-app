@@ -1,7 +1,9 @@
 import type { Typology, TypologyLocationType } from "@bluprint/shared";
 import { sameRoomName, TYPOLOGY_NAME_MAX_LENGTH } from "@bluprint/shared";
+import { CircleAlert } from "lucide-react";
 import { useId, useState } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { toast } from "sonner";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
 	Field,
 	FieldDescription,
@@ -13,12 +15,20 @@ import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import { isProjectDelivered } from "../../projects/api";
 import {
+	isTypologyChanged,
+	isTypologyGone,
 	typologyNamesTakenOf,
 	useCreateTypologyMutation,
+	useTypologyNow,
 	useUpdateTypologyMutation,
 } from "../api";
 import { FormDialog } from "../components/FormDialog";
 import { TYPOLOGY_NAME_TAKEN_TEXT, typologyNameError } from "./typologyNames";
+import {
+	CHANGED_TEXT,
+	changedTitleText,
+	deletedByOtherText,
+} from "./typologySaveText";
 
 export type NameDialogTarget =
 	| { mode: "create"; locationType: TypologyLocationType }
@@ -32,10 +42,15 @@ const CREATE_TEXT = {
 	},
 } as const satisfies Record<TypologyLocationType, object>;
 
-function typologyName(
+interface RestoredName {
+	name: string;
+	version?: number;
+}
+
+function restoredName(
 	variables: unknown,
 	target: NameDialogTarget,
-): string | undefined {
+): RestoredName | undefined {
 	if (typeof variables !== "object" || variables === null) return undefined;
 	if (!("name" in variables) || typeof variables.name !== "string") {
 		return undefined;
@@ -43,16 +58,18 @@ function typologyName(
 	if (target.mode === "create") {
 		return "locationType" in variables &&
 			variables.locationType === target.locationType
-			? variables.name
+			? { name: variables.name }
 			: undefined;
 	}
 	if (
 		!("typologyId" in variables) ||
-		variables.typologyId !== target.typology.id
+		variables.typologyId !== target.typology.id ||
+		!("version" in variables) ||
+		typeof variables.version !== "number"
 	) {
 		return undefined;
 	}
-	return variables.name;
+	return { name: variables.name, version: variables.version };
 }
 
 export function TypologyNameDialog({
@@ -72,16 +89,29 @@ export function TypologyNameDialog({
 }) {
 	const fieldId = useId();
 	const create = useCreateTypologyMutation(projectId);
-	const update = useUpdateTypologyMutation(projectId);
+	const update = useUpdateTypologyMutation(projectId, (gone) =>
+		toast(deletedByOtherText(gone)),
+	);
+	const now = useTypologyNow(projectId);
 	const [newId] = useState(uuidV7);
 	const draftKind =
 		target.mode === "create" ? "create-typology" : "update-typology";
 	const restored = useSessionDraft(draftKind, (variables) =>
-		typologyName(variables, target),
+		restoredName(variables, target),
 	);
 	const clearDraft = useClearSessionDraft(draftKind);
-	const current = target.mode === "rename" ? target.typology.name : "";
-	const [name, setName] = useState(restored ?? current);
+	const live =
+		target.mode === "rename"
+			? (typologies.find(({ id }) => id === target.typology.id) ??
+				target.typology)
+			: undefined;
+	const current = live?.name ?? "";
+	const [name, setName] = useState(restored?.name ?? current);
+	const [version, setVersion] = useState(
+		restored?.version ??
+			(target.mode === "rename" ? target.typology.version : 0),
+	);
+	const [changed, setChanged] = useState(false);
 	const [error, setError] = useState<string>();
 	const mutation = target.mode === "create" ? create : update;
 
@@ -94,7 +124,9 @@ export function TypologyNameDialog({
 		const invalid = typologyNameError(name);
 		if (invalid) return setError(invalid);
 		const trimmed = name.trim();
-		if (target.mode === "rename" && trimmed === current) return close();
+		if (target.mode === "rename" && trimmed === current && !mutation.isError) {
+			return close();
+		}
 		if (
 			typologies.some(
 				(item) =>
@@ -104,12 +136,18 @@ export function TypologyNameDialog({
 		)
 			return setError(TYPOLOGY_NAME_TAKEN_TEXT);
 
+		setChanged(false);
 		const handlers = {
 			onError: (failure: unknown) => {
 				if (typologyNamesTakenOf(failure)) {
 					setError(TYPOLOGY_NAME_TAKEN_TEXT);
-				} else if (isProjectDelivered(failure)) {
+				} else if (isProjectDelivered(failure) || isTypologyGone(failure)) {
 					close();
+				} else if (isTypologyChanged(failure) && target.mode === "rename") {
+					const latest = now(target.typology.id);
+					if (!latest || sameRoomName(latest.name, trimmed)) return close();
+					setVersion(latest.version);
+					setChanged(true);
 				}
 			},
 		};
@@ -131,7 +169,7 @@ export function TypologyNameDialog({
 			);
 		} else {
 			update.mutate(
-				{ typologyId: target.typology.id, name: trimmed },
+				{ typologyId: target.typology.id, version, name: trimmed },
 				{ ...handlers, onSuccess: close },
 			);
 		}
@@ -140,7 +178,9 @@ export function TypologyNameDialog({
 	const failed =
 		mutation.isError &&
 		!typologyNamesTakenOf(mutation.error) &&
-		!isProjectDelivered(mutation.error);
+		!isProjectDelivered(mutation.error) &&
+		!isTypologyChanged(mutation.error) &&
+		!isTypologyGone(mutation.error);
 	const creating = target.mode === "create" && CREATE_TEXT[target.locationType];
 
 	return (
@@ -163,6 +203,13 @@ export function TypologyNameDialog({
 						Não foi possível salvar a tipologia. Confira sua conexão e tente de
 						novo.
 					</AlertDescription>
+				</Alert>
+			)}
+			{changed && !mutation.isPending && live && (
+				<Alert variant="destructive">
+					<CircleAlert aria-hidden="true" />
+					<AlertTitle>{changedTitleText(live)}</AlertTitle>
+					<AlertDescription>{CHANGED_TEXT}</AlertDescription>
 				</Alert>
 			)}
 			<Field data-invalid={!!error}>

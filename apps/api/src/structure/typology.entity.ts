@@ -24,6 +24,7 @@ export const typology = pgTable(
 			.references(() => project.id, { onDelete: "cascade" }),
 		name: text().notNull(),
 		locationType: locationType().$type<TypologyLocationType>().notNull(),
+		version: integer().notNull().default(1),
 		createdAt: createdAt(),
 	},
 	(table) => [

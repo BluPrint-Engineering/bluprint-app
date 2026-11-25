@@ -17,6 +17,7 @@ function typology(
 		id: "0190b000-0000-7000-8000-000000000001",
 		name: locationType === "unit" ? "Tipologia B" : "Hall padrão",
 		locationType,
+		version: 1,
 		rooms: [],
 		locationCount,
 		changedLocationCount,

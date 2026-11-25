@@ -12,10 +12,19 @@ import { Spinner } from "@/components/ui/spinner";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import { isProjectDelivered } from "../../projects/api";
-import { roomNamesTakenOf, useUpdateTypologyMutation } from "../api";
+import {
+	isTypologyChanged,
+	isTypologyGone,
+	roomNamesTakenOf,
+	useTypologyNow,
+	useUpdateTypologyMutation,
+} from "../api";
 import { RoomList } from "../components/RoomList";
 import { AddTag } from "../components/Tags";
 import {
+	CHANGED_TEXT,
+	changedTitleText,
+	deletedByOtherText,
 	savedText,
 	saveFailedText,
 	unitsChangedText,
@@ -26,12 +35,20 @@ interface DraftRoom {
 	name: string;
 }
 
-function restoredRooms(
+interface RestoredEdit {
+	version: number;
+	rooms: DraftRoom[];
+}
+
+function restoredEdit(
 	variables: unknown,
 	typologyId: string,
-): DraftRoom[] | undefined {
+): RestoredEdit | undefined {
 	if (typeof variables !== "object" || variables === null) return undefined;
 	if (!("typologyId" in variables) || variables.typologyId !== typologyId) {
+		return undefined;
+	}
+	if (!("version" in variables) || typeof variables.version !== "number") {
 		return undefined;
 	}
 	if (!("rooms" in variables) || !Array.isArray(variables.rooms))
@@ -45,7 +62,7 @@ function restoredRooms(
 		}
 		rooms.push({ id: room.id, name: room.name });
 	}
-	return rooms;
+	return { version: variables.version, rooms };
 }
 
 function sameRooms(a: DraftRoom[], b: DraftRoom[]) {
@@ -73,16 +90,26 @@ export function TypologyEditor({
 	fieldRef: Ref<HTMLInputElement>;
 	onClose: () => void;
 }) {
-	const update = useUpdateTypologyMutation(projectId);
+	const update = useUpdateTypologyMutation(projectId, (gone) =>
+		toast(deletedByOtherText(gone)),
+	);
+	const now = useTypologyNow(projectId);
 	const restored = useSessionDraft("update-typology", (variables) =>
-		restoredRooms(variables, typology.id),
+		restoredEdit(variables, typology.id),
 	);
 	const clearDraft = useClearSessionDraft("update-typology");
-	const [rooms, setRooms] = useState<DraftRoom[]>(restored ?? typology.rooms);
+	const [rooms, setRooms] = useState<DraftRoom[]>(
+		restored?.rooms ?? typology.rooms,
+	);
+	const [version, setVersion] = useState(restored?.version ?? typology.version);
+	const [changed, setChanged] = useState(false);
 	const stored = new Set(typology.rooms.map(({ id }) => id));
 	const saving = update.isPending;
 	const failure =
-		update.isError && !isProjectDelivered(update.error)
+		update.isError &&
+		!isProjectDelivered(update.error) &&
+		!isTypologyChanged(update.error) &&
+		!isTypologyGone(update.error)
 			? update.error
 			: undefined;
 	const roomsTaken = failure && roomNamesTakenOf(failure);
@@ -103,14 +130,32 @@ export function TypologyEditor({
 		onClose();
 	}
 
+	function seeCurrent() {
+		update.reset();
+		setChanged(false);
+		setRooms(typology.rooms);
+	}
+
 	function save() {
-		if (sameRooms(rooms, typology.rooms)) return cancel();
+		if (!update.isError && sameRooms(rooms, typology.rooms)) return cancel();
+		setChanged(false);
 		update.mutate(
-			{ typologyId: typology.id, rooms },
+			{ typologyId: typology.id, version, rooms },
 			{
 				onSuccess: ({ updatedLocationCount }) => {
 					toast.success(savedText(typology, updatedLocationCount));
 					onClose();
+				},
+				onError: (error) => {
+					if (!isTypologyChanged(error)) return;
+					const latest = now(typology.id);
+					if (!latest) return;
+					if (sameRooms(rooms, latest.rooms)) {
+						toast.success(savedText(latest, 0));
+						return cancel();
+					}
+					setVersion(latest.version);
+					setChanged(true);
 				},
 			},
 		);
@@ -146,6 +191,18 @@ export function TypologyEditor({
 			<Alert>
 				<AlertDescription>{unitsChangedText(typology)}</AlertDescription>
 			</Alert>
+			{changed && !saving && (
+				<Alert variant="destructive">
+					<CircleAlert aria-hidden="true" />
+					<AlertTitle>{changedTitleText(typology)}</AlertTitle>
+					<AlertDescription>{CHANGED_TEXT}</AlertDescription>
+					<div className="col-start-2 pt-(--space-2)">
+						<Button type="button" variant="outline" onClick={seeCurrent}>
+							Ver a lista atual
+						</Button>
+					</div>
+				</Alert>
+			)}
 			{failure !== undefined && (
 				<Alert variant="destructive">
 					<CircleAlert aria-hidden="true" />
