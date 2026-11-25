@@ -80,7 +80,7 @@ test.describe("desktop scrolling", () => {
 		await page.getByLabel("Último andar", { exact: true }).fill("30");
 		await page.getByLabel("Finais", { exact: true }).fill("01, 04");
 		await page.getByRole("button", { name: "Tirar regra 1" }).click();
-		await page.mouse.wheel(0, -10000);
+		await page.evaluate("window.scrollTo(0, 0)");
 		const preview = page.getByRole("complementary", { name: "Prévia" });
 		await expect(
 			preview.getByText("ficam sem tipologia", { exact: false }),

@@ -37,9 +37,6 @@ async function bottomOf(locator: Locator) {
 }
 
 async function expectLastControlAboveTheBar(page: Page, step: string) {
-	await page.evaluate(
-		"window.scrollTo(0, document.documentElement.scrollHeight)",
-	);
 	const section = page.getByRole("region", { name: step, exact: true });
 	const controls = section
 		.locator("input, button, select, textarea, a, [role=radio]")
@@ -52,6 +49,9 @@ async function expectLastControlAboveTheBar(page: Page, step: string) {
 	await expect
 		.poll(
 			async () => {
+				await page.evaluate(
+					"window.scrollTo(0, document.documentElement.scrollHeight)",
+				);
 				const top = (await bar.boundingBox())?.y ?? 0;
 				return (
 					(await bottomOf(last)) <= top && (await bottomOf(section)) <= top
@@ -78,7 +78,11 @@ test("on a phone, scrolling to the end of each step leaves its last control whol
 		await expect(
 			page.getByRole("heading", { level: 2, name: step }),
 		).toBeVisible();
+		if (step === "Prévia") {
+			await expect(
+				page.getByText("Faltam 4 unidades na reserva"),
+			).toBeVisible();
+		}
 		await expectLastControlAboveTheBar(page, step);
 	}
-	await expect(page.getByText("Faltam 4 unidades na reserva")).toBeVisible();
 });
