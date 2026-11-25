@@ -17,6 +17,7 @@ import {
 	signOut,
 } from "./sessionExpiry";
 import {
+	catalogApi,
 	combine,
 	droppedRoom,
 	floor,
@@ -265,6 +266,32 @@ const ADMIN_PROJECT: ProjectSummary = {
 const SAVE = click("button", "Salvar");
 const CANCEL = click("button", "Cancelar");
 
+function newDisciplineEntry(base: string): Entry {
+	const name = textField("Nome", "Gesso", "");
+	const everywhere = () => screen.findByRole("radio", { name: "Na obra toda" });
+	return {
+		open: click("button", "Nova disciplina"),
+		fill: async () => {
+			await name.fill();
+			await user.click(await everywhere());
+		},
+		expectTyped: async () => {
+			await name.expectTyped();
+			expect(await everywhere()).toBeChecked();
+		},
+		expectCurrent: async () => {
+			await name.expectCurrent();
+			expect(await everywhere()).not.toBeChecked();
+		},
+		submit: click("button", "Criar"),
+		cancel: CANCEL,
+		shows: ["Nova disciplina"],
+		focusAfterCancel: byRole("button", "Nova disciplina"),
+		focusAfterSave: byRole("button", "Nova disciplina"),
+		request: `POST ${base}/disciplines`,
+	};
+}
+
 function reservationEntry(
 	open: () => Promise<void>,
 	opener: () => Promise<HTMLElement>,
@@ -291,8 +318,15 @@ function floorPage(remaining: number): Page {
 	const [unit901, unit902] = ninth.units;
 	const [hall] = ninth.commonAreas;
 	if (!unit901 || !unit902 || !hall) throw new Error("fixture");
-	const api = writableApi(ADMIN_PROJECT, structureOf([towerA]), { remaining });
-	const server = expiringServer(api.handler);
+	const structure = structureOf([towerA]);
+	const details: Record<string, Partial<LocationDetail>> = {};
+	const api = writableApi(ADMIN_PROJECT, structure, { remaining, details });
+	const server = expiringServer(
+		combine(
+			catalogApi(ADMIN_PROJECT.id, structure, details).handler,
+			api.handler,
+		),
+	);
 	const base = `/api/projects/${ADMIN_PROJECT.id}`;
 	const nth = (index: number) => async () => {
 		const buttons = await screen.findAllByRole("button", {
@@ -337,6 +371,7 @@ function floorPage(remaining: number): Page {
 			focusAfterSave: byRole("button", "Ações da área comum Lobby"),
 			request: `PATCH ${base}/locations/${hall.id}`,
 		},
+		newDiscipline: newDisciplineEntry(base),
 	};
 	if (remaining > 0) {
 		Object.assign(entries, {
@@ -520,6 +555,7 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 		combine(
 			rooms,
 			typologiesApi(ADMIN_PROJECT.id, { typologies }),
+			catalogApi(ADMIN_PROJECT.id, structure, details).handler,
 			api.handler,
 		),
 	);
@@ -558,6 +594,7 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 			focusAfterSave: byRole("button", "Ações do cômodo Área de serviço"),
 			request: `PATCH ${base}/rooms/${lavanderia.id}`,
 		},
+		newDiscipline: newDisciplineEntry(base),
 	};
 	if (remaining > 0) {
 		const radio = (name: string) => () =>
@@ -633,8 +670,15 @@ function towerPage(remaining: number): Page {
 	);
 	const [piscina] = towerA.commonAreas;
 	if (!piscina) throw new Error("fixture");
-	const api = writableApi(ADMIN_PROJECT, structureOf([towerA]), { remaining });
-	const server = expiringServer(api.handler);
+	const structure = structureOf([towerA]);
+	const details: Record<string, Partial<LocationDetail>> = {};
+	const api = writableApi(ADMIN_PROJECT, structure, { remaining, details });
+	const server = expiringServer(
+		combine(
+			catalogApi(ADMIN_PROJECT.id, structure, details).handler,
+			api.handler,
+		),
+	);
 	const base = `/api/projects/${ADMIN_PROJECT.id}`;
 	const entries: Record<string, Entry> = {
 		renameTower: {
@@ -657,6 +701,7 @@ function towerPage(remaining: number): Page {
 			focusAfterSave: byRole("button", "Ações da área comum Academia"),
 			request: `PATCH ${base}/locations/${piscina.id}`,
 		},
+		newDiscipline: newDisciplineEntry(base),
 	};
 	if (remaining > 0) {
 		Object.assign(entries, {
@@ -1337,6 +1382,10 @@ export const ROWS: Row[] = [
 	[44, "facadeBlank", "addTower", "create-structure", "entry"],
 	[45, "commonArea", "changeTypology", "change-typology", "entry"],
 	[46, "configuration", "createCommonAreaTypology", "create-typology", "entry"],
+	[47, "unit", "newDiscipline", "create-discipline", "full"],
+	[48, "commonArea", "newDiscipline", "create-discipline", "entry"],
+	[49, "floor", "newDiscipline", "create-discipline", "entry"],
+	[50, "tower", "newDiscipline", "create-discipline", "entry"],
 ];
 
 function rowsReturningFocus(rows: Row[]): Row[] {

@@ -1,9 +1,15 @@
 import {
 	type AddRoom,
+	type CreateDiscipline,
 	type CreateStructureRequest,
 	type CreateStructureResult,
 	type CreateTypology,
 	createStructureResultSchema,
+	DISCIPLINE_LIMIT_REACHED,
+	DISCIPLINE_NAME_TAKEN,
+	type DisciplineList,
+	disciplineListSchema,
+	disciplineSchema,
 	LOCATION_NAME_TAKEN,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
@@ -406,6 +412,71 @@ export function useSetLocationDisciplineMutation(
 			}
 			if (error instanceof ApiError && error.status === 401) return;
 			toast.error(disciplinesFailedText(location));
+		},
+	});
+}
+
+export function disciplinesQueryOptions(projectId: string) {
+	return queryOptions({
+		queryKey: ["structure", projectId, "disciplines"],
+		queryFn: () =>
+			apiFetch(`/projects/${projectId}/disciplines`, disciplineListSchema),
+		retry: retryUnlessNotFound,
+	});
+}
+
+export function disciplineNameTakenOf(error: unknown): string | undefined {
+	return error instanceof ApiError &&
+		error.problem?.code === DISCIPLINE_NAME_TAKEN
+		? error.problem.name
+		: undefined;
+}
+
+export function isDisciplineLimitReached(error: unknown) {
+	return (
+		error instanceof ApiError &&
+		error.problem?.code === DISCIPLINE_LIMIT_REACHED
+	);
+}
+
+export function useCreateDisciplineMutation(projectId: string) {
+	const queryClient = useQueryClient();
+	const catalogKey = disciplinesQueryOptions(projectId).queryKey;
+	return useMutation({
+		meta: { sessionDraft: "create-discipline" },
+		mutationFn: (body: CreateDiscipline) =>
+			apiFetch(`/projects/${projectId}/disciplines`, disciplineSchema, {
+				method: "POST",
+				headers: JSON_HEADERS,
+				body: JSON.stringify(body),
+			}),
+		onSuccess: (created) => {
+			queryClient.setQueryData(
+				catalogKey,
+				(catalog?: DisciplineList) =>
+					catalog &&
+					(catalog.items.some(({ id }) => id === created.id)
+						? catalog
+						: { items: [...catalog.items, created] }),
+			);
+			void queryClient.invalidateQueries({ queryKey: catalogKey });
+			void queryClient.invalidateQueries({
+				queryKey: ["structure", projectId, "location"],
+			});
+			void queryClient.invalidateQueries({ queryKey: ["projects"] });
+		},
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+			if (
+				disciplineNameTakenOf(error) !== undefined ||
+				isDisciplineLimitReached(error)
+			) {
+				return queryClient.invalidateQueries({ queryKey: catalogKey });
+			}
 		},
 	});
 }

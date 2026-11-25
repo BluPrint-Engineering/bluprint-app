@@ -11,6 +11,7 @@ export const sessionDraftKinds = [
 	"change-typology",
 	"create-typology",
 	"update-typology",
+	"create-discipline",
 ] as const;
 
 export type SessionDraftKind = (typeof sessionDraftKinds)[number];

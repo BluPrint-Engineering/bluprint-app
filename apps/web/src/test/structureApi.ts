@@ -1,6 +1,11 @@
 import {
+	type CreateDiscipline,
 	type CreateStructureRequest,
+	DISCIPLINE_LIMIT_REACHED,
+	DISCIPLINE_NAME_TAKEN,
+	type Discipline,
 	type DroppedRoom,
+	EXTRA_DISCIPLINE_COLORS,
 	LOCATION_NOT_FOUND,
 	type LocationDetail,
 	type LocationDiscipline,
@@ -16,6 +21,7 @@ import {
 	type StructureTower,
 	type StructureUnit,
 	type SubtreeRooms,
+	sameRoomName,
 	type Typology,
 	type TypologyList,
 } from "@bluprint/shared";
@@ -250,6 +256,9 @@ export function structureApi(
 	return (url) => {
 		const base = `/api/projects/${projectId}`;
 		if (url.pathname === `${base}/structure`) return json(structure);
+		if (url.pathname === `${base}/disciplines`) {
+			return json({ items: baseCatalog() });
+		}
 		const match = new RegExp(`^${base}/locations/([^/]+)$`).exec(url.pathname);
 		if (!match) return undefined;
 		const found = locationIn(structure, match[1] ?? "", details);
@@ -772,4 +781,99 @@ export function disciplinesApi(
 		return json({ disciplines });
 	};
 	return { handler, writes };
+}
+
+export function catalogDiscipline(
+	name: string,
+	options: Partial<Pick<Discipline, "id" | "type" | "appliesEverywhere">> = {},
+): Discipline {
+	const type = options.type ?? "extra";
+	return {
+		id: options.id ?? nextId(),
+		name,
+		color: type === "general" ? null : "#0D9488",
+		type,
+		hasOwnPlan: type !== "extra",
+		appliesEverywhere: options.appliesEverywhere ?? type !== "general",
+	};
+}
+
+export const baseCatalog = () => [
+	catalogDiscipline("Geral", { type: "general" }),
+	catalogDiscipline("Hidráulica", { type: "base" }),
+	catalogDiscipline("Elétrica", { type: "base" }),
+];
+
+export function catalogApi(
+	projectId: string,
+	structure: Structure,
+	details: Record<string, Partial<LocationDetail>>,
+	{
+		catalog = baseCatalog(),
+		answer,
+	}: {
+		catalog?: Discipline[];
+		answer?: (body: CreateDiscipline, attempt: number) => Reply | undefined;
+	} = {},
+) {
+	const created: CreateDiscipline[] = [];
+	const path = `/api/projects/${projectId}/disciplines`;
+	const handler: ApiHandler = (url, init) => {
+		if (url.pathname !== path) return undefined;
+		if ((init?.method ?? "GET") === "GET") return json({ items: catalog });
+		if (init?.method !== "POST") return undefined;
+		const body = JSON.parse(String(init.body)) as CreateDiscipline;
+		created.push(body);
+		const answered = answer?.(body, created.length);
+		if (answered) return answered;
+		const again = catalog.find(({ id }) => id === body.id);
+		if (again) return json(again, 201);
+		const taken = catalog.find(({ name }) => sameRoomName(name, body.name));
+		if (taken) {
+			return json(
+				{
+					type: "about:blank",
+					title: "Conflict",
+					status: 409,
+					code: DISCIPLINE_NAME_TAKEN,
+					name: taken.name,
+				},
+				409,
+			);
+		}
+		const extras = catalog.filter(({ type }) => type === "extra").length;
+		if (extras >= EXTRA_DISCIPLINE_COLORS.length) {
+			return json(
+				{
+					type: "about:blank",
+					title: "Conflict",
+					status: 409,
+					code: DISCIPLINE_LIMIT_REACHED,
+				},
+				409,
+			);
+		}
+		const discipline: Discipline = {
+			...catalogDiscipline(body.name, {
+				id: body.id,
+				appliesEverywhere: body.appliesEverywhere,
+			}),
+			color: EXTRA_DISCIPLINE_COLORS[extras] ?? null,
+		};
+		catalog.push(discipline);
+		for (const node of everyNode(structure)) {
+			const applies =
+				body.appliesEverywhere &&
+				(node.type === "unit" || node.type === "common_area");
+			details[node.id] = {
+				...details[node.id],
+				disciplines: [
+					...(details[node.id]?.disciplines ?? []),
+					{ id: discipline.id, name: discipline.name, applies },
+				],
+			};
+		}
+		return json(discipline, 201);
+	};
+	return { handler, created, catalog };
 }
