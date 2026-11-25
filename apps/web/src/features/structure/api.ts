@@ -643,8 +643,11 @@ export function useUpdateTypologyMutation(
 	const now = useTypologyNow(projectId);
 	return useTypologyMutation(
 		projectId,
-		({ typologyId, ...body }: { typologyId: string } & UpdateTypology) =>
-			apiFetch(
+		async ({
+			typologyId,
+			...body
+		}: { typologyId: string } & UpdateTypology) => {
+			const result = await apiFetch(
 				`/projects/${projectId}/typologies/${typologyId}`,
 				updateTypologyResultSchema,
 				{
@@ -652,7 +655,18 @@ export function useUpdateTypologyMutation(
 					headers: JSON_HEADERS,
 					body: JSON.stringify(body),
 				},
-			),
+			);
+			queryClient.setQueryData(
+				typologiesQueryOptions(projectId).queryKey,
+				(current) =>
+					current && {
+						typologies: current.typologies.map((typology) =>
+							typology.id === result.typology.id ? result.typology : typology,
+						),
+					},
+			);
+			return result;
+		},
 		"update-typology",
 		async (error, { typologyId }) => {
 			const gone = isTypologyGone(error);

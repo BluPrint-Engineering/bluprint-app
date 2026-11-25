@@ -108,22 +108,16 @@ export class TypologiesService {
 			}
 			await this.typologies.rename(typologyId, name);
 		}
-		const current = rooms ? await this.typologies.roomsOf(typologyId) : [];
-		const roomsChanged =
-			rooms !== undefined &&
-			(rooms.length !== current.length ||
-				rooms.some(
-					(entry, index) =>
-						entry.id !== current[index]?.id ||
-						entry.name !== current[index]?.name,
-				));
-		const updatedLocationCount =
-			rooms && roomsChanged ? await this.changeRooms(typologyId, rooms) : 0;
-		if (renamed || roomsChanged) await this.typologies.bumpVersion(typologyId);
+		const updatedLocationCount = rooms
+			? await this.changeRooms(typologyId, rooms)
+			: null;
+		if (renamed || updatedLocationCount !== null) {
+			await this.typologies.bumpVersion(typologyId);
+		}
 
 		return {
 			typology: await this.readOne(projectId, typologyId),
-			updatedLocationCount,
+			updatedLocationCount: updatedLocationCount ?? 0,
 		};
 	}
 
@@ -153,9 +147,15 @@ export class TypologiesService {
 	private async changeRooms(
 		typologyId: string,
 		requested: { id: string; name: string }[],
-	): Promise<number> {
+	): Promise<number | null> {
 		const current = await this.typologies.roomsOf(typologyId);
 		const plan = planRoomChanges(current, requested);
+		const unchanged =
+			plan.addedIds.length === 0 &&
+			plan.removedIds.length === 0 &&
+			plan.renamedIds.length === 0 &&
+			!plan.reordered;
+		if (unchanged) return null;
 
 		const currentIds = new Set(current.map(({ id }) => id));
 		const claimed = await this.typologies.findRoomIds(plan.addedIds);

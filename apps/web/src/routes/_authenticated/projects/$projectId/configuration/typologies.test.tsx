@@ -1366,6 +1366,41 @@ describe("a tipologia renamed over an old version", () => {
 		});
 	});
 
+	test("sends the version of its own rename when the list fails to reload after it", async () => {
+		let offline = false;
+		const api = typologiesApi({
+			answer: () => {
+				offline = true;
+				return undefined;
+			},
+		});
+		const handler = combine(
+			(url, init) =>
+				offline &&
+				(init?.method ?? "GET") === "GET" &&
+				url.pathname === `/api/projects/${OBRA.id}/typologies`
+					? problem(500, "INTERNAL_ERROR")
+					: undefined,
+			api.handler,
+		);
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Renomear");
+		await typeName("Tipologia Y");
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+		await chooseFromMenu("Tipologia Y", "Renomear");
+		await typeName("Tipologia X");
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+		expect(screen.queryByText("A Tipologia Y mudou")).toBeNull();
+		expect(nth(api.writes, 1).body).toEqual({
+			version: 2,
+			name: "Tipologia X",
+		});
+	});
+
 	test("closes the dialog and says so when someone deleted the tipologia", async () => {
 		const { server } = await brunoRenames();
 		server.deleteElsewhere(tipologiaB.id);
