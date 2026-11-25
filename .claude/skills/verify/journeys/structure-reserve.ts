@@ -41,13 +41,21 @@ export default async function structureReserve({ page, shot, expect, query }) {
 	await page.getByRole("link", { name: "Adicionar andares" }).click();
 	await expect(page.getByRole("heading", { level: 1, name: "Adicionar andares" })).toBeVisible();
 	await page.getByRole("textbox", { name: "Último andar" }).fill("4");
+	await expect(page.getByRole("textbox", { name: "Finais", exact: true })).toHaveValue("01, 02");
 	const phone = page.viewportSize().width < 768;
 	if (phone) {
 		await page.getByRole("button", { name: "Continuar · Áreas comuns" }).click();
 		await page.getByRole("button", { name: "Continuar · Tipologias" }).click();
 		await page.getByRole("button", { name: "Continuar · Prévia" }).click();
 	}
-	await expect(page.getByText("Esta estrutura tem 2 unidades e a reserva da obra acabou. Aumente a reserva.")).toBeVisible();
+	await expect(page.getByText("Faltam 2 unidades na reserva")).toBeVisible();
+	await expect(page.getByText(/^Estes andares usam\s2 e a reserva da obra acabou\./)).toBeVisible();
+	await expect(page.getByText(/^Estes andares usam\s2 de 6 reservadas\.$/)).toBeVisible();
+	await expect(page.getByRole("button", { name: "Alterar reserva" })).toBeVisible();
 	await expect(page.getByRole("button", { name: "Adicionar 1 andar" })).toBeDisabled();
 	await shot("w9b-add-floors-over-reserve");
+	if (phone) {
+		await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+		await shot("w9b-add-floors-over-reserve-end", { screenOnly: true });
+	}
 }
