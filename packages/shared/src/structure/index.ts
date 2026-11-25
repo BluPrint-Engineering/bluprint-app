@@ -7,6 +7,7 @@ export * from "./location-type.js";
 export * from "./move-location.js";
 export * from "./remove-location.js";
 export * from "./rename-location.js";
+export * from "./room-names.js";
 export * from "./structure.js";
 export * from "./subtree-rooms.js";
 export * from "./typologies.js";

@@ -59,7 +59,7 @@ export function RenameRoomDialog({
 				(other) => other.id !== room.id && sameRoomName(other.name, trimmed),
 			)
 		)
-			return setError(roomNameTakenText(holder, trimmed));
+			return setError(roomNameTakenText(holder));
 
 		rename.mutate(
 			{ roomId: room.id, name: trimmed },
@@ -67,7 +67,7 @@ export function RenameRoomDialog({
 				onSuccess: close,
 				onError: (failure) => {
 					if (isRoomNameTaken(failure)) {
-						setError(roomNameTakenText(holder, trimmed));
+						setError(roomNameTakenText(holder));
 					} else if (isProjectDelivered(failure)) {
 						close();
 					}

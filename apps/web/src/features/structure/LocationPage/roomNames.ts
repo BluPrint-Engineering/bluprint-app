@@ -1,4 +1,4 @@
-import { ROOM_NAME_MAX_LENGTH } from "@bluprint/shared";
+import { MAX_ROOMS_PER_LOCATION, ROOM_NAME_MAX_LENGTH } from "@bluprint/shared";
 
 export type RoomHolder = "unit" | "common_area";
 
@@ -11,6 +11,10 @@ export function roomNameError(name: string): string | undefined {
 	return undefined;
 }
 
-export function roomNameTakenText(holder: RoomHolder, name: string): string {
-	return `Já existe o cômodo ${name} ${holder === "unit" ? "nesta unidade" : "nesta área comum"}.`;
+export function roomNameTakenText(holder: RoomHolder): string {
+	return `Esse cômodo já está ${holder === "unit" ? "na unidade" : "na área comum"}.`;
+}
+
+export function roomLimitText(holder: RoomHolder): string {
+	return `${holder === "unit" ? "A unidade" : "A área comum"} pode ter até ${MAX_ROOMS_PER_LOCATION} cômodos.`;
 }

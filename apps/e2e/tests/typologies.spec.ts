@@ -51,7 +51,7 @@ test("creates a common-area tipologia, fills its rooms and sees it in its group,
 	await dialog.getByRole("textbox", { name: "Nome" }).fill("Corredor");
 	await dialog.getByRole("button", { name: "Criar" }).click();
 
-	const room = page.getByRole("textbox", { name: "Novo cômodo" });
+	const room = page.getByRole("combobox", { name: "Novo cômodo" });
 	await expect(room).toBeFocused();
 	await room.fill("Circulação");
 	await room.press("Enter");

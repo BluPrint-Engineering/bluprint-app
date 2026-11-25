@@ -261,6 +261,7 @@ export function structureApi(
 		if (url.pathname === `${base}/disciplines`) {
 			return json({ items: baseCatalog() });
 		}
+		if (url.pathname === `${base}/room-names`) return json({ names: [] });
 		const match = new RegExp(`^${base}/locations/([^/]+)$`).exec(url.pathname);
 		if (!match) return undefined;
 		const found = locationIn(structure, match[1] ?? "", details);
@@ -276,6 +277,14 @@ export function structureApi(
 					404,
 				);
 	};
+}
+
+export function roomNamesApi(projectId: string, names: string[]): ApiHandler {
+	return (url, init) =>
+		url.pathname === `/api/projects/${projectId}/room-names` &&
+		(init?.method ?? "GET") === "GET"
+			? json({ names })
+			: undefined;
 }
 
 export function combine(...handlers: ApiHandler[]): ApiHandler {

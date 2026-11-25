@@ -35,9 +35,12 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
 	await expect(page.getByLabel("Adicionar cômodo")).toBeFocused();
 	await shot("add-room-form");
+	await page.getByLabel("Adicionar cômodo").fill("sa");
+	await expect(page.getByRole("listbox", { name: "Sugestões de cômodo" })).toBeVisible();
+	await shot("add-room-suggestions");
 	await page.getByLabel("Adicionar cômodo").fill("Cozínha");
 	await page.getByLabel("Adicionar cômodo").press("Enter");
-	await expect(page.getByText("Já existe o cômodo Cozínha nesta unidade.")).toBeVisible();
+	await expect(page.getByRole("alert").getByText("Esse cômodo já está na unidade.")).toBeVisible();
 	await shot("add-room-name-taken");
 	await page.getByLabel("Adicionar cômodo").fill("Despensa");
 	await page.getByLabel("Adicionar cômodo").press("Enter");
@@ -45,6 +48,8 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await expect(page.getByText("4 alterações")).toBeVisible();
 	expect(await roomNames(unit903)).toContain("Despensa");
 	await shot("room-added");
+	await expect(page.getByLabel("Adicionar cômodo")).toBeFocused();
+	await page.getByRole("button", { name: "Fechar" }).click();
 
 	await menu("Despensa", "Renomear");
 	const rename = page.getByRole("dialog", { name: "Renomear o cômodo" });
@@ -52,7 +57,7 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await shot("rename-dialog");
 	await rename.getByLabel("Nome").fill("Dormitorio 1");
 	await rename.getByLabel("Nome").press("Enter");
-	await expect(rename.getByText("Já existe o cômodo Dormitorio 1 nesta unidade.")).toBeVisible();
+	await expect(rename.getByText("Esse cômodo já está na unidade.")).toBeVisible();
 	await shot("rename-name-taken");
 	await rename.getByLabel("Nome").fill("Depósito");
 	await rename.getByRole("button", { name: "Salvar" }).click();
@@ -185,7 +190,7 @@ export default async function rooms({ page, shot: rawShot, expect, query }) {
 	await page.getByRole("button", { name: "Adicionar cômodo" }).click();
 	await page.getByLabel("Adicionar cômodo").fill("Banheiro");
 	await page.getByLabel("Adicionar cômodo").press("Enter");
-	await expect(page.getByText("Já existe o cômodo Banheiro nesta área comum.")).toBeVisible();
+	await expect(page.getByRole("alert").getByText("Esse cômodo já está na área comum.")).toBeVisible();
 	await shot("common-area-name-taken");
 
 	const vilaNova = await projectId("Residencial Vila Nova");

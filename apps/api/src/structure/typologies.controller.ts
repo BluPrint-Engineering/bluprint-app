@@ -1,4 +1,5 @@
 import type {
+	RoomNames,
 	Typology,
 	TypologyList,
 	UpdateTypologyResult,
@@ -20,6 +21,7 @@ import { ApiErrorResponses } from "../common/problems/api-error-responses.decora
 import { ProjectUseInterceptor } from "../projects/project-use.interceptor";
 import { ProjectParamsDto } from "../projects/dto/project-params.dto";
 import { CreateTypologyDto } from "./dto/create-typology.dto";
+import { RoomNamesDto } from "./dto/room-names.dto";
 import { TypologyListDto } from "./dto/typology-list.dto";
 import { TypologyParamsDto } from "./dto/typology-params.dto";
 import { TypologyDto } from "./dto/typology.dto";
@@ -53,6 +55,25 @@ export class TypologiesController {
 		@Param() params: ProjectParamsDto,
 	): Promise<TypologyList> {
 		return this.typologies.list(session.user.id, params.id);
+	}
+
+	@Get("room-names")
+	@ApiOperation({
+		summary: "The room names in use in a project",
+		description:
+			"The names of the rooms of the project's typologies and locations, one per name ignoring accents, case and repeated spaces (ADR 0083), each spelled the way most rooms spell it (the oldest spelling on a tie), from the most used to the least used (the oldest first on a tie): what the room field suggests. The visibility is the project's: a project that does not exist, that the caller has no membership on, or that belongs to another organization answers the same `404 PROJECT_NOT_FOUND`.",
+	})
+	@ZodResponse({
+		status: 200,
+		description: "The room names, empty for a project without rooms.",
+		type: RoomNamesDto,
+	})
+	@ApiErrorResponses(400, 401, 404)
+	roomNames(
+		@Session() session: UserSession,
+		@Param() params: ProjectParamsDto,
+	): Promise<RoomNames> {
+		return this.typologies.roomNames(session.user.id, params.id);
 	}
 
 	@Post("typologies")

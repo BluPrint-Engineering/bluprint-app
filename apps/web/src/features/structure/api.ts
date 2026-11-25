@@ -22,6 +22,7 @@ import {
 	ROOM_NAME_TAKEN,
 	ROOM_NOT_FOUND,
 	removeLocationResultSchema,
+	roomNamesSchema,
 	type Structure,
 	type SubtreeRooms,
 	structureSchema,
@@ -40,6 +41,7 @@ import {
 	partialMatchKey,
 	queryOptions,
 	useMutation,
+	useQuery,
 	useQueryClient,
 } from "@tanstack/react-query";
 import { toast } from "sonner";
@@ -328,6 +330,23 @@ export function useTypologyNow(projectId: string) {
 			?.typologies.find(({ id }) => id === typologyId);
 }
 
+export function roomNamesQueryOptions(projectId: string) {
+	return queryOptions({
+		queryKey: ["structure", projectId, "room-names"],
+		queryFn: () =>
+			apiFetch(`/projects/${projectId}/room-names`, roomNamesSchema),
+		retry: retryUnlessNotFound,
+	});
+}
+
+const NO_ROOM_NAMES: string[] = [];
+
+export function useRoomNames(projectId: string): string[] {
+	return (
+		useQuery(roomNamesQueryOptions(projectId)).data?.names ?? NO_ROOM_NAMES
+	);
+}
+
 export function isTypologyInUse(error: unknown) {
 	return error instanceof ApiError && error.problem?.code === TYPOLOGY_IN_USE;
 }
@@ -373,6 +392,9 @@ function useLocationMutation<Variables>(
 			});
 			void queryClient.invalidateQueries({
 				queryKey: typologiesQueryOptions(projectId).queryKey,
+			});
+			void queryClient.invalidateQueries({
+				queryKey: roomNamesQueryOptions(projectId).queryKey,
 			});
 			void queryClient.invalidateQueries({ queryKey: ["projects"] });
 		},

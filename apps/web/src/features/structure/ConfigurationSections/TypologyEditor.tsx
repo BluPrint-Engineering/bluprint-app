@@ -16,11 +16,12 @@ import {
 	isTypologyChanged,
 	isTypologyGone,
 	roomNamesTakenOf,
+	useRoomNames,
 	useTypologyNow,
 	useUpdateTypologyMutation,
 } from "../api";
 import { RoomList } from "../components/RoomList";
-import { AddTag } from "../components/Tags";
+import { RoomSuggestField } from "../components/RoomSuggestField";
 import {
 	CHANGED_TEXT,
 	changedTitleText,
@@ -103,6 +104,8 @@ export function TypologyEditor({
 	);
 	const [version, setVersion] = useState(restored?.version ?? typology.version);
 	const [changed, setChanged] = useState(false);
+	const [typed, setTyped] = useState("");
+	const usedNames = useRoomNames(projectId);
 	const stored = new Set(typology.rooms.map(({ id }) => id));
 	const saving = update.isPending;
 	const failure =
@@ -122,7 +125,7 @@ export function TypologyEditor({
 			...current,
 			brought ? taken : { id: uuidV7(), name },
 		]);
-		return true;
+		setTyped("");
 	}
 
 	function cancel() {
@@ -177,17 +180,19 @@ export function TypologyEditor({
 					setRooms((current) => current.filter((_, i) => i !== index))
 				}
 			/>
-			<AddTag
-				sameName={sameRoomName}
-				label="Novo cômodo"
-				placeholder="Novo cômodo"
-				existing={rooms.map(({ name }) => name)}
+			<RoomSuggestField
+				ariaLabel={`Novo cômodo da ${typology.name}`}
+				value={typed}
+				onValueChange={setTyped}
+				onAdd={addRoom}
+				used={usedNames}
+				present={rooms.map(({ name }) => name)}
+				presentLabel="Já está nesta tipologia"
 				duplicateMessage="Esse cômodo já está na tipologia."
 				maxItems={MAX_ROOMS_PER_TYPOLOGY}
 				maxMessage={`A tipologia pode ter até ${MAX_ROOMS_PER_TYPOLOGY} cômodos.`}
 				disabled={saving}
 				inputRef={fieldRef}
-				onAdd={addRoom}
 			/>
 			<Alert>
 				<AlertDescription>{unitsChangedText(typology)}</AlertDescription>
