@@ -26,6 +26,18 @@ export default async function newDiscipline({ page, shot: rawShot, expect, query
 	const limit = page.getByText("Esta obra já tem 10 disciplinas extras, o máximo.");
 
 	const unit903 = await locationId("unit", "903", "Torre A", "9º andar");
+	const ninth = await locationId("floor", "9º andar", "Torre A");
+	if ((await extras()) >= 10) {
+		await open(unit903, "903");
+		await expect(limit).toBeVisible();
+		await expect(newButton).toHaveCount(0);
+		await shot("limit-reached");
+		await open(ninth, "9º andar");
+		await expect(limit).toBeVisible();
+		await expect(newButton).toHaveCount(0);
+		await shot("limit-on-floor");
+		return;
+	}
 	await open(unit903, "903");
 	await expect(page.getByText("3 de 4")).toBeVisible();
 	await shot("card-with-button");
@@ -50,7 +62,6 @@ export default async function newDiscipline({ page, shot: rawShot, expect, query
 	expect((await disciplines("Gesso")).map((row) => `${row.type}:${row.applies_everywhere}`)).toEqual(["extra:true"]);
 	await shot("gesso-created-on-903");
 
-	const ninth = await locationId("floor", "9º andar", "Torre A");
 	await open(ninth, "9º andar");
 	await expect(box("Gesso")).not.toBeChecked();
 	await shot("gesso-off-on-floor");

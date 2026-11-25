@@ -1,3 +1,4 @@
+import type { LucideIcon } from "lucide-react";
 import type { FormEvent, ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ interface FormDialogProps {
 	title: string;
 	description?: string;
 	submitLabel: string;
+	SubmitIcon?: LucideIcon;
 	pendingLabel: string;
 	pending: boolean;
 	submitDisabled?: boolean;
@@ -37,6 +39,7 @@ export function FormDialog({
 	title,
 	description,
 	submitLabel,
+	SubmitIcon,
 	pendingLabel,
 	pending,
 	submitDisabled = false,
@@ -76,7 +79,11 @@ export function FormDialog({
 				disabled={pending || submitDisabled}
 				className={className}
 			>
-				{pending && <Spinner aria-hidden />}
+				{pending ? (
+					<Spinner aria-hidden />
+				) : (
+					SubmitIcon && <SubmitIcon aria-hidden="true" />
+				)}
 				{pending ? pendingLabel : submitLabel}
 			</Button>
 			<Button
