@@ -147,6 +147,7 @@ export function TypologyEditor({
 					onClose();
 				},
 				onError: (error) => {
+					if (isTypologyGone(error)) return cancel();
 					if (!isTypologyChanged(error)) return;
 					const latest = now(typology.id);
 					if (!latest) return;

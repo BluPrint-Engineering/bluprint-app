@@ -1315,6 +1315,26 @@ describe("a tipologia saved by someone else meanwhile", () => {
 			screen.getByRole("button", { name: "Nova tipologia" }),
 		).not.toHaveAttribute("aria-disabled");
 	});
+
+	test("closes the edit when someone deleted the tipologia even if the list cannot be reloaded", async () => {
+		const api = typologiesApi();
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		api.server.deleteElsewhere(tipologiaB.id);
+		list.state.offline = true;
+		await addRoom("Lavabo");
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("A Tipologia B foi excluída por outra pessoa."),
+		).toBeInTheDocument();
+		await waitFor(() =>
+			expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull(),
+		);
+		expect(api.writes).toHaveLength(1);
+	});
 });
 
 describe("a tipologia renamed over an old version", () => {
