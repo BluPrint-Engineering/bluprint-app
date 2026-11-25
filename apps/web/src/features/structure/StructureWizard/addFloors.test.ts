@@ -97,22 +97,27 @@ describe("extendedDraft", () => {
 		expect(draft.towers).toHaveLength(1);
 		expect(draft.towers[0]).toMatchObject({
 			name: "Torre B",
-			first: "3",
-			last: "",
-			perFloor: "3",
 			ground: false,
 			hall: true,
 		});
+		expect(draft.towers[0]?.ranges).toEqual([
+			expect.objectContaining({
+				first: "3",
+				last: "",
+				finals: "01, 03",
+				noUnits: false,
+			}),
+		]);
 		expect(draft.numbering).toBe("digits");
 	});
 
 	test("starts at the 1º on a tower without floors", () => {
 		const draft = extendedDraft(tower("Torre A"), [], false);
 
-		expect(draft.towers[0]).toMatchObject({
+		expect(draft.towers[0]).toMatchObject({ hall: true });
+		expect(draft.towers[0]?.ranges[0]).toMatchObject({
 			first: "1",
-			perFloor: "",
-			hall: true,
+			finals: "",
 		});
 		expect(draft.extend).toMatchObject({ takenFloors: [], named: false });
 	});
@@ -212,8 +217,37 @@ describe("extendedDraft", () => {
 		);
 
 		expect(draft.numbering).toBe("letters");
+		expect(draft.towers[0]?.ranges[0]?.finals).toBe("A, B");
+	});
+
+	test("writes a single stack once", () => {
+		const draft = extendedDraft(
+			tower("Torre A", numberedFloors(1, 2, 1)),
+			[],
+			false,
+		);
+
+		expect(draft.towers[0]?.ranges[0]?.finals).toBe("01");
 	});
 });
+
+type Extended = ReturnType<typeof extendedDraft>;
+
+function withTyped(
+	draft: Extended,
+	typed: { first?: string; last?: string },
+): Extended {
+	return {
+		...draft,
+		towers: draft.towers.map((one) => ({
+			...one,
+			ranges: one.ranges.map((range) => ({ ...range, ...typed })),
+		})),
+	};
+}
+
+const firstFieldOf = (draft: Extended) =>
+	`${draft.towers[0]?.ranges[0]?.key}-first`;
 
 describe("buildPlan for added floors", () => {
 	const typed = (name: string) => ({ name, typology: "Tipologia A" });
@@ -228,8 +262,7 @@ describe("buildPlan for added floors", () => {
 		last: string,
 		edit?: (draft: ReturnType<typeof extendedDraft>) => void,
 	) {
-		const draft = extendedDraft(existing, [type], true);
-		draft.towers = draft.towers.map((each) => ({ ...each, last }));
+		const draft = withTyped(extendedDraft(existing, [type], true), { last });
 		edit?.(draft);
 		return { draft, plan: buildPlan(draft, identity) };
 	}
@@ -307,6 +340,7 @@ describe("buildPlan for added floors", () => {
 	test("puts a common area of one floor under the new floor and the hall in each new floor", () => {
 		const { plan: built } = plan("4", (each) => {
 			each.towers = each.towers.map((one) => ({ ...one, hall: true }));
+			expect(each.towers[0]?.ranges[0]?.finals).toBe("01, 02");
 			each.floorAreas = [{ key: "a", tower: 0, floor: "4", name: "Terraço" }];
 		});
 
@@ -331,63 +365,67 @@ describe("validateDraft for added floors", () => {
 	const existing = tower("Torre B", numberedFloors(1, 4, 2));
 
 	function errorsFor(first: string, last: string, named = true) {
-		const draft = extendedDraft(existing, [], named);
-		draft.towers = draft.towers.map((one) => ({ ...one, first, last }));
-		return validateDraft(draft);
+		const draft = withTyped(extendedDraft(existing, [], named), {
+			first,
+			last,
+		});
+		return {
+			errors: validateDraft(draft),
+			first: firstFieldOf(draft),
+		};
 	}
 
 	test("accepts floors above the last one", () => {
-		expect(errorsFor("5", "6")).toEqual({});
+		expect(errorsFor("5", "6").errors).toEqual({});
 	});
 
 	test("refuses a floor the tower already has, by name", () => {
-		expect(errorsFor("4", "6")).toEqual({
-			"tower-0-first": "A Torre B já tem o 4º andar.",
-		});
+		const { errors, first } = errorsFor("4", "6");
+
+		expect(errors).toEqual({ [first]: "A Torre B já tem o 4º andar." });
 	});
 
 	test("refuses a range that crosses an existing floor", () => {
-		expect(Object.values(errorsFor("0", "9"))).toEqual([
-			"O primeiro andar começa no 1º.",
+		expect(Object.values(errorsFor("0", "9").errors)).toEqual([
+			"Use um andar a partir do 1º.",
 		]);
-		expect(errorsFor("3", "5")["tower-0-first"]).toBe(
-			"A Torre B já tem o 3º andar.",
-		);
+		const { errors, first } = errorsFor("3", "5");
+		expect(errors[first]).toBe("A Torre B já tem o 3º andar.");
 	});
 
 	test("speaks of the obra when the tower is the only one", () => {
-		expect(errorsFor("2", "6", false)["tower-0-first"]).toBe(
-			"A obra já tem o 2º andar.",
-		);
+		const { errors, first } = errorsFor("2", "6", false);
+
+		expect(errors[first]).toBe("A obra já tem o 2º andar.");
 	});
 
 	test("refuses floors whose units a renamed top floor already has", () => {
-		const draft = extendedDraft(withCobertura(), [], true);
-		draft.towers = draft.towers.map((one) => ({ ...one, last: "5" }));
+		const draft = withTyped(extendedDraft(withCobertura(), [], true), {
+			last: "5",
+		});
 
-		expect(draft.towers[0]?.first).toBe("4");
+		expect(draft.towers[0]?.ranges[0]?.first).toBe("4");
 		expect(validateDraft(draft)).toEqual({
-			"tower-0-first":
+			[firstFieldOf(draft)]:
 				"A Torre B já tem a unidade 401. Comece em um andar acima dela.",
 		});
 	});
 
 	test("speaks of the obra when a unit clashes on the only tower", () => {
-		const draft = extendedDraft(withCobertura(), [], false);
-		draft.towers = draft.towers.map((one) => ({ ...one, last: "4" }));
+		const draft = withTyped(extendedDraft(withCobertura(), [], false), {
+			last: "4",
+		});
 
-		expect(validateDraft(draft)["tower-0-first"]).toBe(
+		expect(validateDraft(draft)[firstFieldOf(draft)]).toBe(
 			"A obra já tem a unidade 401. Comece em um andar acima dela.",
 		);
 	});
 
 	test("accepts floors above the units of a renamed top floor", () => {
-		const draft = extendedDraft(withCobertura(), [], true);
-		draft.towers = draft.towers.map((one) => ({
-			...one,
+		const draft = withTyped(extendedDraft(withCobertura(), [], true), {
 			first: "5",
 			last: "6",
-		}));
+		});
 
 		expect(validateDraft(draft)).toEqual({});
 	});

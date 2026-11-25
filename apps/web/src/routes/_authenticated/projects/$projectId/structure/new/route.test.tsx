@@ -148,16 +148,24 @@ async function typeInto(name: string, value: string, at = 0) {
 
 async function describeTower(
 	last: string,
-	perFloor: string,
+	finals: string,
 	options: { first?: string; at?: number } = {},
 ) {
 	const at = options.at ?? 0;
-	if (options.first !== undefined) {
-		await typeInto("Primeiro andar", options.first, at);
-	}
+	await typeInto("Primeiro andar", options.first ?? "1", at);
 	await typeInto("Último andar", last, at);
-	await typeInto("Unidades por andar", perFloor, at);
+	await typeInto("Finais", finals, at);
 }
+
+const hallCheckbox = (at = 0) =>
+	nth(screen.getAllByRole("checkbox", { name: "Hall em cada andar" }), at);
+
+async function checkHall(at = 0) {
+	await user.click(hallCheckbox(at));
+}
+
+const rangeRegion = (number: number, at = 0) =>
+	nth(screen.getAllByRole("region", { name: `Faixa ${number}` }), at);
 
 const createButton = () =>
 	screen.findByRole("button", { name: /Criar estrutura|Criando estrutura…/ });
@@ -250,17 +258,73 @@ describe("structure wizard", () => {
 				screen.queryByRole("textbox", { name: "Nome" }),
 			).not.toBeInTheDocument();
 			expect(
-				screen.getByRole("checkbox", { name: /Térreo sem unidades/ }),
+				screen.getByText(
+					"Cada torre com as suas faixas de andares e os finais de cada faixa. Uma torre nova começa igual à anterior, sem o Hall em cada andar.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"Cada faixa vai de um andar a outro, com os seus finais. Andar fora de uma faixa não existe.",
+				),
+			).toBeInTheDocument();
+			const range = within(rangeRegion(1));
+			expect(
+				range.getByRole("textbox", { name: "Primeiro andar" }),
+			).toHaveValue("");
+			expect(range.getByRole("textbox", { name: "Último andar" })).toHaveValue(
+				"",
+			);
+			const finals = range.getByRole("textbox", { name: "Finais" });
+			expect(finals).toHaveValue("");
+			expect(finals).toHaveAttribute("placeholder", "Ex.: 01, 02");
+			expect(finals).toHaveAccessibleDescription(
+				"Separe os finais com vírgula e espaço.",
+			);
+			expect(
+				range.getByText("Preencha a faixa para ver as unidades."),
+			).toBeInTheDocument();
+			expect(
+				range.queryByRole("button", { name: "Tirar a faixa 1" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.getByText("Total: 0 unidades em 0 andares"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("checkbox", { name: "Térreo sem unidades" }),
 			).toBeChecked();
 			expect(
-				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
-			).toBeChecked();
+				screen.getByRole("checkbox", { name: "Térreo sem unidades" }),
+			).toHaveAccessibleDescription("Com hall de entrada");
+			expect(hallCheckbox()).not.toBeChecked();
+			expect(hallCheckbox()).toHaveAccessibleDescription(
+				"Um Hall em cada andar da torre. Cada um usa 1 da reserva.",
+			);
+			expect(
+				screen.getByText(
+					"Vale para a obra toda. Depois, qualquer nome se troca na própria unidade.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"O hall de entrada e o Hall em cada andar estão no passo 1. Aqui entram as outras. Cada área comum criada usa 1 da reserva, como uma unidade.",
+				),
+			).toBeInTheDocument();
+			expect(screen.getByText("Torre única")).toBeInTheDocument();
+			expect(
+				screen.getByText("Preencha as faixas para ver os andares."),
+			).toBeInTheDocument();
+			expect(
+				await screen.findByText(
+					"Complete as faixas para ver quanto da reserva esta estrutura usa.",
+				),
+			).toBeInTheDocument();
 		});
 
 		test("counts the plan and says what it uses and what is left as the fields are typed (W4)", async () => {
 			const { handler } = wizardApi({ units: balance(150) });
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
+			await checkHall();
 
 			expect(
 				await screen.findByText("1 torre · 4 andares · 12 unidades"),
@@ -270,8 +334,19 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 			expect(
 				await screen.findByText(
-					"Usa 16 das 150 unidades que restam nesta obra. Depois de criar, sobram 134.",
+					"Esta estrutura usa 16 de 150 reservadas. Depois de criar, sobram 134.",
 				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("12 unidades + 3 halls de andar + 1 hall de entrada"),
+			).toBeInTheDocument();
+			expect(
+				within(rangeRegion(1)).getByText(
+					"12 unidades · 3 andares · finais 01, 02, 03 e 04",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("Total: 12 unidades em 3 andares"),
 			).toBeInTheDocument();
 			const facade = screen.getByRole("list", { name: "Fachada da Torre A" });
 			expect(within(facade).getByText("Térreo")).toBeInTheDocument();
@@ -280,20 +355,44 @@ describe("structure wizard", () => {
 			expect(within(facade).getAllByText("Hall")).toHaveLength(3);
 		});
 
-		test("drops anything but digits from the number fields", async () => {
-			const { handler } = wizardApi();
+		test("refuses floors that are not whole numbers and clears each message once its field is edited", async () => {
+			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("1a2.b", "4");
+			await describeTower("2.5", "01, 04", { first: "2a" });
+			await user.click(await createButton());
 
-			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
-				"12",
+			expect(
+				await screen.findByText("Use um andar a partir do 1º."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"O último andar precisa ser igual ou maior que o primeiro.",
+				),
+			).toBeInTheDocument();
+			expect(rangeRegion(1)).toHaveClass(
+				"shadow-[inset_0_0_0_1px_var(--destructive)]",
 			);
+			expect(sent).toHaveLength(0);
+
+			await user.type(
+				screen.getByRole("textbox", { name: "Primeiro andar" }),
+				"9",
+			);
+
+			expect(
+				screen.queryByText("Use um andar a partir do 1º."),
+			).not.toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"O último andar precisa ser igual ou maior que o primeiro.",
+				),
+			).toBeInTheDocument();
 		});
 
 		test("renumbers the units when the numbering changes", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("2", "2");
+			await describeTower("2", "01, 02");
 			const facade = await screen.findByRole("list", {
 				name: "Fachada da Torre A",
 			});
@@ -303,19 +402,29 @@ describe("structure wizard", () => {
 
 			expect(within(facade).getByText("2B")).toBeInTheDocument();
 			expect(within(facade).queryByText("202")).not.toBeInTheDocument();
+			const finals = screen.getByRole("textbox", { name: "Finais" });
+			expect(finals).toHaveValue("A, B");
+			expect(finals).toHaveAttribute("placeholder", "Ex.: A, B");
+			expect(screen.getByText(/finais A e B$/)).toBeInTheDocument();
+
+			await user.click(screen.getByRole("radio", { name: "101, 102" }));
+
+			expect(finals).toHaveValue("01, 02");
+			expect(within(facade).getByText("202")).toBeInTheDocument();
 		});
 
 		test("leaves the ground floor and the halls out when unchecked", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("2", "2");
+			await describeTower("2", "01, 02");
+
+			await checkHall();
+			expect(await screen.findByText(/^3 áreas comuns/)).toBeInTheDocument();
 
 			await user.click(
 				screen.getByRole("checkbox", { name: /Térreo sem unidades/ }),
 			);
-			await user.click(
-				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
-			);
+			await checkHall();
 
 			expect(
 				await screen.findByText("1 torre · 2 andares · 4 unidades"),
@@ -323,10 +432,11 @@ describe("structure wizard", () => {
 			expect(screen.getByText(/^0 áreas comuns/)).toBeInTheDocument();
 		});
 
-		test("asks for each name and copies the previous tower with the next letter (W1 with two towers)", async () => {
+		test("asks for each name and copies the previous tower with the next letter, without the hall (W1 with two towers)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("12", "4");
+			await describeTower("12", "01, 04");
+			await checkHall();
 
 			await user.click(
 				await screen.findByRole("button", { name: "Uma torre a mais" }),
@@ -341,15 +451,33 @@ describe("structure wizard", () => {
 				nth(screen.getAllByRole("textbox", { name: "Último andar" }), 1),
 			).toHaveValue("12");
 			expect(
+				nth(screen.getAllByRole("textbox", { name: "Finais" }), 1),
+			).toHaveValue("01, 04");
+			expect(hallCheckbox(0)).toBeChecked();
+			expect(hallCheckbox(1)).not.toBeChecked();
+			expect(
+				nth(
+					screen.getAllByRole("checkbox", { name: "Térreo sem unidades" }),
+					1,
+				),
+			).toBeChecked();
+			expect(
 				await screen.findByText("2 torres · 26 andares · 96 unidades"),
 			).toBeInTheDocument();
+			expect(
+				screen.getByText("Torre A: 48 unidades em 12 andares"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("Torre B: 48 unidades em 12 andares"),
+			).toBeInTheDocument();
+			expect(screen.queryByText("Torre única")).not.toBeInTheDocument();
 			expect(screen.queryByText(/Com uma torre só/)).not.toBeInTheDocument();
 		});
 
 		test("takes the areas of the project, of each tower and of one floor (W2)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("12", "4");
+			await describeTower("12", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Uma torre a mais" }),
 			);
@@ -381,20 +509,20 @@ describe("structure wizard", () => {
 			expect(
 				await screen.findByText("· Torre B, 12º andar"),
 			).toBeInTheDocument();
-			expect(screen.getByText(/^30 áreas comuns/)).toBeInTheDocument();
+			expect(screen.getByText(/^6 áreas comuns/)).toBeInTheDocument();
 			const facade = screen.getByRole("list", { name: "Fachada da Torre B" });
 			expect(within(facade).getByText("Terraço")).toBeInTheDocument();
 			const projectAreas = screen.getByRole("button", {
 				name: "Tirar Guarita",
 			});
 			await user.click(projectAreas);
-			expect(screen.getByText(/^29 áreas comuns/)).toBeInTheDocument();
+			expect(screen.getByText(/^5 áreas comuns/)).toBeInTheDocument();
 		});
 
 		test("refuses an area that is already listed and a floor outside the tower", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("12", "4");
+			await describeTower("12", "01, 04");
 			const field = await screen.findByRole("textbox", {
 				name: "Área comum da obra",
 			});
@@ -430,30 +558,36 @@ describe("structure wizard", () => {
 		test("explains each missing field, scrolls to the first and focuses it, and sends nothing (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await typeInto("Último andar", "");
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText("Informe o último andar."),
+				await screen.findByText("Informe o primeiro andar."),
+			).toBeInTheDocument();
+			expect(screen.getByText("Informe o último andar.")).toBeInTheDocument();
+			expect(
+				screen.getByText("Informe os finais desta faixa."),
 			).toBeInTheDocument();
 			expect(
-				screen.getByText("De 1 a 30 unidades por andar."),
-			).toBeInTheDocument();
+				screen.queryByText("Separe os finais com vírgula e espaço."),
+			).not.toBeInTheDocument();
 			await waitFor(() => {
 				expect(
-					screen.getByRole("textbox", { name: "Último andar" }),
+					screen.getByRole("textbox", { name: "Primeiro andar" }),
 				).toHaveFocus();
 			});
 			expect(
 				screen.getByRole("textbox", { name: "Último andar" }),
 			).toHaveAttribute("aria-invalid", "true");
+			expect(
+				screen.getByRole("textbox", { name: "Finais" }),
+			).toHaveAccessibleDescription("Informe os finais desta faixa.");
 			expect(sent).toHaveLength(0);
 		});
 
 		test("compares the last floor with the first and clears the message once it is fixed (W5)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("3", "4", { first: "5" });
+			await describeTower("3", "01, 04", { first: "5" });
 			await user.click(await createButton());
 
 			expect(
@@ -474,7 +608,7 @@ describe("structure wizard", () => {
 		test("asks for a name and refuses a repeated one with several towers (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Uma torre a mais" }),
 			);
@@ -497,7 +631,7 @@ describe("structure wizard", () => {
 		test("flags a one-floor area left outside the tower's floors, focuses its row and sends nothing (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("20", "4");
+			await describeTower("20", "01, 04");
 			await addFloorArea("Terraço", "20");
 			await typeInto("Último andar", "15");
 
@@ -525,7 +659,7 @@ describe("structure wizard", () => {
 		test("clears the last floor's message once the first floor is fixed (W5)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("3", "4", { first: "5" });
+			await describeTower("3", "01, 04", { first: "5" });
 			await user.click(await createButton());
 			await screen.findByText(
 				"O último andar precisa ser igual ou maior que o primeiro.",
@@ -543,7 +677,8 @@ describe("structure wizard", () => {
 		test("refuses a one-floor area that repeats a name on its floor or the hall", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("12", "4");
+			await describeTower("12", "01, 04");
+			await checkHall();
 			await addFloorArea("Terraço", "12");
 
 			await user.click(
@@ -577,7 +712,7 @@ describe("structure wizard", () => {
 		test("keeps an open one-floor area form across the phone breakpoint", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("12", "4");
+			await describeTower("12", "01, 04");
 			await user.click(
 				screen.getByRole("button", { name: "Área comum num andar" }),
 			);
@@ -642,7 +777,7 @@ describe("structure wizard", () => {
 				create: () => new Promise(() => {}),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 
 			const sending = await screen.findByRole("button", {
@@ -662,7 +797,7 @@ describe("structure wizard", () => {
 					}),
 			});
 			const { router } = open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 			await screen.findByRole("button", { name: "Criando estrutura…" });
 
@@ -670,16 +805,12 @@ describe("structure wizard", () => {
 				screen.getByRole("textbox", { name: "Último andar" }),
 				"9",
 			);
-			await user.click(
-				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
-			);
+			await checkHall();
 
 			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
 				"3",
 			);
-			expect(
-				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
-			).toBeChecked();
+			expect(hallCheckbox()).not.toBeChecked();
 			succeed();
 			await waitFor(() => {
 				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
@@ -699,7 +830,7 @@ describe("structure wizard", () => {
 					}),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 			await screen.findByRole("button", { name: "Criando estrutura…" });
 
@@ -745,7 +876,7 @@ describe("structure wizard", () => {
 		test("creates the plan in one request with parents before children, then opens the project with the toast (W10)", async () => {
 			const { handler, sent } = wizardApi();
 			const { router } = open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.type(
 				screen.getByRole("textbox", { name: "Área comum da obra" }),
 				"Guarita{Enter}",
@@ -757,7 +888,7 @@ describe("structure wizard", () => {
 			});
 			expect(sent).toHaveLength(1);
 			const { locations } = sent[0] as CreateStructure;
-			expect(locations).toHaveLength(1 + 4 + 12 + 4 + 1);
+			expect(locations).toHaveLength(1 + 4 + 12 + 1 + 1);
 			const seen = new Set<string>();
 			for (const location of locations) {
 				expect(z.uuid().safeParse(location.id).success).toBe(true);
@@ -788,7 +919,7 @@ describe("structure wizard", () => {
 					attempt === 1 ? json({}, 500) : json({ counts: countsOf(body) }, 201),
 			});
 			const { router } = open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 
 			expect(
@@ -816,7 +947,7 @@ describe("structure wizard", () => {
 					attempt === 1 ? json({}, 500) : new Promise(() => {}),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 			await screen.findByText(/Nada foi salvo/);
 
@@ -837,7 +968,7 @@ describe("structure wizard", () => {
 					problem(409, LOCATION_NAME_TAKEN, { names: ["Torre A", "Guarita"] }),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 
 			expect(
@@ -849,6 +980,230 @@ describe("structure wizard", () => {
 				"3",
 			);
 			expect(screen.queryByText(/Nada foi salvo/)).not.toBeInTheDocument();
+		});
+	});
+
+	describe("the floor ranges", () => {
+		async function teamRequest() {
+			await describeTower("10", "01, 02", { first: "2" });
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			expect(
+				within(rangeRegion(2)).getByRole("textbox", {
+					name: "Primeiro andar",
+				}),
+			).toHaveValue("11");
+			await typeInto("Último andar", "17", 1);
+			await typeInto("Finais", "01", 1);
+		}
+
+		test("builds the team's tower from two ranges and sends exactly what the preview shows", async () => {
+			const { handler, sent } = wizardApi();
+			const { router } = open(handler);
+			await teamRequest();
+
+			expect(
+				within(rangeRegion(1)).getByText(
+					"18 unidades · 9 andares · finais 01 e 02",
+				),
+			).toBeInTheDocument();
+			expect(
+				within(rangeRegion(2)).getByText("7 unidades · 7 andares · final 01"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("Total: 25 unidades em 16 andares"),
+			).toBeInTheDocument();
+			const facade = screen.getByRole("list", { name: "Fachada da Torre A" });
+			for (const name of ["201", "202", "1001", "1002", "1101", "1701"]) {
+				expect(within(facade).getByText(name)).toBeInTheDocument();
+			}
+			expect(within(facade).queryByText("1102")).not.toBeInTheDocument();
+			expect(within(facade).queryByText("1º")).not.toBeInTheDocument();
+			const shown = within(facade)
+				.getAllByTitle("Tipologia A")
+				.map((unit) => unit.textContent);
+
+			await user.click(await createButton());
+
+			await waitFor(() => {
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+			});
+			const units = (sent[0] as CreateStructure).locations
+				.filter(({ type }) => type === "unit")
+				.map(({ name }) => name);
+			expect(units).toHaveLength(25);
+			expect(units.toSorted()).toEqual(shown.toSorted());
+			expect(units).not.toContain("1102");
+		});
+
+		test("takes a range out with its own button", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await teamRequest();
+
+			await user.click(screen.getByRole("button", { name: "Tirar a faixa 1" }));
+
+			expect(
+				screen.queryByRole("region", { name: "Faixa 2" }),
+			).not.toBeInTheDocument();
+			expect(
+				within(rangeRegion(1)).getByRole("textbox", { name: "Primeiro andar" }),
+			).toHaveValue("11");
+			expect(
+				screen.queryByRole("button", { name: "Tirar a faixa 1" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.getByText("Total: 7 unidades em 7 andares"),
+			).toBeInTheDocument();
+		});
+
+		test("creates a floor without units, with the Hall when it is on", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			await typeInto("Último andar", "3", 1);
+			const leisure = within(rangeRegion(2));
+
+			await user.click(
+				leisure.getByRole("checkbox", { name: "Andares sem unidades" }),
+			);
+
+			expect(
+				leisure.getByRole("checkbox", { name: "Andares sem unidades" }),
+			).toHaveAccessibleDescription("Só áreas comuns, como um andar de lazer.");
+			expect(
+				leisure.queryByRole("textbox", { name: "Finais" }),
+			).not.toBeInTheDocument();
+			expect(leisure.getByText("0 unidades · 1 andar")).toBeInTheDocument();
+			expect(
+				screen.getByText("Total: 4 unidades em 3 andares"),
+			).toBeInTheDocument();
+
+			await checkHall();
+
+			const facade = screen.getByRole("list", { name: "Fachada da Torre A" });
+			const third = within(facade).getByText("3º").closest("li");
+			expect(third).toHaveTextContent("3ºHall");
+			expect(
+				screen.getByText("1 torre · 4 andares · 4 unidades"),
+			).toBeInTheDocument();
+		});
+
+		test("asks for the finals of a range and keeps the tower out of the preview", async () => {
+			const { handler, sent } = wizardApi();
+			open(handler);
+			await describeTower("4", "", { first: "2" });
+
+			expect(
+				screen.getByText("Complete as faixas desta torre para ver os andares."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("Total: 0 unidades em 0 andares"),
+			).toBeInTheDocument();
+			await user.click(await createButton());
+
+			expect(
+				await screen.findByText("Informe os finais desta faixa."),
+			).toBeInTheDocument();
+			expect(
+				within(rangeRegion(1)).getByText(
+					"Preencha a faixa para ver as unidades.",
+				),
+			).toBeInTheDocument();
+			await waitFor(() => {
+				expect(screen.getByRole("textbox", { name: "Finais" })).toHaveFocus();
+			});
+			expect(sent).toHaveLength(0);
+		});
+
+		test("names the range a floor is already in, leaves the tower out of the preview and the count and focuses it", async () => {
+			const { handler, sent } = wizardApi({ units: balance(30) });
+			open(handler);
+			await teamRequest();
+
+			await typeInto("Primeiro andar", "10", 1);
+
+			const overlap =
+				"O 10º andar já está na faixa 1. Cada andar fica numa faixa só.";
+			expect(within(rangeRegion(2)).getByText(overlap)).toBeInTheDocument();
+			expect(rangeRegion(2)).toHaveClass(
+				"shadow-[inset_0_0_0_1px_var(--destructive)]",
+			);
+			expect(rangeRegion(1)).not.toHaveClass(
+				"shadow-[inset_0_0_0_1px_var(--destructive)]",
+			);
+			expect(
+				screen.getByText("Total: 0 unidades em 0 andares"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("Complete as faixas desta torre para ver os andares."),
+			).toBeInTheDocument();
+			expect(
+				await screen.findByText(
+					"Complete as faixas para ver quanto da reserva esta estrutura usa.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.queryByText(/Faltam \d+ unidades na reserva/),
+			).not.toBeInTheDocument();
+
+			await user.click(await createButton());
+
+			const first = within(rangeRegion(2)).getByRole("textbox", {
+				name: "Primeiro andar",
+			});
+			await waitFor(() => expect(first).toHaveFocus());
+			expect(first).toHaveAttribute("aria-invalid", "true");
+			expect(first).toHaveAccessibleDescription(overlap);
+			expect(sent).toHaveLength(0);
+		});
+
+		test("refuses letters for a range with more than 26 finals and changes nothing", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("3", "01, 02");
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			await typeInto("Último andar", "5", 1);
+			await typeInto("Finais", "01, 28", 1);
+
+			await user.click(screen.getByRole("radio", { name: "1A, 1B" }));
+
+			expect(
+				screen.getByText(
+					"A faixa 2 da Torre A tem 28 finais. Com letras, o máximo é 26, de A a Z.",
+				),
+			).toBeInTheDocument();
+			expect(screen.getByRole("radio", { name: "101, 102" })).toBeChecked();
+			expect(
+				screen
+					.getAllByRole("textbox", { name: "Finais" })
+					.map((field) => (field as HTMLInputElement).value),
+			).toEqual(["01, 02", "01, 28"]);
+			expect(
+				within(
+					screen.getByRole("list", { name: "Fachada da Torre A" }),
+				).getByText("528"),
+			).toBeInTheDocument();
+		});
+
+		test("explains finals that are not numbers or letters", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("3", "01, x");
+			await user.click(await createButton());
+
+			expect(
+				await screen.findByText("Use números de 1 a 30, como 01, 02."),
+			).toBeInTheDocument();
+
+			await typeInto("Finais", "A, B");
+			await user.click(screen.getByRole("radio", { name: "1A, 1B" }));
+			await typeInto("Finais", "A, 1");
+			await user.click(await createButton());
+
+			expect(
+				await screen.findByText("Use letras de A a Z, como A, B."),
+			).toBeInTheDocument();
 		});
 	});
 
@@ -921,7 +1276,7 @@ describe("structure wizard", () => {
 		test("adds a second typology and applies each by final, counting them in the preview (W3, W4)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("2", "4");
+			await describeTower("2", "01, 04");
 
 			await addTypology();
 			await addRule();
@@ -934,7 +1289,7 @@ describe("structure wizard", () => {
 
 			expect(
 				await screen.findByText(
-					"3 áreas comuns · Tipologia A: 4 · Tipologia B: 4",
+					"1 área comum · Tipologia A: 4 · Tipologia B: 4",
 				),
 			).toBeInTheDocument();
 			expect(
@@ -954,7 +1309,7 @@ describe("structure wizard", () => {
 		test("limits a rule to a range of floors and warns of the units it leaves without a typology (W4)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("4", "2");
+			await describeTower("4", "01, 02");
 
 			await typeInto("Do andar da regra 1", "2");
 			await typeInto("Até o andar da regra 1", "3");
@@ -965,7 +1320,7 @@ describe("structure wizard", () => {
 				),
 			).toBeInTheDocument();
 			expect(
-				screen.getByText("5 áreas comuns · Tipologia A: 4 · Sem tipologia: 4"),
+				screen.getByText("1 área comum · Tipologia A: 4 · Sem tipologia: 4"),
 			).toBeInTheDocument();
 			const facade = screen.getByRole("list", { name: "Fachada da Torre A" });
 			expect(within(facade).getByText("101")).toHaveAttribute(
@@ -981,7 +1336,7 @@ describe("structure wizard", () => {
 		test("warns in the singular for one unit and clears the warning when a rule covers it (W4)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("1", "2");
+			await describeTower("1", "01, 02");
 
 			await typeInto("Finais da regra 1", "1");
 
@@ -1004,7 +1359,7 @@ describe("structure wizard", () => {
 		test("takes a typology out together with the rules that point at it", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("1", "2");
+			await describeTower("1", "01, 02");
 
 			await user.click(
 				await screen.findByRole("button", { name: "Tirar Tipologia A" }),
@@ -1026,7 +1381,7 @@ describe("structure wizard", () => {
 		test("copies the previous tower's rules to a new tower and offers the tower in each rule (W3)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("2", "2");
+			await describeTower("2", "01, 02");
 
 			await user.click(
 				await screen.findByRole("button", { name: "Uma torre a mais" }),
@@ -1043,14 +1398,14 @@ describe("structure wizard", () => {
 				}),
 			).toHaveDisplayValue("Torre B");
 			expect(
-				await screen.findByText(/^6 áreas comuns · Tipologia A: 8$/),
+				await screen.findByText(/^2 áreas comuns · Tipologia A: 8$/),
 			).toBeInTheDocument();
 		});
 
 		test("sends the typologies with their rooms and the typology of each unit (W10)", async () => {
 			const { handler, sent } = wizardApi();
 			const { router } = open(handler);
-			await describeTower("1", "2");
+			await describeTower("1", "01, 02");
 			const rooms = await screen.findByRole("textbox", {
 				name: "Novo cômodo da Tipologia A",
 			});
@@ -1092,7 +1447,7 @@ describe("structure wizard", () => {
 					attempt === 1 ? json({}, 500) : json({ counts: countsOf(body) }, 201),
 			});
 			open(handler);
-			await describeTower("1", "2");
+			await describeTower("1", "01, 02");
 			await user.type(
 				await screen.findByRole("textbox", {
 					name: "Novo cômodo da Tipologia A",
@@ -1111,7 +1466,7 @@ describe("structure wizard", () => {
 		test("asks for the typology's name and explains finals that are not numbers, and focuses the first (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("2", "4");
+			await describeTower("2", "01, 04");
 			await typeInto("Nome da tipologia", "");
 			await typeInto("Finais da regra 1", "um");
 
@@ -1134,7 +1489,7 @@ describe("structure wizard", () => {
 		test("refuses a repeated typology name and a rule that ends before it starts (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("2", "4");
+			await describeTower("2", "01, 04");
 			await addTypology();
 			await typeInto("Nome da tipologia", " tipologia  a ", 1);
 			await typeInto("Do andar da regra 1", "5");
@@ -1166,7 +1521,7 @@ describe("structure wizard", () => {
 					problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] }),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 
 			expect(
@@ -1182,25 +1537,28 @@ describe("structure wizard", () => {
 	});
 
 	describe("the project's reservation", () => {
-		test("tells a manager how many units to take out and disables the button (W4b)", async () => {
+		test("tells a manager how much is missing, asks for more and disables the button (W10)", async () => {
 			const { handler, sent } = wizardApi({
 				summary: { ...OBRA, role: "manager" },
 				units: balance(6),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
+			await checkHall();
 
-			const alert = await screen.findByText(
-				"Esta estrutura tem 16 unidades e a obra tem 6. Tire 10 unidades ou peça mais reserva ao admin da construtora.",
+			const alert = await screen.findByRole("alert");
+			expect(alert).toHaveTextContent("Faltam 10 unidades na reserva");
+			expect(alert).toHaveTextContent(
+				"Esta estrutura usa 16 e a obra ainda tem 6. Peça mais ao admin da construtora.",
 			);
-			expect(alert).toBeInTheDocument();
 			expect(
-				screen.getByText("Restam 6 unidades nesta obra."),
+				screen.getByText("Esta estrutura usa 16 de 150 reservadas."),
 			).toBeInTheDocument();
+			expect(screen.queryByText(/Depois de criar/)).not.toBeInTheDocument();
 			const button = await createButton();
 			expect(button).toBeDisabled();
 			expect(button).toHaveAccessibleDescription(
-				/Esta estrutura tem 16 unidades/,
+				/Faltam 10 unidades na reserva Esta estrutura usa\s16 e a obra ainda tem\s6\./,
 			);
 			expect(
 				screen.queryByRole("button", { name: "Alterar reserva" }),
@@ -1215,7 +1573,13 @@ describe("structure wizard", () => {
 				units: balance(10),
 			});
 			open(handler);
-			await describeTower("3", "2");
+			await describeTower("3", "01, 02");
+			await checkHall();
+			expect(
+				await screen.findByText(
+					"Esta estrutura usa 10 de 150 reservadas. Depois de criar, sobram 0.",
+				),
+			).toBeInTheDocument();
 			expect(await createButton()).toBeEnabled();
 
 			await addFloorArea("Terraço", "3");
@@ -1223,44 +1587,118 @@ describe("structure wizard", () => {
 			const button = await createButton();
 			await waitFor(() => expect(button).toBeDisabled());
 			expect(
+				screen.getByText("Falta 1 unidade na reserva"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(/Esta estrutura usa 11 e a obra ainda tem 10\./),
+			).toBeInTheDocument();
+			expect(
 				screen.getByText(
-					"Esta estrutura tem 11 unidades e a obra tem 10. Tire 1 unidade ou peça mais reserva ao admin da construtora.",
+					"6 unidades + 3 halls de andar + 1 hall de entrada + 1 outra área comum",
 				),
 			).toBeInTheDocument();
 			await user.click(button);
 			expect(sent).toHaveLength(0);
 		});
 
-		test("tells an assistant the reservation is over when nothing is left (W4b)", async () => {
+		test("tells an assistant the reservation is over when nothing is left", async () => {
 			const { handler } = wizardApi({
 				summary: { ...OBRA, role: "assistant" },
 				units: balance(0),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 
 			expect(
-				await screen.findByText(
-					"Esta estrutura tem 16 unidades e a reserva da obra acabou. Peça mais reserva ao admin da construtora.",
+				await screen.findByText("Faltam 13 unidades na reserva"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					/Esta estrutura usa 13 e a reserva da obra acabou\. Peça mais ao admin da construtora\./,
 				),
 			).toBeInTheDocument();
-			expect(screen.getByText("A reserva da obra acabou.")).toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
 		});
 
-		test("offers the admin Alterar reserva over the wizard, keeps the draft and recomputes once saved (W4c)", async () => {
+		test("adds up the whole structure against the reservation and what is left (W2)", async () => {
+			const { handler } = wizardApi({ units: balance(400, 400) });
+			open(handler);
+			await describeTower("10", "01, 02", { first: "2" });
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			await describeTower("17", "01", { first: "11", at: 1 });
+			await checkHall();
+			await user.click(
+				screen.getByRole("button", { name: "Uma torre a mais" }),
+			);
+			await user.click(
+				nth(screen.getAllByRole("button", { name: "Tirar a faixa 2" }), 1),
+			);
+			await typeInto("Finais", "01, 04", 2);
+			for (const area of ["Garagem", "Salão de festas"]) {
+				await user.type(
+					screen.getByRole("textbox", { name: "Área comum da obra" }),
+					`${area}{Enter}`,
+				);
+			}
+
+			expect(
+				await screen.findByText(
+					"Esta estrutura usa 81 de 400 reservadas. Depois de criar, sobram 319.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"61 unidades + 16 halls de andar + 2 halls de entrada + 2 outras áreas comuns",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("2 torres · 27 andares · 61 unidades"),
+			).toBeInTheDocument();
+		});
+
+		test("says what is left in the singular", async () => {
+			const { handler } = wizardApi({ units: balance(6) });
+			open(handler);
+			await describeTower("1", "01, 04");
+
+			expect(
+				await screen.findByText(
+					"Esta estrutura usa 5 de 150 reservadas. Depois de criar, sobra 1.",
+				),
+			).toBeInTheDocument();
+		});
+
+		test("waits for complete ranges before counting the reservation", async () => {
+			const { handler } = wizardApi({ units: balance(30) });
+			open(handler);
+			await describeTower("10", "01, 02", { first: "2" });
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			await typeInto("Último andar", "17", 1);
+
+			expect(
+				await screen.findByText(
+					"Complete as faixas para ver quanto da reserva esta estrutura usa.",
+				),
+			).toBeInTheDocument();
+			expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+			expect(await createButton()).toBeEnabled();
+		});
+
+		test("offers the admin Alterar reserva over the wizard, keeps the draft and recomputes once saved (W10b)", async () => {
 			const { handler, unitsReads } = wizardApi({
 				summary: { ...OBRA, units: { reserved: 150, used: 144 } },
 				units: balance(6),
 			});
 			const { router } = open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 
 			expect(
-				await screen.findByText(
-					/Esta estrutura tem 16 unidades e a obra tem 6\. Tire 10 unidades ou aumente a reserva\./,
-				),
+				await screen.findByText("Faltam 7 unidades na reserva"),
 			).toBeInTheDocument();
+			expect(
+				screen.getByText(/Esta estrutura usa 13 e a obra ainda tem 6\./),
+			).toBeInTheDocument();
+			expect(screen.queryByText(/Peça mais ao admin/)).not.toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
 			const readsBefore = unitsReads.length;
 			await user.click(screen.getByRole("button", { name: "Alterar reserva" }));
@@ -1276,7 +1714,7 @@ describe("structure wizard", () => {
 
 			expect(
 				await screen.findByText(
-					"Usa 16 das 16 unidades que restam nesta obra. Depois de criar, sobram 0.",
+					"Esta estrutura usa 13 de 160 reservadas. Depois de criar, sobram 3.",
 				),
 			).toBeInTheDocument();
 			expect(unitsReads.length).toBeGreaterThan(readsBefore);
@@ -1285,7 +1723,7 @@ describe("structure wizard", () => {
 					screen.queryByRole("dialog", { name: "Alterar reserva" }),
 				).not.toBeInTheDocument();
 			});
-			expect(screen.queryByText(/Esta estrutura tem/)).not.toBeInTheDocument();
+			expect(screen.queryByText(/na reserva$/)).not.toBeInTheDocument();
 			expect(await createButton()).toBeEnabled();
 			await waitFor(async () => {
 				expect(await createButton()).toHaveFocus();
@@ -1302,7 +1740,7 @@ describe("structure wizard", () => {
 				units: balance(6),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Alterar reserva" }),
 			);
@@ -1326,7 +1764,7 @@ describe("structure wizard", () => {
 		test("enables the button again once the plan fits", async () => {
 			const { handler } = wizardApi({ units: balance(6) });
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			expect(await createButton()).toBeDisabled();
 
 			await typeInto("Último andar", "1");
@@ -1334,32 +1772,31 @@ describe("structure wizard", () => {
 			expect(await createButton()).toBeEnabled();
 			expect(
 				screen.getByText(
-					"Usa 6 das 6 unidades que restam nesta obra. Depois de criar, sobram 0.",
+					"Esta estrutura usa 5 de 150 reservadas. Depois de criar, sobra 1.",
 				),
 			).toBeInTheDocument();
-			expect(screen.queryByText(/Esta estrutura tem/)).not.toBeInTheDocument();
+			expect(screen.queryByText(/na reserva$/)).not.toBeInTheDocument();
 		});
 
-		test("shows the server's numbers when someone spent units meanwhile and keeps the draft (W7b)", async () => {
+		test("shows the server's numbers when someone spent units meanwhile and keeps the draft", async () => {
 			const { handler, sent, setUnits } = wizardApi({
 				create: () => {
 					setUnits(balance(5));
-					return problem(409, NO_UNITS_LEFT, { requested: 16, available: 5 });
+					return problem(409, NO_UNITS_LEFT, { requested: 13, available: 5 });
 				},
 			});
 			open(handler);
-			await describeTower("3", "4");
-			await screen.findByText(/Usa 16 das 150 unidades/);
+			await describeTower("3", "01, 04");
+			await screen.findByText(/Esta estrutura usa 13 de 150 reservadas/);
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText(
-					/Esta estrutura tem 16 unidades e a obra tem 5\. Tire 11 unidades ou aumente a reserva\./,
-				),
+				await screen.findByText("Faltam 8 unidades na reserva"),
 			).toBeInTheDocument();
 			expect(
-				screen.getByText("Restam 5 unidades nesta obra."),
+				screen.getByText(/Esta estrutura usa 13 e a obra ainda tem 5\./),
 			).toBeInTheDocument();
+			expect(screen.queryByText(/Depois de criar/)).not.toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
 			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
 				"3",
@@ -1368,25 +1805,26 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(1);
 
 			await typeInto("Último andar", "1");
-			await typeInto("Unidades por andar", "1");
+			await typeInto("Finais", "01");
 
 			expect(await createButton()).toBeEnabled();
 		});
 
-		test("shows the server's numbers when the units could not be read before (W7b)", async () => {
+		test("shows the server's numbers when the units could not be read before", async () => {
 			const { handler, sent } = wizardApi({
 				unitsResponse: () => json({}, 500),
 				create: () =>
-					problem(409, NO_UNITS_LEFT, { requested: 16, available: 5 }),
+					problem(409, NO_UNITS_LEFT, { requested: 13, available: 5 }),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText(
-					/Esta estrutura tem 16 unidades e a obra tem 5\. Tire 11 unidades ou aumente a reserva\./,
-				),
+				await screen.findByText("Faltam 8 unidades na reserva"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(/Esta estrutura usa 13 e a obra ainda tem 5\./),
 			).toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
 			expect(sent).toHaveLength(1);
@@ -1397,11 +1835,11 @@ describe("structure wizard", () => {
 				unitsResponse: () => json({}, 500),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 
 			await waitFor(() => expect(sent).toHaveLength(0));
 			expect(await createButton()).toBeEnabled();
-			expect(screen.queryByText(/unidades que restam/)).not.toBeInTheDocument();
+			expect(screen.queryByText(/reservadas/)).not.toBeInTheDocument();
 			await user.click(await createButton());
 			await waitFor(() => expect(sent).toHaveLength(1));
 		});
@@ -1409,22 +1847,19 @@ describe("structure wizard", () => {
 		test("blocks a plan with more than 5.000 locations", async () => {
 			const { handler } = wizardApi({ units: balance(9000, 9000) });
 			open(handler);
-			fireEvent.change(
-				await screen.findByRole("textbox", { name: "Último andar" }),
-				{
-					target: { value: "200" },
-				},
-			);
-			fireEvent.change(
-				screen.getByRole("textbox", { name: "Unidades por andar" }),
-				{
-					target: { value: "30" },
-				},
-			);
+			for (const [name, value] of [
+				["Primeiro andar", "1"],
+				["Último andar", "200"],
+				["Finais", "01, 30"],
+			] as const) {
+				fireEvent.change(await screen.findByRole("textbox", { name }), {
+					target: { value },
+				});
+			}
 
 			expect(
 				await screen.findByText(
-					"Esta estrutura tem 6.403 locais e o limite é 5.000 por vez. Reduza andares, unidades ou áreas comuns.",
+					"Esta estrutura tem 6.203 locais e o limite é 5.000 por vez. Reduza andares, unidades ou áreas comuns.",
 				),
 			).toBeInTheDocument();
 			expect(await createButton()).toBeDisabled();
@@ -1432,9 +1867,9 @@ describe("structure wizard", () => {
 	});
 
 	describe("who may open it", () => {
-		test("shows the lock line and no wizard on a delivered project", async () => {
+		test("shows the lock line and the delivered block with the way back, and no wizard, on a delivered project (W15)", async () => {
 			const { handler } = wizardApi({
-				summary: { ...OBRA, status: "delivered" },
+				summary: { ...OBRA, status: "delivered", role: "manager" },
 			});
 			open(handler);
 
@@ -1443,7 +1878,21 @@ describe("structure wizard", () => {
 				screen.getByRole("heading", { level: 1, name: "Montar estrutura" }),
 			).toBeInTheDocument();
 			expect(
+				screen.getByRole("heading", { level: 2, name: "A obra foi entregue" }),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"A estrutura não pode mais ser alterada. Dá para conferir tudo na fachada e na configuração.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Voltar para a obra" }),
+			).toHaveAttribute("href", `/projects/${OBRA.id}`);
+			expect(
 				screen.queryByRole("button", { name: "Criar estrutura" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.queryByRole("textbox", { name: "Primeiro andar" }),
 			).not.toBeInTheDocument();
 		});
 
@@ -1496,7 +1945,7 @@ describe("structure wizard", () => {
 			await user.click(
 				await screen.findByRole("link", { name: "Montar estrutura" }),
 			);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await user.click(await createButton());
 			await waitFor(() => {
 				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
@@ -1556,7 +2005,8 @@ describe("structure wizard", () => {
 			expect(
 				screen.queryByRole("button", { name: "Voltar" }),
 			).not.toBeInTheDocument();
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
+			await checkHall();
 
 			await user.click(
 				screen.getByRole("button", { name: "Continuar · Áreas comuns" }),
@@ -1592,9 +2042,10 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 			expect(
 				await screen.findByText(
-					"Usa 16 das 150 unidades que restam nesta obra. Depois de criar, sobram 134.",
+					"Esta estrutura usa 16 de 150 reservadas. Depois de criar, sobram 134.",
 				),
 			).toBeInTheDocument();
+			expect(screen.getByText("Torre única")).toBeInTheDocument();
 			expect(await createButton()).toBeEnabled();
 			expect(
 				screen.queryByRole("button", { name: /Continuar/ }),
@@ -1608,7 +2059,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler } = wizardApi();
 			open(handler);
-			await typeInto("Último andar", "");
+			await describeTower("", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Continuar · Áreas comuns" }),
 			);
@@ -1626,7 +2077,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("20", "4");
+			await describeTower("20", "01, 04");
 			await user.click(
 				screen.getByRole("button", { name: "Continuar · Áreas comuns" }),
 			);
@@ -1647,24 +2098,25 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(0);
 		});
 
-		test("puts the over-reservation alert beside the disabled button in the bar (W4b)", async () => {
+		test("puts the over-reservation alert beside the disabled button in the bar (W10)", async () => {
 			setViewport("phone");
 			const { handler } = wizardApi({
 				summary: { ...OBRA, role: "assistant" },
 				units: balance(6),
 			});
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await toPreviewOnPhone();
 
 			const button = await createButton();
 			expect(button).toBeDisabled();
 			const alert = await screen.findByRole("alert");
+			expect(alert).toHaveTextContent("Faltam 7 unidades na reserva");
 			expect(alert).toHaveTextContent(
-				"Esta estrutura tem 16 unidades e a obra tem 6. Tire 10 unidades ou peça mais reserva ao admin da construtora.",
+				"Esta estrutura usa 13 e a obra ainda tem 6. Peça mais ao admin da construtora.",
 			);
 			expect(button).toHaveAccessibleDescription(
-				/Esta estrutura tem 16 unidades/,
+				/Faltam 7 unidades na reserva Esta estrutura usa\s13 e a obra ainda tem\s6\./,
 			);
 			expect(
 				within(alert.parentElement as HTMLElement).getByRole("button", {
@@ -1672,7 +2124,7 @@ describe("structure wizard", () => {
 				}),
 			).toBe(button);
 			expect(
-				screen.getByText("Restam 6 unidades nesta obra."),
+				screen.getByText("Esta estrutura usa 13 de 150 reservadas."),
 			).toBeInTheDocument();
 		});
 
@@ -1680,7 +2132,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler, sent } = wizardApi();
 			const { router } = open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await toPreviewOnPhone();
 			await user.click(await createButton());
 
@@ -1697,7 +2149,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler } = wizardApi({ create: () => json({}, 500) });
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 			await toPreviewOnPhone();
 			await user.click(await createButton());
 
@@ -1713,7 +2165,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("3", "4");
+			await describeTower("3", "01, 04");
 
 			await toTypologiesOnPhone();
 
@@ -1741,7 +2193,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler } = wizardApi();
 			open(handler);
-			await describeTower("2", "4");
+			await describeTower("2", "01, 04");
 			await toTypologiesOnPhone();
 			await typeInto("Finais", "01, 03");
 
@@ -1751,7 +2203,7 @@ describe("structure wizard", () => {
 
 			expect(screen.getByText("Passo 4 de 4")).toBeInTheDocument();
 			expect(
-				screen.getByText("3 áreas comuns · Tipologia A: 4 · Sem tipologia: 4"),
+				screen.getByText("1 área comum · Tipologia A: 4 · Sem tipologia: 4"),
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
@@ -1764,7 +2216,7 @@ describe("structure wizard", () => {
 			setViewport("phone");
 			const { handler, sent } = wizardApi();
 			open(handler);
-			await describeTower("2", "4");
+			await describeTower("2", "01, 04");
 			await toTypologiesOnPhone();
 			await typeInto("Finais", "um");
 			await user.click(

@@ -1102,23 +1102,83 @@ function wizardPage(adding: boolean, remaining: number): Page {
 			await screen.findByRole("textbox", { name: "Último andar" });
 		},
 	};
-	const describeTower = textField("Último andar", adding ? "5" : "3", "");
+	const textbox =
+		(name: string, at = 0) =>
+		async () =>
+			(await screen.findAllByRole("textbox", { name }))[at];
+	const typeIn = async (name: string, value: string, at = 0) => {
+		const field = await textbox(name, at)();
+		if (!field) throw new Error(`no ${name} ${at}`);
+		await user.clear(field);
+		await user.type(field, value);
+	};
+	const valuesOf = async (name: string) =>
+		(await screen.findAllByRole("textbox", { name })).map(
+			(field) => (field as HTMLInputElement).value,
+		);
 	const fillTower = async () => {
-		await describeTower.fill();
-		if (!adding) {
-			const perFloor = await screen.findByRole("textbox", {
-				name: "Unidades por andar",
-			});
-			await user.clear(perFloor);
-			await user.type(perFloor, "4");
+		if (adding) {
+			await typeIn("Último andar", "5");
+			await typeIn("Finais", "01, 03");
+			return;
 		}
+		await user.click(await screen.findByRole("radio", { name: "1A, 1B" }));
+		await typeIn("Primeiro andar", "2");
+		await typeIn("Último andar", "4");
+		await typeIn("Finais", "a, d");
+		await user.click(await screen.findByRole("button", { name: "Faixa" }));
+		await typeIn("Último andar", "6", 1);
+		await typeIn("Finais", "B", 1);
+		await user.click(await screen.findByRole("button", { name: "Faixa" }));
+		await typeIn("Último andar", "7", 2);
+		const leisure = (
+			await screen.findAllByRole("checkbox", { name: "Andares sem unidades" })
+		)[2];
+		if (!leisure) throw new Error("no third range");
+		await user.click(leisure);
+	};
+	const overReserve = async () => {
+		if (!adding) await typeIn("Primeiro andar", "1");
+		await typeIn("Último andar", "5");
+		await typeIn("Finais", "01, 03");
+	};
+	const describeTower: Pick<Entry, "fill" | "expectTyped" | "expectCurrent"> = {
+		fill: fillTower,
+		expectTyped: async () => {
+			if (adding) {
+				expect(await valuesOf("Último andar")).toEqual(["5"]);
+				expect(await valuesOf("Finais")).toEqual(["01, 03"]);
+				return;
+			}
+			expect(await valuesOf("Primeiro andar")).toEqual(["2", "5", "7"]);
+			expect(await valuesOf("Último andar")).toEqual(["4", "6", "7"]);
+			expect(await valuesOf("Finais")).toEqual(["a, d", "B"]);
+			expect(
+				(
+					await screen.findAllByRole("checkbox", {
+						name: "Andares sem unidades",
+					})
+				).map((box) => box.getAttribute("aria-checked")),
+			).toEqual(["false", "false", "true"]);
+			expect(
+				await screen.findByRole("radio", { name: "1A, 1B" }),
+			).toBeChecked();
+		},
+		expectCurrent: async () => {
+			expect(await valuesOf("Último andar")).toEqual([""]);
+			expect(await valuesOf("Finais")).toEqual([adding ? "01, 02" : ""]);
+			if (!adding) {
+				expect(
+					await screen.findByRole("radio", { name: "101, 102" }),
+				).toBeChecked();
+			}
+		},
 	};
 	const entries: Record<string, Entry> = {};
 	if (remaining > 20) {
 		entries.create = {
 			open: async () => {},
 			...describeTower,
-			fill: fillTower,
 			submit: async () => user.click(await createButton()),
 			...leaveAndReturn,
 			shows: [],
@@ -1127,7 +1187,7 @@ function wizardPage(adding: boolean, remaining: number): Page {
 	} else {
 		entries.reservation = {
 			open: async () => {
-				await fillTower();
+				await overReserve();
 				await user.click(
 					await screen.findByRole("button", { name: "Alterar reserva" }),
 				);

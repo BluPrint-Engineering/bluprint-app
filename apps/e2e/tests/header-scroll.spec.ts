@@ -33,8 +33,9 @@ test.describe("desktop scrolling", () => {
 		await page.setViewportSize({ width: 1280, height: 600 });
 		await createProject(page);
 		await page.getByRole("link", { name: "Montar estrutura" }).click();
-		await page.getByLabel("Último andar").fill("30");
-		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByLabel("Primeiro andar", { exact: true }).fill("1");
+		await page.getByLabel("Último andar", { exact: true }).fill("30");
+		await page.getByLabel("Finais", { exact: true }).fill("01, 04");
 		await page.mouse.move(600, 300);
 		await page.mouse.wheel(0, 450);
 		await expect
@@ -75,8 +76,9 @@ test.describe("desktop scrolling", () => {
 		await page.setViewportSize({ width: 1280, height: 600 });
 		await createProject(page, "5");
 		await page.getByRole("link", { name: "Montar estrutura" }).click();
-		await page.getByLabel("Último andar").fill("30");
-		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByLabel("Primeiro andar", { exact: true }).fill("1");
+		await page.getByLabel("Último andar", { exact: true }).fill("30");
+		await page.getByLabel("Finais", { exact: true }).fill("01, 04");
 		await page.getByRole("button", { name: "Tirar regra 1" }).click();
 		await page.mouse.wheel(0, -10000);
 		const preview = page.getByRole("complementary", { name: "Prévia" });
@@ -122,8 +124,9 @@ test.describe("desktop scrolling", () => {
 		await page.setViewportSize({ width: 1280, height: 600 });
 		await createProject(page);
 		await page.getByRole("link", { name: "Montar estrutura" }).click();
-		await page.getByLabel("Último andar").fill("3");
-		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByLabel("Primeiro andar", { exact: true }).fill("1");
+		await page.getByLabel("Último andar", { exact: true }).fill("3");
+		await page.getByLabel("Finais", { exact: true }).fill("01, 04");
 		for (let count = 0; count < 3; count++) {
 			await page
 				.getByRole("button", { name: "Nova tipologia", exact: true })
@@ -174,8 +177,9 @@ test.describe("phone hash", () => {
 		test.skip(!isMobile, "Phone hash landing");
 		await createProject(page);
 		await page.getByRole("link", { name: "Montar estrutura" }).click();
-		await page.getByLabel("Último andar").fill("3");
-		await page.getByLabel("Unidades por andar").fill("4");
+		await page.getByLabel("Primeiro andar", { exact: true }).fill("1");
+		await page.getByLabel("Último andar", { exact: true }).fill("3");
+		await page.getByLabel("Finais", { exact: true }).fill("01, 04");
 		await page
 			.getByRole("button", { name: "Continuar · Áreas comuns" })
 			.click();

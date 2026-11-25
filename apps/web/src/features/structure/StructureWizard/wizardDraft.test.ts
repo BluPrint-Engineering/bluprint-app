@@ -1,37 +1,70 @@
-import { nth } from "@/test/nth";
+import { buildPlan } from "./buildPlan";
 import {
 	type FloorAreaDraft,
 	firstInvalidField,
 	initialDraft,
 	nextTowerName,
-	parseTower,
+	type RangeDraft,
+	readWizardDraft,
 	ruleFieldId,
+	type TowerDraft,
 	typologyFieldId,
 	validateDraft,
 	type WizardDraft,
+	withNewRange,
 	withNewRule,
 	withNewTypology,
+	withNumbering,
+	withoutRange,
 	withoutTypology,
+	withRange,
 	withTowerCount,
 } from "./wizardDraft";
 
-function draftOf(
-	...towers: Partial<WizardDraft["towers"][number]>[]
-): WizardDraft {
+type RangeOf = Partial<Omit<RangeDraft, "key">>;
+
+type TowerOf = Partial<Omit<TowerDraft, "ranges">> &
+	RangeOf & { ranges?: RangeOf[] };
+
+function draftOf(...towers: TowerOf[]): WizardDraft {
 	return {
 		...initialDraft(),
-		towers: towers.map((tower, index) => ({
-			key: `tower-${index}`,
-			name: `Torre ${String.fromCharCode(65 + index)}`,
-			first: "1",
-			last: "12",
-			perFloor: "4",
-			ground: true,
-			hall: true,
-			...tower,
-		})),
+		towers: towers.map(
+			({ ranges, first, last, finals, noUnits, ...tower }, index) => ({
+				key: `tower-${index}`,
+				name: `Torre ${String.fromCharCode(65 + index)}`,
+				ground: true,
+				hall: true,
+				...tower,
+				ranges: (
+					ranges ?? [
+						{
+							...(first !== undefined && { first }),
+							...(last !== undefined && { last }),
+							...(finals !== undefined && { finals }),
+							...(noUnits !== undefined && { noUnits }),
+						},
+					]
+				).map((range, at) => ({
+					key: `range-${index}-${at}`,
+					first: "1",
+					last: "12",
+					finals: "01, 04",
+					noUnits: false,
+					...range,
+				})),
+			}),
+		),
 	};
 }
+
+const finalsOf = (draft: WizardDraft) =>
+	draft.towers.map((tower) => tower.ranges.map((range) => range.finals));
+
+const unitNames = (draft: WizardDraft) =>
+	buildPlan(draft, (key) => key)
+		.locations.filter(({ type }) => type === "unit")
+		.map(({ name }) => name);
 
 function floorArea(
 	floor: string,
@@ -62,13 +95,32 @@ describe("nextTowerName", () => {
 	});
 });
 
+describe("initialDraft", () => {
+	test("starts one tower with one empty range, the ground floor and no hall on each floor", () => {
+		const [tower] = initialDraft().towers;
+
+		expect(tower).toMatchObject({ ground: true, hall: false });
+		expect(tower?.ranges).toEqual([
+			expect.objectContaining({
+				first: "",
+				last: "",
+				finals: "",
+				noUnits: false,
+			}),
+		]);
+	});
+});
+
 describe("withTowerCount", () => {
-	test("copies the previous tower with the next letter", () => {
+	test("copies the previous tower's ranges and ground floor with the next letter, without the hall", () => {
 		const draft = draftOf({
 			name: "Torre A",
-			last: "10",
-			perFloor: "2",
-			hall: false,
+			hall: true,
+			ground: false,
+			ranges: [
+				{ first: "2", last: "10", finals: "01, 02" },
+				{ first: "11", last: "17", finals: "01", noUnits: false },
+			],
 		});
 
 		const grown = withTowerCount(withTowerCount(draft, 2), 3);
@@ -78,18 +130,28 @@ describe("withTowerCount", () => {
 			"Torre B",
 			"Torre C",
 		]);
-		expect(grown.towers[2]).toMatchObject({
-			last: "10",
-			perFloor: "2",
-			hall: false,
-		});
+		expect(grown.towers[2]).toMatchObject({ ground: false, hall: false });
+		expect(
+			grown.towers[2]?.ranges.map(({ first, last, finals }) => [
+				first,
+				last,
+				finals,
+			]),
+		).toEqual([
+			["2", "10", "01, 02"],
+			["11", "17", "01"],
+		]);
+		const keys = grown.towers.flatMap((tower) =>
+			tower.ranges.map(({ key }) => key),
+		);
+		expect(new Set(keys).size).toBe(keys.length);
 	});
 
 	test("keeps what the person already typed when the count goes down and up again", () => {
 		const draft = withTowerCount(draftOf({}, { last: "8" }), 1);
 
 		expect(draft.towers).toHaveLength(1);
-		expect(withTowerCount(draft, 2).towers[1]?.last).toBe("12");
+		expect(withTowerCount(draft, 2).towers[1]?.ranges[0]?.last).toBe("12");
 	});
 
 	test("never goes below one tower", () => {
@@ -101,33 +163,87 @@ describe("withTowerCount", () => {
 	});
 });
 
-describe("parseTower", () => {
-	test("reads a valid tower", () => {
-		expect(parseTower(nth(draftOf({}).towers, 0))).toEqual({
-			first: 1,
-			last: 12,
-			perFloor: 4,
+describe("ranges in the draft", () => {
+	test("starts a new range on the floor above the last one", () => {
+		const draft = withNewRange(draftOf({ first: "2", last: "10" }), 0);
+
+		expect(draft.towers[0]?.ranges[1]).toMatchObject({
+			first: "11",
+			last: "",
+			finals: "",
+			noUnits: false,
 		});
 	});
 
-	test.each([
-		[{ last: "" }],
-		[{ first: "" }],
-		[{ first: "0" }],
-		[{ first: "5", last: "4" }],
-		[{ perFloor: "0" }],
-		[{ perFloor: "31" }],
-		[{ last: "1a" }],
-	])("rejects %j", (change) => {
-		expect(parseTower(nth(draftOf(change).towers, 0))).toBeUndefined();
+	test("leaves the first floor of a new range empty when the last one is not a floor", () => {
+		const draft = withNewRange(draftOf({ first: "2", last: "1a" }), 0);
+
+		expect(draft.towers[0]?.ranges[1]?.first).toBe("");
 	});
 
-	test("reads a tower taller than 200 floors", () => {
-		expect(parseTower(nth(draftOf({ last: "350" }).towers, 0))).toEqual({
-			first: 1,
-			last: 350,
-			perFloor: 4,
+	test("changes and takes out one range of one tower", () => {
+		const draft = draftOf(
+			{ ranges: [{ first: "1" }, { first: "13", last: "14" }] },
+			{},
+		);
+
+		const changed = withRange(draft, 0, "range-0-1", { noUnits: true });
+		expect(changed.towers[0]?.ranges[1]?.noUnits).toBe(true);
+		expect(changed.towers[1]?.ranges[0]?.noUnits).toBe(false);
+
+		const removed = withoutRange(changed, 0, "range-0-0");
+		expect(removed.towers[0]?.ranges.map(({ key }) => key)).toEqual([
+			"range-0-1",
+		]);
+	});
+});
+
+describe("withNumbering", () => {
+	test("turns the typed finals into letters by position and back", () => {
+		const draft = draftOf({
+			ranges: [
+				{ first: "2", last: "10", finals: "01, 02" },
+				{ first: "11", last: "17", finals: "1 4" },
+			],
 		});
+
+		const letters = withNumbering(draft, "letters").draft;
+		if (!letters) throw new Error("refused");
+		expect(letters.numbering).toBe("letters");
+		expect(finalsOf(letters)).toEqual([["A, B", "A, D"]]);
+		expect(unitNames(letters).slice(0, 2)).toEqual(["2A", "2B"]);
+
+		const digits = withNumbering(letters, "digits").draft;
+		if (!digits) throw new Error("refused");
+		expect(finalsOf(digits)).toEqual([["01, 02", "01, 04"]]);
+	});
+
+	test("leaves finals that cannot be read as typed", () => {
+		const draft = draftOf({ finals: "01, x" });
+
+		expect(finalsOf(withNumbering(draft, "letters").draft ?? draft)).toEqual([
+			["01, x"],
+		]);
+	});
+
+	test("refuses letters when a range has more than 26 finals, naming the range", () => {
+		const draft = draftOf(
+			{ ranges: [{ finals: "01, 02" }, { first: "13", finals: "01, 28" }] },
+			{},
+		);
+
+		expect(withNumbering(draft, "letters")).toEqual({
+			refusal:
+				"A faixa 2 da Torre A tem 28 finais. Com letras, o máximo é 26, de A a Z.",
+		});
+	});
+
+	test("names the only tower Torre A in the refusal", () => {
+		expect(
+			withNumbering(draftOf({ name: "", finals: "01, 30" }), "letters").refusal,
+		).toBe(
+			"A faixa 1 da Torre A tem 30 finais. Com letras, o máximo é 26, de A a Z.",
+		);
 	});
 });
 
@@ -137,24 +253,78 @@ describe("validateDraft", () => {
 	});
 
 	test("asks for each empty field in portuguese", () => {
-		const errors = validateDraft(
-			draftOf({ first: "", last: "", perFloor: "" }),
+		expect(validateDraft(draftOf({ first: "", last: "", finals: "" }))).toEqual(
+			{
+				"range-0-0-first": "Informe o primeiro andar.",
+				"range-0-0-last": "Informe o último andar.",
+				"range-0-0-finals": "Informe os finais desta faixa.",
+			},
 		);
-
-		expect(errors).toEqual({
-			"tower-0-first": "Informe o primeiro andar.",
-			"tower-0-last": "Informe o último andar.",
-			"tower-0-perFloor": "De 1 a 30 unidades por andar.",
-		});
 	});
 
-	test("compares the last floor with the first only when both are filled", () => {
+	test.each([["2abc"], ["2.5"], ["0"], ["-1"]])(
+		"refuses %s as a first floor",
+		(first) => {
+			expect(validateDraft(draftOf({ first }))).toEqual({
+				"range-0-0-first": "Use um andar a partir do 1º.",
+			});
+		},
+	);
+
+	test("compares the last floor with the first and refuses one that is not a whole number", () => {
 		expect(validateDraft(draftOf({ first: "5", last: "4" }))).toEqual({
-			"tower-0-last":
+			"range-0-0-last":
+				"O último andar precisa ser igual ou maior que o primeiro.",
+		});
+		expect(validateDraft(draftOf({ last: "2.5" }))).toEqual({
+			"range-0-0-last":
 				"O último andar precisa ser igual ou maior que o primeiro.",
 		});
 		expect(validateDraft(draftOf({ first: "", last: "4" }))).toEqual({
-			"tower-0-first": "Informe o primeiro andar.",
+			"range-0-0-first": "Informe o primeiro andar.",
+		});
+	});
+
+	test.each([
+		["digits", "01, x", "Use números de 1 a 30, como 01, 02."],
+		["digits", "001", "Use números de 1 a 30, como 01, 02."],
+		["digits", "00", "Use números de 1 a 30, como 01, 02."],
+		["digits", "A, B", "Use números de 1 a 30, como 01, 02."],
+		["letters", "01, 02", "Use letras de A a Z, como A, B."],
+		["letters", "AB", "Use letras de A a Z, como A, B."],
+		["digits", "01, 31", "De 1 a 30 unidades por andar."],
+	] as const)("refuses %s finals %s", (numbering, finals, message) => {
+		expect(validateDraft({ ...draftOf({ finals }), numbering })).toEqual({
+			"range-0-0-finals": message,
+		});
+	});
+
+	test("accepts finals separated by commas or spaces, in either case", () => {
+		expect(validateDraft(draftOf({ finals: "1 3" }))).toEqual({});
+		expect(
+			validateDraft({ ...draftOf({ finals: "a,  c" }), numbering: "letters" }),
+		).toEqual({});
+	});
+
+	test("needs no finals in a range without units", () => {
+		expect(validateDraft(draftOf({ noUnits: true, finals: "" }))).toEqual({});
+	});
+
+	test("names the earlier range when two ranges share a floor", () => {
+		const draft = draftOf({
+			ranges: [
+				{ first: "2", last: "10" },
+				{ first: "10", last: "17" },
+			],
+		});
+
+		expect(validateDraft(draft)).toEqual({
+			"range-0-1-overlap":
+				"O 10º andar já está na faixa 1. Cada andar fica numa faixa só.",
+		});
+		expect(firstInvalidField(draft, validateDraft(draft))).toEqual({
+			id: "range-0-1-first",
+			section: "towers",
 		});
 	});
 
@@ -172,12 +342,6 @@ describe("validateDraft", () => {
 			"tower-1-name": "Já existe outra torre com esse nome.",
 		});
 	});
-
-	test("refuses more than 30 units per floor", () => {
-		expect(validateDraft(draftOf({ perFloor: "31" }))).toEqual({
-			"tower-0-perFloor": "De 1 a 30 unidades por andar.",
-		});
-	});
 });
 
 describe("validateDraft on one-floor common areas", () => {
@@ -185,6 +349,17 @@ describe("validateDraft on one-floor common areas", () => {
 		expect(validateDraft(withFloorAreas(draftOf({}), floorArea("12")))).toEqual(
 			{},
 		);
+	});
+
+	test("accepts an area on a floor without units", () => {
+		const draft = withFloorAreas(
+			draftOf({
+				ranges: [{ last: "11" }, { first: "12", noUnits: true }],
+			}),
+			floorArea("12"),
+		);
+
+		expect(validateDraft(draft)).toEqual({});
 	});
 
 	test("flags an area whose floor is now above the tower's last floor", () => {
@@ -209,6 +384,22 @@ describe("validateDraft on one-floor common areas", () => {
 		});
 	});
 
+	test("flags an area on a floor that falls between two ranges", () => {
+		const draft = withFloorAreas(
+			draftOf({
+				ranges: [
+					{ first: "2", last: "7" },
+					{ first: "9", last: "10" },
+				],
+			}),
+			floorArea("8", { key: "terrace" }),
+		);
+
+		expect(validateDraft(draft)).toEqual({
+			"floor-area-terrace": "O 8º andar não está em nenhuma faixa da torre.",
+		});
+	});
+
 	test("flags an area whose tower has no valid floors yet", () => {
 		const draft = withFloorAreas(
 			draftOf({ last: "" }),
@@ -216,7 +407,7 @@ describe("validateDraft on one-floor common areas", () => {
 		);
 
 		expect(validateDraft(draft)).toMatchObject({
-			"tower-0-last": "Informe o último andar.",
+			"range-0-0-last": "Informe o último andar.",
 			"floor-area-terrace": "Confira os andares da torre primeiro.",
 		});
 	});
@@ -274,11 +465,11 @@ describe("firstInvalidField", () => {
 		});
 	});
 
-	test("points to a tower field before a common area", () => {
+	test("points to a range field before a common area", () => {
 		const draft = withFloorAreas(draftOf({ last: "" }), floorArea("5"));
 
 		expect(firstInvalidField(draft, validateDraft(draft))).toEqual({
-			id: "tower-0-last",
+			id: "range-0-0-last",
 			section: "towers",
 		});
 	});
@@ -299,6 +490,79 @@ describe("firstInvalidField", () => {
 		const draft = draftOf({});
 
 		expect(firstInvalidField(draft, validateDraft(draft))).toBeUndefined();
+	});
+});
+
+describe("the team's hostile sequence", () => {
+	test("keeps every step of the request true from typing to the overlap", () => {
+		let draft = draftOf({
+			ranges: [
+				{ first: "2", last: "10", finals: "01, 02" },
+				{ first: "11", last: "17", finals: "01" },
+			],
+		});
+		draft = withTowerCount(draft, 2);
+		draft = withRange(draft, 1, draft.towers[1]?.ranges[0]?.key ?? "", {
+			finals: "01, 04",
+		});
+		draft = withoutRange(draft, 1, draft.towers[1]?.ranges[1]?.key ?? "");
+
+		const letters = withNumbering(draft, "letters").draft;
+		if (!letters) throw new Error("refused");
+		expect(finalsOf(letters)).toEqual([["A, B", "A"], ["A, D"]]);
+		expect(unitNames(letters).slice(0, 2)).toEqual(["2A", "2B"]);
+		const back = withNumbering(letters, "digits").draft;
+		if (!back) throw new Error("refused");
+		expect(finalsOf(back)).toEqual([["01, 02", "01"], ["01, 04"]]);
+
+		draft = withRange(back, 1, back.towers[1]?.ranges[0]?.key ?? "", {
+			finals: "03, 04",
+		});
+		draft = {
+			...draft,
+			towers: draft.towers.map((tower, index) => ({
+				...tower,
+				ground: true,
+				hall: index === 0,
+			})),
+		};
+		let plan = buildPlan(draft, (key) => key);
+		expect(plan.spend).toEqual({
+			units: 25 + 18,
+			floorHalls: 16,
+			entranceHalls: 2,
+			otherAreas: 0,
+		});
+		expect(unitNames(draft).filter((name) => name.startsWith("2"))).toEqual([
+			"201",
+			"202",
+			"203",
+			"204",
+		]);
+
+		draft = withNewRange(draft, 0);
+		draft = withRange(draft, 0, draft.towers[0]?.ranges[2]?.key ?? "", {
+			first: "10",
+			last: "10",
+			finals: "01",
+		});
+		plan = buildPlan(draft, (key) => key);
+		expect(plan.towers[0]?.state).toBe("invalid");
+		expect(plan.spend).toEqual({
+			units: 18,
+			floorHalls: 0,
+			entranceHalls: 1,
+			otherAreas: 0,
+		});
+
+		draft = withRange(draft, 0, draft.towers[0]?.ranges[2]?.key ?? "", {
+			first: "18",
+			last: "18",
+			finals: "01, 28",
+		});
+		expect(withNumbering(draft, "letters").refusal).toBe(
+			"A faixa 3 da Torre A tem 28 finais. Com letras, o máximo é 26, de A a Z.",
+		);
 	});
 });
 
@@ -408,7 +672,7 @@ describe("typologies in the draft", () => {
 		const rule = draft.rules[0];
 		const bad = {
 			...draft,
-			towers: [{ ...draft.towers[0], first: "1", last: "5", perFloor: "2" }],
+			towers: draftOf({ last: "5" }).towers,
 			rules: [{ ...rule, finals: "um", from: "5", to: "2" }],
 		} as WizardDraft;
 
@@ -428,7 +692,7 @@ describe("typologies in the draft", () => {
 		const rule = draft.rules[1];
 		const bad = {
 			...draft,
-			towers: [{ ...draft.towers[0], first: "1", last: "5", perFloor: "2" }],
+			towers: draftOf({ last: "5" }).towers,
 			rules: [draft.rules[0], { ...rule, finals: "x" }],
 		} as WizardDraft;
 
@@ -440,9 +704,20 @@ describe("typologies in the draft", () => {
 
 	test("accepts the starting draft once the first tower is described", () => {
 		const draft = initialDraft();
+		const [tower] = draft.towers;
 		const filled = {
 			...draft,
-			towers: [{ ...draft.towers[0], last: "5", perFloor: "2" }],
+			towers: tower && [
+				{
+					...tower,
+					ranges: tower.ranges.map((range) => ({
+						...range,
+						first: "1",
+						last: "5",
+						finals: "01, 02",
+					})),
+				},
+			],
 		} as WizardDraft;
 
 		expect(validateDraft(filled)).toEqual({});
@@ -465,12 +740,62 @@ describe("a draft restored after the tab reloaded", () => {
 		const restored = reloaded.readWizardDraft(stored);
 		if (!restored) throw new Error("the stored draft did not read back");
 		const grown = reloaded.withTowerCount(
-			reloaded.withNewRule(reloaded.withNewTypology(restored)),
+			reloaded.withNewRange(
+				reloaded.withNewRule(reloaded.withNewTypology(restored)),
+				0,
+			),
 			restored.towers.length + 1,
 		);
 
 		expect(unique(grown.towers)).toBe(true);
+		expect(unique(grown.towers.flatMap((tower) => tower.ranges))).toBe(true);
 		expect(unique(grown.typologies)).toBe(true);
 		expect(unique(grown.rules)).toBe(true);
+	});
+});
+
+describe("readWizardDraft", () => {
+	test("reads back the ranges, finals as typed, the box without units and the numbering", () => {
+		const draft = {
+			...draftOf({
+				ranges: [
+					{ first: "2", last: "10", finals: "a, b" },
+					{ first: "11", last: "11", finals: "", noUnits: true },
+				],
+			}),
+			numbering: "letters" as const,
+		};
+
+		expect(readWizardDraft(JSON.parse(JSON.stringify(draft)))).toEqual(draft);
+	});
+
+	test("drops a draft of the format before floor ranges whole", () => {
+		const draft = JSON.parse(JSON.stringify(draftOf({}))) as {
+			towers: Record<string, unknown>[];
+		};
+		const old = {
+			...draft,
+			towers: draft.towers.map(({ ranges: _ranges, ...tower }) => ({
+				...tower,
+				first: "1",
+				last: "12",
+				perFloor: "4",
+			})),
+		};
+
+		expect(readWizardDraft(old)).toBeUndefined();
+	});
+
+	test("drops a draft with a tower without ranges", () => {
+		const draft = JSON.parse(JSON.stringify(draftOf({}))) as {
+			towers: Record<string, unknown>[];
+		};
+
+		expect(
+			readWizardDraft({
+				...draft,
+				towers: draft.towers.map((tower) => ({ ...tower, ranges: [] })),
+			}),
+		).toBeUndefined();
 	});
 });
