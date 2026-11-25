@@ -70,7 +70,7 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await expect(search).toHaveValue("");
 
 	await menu("Tipologia A", "Editar cômodos");
-	await expect(page.getByRole("textbox", { name: "Novo cômodo" })).toBeVisible();
+	await expect(page.getByRole("combobox", { name: "Novo cômodo" })).toBeVisible();
 	await expect(page.getByText(/^Salvar muda as \d+ unidades da Tipologia A\. Um local com alterações mantém o que foi mudado nele\.$/)).toBeVisible();
 	await page.getByRole("button", { name: "Ações da Tipologia B" }).click();
 	await expect(page.getByRole("menuitem", { name: "Editar cômodos" })).toHaveAttribute("aria-disabled", "true");
@@ -79,17 +79,20 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await expect(tipologias.getByRole("button", { name: "Nova tipologia", exact: true })).toHaveAttribute("aria-disabled", "true");
 	await expect(tipologias.getByRole("button", { name: "Nova tipologia de área comum" })).toHaveAttribute("aria-disabled", "true");
 	await shot("c4-editing");
-	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Sála");
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("sa");
+	await expect(page.getByRole("listbox", { name: "Sugestões de cômodo" })).toBeVisible();
+	await shot("c4-suggestions");
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("Sála");
 	await page.keyboard.press("Enter");
 	await expect(page.getByText("Esse cômodo já está na tipologia.")).toBeVisible();
 	await shot("c4-accent-duplicate");
-	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Lavanderia");
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("Lavanderia");
 	await page.keyboard.press("Enter");
 	await page.getByRole("button", { name: "Salvar" }).click();
 	await expect(page.getByText("A tipologia não pode ter o cômodo Lavanderia: uma unidade já tem um cômodo com esse nome.")).toBeVisible();
 	await shot("c4-name-clash");
 	await page.getByRole("button", { name: "Tirar Lavanderia" }).click();
-	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Despensa");
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("Despensa");
 	await page.keyboard.press("Enter");
 	await expect(page.getByRole("listitem").filter({ hasText: "Despensa" }).getByText("Novo", { exact: true })).toBeVisible();
 	await shot("c4-room-added");
@@ -155,9 +158,9 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await page.getByRole("textbox", { name: "Nome" }).fill("Depósito");
 	await shot("create-common-area-open");
 	await page.keyboard.press("Enter");
-	await expect(page.getByRole("textbox", { name: "Novo cômodo" })).toBeFocused();
+	await expect(page.getByRole("combobox", { name: "Novo cômodo" })).toBeFocused();
 	await expect(areas.getByText("4 tipologias")).toBeVisible();
-	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Prateleiras");
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("Prateleiras");
 	await page.keyboard.press("Enter");
 	await expect(page.getByText("Nenhuma área comum usa a Depósito ainda.")).toBeVisible();
 	await page.getByRole("button", { name: "Salvar" }).click();
@@ -177,8 +180,8 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await page.getByRole("textbox", { name: "Nome" }).fill("Studio");
 	await shot("create-open");
 	await page.keyboard.press("Enter");
-	await expect(page.getByRole("textbox", { name: "Novo cômodo" })).toBeVisible();
-	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Sala");
+	await expect(page.getByRole("combobox", { name: "Novo cômodo" })).toBeVisible();
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("Sala");
 	await page.keyboard.press("Enter");
 	await page.getByRole("button", { name: "Salvar" }).click();
 	await expect(page.getByText("Studio salva.")).toBeVisible();

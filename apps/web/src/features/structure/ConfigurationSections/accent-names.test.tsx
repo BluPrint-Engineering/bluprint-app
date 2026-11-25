@@ -44,7 +44,7 @@ test("refuses accent variants of typology and room names before sending", async 
 		screen.getByRole("menuitem", { name: "Editar cômodos" }),
 	);
 	await userEvent.type(
-		screen.getByRole("textbox", { name: "Novo cômodo" }),
+		screen.getByRole("combobox", { name: "Novo cômodo da Tipologia Á" }),
 		"suite{Enter}",
 	);
 	expect(

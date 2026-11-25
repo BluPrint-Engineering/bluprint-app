@@ -25,6 +25,7 @@ import {
 	floor,
 	locationIn,
 	room,
+	roomNamesApi,
 	structureApi,
 	structureOf,
 	tower,
@@ -70,16 +71,19 @@ function locationApi({
 	details = {},
 	summary = OBRA,
 	typologies,
+	usedNames = [],
 	answer,
 }: {
 	details?: Record<string, Partial<LocationDetail>>;
 	summary?: ProjectSummary;
 	typologies?: TypologyList;
+	usedNames?: string[];
 	answer?: Answer;
 } = {}) {
 	const writes: Write[] = [];
 	const base = `/api/projects/${OBRA.id}`;
 	const handler: ApiHandler = combine(
+		roomNamesApi(OBRA.id, usedNames),
 		(url, init) => {
 			const method = init?.method ?? "GET";
 			if (method !== "GET" && url.pathname.startsWith(base)) {
@@ -163,44 +167,61 @@ afterEach(() => {
 	toast.dismiss();
 });
 
+const addField = () =>
+	screen.getByRole("combobox", { name: "Adicionar cômodo" });
+const addFieldGone = () =>
+	expect(
+		screen.queryByRole("combobox", { name: "Adicionar cômodo" }),
+	).not.toBeInTheDocument();
+const openAddField = () =>
+	userEvent.click(screen.getByRole("button", { name: "Adicionar cômodo" }));
+
 describe("adding a room (U3)", () => {
-	test("opens the form in the list with the focus on the field, and Escape closes it", async () => {
+	test("opens the field in the list with the focus on it, and Fechar closes it back to the button", async () => {
 		const { handler, writes } = locationApi({
 			details: { [unit903.id]: { rooms: [sala] } },
 		});
 		await openUnit(handler);
 
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
+		await openAddField();
 
-		const field = screen.getByRole("textbox", { name: "Adicionar cômodo" });
-		expect(field).toHaveFocus();
-		await userEvent.keyboard("{Escape}");
-		expect(
-			screen.queryByRole("textbox", { name: "Adicionar cômodo" }),
-		).not.toBeInTheDocument();
+		expect(addField()).toHaveFocus();
+		expect(screen.getByRole("button", { name: "Adicionar" })).toBeDisabled();
+		await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+		addFieldGone();
 		expect(
 			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		).toBeInTheDocument();
+		).toHaveFocus();
 		expect(writes).toEqual([]);
 	});
 
-	test("adds the room with an id the client chose and the trimmed name, then lists it", async () => {
+	test("closes the field with Escape once the list is closed", async () => {
+		const { handler, writes } = locationApi();
+		await openUnit(handler);
+		await openAddField();
+
+		await userEvent.type(addField(), "co");
+		await userEvent.keyboard("{Escape}");
+		expect(
+			screen.queryByRole("listbox", { name: "Sugestões de cômodo" }),
+		).not.toBeInTheDocument();
+		expect(addField()).toHaveValue("co");
+		await userEvent.keyboard("{Escape}");
+
+		addFieldGone();
+		expect(writes).toEqual([]);
+	});
+
+	test("adds the room with an id the client chose and the trimmed name, and stays open for the next", async () => {
 		const { handler, writes } = locationApi({
 			details: { [unit903.id]: { rooms: [sala] } },
 			answer: () =>
 				json(unitDetail({ rooms: [sala, lavanderia], changes: 1 }), 201),
 		});
 		await openUnit(handler);
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
+		await openAddField();
 
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-			"  Lavanderia {Enter}",
-		);
+		await userEvent.type(addField(), "  Lavanderia {Enter}");
 
 		expect(await screen.findByText("Lavanderia")).toBeInTheDocument();
 		expect(writes).toHaveLength(1);
@@ -213,50 +234,132 @@ describe("adding a room (U3)", () => {
 			id: expect.stringMatching(/^[0-9a-f-]{36}$/) as string,
 			name: "Lavanderia",
 		});
-		expect(
-			screen.queryByRole("textbox", { name: "Adicionar cômodo" }),
-		).not.toBeInTheDocument();
+		await waitFor(() => expect(addField()).toHaveValue(""));
+		expect(addField()).toHaveFocus();
 		expect(screen.getByText("1 alteração")).toBeInTheDocument();
 	});
 
-	test("says the name is taken in this unit and keeps what was typed", async () => {
-		const { handler } = locationApi({
-			details: { [unit903.id]: { rooms: [sala] } },
-			answer: () => problem(409, ROOM_NAME_TAKEN, { names: ["sala"] }),
+	test("offers the fixed names and the ones the obra uses, and adds the one that is tapped", async () => {
+		const { handler, writes } = locationApi({
+			details: { [hall.id]: { rooms: [room("Salão de festas")] } },
+			usedNames: ["Salão", "Casa", "Box 1"],
+			answer: () =>
+				json(
+					{
+						...locationIn(structure, hall.id, {
+							[hall.id]: { rooms: [room("Salão de festas"), room("Sacada")] },
+						}),
+					},
+					201,
+				),
 		});
-		await openUnit(handler);
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
+		stubApi(signedIn, { api: handler });
+		renderAt(`/projects/${OBRA.id}/locations/${hall.id}`);
+		await screen.findByRole("heading", { level: 1, name: "Hall" });
+		await openAddField();
 
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-			"sala{Enter}",
-		);
+		await userEvent.type(addField(), "sa");
 
+		const list = await screen.findByRole("listbox", {
+			name: "Sugestões de cômodo",
+		});
+		const texts = (group: string) =>
+			within(within(list).getByRole("group", { name: group }))
+				.getAllByRole("option")
+				.map((option) => option.textContent);
+		expect(texts("Sugestões")).toEqual(["Sala", "Sacada"]);
+		expect(texts("Usados nesta obra")).toEqual(["Salão"]);
+		expect(texts("Já está aqui")).toEqual(["Salão de festas"]);
 		expect(
-			await screen.findByText("Já existe o cômodo sala nesta unidade."),
+			within(list).getByRole("option", { name: "Salão de festas" }),
+		).toHaveAttribute("aria-disabled", "true");
+		expect(
+			within(list).getByRole("option", { name: "Adicionar “sa”" }),
 		).toBeInTheDocument();
-		expect(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-		).toHaveValue("sala");
+		expect(writes).toEqual([]);
+
+		await userEvent.click(within(list).getByRole("option", { name: "Sacada" }));
+
+		await waitFor(() => expect(writes).toHaveLength(1));
+		expect(writes[0]?.body).toMatchObject({ name: "Sacada" });
+		await waitFor(() => expect(addField()).toHaveValue(""));
+		expect(addField()).toHaveFocus();
 	});
 
-	test("asks for a name before sending anything", async () => {
+	test("reads the names the obra uses again after a room is added", async () => {
+		const { handler } = locationApi({
+			details: { [unit903.id]: { rooms: [sala] } },
+			answer: () => json(unitDetail({ rooms: [sala, lavanderia] }), 201),
+		});
+		const { fetchMock } = await openUnit(handler);
+		const reads = () =>
+			fetchMock.mock.calls.filter(([input]) =>
+				String(input).endsWith("/room-names"),
+			).length;
+		await openAddField();
+		await waitFor(() => expect(reads()).toBe(1));
+
+		await userEvent.type(addField(), "Lavanderia{Enter}");
+
+		await waitFor(() => expect(reads()).toBe(2));
+	});
+
+	test("adds the known spelling when the typed text is the same name", async () => {
+		const { handler, writes } = locationApi({
+			details: { [unit903.id]: { rooms: [sala] } },
+			usedNames: ["Box 1"],
+			answer: () => json(unitDetail({ rooms: [sala, lavanderia] }), 201),
+		});
+		await openUnit(handler);
+		await openAddField();
+
+		await userEvent.type(addField(), "box 1{Enter}");
+
+		await waitFor(() => expect(writes).toHaveLength(1));
+		expect(writes[0]?.body).toMatchObject({ name: "Box 1" });
+	});
+
+	test("says the name is already in the unit before sending, and keeps what was typed", async () => {
+		const { handler, writes } = locationApi({
+			details: { [unit903.id]: { rooms: [sala] } },
+		});
+		await openUnit(handler);
+		await openAddField();
+
+		await userEvent.type(addField(), "sala{Enter}");
+
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Esse cômodo já está na unidade.",
+		);
+		expect(addField()).toHaveValue("sala");
+		expect(addField()).toBeInvalid();
+		expect(writes).toEqual([]);
+	});
+
+	test("says the name is taken when the unit made a room of that name since", async () => {
+		const { handler } = locationApi({
+			details: { [unit903.id]: { rooms: [sala] } },
+			answer: () => problem(409, ROOM_NAME_TAKEN, { names: ["Despensa"] }),
+		});
+		await openUnit(handler);
+		await openAddField();
+
+		await userEvent.type(addField(), "Despensa{Enter}");
+
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Esse cômodo já está na unidade.",
+		);
+		expect(addField()).toHaveValue("Despensa");
+	});
+
+	test("sends nothing for an empty field", async () => {
 		const { handler, writes } = locationApi();
 		await openUnit(handler);
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
+		await openAddField();
 
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-			"   {Enter}",
-		);
+		await userEvent.type(addField(), "   {Enter}");
 
-		expect(
-			await screen.findByText("Informe o nome do cômodo."),
-		).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Adicionar" })).toBeDisabled();
 		expect(writes).toEqual([]);
 	});
 
@@ -265,23 +368,16 @@ describe("adding a room (U3)", () => {
 			answer: () => problem(500, "INTERNAL_ERROR"),
 		});
 		await openUnit(handler);
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
+		await openAddField();
 
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-			"Varanda{Enter}",
-		);
+		await userEvent.type(addField(), "Varanda{Enter}");
 
 		expect(
 			await screen.findByText(
 				"Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo.",
 			),
 		).toBeInTheDocument();
-		expect(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-		).toHaveValue("Varanda");
+		expect(addField()).toHaveValue("Varanda");
 	});
 
 	test("retries a failed name with the same id, and sends a new name or a reopened form with a new one", async () => {
@@ -289,30 +385,24 @@ describe("adding a room (U3)", () => {
 			answer: () => problem(500, "INTERNAL_ERROR"),
 		});
 		await openUnit(handler);
-		const field = () =>
-			screen.getByRole("textbox", { name: "Adicionar cômodo" });
 		const failure =
 			"Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo.";
 		const sent = async (count: number) => {
 			await screen.findByText(failure);
 			await waitFor(() => expect(writes).toHaveLength(count));
 		};
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
+		await openAddField();
 
-		await userEvent.type(field(), "Lavanderia{Enter}");
+		await userEvent.type(addField(), "Lavanderia{Enter}");
 		await sent(1);
 		await userEvent.click(screen.getByRole("button", { name: "Adicionar" }));
 		await sent(2);
-		await userEvent.clear(field());
-		await userEvent.type(field(), "Despensa{Enter}");
+		await userEvent.clear(addField());
+		await userEvent.type(addField(), "Despensa{Enter}");
 		await sent(3);
-		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
-		await userEvent.type(field(), "Despensa{Enter}");
+		await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
+		await openAddField();
+		await userEvent.type(addField(), "Despensa{Enter}");
 		await sent(4);
 
 		const ids = writes.map((write) => (write.body as { id: string }).id);
@@ -323,36 +413,30 @@ describe("adding a room (U3)", () => {
 	test("adds a room to a common area and names it in the error (U5)", async () => {
 		const { handler, writes } = locationApi({
 			details: { [hall.id]: { rooms: [room("Banheiro")] } },
-			answer: () => problem(409, ROOM_NAME_TAKEN, { names: ["Banheiro"] }),
+			answer: () => problem(409, ROOM_NAME_TAKEN, { names: ["Lavabo"] }),
 		});
 		stubApi(signedIn, { api: handler });
 		renderAt(`/projects/${OBRA.id}/locations/${hall.id}`);
 		await screen.findByRole("heading", { level: 1, name: "Hall" });
 
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-			"Banheiro{Enter}",
-		);
+		await openAddField();
+		await userEvent.type(addField(), "Banheiro{Enter}");
 
-		expect(
-			await screen.findByText("Já existe o cômodo Banheiro nesta área comum."),
-		).toBeInTheDocument();
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Esse cômodo já está na área comum.",
+		);
 		expect(writes).toEqual([]);
-		const field = screen.getByRole("textbox", { name: "Adicionar cômodo" });
-		await userEvent.clear(field);
-		await userEvent.type(field, "Banheíro{Enter}");
-		expect(
-			screen.getByText("Já existe o cômodo Banheíro nesta área comum."),
-		).toBeInTheDocument();
+		await userEvent.clear(addField());
+		await userEvent.type(addField(), "Banheíro{Enter}");
+		expect(screen.getByRole("alert")).toHaveTextContent(
+			"Esse cômodo já está na área comum.",
+		);
 		expect(writes).toEqual([]);
-		await userEvent.clear(field);
-		await userEvent.type(field, "Lavabo{Enter}");
-		expect(
-			await screen.findByText("Já existe o cômodo Lavabo nesta área comum."),
-		).toBeInTheDocument();
+		await userEvent.clear(addField());
+		await userEvent.type(addField(), "Lavabo{Enter}");
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Esse cômodo já está na área comum.",
+		);
 		expect(writes[0]?.path).toBe(`/locations/${hall.id}/rooms`);
 	});
 });
@@ -412,9 +496,7 @@ describe("renaming a room", () => {
 		await userEvent.type(field, "Cozinha{Enter}");
 
 		expect(
-			await within(dialog).findByText(
-				"Já existe o cômodo Cozinha nesta unidade.",
-			),
+			await within(dialog).findByText("Esse cômodo já está na unidade."),
 		).toBeInTheDocument();
 		expect(dialog).toBeInTheDocument();
 	});
@@ -620,7 +702,7 @@ describe("giving a room back", () => {
 
 		expect(
 			await screen.findByText(
-				"Não foi possível devolver o cômodo Sacada: Já existe o cômodo Sacada nesta unidade.",
+				"Não foi possível devolver o cômodo Sacada. Esse cômodo já está na unidade.",
 			),
 		).toBeInTheDocument();
 	});
@@ -890,13 +972,8 @@ describe("a project delivered under an old tab", () => {
 				: base.handler(url, init);
 		await openUnit(handler);
 
-		await userEvent.click(
-			screen.getByRole("button", { name: "Adicionar cômodo" }),
-		);
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Adicionar cômodo" }),
-			"Varanda{Enter}",
-		);
+		await openAddField();
+		await userEvent.type(addField(), "Varanda{Enter}");
 
 		expect(await screen.findByText("Local não encontrado")).toBeInTheDocument();
 	});

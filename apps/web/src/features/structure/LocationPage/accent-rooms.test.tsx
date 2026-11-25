@@ -36,13 +36,13 @@ test("refuses accent variants when adding or renaming rooms before sending", asy
 		screen.getByRole("button", { name: "Adicionar cômodo" }),
 	);
 	await userEvent.type(
-		screen.getByRole("textbox", { name: "Adicionar cômodo" }),
+		screen.getByRole("combobox", { name: "Adicionar cômodo" }),
 		"suite{Enter}",
 	);
 	expect(
-		await screen.findByText("Já existe o cômodo suite nesta unidade."),
+		await screen.findByText("Esse cômodo já está na unidade."),
 	).toBeInTheDocument();
-	await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+	await userEvent.click(screen.getByRole("button", { name: "Fechar" }));
 	await userEvent.click(
 		screen.getByRole("button", { name: "Ações do cômodo Quarto" }),
 	);
@@ -52,7 +52,7 @@ test("refuses accent variants when adding or renaming rooms before sending", asy
 	await userEvent.clear(field);
 	await userEvent.type(field, "suite{Enter}");
 	expect(
-		await screen.findByText("Já existe o cômodo suite nesta unidade."),
+		await screen.findByText("Esse cômodo já está na unidade."),
 	).toBeInTheDocument();
 	expect(
 		fetchMock.mock.calls.filter(

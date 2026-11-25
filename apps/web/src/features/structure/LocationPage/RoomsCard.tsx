@@ -1,8 +1,8 @@
 import {
 	type DroppedRoom,
 	type LocationDetail,
+	MAX_ROOMS_PER_LOCATION,
 	type Room,
-	sameRoomName,
 } from "@bluprint/shared";
 import { Ellipsis, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import {
@@ -23,9 +23,7 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import {
@@ -33,12 +31,14 @@ import {
 	useAddRoomMutation,
 	useGiveRoomBackMutation,
 	useRemoveRoomMutation,
+	useRoomNames,
 } from "../api";
+import { RoomSuggestField } from "../components/RoomSuggestField";
 import { useFocusOnClose } from "../components/useAdding";
 import { plural } from "../plural";
 import { holderText } from "./holderText";
 import { RenameRoomDialog } from "./RenameRoomDialog";
-import { type RoomHolder, roomNameError, roomNameTakenText } from "./roomNames";
+import { type RoomHolder, roomLimitText, roomNameTakenText } from "./roomNames";
 
 function RoomRow({
 	name,
@@ -87,6 +87,7 @@ function AddRoomRow({
 }) {
 	const fieldId = useId();
 	const add = useAddRoomMutation(projectId, location.id);
+	const usedNames = useRoomNames(projectId);
 	const restored = useSessionDraft("add-room", (variables) => {
 		if (typeof variables !== "object" || variables === null) return undefined;
 		if (!("name" in variables) || typeof variables.name !== "string") {
@@ -110,23 +111,24 @@ function AddRoomRow({
 		add.reset();
 	}
 
-	function submit() {
-		const invalid = roomNameError(name);
-		if (invalid) return setError(invalid);
-		const trimmed = name.trim();
-		if (location.rooms.some((room) => sameRoomName(room.name, trimmed)))
-			return setError(roomNameTakenText(holder, trimmed));
-		if (attempt.current?.name !== trimmed) {
-			attempt.current = { id: uuidV7(), name: trimmed };
+	function submit(chosen: string) {
+		if (attempt.current?.name !== chosen) {
+			attempt.current = { id: uuidV7(), name: chosen };
 		}
 
 		add.mutate(
-			{ id: attempt.current.id, name: trimmed },
+			{ id: attempt.current.id, name: chosen },
 			{
-				onSuccess: close,
+				onSuccess: () => {
+					clearDraft();
+					setName("");
+					setError(undefined);
+					attempt.current = undefined;
+					add.reset();
+				},
 				onError: (failure) => {
 					if (isRoomNameTaken(failure)) {
-						setError(roomNameTakenText(holder, trimmed));
+						setError(roomNameTakenText(holder));
 						attempt.current = undefined;
 					}
 				},
@@ -158,49 +160,45 @@ function AddRoomRow({
 			<form
 				noValidate
 				className="grid gap-(--space-3) px-(--space-4) pt-(--space-3) pb-(--space-4)"
-				onSubmit={(event) => {
-					event.preventDefault();
-					submit();
-				}}
+				onSubmit={(event) => event.preventDefault()}
 				onKeyDown={(event) => {
 					if (event.key === "Escape" && !add.isPending) close();
 				}}
 			>
 				<Field data-invalid={!!error || failed}>
 					<FieldLabel htmlFor={fieldId}>Adicionar cômodo</FieldLabel>
-					<Input
+					<RoomSuggestField
 						id={fieldId}
 						autoFocus
-						autoComplete="off"
-						enterKeyHint="done"
 						value={name}
-						disabled={add.isPending}
-						aria-invalid={!!error || failed}
-						aria-describedby={error || failed ? `${fieldId}-error` : undefined}
-						onChange={(event) => {
+						onValueChange={(next) => {
 							setError(undefined);
-							setName(event.target.value);
+							setName(next);
 						}}
+						onAdd={submit}
+						used={usedNames}
+						present={location.rooms.map((room) => room.name)}
+						presentLabel="Já está aqui"
+						duplicateMessage={roomNameTakenText(holder)}
+						maxItems={MAX_ROOMS_PER_LOCATION}
+						maxMessage={roomLimitText(holder)}
+						pending={add.isPending}
+						error={
+							error ??
+							(failed
+								? "Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo."
+								: undefined)
+						}
 					/>
-					{(error || failed) && (
-						<FieldError id={`${fieldId}-error`}>
-							{error ??
-								"Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo."}
-						</FieldError>
-					)}
 				</Field>
 				<div className="flex gap-(--space-2) max-md:*:flex-1">
-					<Button type="submit" disabled={add.isPending}>
-						{add.isPending && <Spinner aria-hidden />}
-						{add.isPending ? "Adicionando…" : "Adicionar"}
-					</Button>
 					<Button
 						type="button"
 						variant="outline"
 						disabled={add.isPending}
 						onClick={close}
 					>
-						Cancelar
+						Fechar
 					</Button>
 				</div>
 			</form>
@@ -295,7 +293,7 @@ export function RoomsCard({
 			onError: (failure) =>
 				toast.error(
 					isRoomNameTaken(failure)
-						? `Não foi possível devolver o cômodo ${dropped.name}: ${roomNameTakenText(holder, dropped.name)}`
+						? `Não foi possível devolver o cômodo ${dropped.name}. ${roomNameTakenText(holder)}`
 						: `Não foi possível devolver o cômodo ${dropped.name}. Confira sua conexão e tente de novo.`,
 				),
 		});

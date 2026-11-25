@@ -152,7 +152,7 @@ const roomsUnder = (name: string) =>
 const row = (name: string) =>
 	card().getByRole("button", { name: new RegExp(`^${name}`), expanded: false });
 const createButton = (name: string) => card().getByRole("button", { name });
-const field = () => screen.getByRole("textbox", { name: "Novo cômodo" });
+const field = () => screen.getByRole("combobox", { name: /^Novo cômodo da / });
 const removeButtons = () =>
 	screen.queryAllByRole("button", { name: /^Tirar / });
 
@@ -551,7 +551,7 @@ describe("creating a tipologia", () => {
 			within(
 				group("Áreas comuns").getByText("Depósito").closest("li") ??
 					document.body,
-			).getByRole("textbox", { name: "Novo cômodo" }),
+			).getByRole("combobox", { name: /^Novo cômodo da / }),
 		).toBeInTheDocument();
 		expect(group("Unidades").queryByText("Depósito")).not.toBeInTheDocument();
 		expect(group("Áreas comuns").getByText("5 tipologias")).toBeInTheDocument();
@@ -1270,7 +1270,9 @@ describe("editing a tipologia in place (C4)", () => {
 			id: expect.stringMatching(/^[0-9a-f-]{36}$/),
 			name: "Lavabo",
 		});
-		expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull();
+		expect(
+			screen.queryByRole("combobox", { name: /^Novo cômodo da / }),
+		).toBeNull();
 	});
 
 	test("says 1 área comum atualizada for a common-area tipologia of one", async () => {
@@ -1345,7 +1347,7 @@ describe("editing a tipologia in place (C4)", () => {
 
 		await waitFor(() => {
 			expect(
-				screen.queryByRole("textbox", { name: "Novo cômodo" }),
+				screen.queryByRole("combobox", { name: /^Novo cômodo da / }),
 			).not.toBeInTheDocument();
 		});
 		expect(writes).toEqual([]);
@@ -1517,7 +1519,7 @@ describe("one tipologia in edit at a time", () => {
 		expect(await card().findByText("Duplex Garden")).toBeInTheDocument();
 
 		expect(
-			screen.getAllByRole("textbox", { name: "Novo cômodo" }),
+			screen.getAllByRole("combobox", { name: /^Novo cômodo da / }),
 		).toHaveLength(1);
 		expect(
 			removeButtons().map((button) => button.getAttribute("aria-label")),
@@ -1733,7 +1735,9 @@ describe("Tipologias of a delivered project (C9)", () => {
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
 		expect(await card().findByText(LOCKED)).toBeInTheDocument();
-		expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull();
+		expect(
+			screen.queryByRole("combobox", { name: /^Novo cômodo da / }),
+		).toBeNull();
 		expect(card().queryByRole("button", { name: /^Ações da / })).toBeNull();
 		expect(
 			card().queryByRole("button", { name: /^Nova tipologia/ }),

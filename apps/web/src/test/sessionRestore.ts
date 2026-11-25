@@ -75,7 +75,9 @@ function openForms(inline: string[]): string[] {
 			return (title && document.getElementById(title)?.textContent) ?? "";
 		});
 	const forms = inline.filter(
-		(name) => screen.queryByRole("textbox", { name }) !== null,
+		(name) =>
+			screen.queryByRole("textbox", { name }) !== null ||
+			screen.queryByRole("combobox", { name: new RegExp(`^${name}`) }) !== null,
 	);
 	return [...dialogs, ...forms];
 }
@@ -93,9 +95,7 @@ export const click = (role: string, name: string) => async () => {
 };
 
 const submitBeside = (field: string, button: string) => async () => {
-	const form = (await screen.findByRole("textbox", { name: field })).closest(
-		"form",
-	);
+	const form = (await screen.findByLabelText(field)).closest("form");
 	if (!form) throw new Error(`no form around ${field}`);
 	await user.click(within(form).getByRole("button", { name: button }));
 };
@@ -108,8 +108,9 @@ function textField(
 	name: string,
 	typed: string,
 	current: string,
+	role: "textbox" | "combobox" = "textbox",
 ): Pick<Entry, "fill" | "expectTyped" | "expectCurrent"> {
-	const field = () => screen.findByRole("textbox", { name });
+	const field = () => screen.findByRole(role, { name });
 	return {
 		fill: async () => {
 			const found = await field();
@@ -607,12 +608,19 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 		},
 		addRoom: {
 			open: click("button", "Adicionar cômodo"),
-			...textField("Adicionar cômodo", "Copa", ""),
+			...textField("Adicionar cômodo", "Copa", "", "combobox"),
+			expectTyped: async () => {
+				expect(
+					await screen.findByRole("combobox", { name: "Adicionar cômodo" }),
+				).toHaveValue("Copa");
+				expect(screen.queryByRole("listbox")).toBeNull();
+			},
 			submit: submitBeside("Adicionar cômodo", "Adicionar"),
-			cancel: CANCEL,
+			cancel: click("button", "Fechar"),
 			shows: ["Adicionar cômodo"],
 			focusAfterCancel: byRole("button", "Adicionar cômodo"),
-			focusAfterSave: byRole("button", "Adicionar cômodo"),
+			focusAfterSave: byRole("combobox", "Adicionar cômodo"),
+			afterSave: click("button", "Fechar"),
 			request: `POST ${base}/locations/${located.id}/rooms`,
 		},
 		renameRoom: {
@@ -968,7 +976,7 @@ function configurationPage(): Page {
 				cancel: CANCEL,
 				shows: ["Nova tipologia"],
 				focusAfterCancel: byRole("button", "Nova tipologia"),
-				focusAfterSave: byRole("textbox", "Novo cômodo"),
+				focusAfterSave: byRole("combobox", "Novo cômodo da Tipologia C"),
 				afterSave: CANCEL,
 				request: `POST ${base}/typologies`,
 			},
@@ -979,7 +987,7 @@ function configurationPage(): Page {
 				cancel: CANCEL,
 				shows: ["Nova tipologia de área comum"],
 				focusAfterCancel: byRole("button", "Nova tipologia de área comum"),
-				focusAfterSave: byRole("textbox", "Novo cômodo"),
+				focusAfterSave: byRole("combobox", "Novo cômodo da Corredor"),
 				afterSave: CANCEL,
 				request: `POST ${base}/typologies`,
 			},
@@ -1009,7 +1017,9 @@ function configurationPage(): Page {
 				open: () => pick("Ações da Tipologia A", "Editar cômodos"),
 				fill: async () => {
 					await user.type(
-						await screen.findByRole("textbox", { name: "Novo cômodo" }),
+						await screen.findByRole("combobox", {
+							name: "Novo cômodo da Tipologia A",
+						}),
 						"Lavabo{Enter}",
 					);
 					await user.click(
@@ -1017,7 +1027,9 @@ function configurationPage(): Page {
 					);
 				},
 				expectTyped: async () => {
-					await screen.findByRole("textbox", { name: "Novo cômodo" });
+					await screen.findByRole("combobox", {
+						name: "Novo cômodo da Tipologia A",
+					});
 					expect(tags().map((tag) => tag.getAttribute("aria-label"))).toEqual([
 						"Tirar Lavabo",
 					]);
@@ -1032,7 +1044,9 @@ function configurationPage(): Page {
 					}
 				},
 				expectCurrent: async () => {
-					await screen.findByRole("textbox", { name: "Novo cômodo" });
+					await screen.findByRole("combobox", {
+						name: "Novo cômodo da Tipologia A",
+					});
 					expect(tags().map((tag) => tag.getAttribute("aria-label"))).toEqual([
 						"Tirar Sala",
 					]);

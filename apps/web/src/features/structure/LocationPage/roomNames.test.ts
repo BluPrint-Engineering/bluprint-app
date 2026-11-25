@@ -20,11 +20,9 @@ describe("roomNameError", () => {
 
 describe("roomNameTakenText", () => {
 	test("names the unit or the common area", () => {
-		expect(roomNameTakenText("unit", "Sala")).toBe(
-			"Já existe o cômodo Sala nesta unidade.",
-		);
-		expect(roomNameTakenText("common_area", "Copa")).toBe(
-			"Já existe o cômodo Copa nesta área comum.",
+		expect(roomNameTakenText("unit")).toBe("Esse cômodo já está na unidade.");
+		expect(roomNameTakenText("common_area")).toBe(
+			"Esse cômodo já está na área comum.",
 		);
 	});
 });
