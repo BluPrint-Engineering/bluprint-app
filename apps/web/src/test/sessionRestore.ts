@@ -6,6 +6,7 @@ import type {
 import { onlineManager } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { SessionDraftKind } from "@/features/auth/sessionDraft";
 import { uuidV7 } from "@/lib/uuidV7";
@@ -993,6 +994,17 @@ function configurationPage(): Page {
 				request: `PATCH ${base}/typologies/${typeA.id}`,
 				staleRestore,
 			},
+			copyTypology: {
+				open: () => pick("Ações da Tipologia A", "Copiar"),
+				...textField("Nome da cópia", "Tipologia Z", "Tipologia A (cópia)"),
+				submit: click("button", "Copiar"),
+				cancel: CANCEL,
+				shows: ["Copiar Tipologia A"],
+				focusAfterCancel: byRole("button", "Ações da Tipologia A"),
+				focusAfterSave: () =>
+					screen.findByRole("button", { name: /^Tipologia Z/ }),
+				request: `POST ${base}/typologies`,
+			},
 			editRooms: {
 				open: () => pick("Ações da Tipologia A", "Editar cômodos"),
 				fill: async () => {
@@ -1432,6 +1444,7 @@ export const ROWS: Row[] = [
 	[48, "commonArea", "newDiscipline", "create-discipline", "entry"],
 	[49, "floor", "newDiscipline", "create-discipline", "entry"],
 	[50, "tower", "newDiscipline", "create-discipline", "entry"],
+	[51, "configuration", "copyTypology", "copy-typology", "full"],
 ];
 
 function rowsReturningFocus(rows: Row[]): Row[] {
@@ -1464,6 +1477,7 @@ export function describeRestorationRows(fileUrl: string) {
 			localStorage.clear();
 			vi.unstubAllGlobals();
 			onlineManager.setOnline(true);
+			toast.dismiss();
 		});
 
 		test.each(entryRows)(
@@ -1503,6 +1517,7 @@ export function describeRestorationRows(fileUrl: string) {
 		afterEach(() => {
 			localStorage.clear();
 			vi.unstubAllGlobals();
+			toast.dismiss();
 		});
 
 		test.each(focusRows)(

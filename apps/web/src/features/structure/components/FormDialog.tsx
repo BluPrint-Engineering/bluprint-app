@@ -56,6 +56,17 @@ export function FormDialog({
 		returnFocus()?.focus();
 	}
 
+	function focusFirstField(event: Event) {
+		const field = document
+			.getElementById(formId)
+			?.querySelector<HTMLElement>(
+				"textarea, input:not([type=radio]):not([type=checkbox])",
+			);
+		if (!field) return;
+		event.preventDefault();
+		field.focus();
+	}
+
 	const form = (
 		<form
 			id={formId}
@@ -128,6 +139,7 @@ export function FormDialog({
 	return (
 		<Drawer open onOpenChange={handleOpenChange} dismissible={!pending}>
 			<DrawerContent
+				onOpenAutoFocus={focusFirstField}
 				onCloseAutoFocus={focusOpener}
 				{...(description === undefined && { "aria-describedby": undefined })}
 			>
@@ -137,7 +149,7 @@ export function FormDialog({
 						<DrawerDescription>{description}</DrawerDescription>
 					)}
 				</DrawerHeader>
-				<div className="grid px-(--page-pad) pt-(--space-2) pb-(--space-5)">
+				<div className="grid min-h-0 overflow-y-auto px-(--page-pad) pt-(--space-2) pb-(--space-5)">
 					{form}
 				</div>
 				<DrawerFooter className="flex-col">

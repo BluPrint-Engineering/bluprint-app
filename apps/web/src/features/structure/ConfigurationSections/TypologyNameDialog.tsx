@@ -23,7 +23,10 @@ import {
 	useUpdateTypologyMutation,
 } from "../api";
 import { FormDialog } from "../components/FormDialog";
-import { TYPOLOGY_NAME_TAKEN_TEXT, typologyNameError } from "./typologyNames";
+import {
+	TYPOLOGY_NAME_TAKEN_TEXT,
+	typologyNameError,
+} from "../components/typologyNames";
 import {
 	CHANGED_TEXT,
 	changedTitleText,

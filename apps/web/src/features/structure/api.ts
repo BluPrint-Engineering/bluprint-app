@@ -583,7 +583,7 @@ export function useResetTypologyMutation(projectId: string, unitId: string) {
 function useTypologyMutation<Variables, Result>(
 	projectId: string,
 	send: (variables: Variables) => Promise<Result>,
-	kind?: "create-typology" | "update-typology",
+	kind?: "create-typology" | "copy-typology" | "update-typology",
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -606,18 +606,22 @@ function useTypologyMutation<Variables, Result>(
 	});
 }
 
-export function useCreateTypologyMutation(projectId: string) {
+function useTypologyCreation<Variables>(
+	projectId: string,
+	toBody: (variables: Variables) => CreateTypology,
+	kind: "create-typology" | "copy-typology",
+) {
 	const queryClient = useQueryClient();
 	return useTypologyMutation(
 		projectId,
-		async (body: CreateTypology) => {
+		async (variables: Variables) => {
 			const created = await apiFetch(
 				`/projects/${projectId}/typologies`,
 				typologySchema,
 				{
 					method: "POST",
 					headers: JSON_HEADERS,
-					body: JSON.stringify(body),
+					body: JSON.stringify(toBody(variables)),
 				},
 			);
 			queryClient.setQueryData(
@@ -629,7 +633,27 @@ export function useCreateTypologyMutation(projectId: string) {
 			);
 			return created;
 		},
+		kind,
+	);
+}
+
+export function useCreateTypologyMutation(projectId: string) {
+	return useTypologyCreation(
+		projectId,
+		(body: CreateTypology) => body,
 		"create-typology",
+	);
+}
+
+export interface CopyTypology extends CreateTypology {
+	copy: { typologyId: string; name: string };
+}
+
+export function useCopyTypologyMutation(projectId: string) {
+	return useTypologyCreation(
+		projectId,
+		({ copy: _copy, ...body }: CopyTypology) => body,
+		"copy-typology",
 	);
 }
 

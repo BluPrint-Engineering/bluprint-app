@@ -716,6 +716,8 @@ export function typologyServer(
 		if (answered) return answered;
 
 		if (method === "POST" && url.pathname === list && body) {
+			const existing = typologies.find((each) => each.id === body.id);
+			if (existing) return json(existing, 201);
 			const created: Typology = {
 				id: String(body.id),
 				name: String(body.name),
