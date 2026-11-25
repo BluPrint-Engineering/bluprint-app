@@ -212,7 +212,7 @@ export default async function structureConfiguration({ page, shot, expect, query
 	const before = await stored("Tipologia B");
 	await menu("Tipologia B", "Editar cômodos");
 	await savedElsewhere("Tipologia B", "Tipologia Z");
-	await page.getByRole("textbox", { name: "Novo cômodo" }).fill("Lavabo");
+	await page.getByRole("combobox", { name: "Novo cômodo" }).fill("Lavabo");
 	await page.keyboard.press("Enter");
 	await page.getByRole("button", { name: "Salvar" }).click();
 	await expect(page.getByText("A Tipologia Z mudou")).toBeVisible();
@@ -225,7 +225,7 @@ export default async function structureConfiguration({ page, shot, expect, query
 	await expect(page.getByRole("button", { name: "Tirar Lavabo" })).toHaveCount(0);
 	await expect(page.getByText("A Tipologia Z mudou")).toHaveCount(0);
 	await page.getByRole("button", { name: "Salvar" }).click();
-	await expect(page.getByRole("textbox", { name: "Novo cômodo" })).toHaveCount(0);
+	await expect(page.getByRole("combobox", { name: "Novo cômodo" })).toHaveCount(0);
 	expect(await stored("Tipologia Z")).toEqual({ version: before.version + 1, rooms: before.rooms });
 
 	await menu("Tipologia Z", "Renomear");
