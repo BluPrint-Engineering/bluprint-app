@@ -111,6 +111,20 @@ function typologiesApi({
 	return { handler, writes: server.writes, server };
 }
 
+function listGoesOffline(api: ReturnType<typeof typologiesApi>) {
+	const state = { offline: false };
+	const handler = combine(
+		(url, init) =>
+			state.offline &&
+			(init?.method ?? "GET") === "GET" &&
+			url.pathname === `/api/projects/${OBRA.id}/typologies`
+				? problem(500, "INTERNAL_ERROR")
+				: undefined,
+		api.handler,
+	);
+	return { handler, state };
+}
+
 async function openConfiguration(handler: ApiHandler, first = "Tipologia A") {
 	const stubbed = stubApi(signedIn, { api: handler });
 	renderAt(CONFIG_PATH);
@@ -1257,6 +1271,34 @@ describe("a tipologia saved by someone else meanwhile", () => {
 		expect(nth(api.writes, 1).body).toMatchObject({ version: 1 });
 	});
 
+	test("says the save failed, not that someone else saved, when the list cannot be reloaded after the refusal", async () => {
+		const api = typologiesApi();
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		api.server.saveElsewhere(tipologiaB.id, {
+			rooms: [...tipologiaB.rooms, SUITE],
+		});
+		list.state.offline = true;
+		await userEvent.click(screen.getByRole("button", { name: "Tirar Quarto" }));
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("Não foi possível salvar"),
+		).toBeInTheDocument();
+		expect(screen.queryByText("A Tipologia B mudou")).toBeNull();
+		expect(tags()).toEqual(["Tirar Sala", "Tirar Banheiro"]);
+
+		list.state.offline = false;
+		await userEvent.click(
+			screen.getByRole("button", { name: "Tentar de novo" }),
+		);
+
+		expect(await screen.findByText("A Tipologia B mudou")).toBeInTheDocument();
+		expect(nth(api.writes, 1).body).toMatchObject({ version: 1 });
+	});
+
 	test("closes the edit and says so when someone deleted the tipologia", async () => {
 		const { server } = await brunoEditsRooms();
 		server.deleteElsewhere(tipologiaB.id);
@@ -1367,23 +1409,14 @@ describe("a tipologia renamed over an old version", () => {
 	});
 
 	test("sends the version of its own rename when the list fails to reload after it", async () => {
-		let offline = false;
 		const api = typologiesApi({
 			answer: () => {
-				offline = true;
+				list.state.offline = true;
 				return undefined;
 			},
 		});
-		const handler = combine(
-			(url, init) =>
-				offline &&
-				(init?.method ?? "GET") === "GET" &&
-				url.pathname === `/api/projects/${OBRA.id}/typologies`
-					? problem(500, "INTERNAL_ERROR")
-					: undefined,
-			api.handler,
-		);
-		await openConfiguration(handler);
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
 		await chooseFromMenu("Tipologia B", "Renomear");
 		await typeName("Tipologia Y");
 		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
@@ -1398,6 +1431,36 @@ describe("a tipologia renamed over an old version", () => {
 		expect(nth(api.writes, 1).body).toEqual({
 			version: 2,
 			name: "Tipologia X",
+		});
+	});
+
+	test("says the rename failed, not that someone else saved, when the list cannot be reloaded after the refusal", async () => {
+		const api = typologiesApi();
+		const list = listGoesOffline(api);
+		await openConfiguration(list.handler);
+		await chooseFromMenu("Tipologia B", "Renomear");
+		api.server.saveElsewhere(tipologiaB.id, {
+			rooms: [...tipologiaB.rooms, SUITE],
+		});
+		list.state.offline = true;
+		await typeName("Tipologia Y");
+
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await dialog().findByText(/Não foi possível salvar a tipologia/),
+		).toBeInTheDocument();
+		expect(dialog().queryByText("A Tipologia B mudou")).toBeNull();
+
+		list.state.offline = false;
+		await userEvent.click(dialog().getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await dialog().findByText("A Tipologia B mudou"),
+		).toBeInTheDocument();
+		expect(nth(api.writes, 1).body).toEqual({
+			version: 1,
+			name: "Tipologia Y",
 		});
 	});
 

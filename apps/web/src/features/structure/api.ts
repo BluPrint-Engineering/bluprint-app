@@ -584,7 +584,6 @@ function useTypologyMutation<Variables, Result>(
 	projectId: string,
 	send: (variables: Variables) => Promise<Result>,
 	kind?: "create-typology" | "update-typology",
-	onFailure?: (error: Error, variables: Variables) => Promise<void>,
 ) {
 	const queryClient = useQueryClient();
 	return useMutation({
@@ -597,13 +596,12 @@ function useTypologyMutation<Variables, Result>(
 				}),
 				queryClient.invalidateQueries({ queryKey: ["projects"] }),
 			]),
-		onError: (error, variables) => {
+		onError: (error) => {
 			if (isProjectDelivered(error)) {
 				return queryClient.invalidateQueries({
 					queryKey: projectQueryOptions(projectId).queryKey,
 				});
 			}
-			return onFailure?.(error, variables);
 		},
 	});
 }
@@ -647,6 +645,12 @@ export function useUpdateTypologyMutation(
 			typologyId,
 			...body
 		}: { typologyId: string } & UpdateTypology) => {
+			const known = now(typologyId);
+			const reload = () =>
+				queryClient.fetchQuery({
+					...typologiesQueryOptions(projectId),
+					staleTime: 0,
+				});
 			const result = await apiFetch(
 				`/projects/${projectId}/typologies/${typologyId}`,
 				updateTypologyResultSchema,
@@ -655,7 +659,14 @@ export function useUpdateTypologyMutation(
 					headers: JSON_HEADERS,
 					body: JSON.stringify(body),
 				},
-			);
+			).catch(async (error: unknown) => {
+				if (isTypologyChanged(error)) await reload();
+				if (isTypologyGone(error)) {
+					await reload().catch(() => undefined);
+					if (known) onGone?.(known);
+				}
+				throw error;
+			});
 			queryClient.setQueryData(
 				typologiesQueryOptions(projectId).queryKey,
 				(current) =>
@@ -668,15 +679,6 @@ export function useUpdateTypologyMutation(
 			return result;
 		},
 		"update-typology",
-		async (error, { typologyId }) => {
-			const gone = isTypologyGone(error);
-			if (!gone && !isTypologyChanged(error)) return;
-			const known = now(typologyId);
-			await queryClient
-				.fetchQuery({ ...typologiesQueryOptions(projectId), staleTime: 0 })
-				.catch(() => undefined);
-			if (gone && known) onGone?.(known);
-		},
 	);
 }
 
