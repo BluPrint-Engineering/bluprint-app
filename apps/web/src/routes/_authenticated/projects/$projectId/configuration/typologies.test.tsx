@@ -455,6 +455,38 @@ describe("searching Tipologias (C5)", () => {
 		expect(card().getByText("Tipologia A")).toBeInTheDocument();
 		expect(createButton("Nova tipologia")).toBeInTheDocument();
 	});
+
+	test("forgets the search when the list drops to 6 and comes back empty at 7", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await userEvent.type(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+			"co",
+		);
+		await chooseFromMenu("Cobertura", "Excluir tipologia");
+		await screen.findByText("Cobertura excluída.");
+		await chooseFromMenu("Corredor", "Excluir tipologia");
+		await waitFor(() =>
+			expect(
+				card().queryByRole("textbox", { name: "Buscar tipologia" }),
+			).not.toBeInTheDocument(),
+		);
+
+		await userEvent.click(createButton("Nova tipologia"));
+		const dialog = await screen.findByRole("dialog", {
+			name: "Nova tipologia",
+		});
+		await userEvent.type(within(dialog).getByLabelText("Nome"), "Tipologia E");
+		await userEvent.click(
+			within(dialog).getByRole("button", { name: "Criar" }),
+		);
+
+		expect(
+			await card().findByRole("textbox", { name: "Buscar tipologia" }),
+		).toHaveValue("");
+		expect(card().getByText("Tipologia A")).toBeInTheDocument();
+		expect(card().getByText("Hall social")).toBeInTheDocument();
+	});
 });
 
 describe("creating a tipologia", () => {

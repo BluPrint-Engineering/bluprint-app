@@ -151,6 +151,7 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 	const state = query.data ? undefined : firstLoadState(query);
 	const typologies = query.data?.typologies ?? [];
 	const searchable = typologies.length >= SEARCH_FROM;
+	if (!searchable && search !== "") setSearch("");
 	const searching = searchable && search.trim() !== "";
 	const editing =
 		editable && typologies.some(({ id }) => id === editingId)
