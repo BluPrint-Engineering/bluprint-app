@@ -4,15 +4,10 @@ import {
 	type StructureCounts,
 	tidyLocationName,
 } from "@bluprint/shared";
+import type { ReserveParts } from "../reserveText";
+import { isBlankRange, towerFloors } from "./floorRanges";
 import { typologyKeyFor } from "./typologyRules";
-import {
-	FLOOR_HALL,
-	type ParsedTower,
-	parseTower,
-	SINGLE_TOWER_NAME,
-	unitName,
-	type WizardDraft,
-} from "./wizardDraft";
+import { FLOOR_HALL, SINGLE_TOWER_NAME, type WizardDraft } from "./wizardDraft";
 
 export interface PlanArea {
 	key: string;
@@ -31,11 +26,15 @@ export interface PlanFloor {
 	areas: PlanArea[];
 }
 
+export type PlanTowerState = "valid" | "blank" | "invalid";
+
 export interface PlanTower {
 	key: string;
 	name: string;
 	floors: PlanFloor[];
-	valid: boolean;
+	state: PlanTowerState;
+	units: number;
+	numberedFloors: number;
 }
 
 export interface PlanTypologyCount {
@@ -51,6 +50,8 @@ export interface Plan {
 	towers: PlanTower[];
 	typologyCounts: PlanTypologyCount[];
 	untyped: number;
+	complete: boolean;
+	spend: ReserveParts;
 }
 
 export const floorName = (floor: number) => `${floor}º andar`;
@@ -96,6 +97,12 @@ export function buildPlan(
 		existingTypes.has(key) ? key : idFor(typologyIdKey(key));
 	const typedUnits = new Map<string, number>();
 	let untyped = 0;
+	const spend: ReserveParts = {
+		units: 0,
+		floorHalls: 0,
+		entranceHalls: 0,
+		otherAreas: 0,
+	};
 
 	const several = draft.towers.length > 1;
 	const towers: PlanTower[] = [];
@@ -106,28 +113,37 @@ export function buildPlan(
 			: several
 				? tower.name.trim()
 				: SINGLE_TOWER_NAME;
-		const parsed: ParsedTower | undefined = parseTower(tower);
+		const parsed = towerFloors(tower.ranges, draft.numbering);
 		if (!parsed) {
-			towers.push({ key: tower.key, name, floors: [], valid: false });
+			towers.push({
+				key: tower.key,
+				name,
+				floors: [],
+				state: tower.ranges.every(isBlankRange) ? "blank" : "invalid",
+				units: 0,
+				numberedFloors: 0,
+			});
 			return;
 		}
 
+		const towerKey = `tower:${tower.key}`;
 		const towerId =
-			draft.extend?.towerId ??
-			add(`tower:${towerIndex}`, null, "tower", name, towerIndex);
+			draft.extend?.towerId ?? add(towerKey, null, "tower", name, towerIndex);
 		const floors: PlanFloor[] = [];
 		let position = 0;
+		let towerUnits = 0;
 
 		if (tower.ground) {
 			const groundId = add(
-				`tower:${towerIndex}:ground`,
+				`${towerKey}:ground`,
 				towerId,
 				"floor",
 				GROUND_FLOOR,
 				position++,
 			);
-			const hallKey = `tower:${towerIndex}:ground:hall`;
+			const hallKey = `${towerKey}:ground:hall`;
 			add(hallKey, groundId, "common_area", GROUND_HALL, 0);
+			spend.entranceHalls++;
 			floors.push({
 				label: GROUND_FLOOR,
 				added: false,
@@ -136,8 +152,8 @@ export function buildPlan(
 			});
 		}
 
-		for (let number = parsed.first; number <= parsed.last; number++) {
-			const floorKey = `tower:${towerIndex}:floor:${number}`;
+		for (const { number, stacks } of parsed) {
+			const floorKey = `${towerKey}:floor:${number}`;
 			const floorId = add(
 				floorKey,
 				towerId,
@@ -145,32 +161,48 @@ export function buildPlan(
 				floorName(number),
 				position++,
 			);
-			const units: PlanUnit[] = [];
-			for (let at = 0; at < parsed.perFloor; at++) {
-				const name = unitName(number, at, draft.numbering);
-				const ruled = typologyKeyFor(draft.rules, towerIndex, number, at + 1);
+			const units: PlanUnit[] = stacks.map((stack, at) => {
+				const name = `${number}${stack.label}`;
+				const ruled = typologyKeyFor(
+					draft.rules,
+					towerIndex,
+					number,
+					stack.position,
+				);
 				const typeKey =
 					ruled !== null && typologyNames.has(ruled) ? ruled : null;
-				add(`${floorKey}:unit:${at}`, floorId, "unit", name, at, typeKey);
-				units.push({
+				add(
+					`${floorKey}:unit:${stack.position}`,
+					floorId,
+					"unit",
+					name,
+					at,
+					typeKey,
+				);
+				if (typeKey === null) untyped++;
+				else typedUnits.set(typeKey, (typedUnits.get(typeKey) ?? 0) + 1);
+				return {
 					name,
 					typology:
 						typeKey === null ? null : (typologyNames.get(typeKey) ?? null),
-				});
-				if (typeKey === null) untyped++;
-				else typedUnits.set(typeKey, (typedUnits.get(typeKey) ?? 0) + 1);
-			}
+				};
+			});
+			towerUnits += units.length;
 
 			const names: string[] = [];
-			if (tower.hall) names.push(FLOOR_HALL);
+			if (tower.hall) {
+				names.push(FLOOR_HALL);
+				spend.floorHalls++;
+			}
 			for (const area of draft.floorAreas) {
 				if (area.tower === towerIndex && Number(area.floor) === number) {
 					names.push(area.name.trim());
+					spend.otherAreas++;
 				}
 			}
 			const areas = names.map((name, at) => {
 				const key = `${floorKey}:area:${at}`;
-				add(key, floorId, "common_area", name, parsed.perFloor + at);
+				add(key, floorId, "common_area", name, stacks.length + at);
 				return { key, name };
 			});
 
@@ -181,20 +213,29 @@ export function buildPlan(
 				areas,
 			});
 		}
+		spend.units += towerUnits;
 
 		if (several) {
 			draft.towerAreas.forEach((area, at) => {
 				add(
-					`tower:${towerIndex}:area:${at}`,
+					`${towerKey}:area:${at}`,
 					towerId,
 					"common_area",
 					area.trim(),
 					position + at,
 				);
+				spend.otherAreas++;
 			});
 		}
 
-		towers.push({ key: tower.key, name, floors, valid: true });
+		towers.push({
+			key: tower.key,
+			name,
+			floors,
+			state: "valid",
+			units: towerUnits,
+			numberedFloors: parsed.length,
+		});
 	});
 
 	draft.projectAreas.forEach((area, at) => {
@@ -205,6 +246,7 @@ export function buildPlan(
 			area.trim(),
 			draft.towers.length + at,
 		);
+		spend.otherAreas++;
 	});
 
 	const count = (type: NewLocation["type"]) =>
@@ -238,5 +280,10 @@ export function buildPlan(
 			commonAreas: count("common_area"),
 		},
 		towers,
+		complete: towers.every(({ state }) => state === "valid"),
+		spend,
 	};
 }
+
+export const reserveUsed = (spend: ReserveParts) =>
+	spend.units + spend.floorHalls + spend.entranceHalls + spend.otherAreas;

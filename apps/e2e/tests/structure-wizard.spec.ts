@@ -35,9 +35,22 @@ async function createProject(page: Page, name: string, units: string) {
 	).toBeVisible();
 }
 
-async function describeTower(page: Page, last: string, perFloor: string) {
-	await page.getByLabel("Último andar").fill(last);
-	await page.getByLabel("Unidades por andar").fill(perFloor);
+async function describeRange(
+	page: Page,
+	at: number,
+	range: { first?: string; last: string; finals: string },
+) {
+	if (range.first !== undefined) {
+		await page
+			.getByLabel("Primeiro andar", { exact: true })
+			.nth(at)
+			.fill(range.first);
+	}
+	await page
+		.getByLabel("Último andar", { exact: true })
+		.nth(at)
+		.fill(range.last);
+	await page.getByLabel("Finais", { exact: true }).nth(at).fill(range.finals);
 }
 
 async function continueTo(page: Page, step: string) {
@@ -57,7 +70,13 @@ test("a new account reserves units for a project, builds its structure with the 
 		page.getByRole("heading", { level: 1, name: "Montar estrutura" }),
 	).toBeVisible();
 
-	await describeTower(page, "3", "4");
+	await describeRange(page, 0, { first: "1", last: "2", finals: "01, 04" });
+	await page.getByRole("button", { name: "Faixa", exact: true }).click();
+	await expect(
+		page.getByLabel("Primeiro andar", { exact: true }).nth(1),
+	).toHaveValue("3");
+	await describeRange(page, 1, { last: "3", finals: "1 4" });
+	await expect(page.getByText("Total: 12 unidades em 3 andares")).toBeVisible();
 	await continueTo(page, "Áreas comuns");
 	await page.getByLabel("Área comum da obra").fill("Guarita");
 	await page.getByLabel("Área comum da obra").press("Enter");
@@ -76,12 +95,15 @@ test("a new account reserves units for a project, builds its structure with the 
 		page.getByText("1 torre · 4 andares · 12 unidades"),
 	).toBeVisible();
 	await expect(
-		page.getByText("5 áreas comuns · Tipologia A: 12"),
+		page.getByText("2 áreas comuns · Tipologia A: 12"),
 	).toBeVisible();
 	await expect(
 		page.getByText(
-			"Usa 17 das 75 unidades que restam nesta obra. Depois de criar, sobram 58.",
+			/^Esta estrutura usa\s14 de 75 reservadas\. Depois de criar, sobram\s61\.$/,
 		),
+	).toBeVisible();
+	await expect(
+		page.getByText("12 unidades + 1 hall de entrada + 1 outra área comum"),
 	).toBeVisible();
 
 	await page.getByRole("button", { name: "Criar estrutura" }).click();
@@ -150,15 +172,14 @@ test("a project whose reservation is smaller than the plan cannot be sent", asyn
 	await createProject(page, "Casa Menor", "5");
 
 	await page.getByRole("link", { name: "Montar estrutura" }).click();
-	await describeTower(page, "3", "4");
+	await describeRange(page, 0, { first: "1", last: "3", finals: "01, 04" });
 	await continueTo(page, "Áreas comuns");
 	await continueTo(page, "Tipologias");
 	await continueTo(page, "Prévia");
 
+	await expect(page.getByText("Faltam 8 unidades na reserva")).toBeVisible();
 	await expect(
-		page.getByText(
-			/Esta estrutura tem 16 unidades e a obra tem\s5\. Tire 11 unidades ou aumente a reserva\./,
-		),
+		page.getByText(/Esta estrutura usa\s13 e a obra ainda tem\s5\./),
 	).toBeVisible();
 	await expect(
 		page.getByRole("button", { name: "Alterar reserva" }),

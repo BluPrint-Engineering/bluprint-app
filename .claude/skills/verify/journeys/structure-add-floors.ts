@@ -27,7 +27,7 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 	await expect(page.getByRole("heading", { level: 1, name: "Adicionar andares à Torre B" })).toBeVisible();
 	await expect(page.getByText(/^A Torre B tem hoje \d+ andares, do 1º ao 10º, com 2 unidades por andar\.$/)).toBeVisible();
 	await expect(page.getByRole("textbox", { name: "Do andar", exact: true })).toHaveValue("11");
-	await expect(page.getByRole("textbox", { name: "Unidades por andar" })).toHaveValue("2");
+	await expect(page.getByRole("textbox", { name: "Finais", exact: true })).toHaveValue("01, 02");
 	await shot("w9-add-floors");
 
 	await page.getByRole("textbox", { name: "Último andar" }).fill("12");
@@ -37,7 +37,8 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 		await page.getByRole("button", { name: "Continuar · Prévia" }).click();
 	}
 	await expect(page.getByText("Torre B ganha 2 andares e 4 unidades")).toBeVisible();
-	await expect(page.getByText(/^Usa 6 das \d+ unidades que restam nesta obra\. Depois de adicionar, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText(/^Estes andares usam\s6 das \d+ que restam na reserva\. Depois de adicionar, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText("4 unidades + 2 halls de andar")).toBeVisible();
 	await shot("w9-preview");
 
 	await page.getByRole("button", { name: "Adicionar 2 andares" }).click();

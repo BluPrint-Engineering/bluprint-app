@@ -51,6 +51,7 @@ A journey is a `.ts` file whose default export receives `{ page, context, shot, 
 
 - `page`, `context`: Playwright, with `baseURL` set, so `page.goto("/projects")` works.
 - `shot(name)`: full-page screenshot into the evidence dir, numbered in order. It grows the viewport height to the page's scroll height for the capture and restores it, so a page taller than the viewport is captured whole without a width change.
+- `shot(name, { screenOnly: true })`: only what the screen shows at the current scroll, the way the user sees it. A full-page capture draws a `position: fixed` element (the phone wizard's bottom bar) where it sits in the grown viewport, in the middle of the image, so it cannot show whether that element covers content: scroll first (`page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight))`), then take the screen.
 - `note(line)`: appends a line to the device log.
 - `expect`: Playwright's `expect`, web-first assertions included.
 - `query(sql, params)`: rows from the instance database, on a read-only connection, for proving side effects.

@@ -1,10 +1,13 @@
 import type { ProjectSummary, Structure, TypologyList } from "@bluprint/shared";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { Navigate } from "@tanstack/react-router";
+import { Link, Navigate } from "@tanstack/react-router";
+import { Lock } from "lucide-react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
 import { NotFound } from "@/components/NotFound";
 import { BackLink, PageBand, PageMain } from "@/components/PageBand";
+import { StateBlock } from "@/components/StateBlock";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { firstLoadState } from "@/lib/firstLoadState";
 import {
@@ -20,6 +23,22 @@ import { extendedDraft } from "./wizardDraft";
 
 const H1 =
 	"text-[1.75rem] leading-[1.15] font-semibold tracking-tight text-balance md:text-4xl";
+
+function DeliveredBlock({ projectId }: { projectId: string }) {
+	return (
+		<StateBlock
+			icon={Lock}
+			title="A obra foi entregue"
+			description="A estrutura não pode mais ser alterada. Dá para conferir tudo na fachada e na configuração."
+		>
+			<Button asChild size="lg">
+				<Link to="/projects/$projectId" params={{ projectId }}>
+					Voltar para a obra
+				</Link>
+			</Button>
+		</StateBlock>
+	);
+}
 
 export function StructureWizardPage({
 	projectId,
@@ -86,11 +105,13 @@ export function StructureWizardPage({
 						</p>
 					)}
 				</PageBand>
-				{!delivered && (
-					<PageMain>
+				<PageMain>
+					{delivered ? (
+						<DeliveredBlock projectId={project.id} />
+					) : (
 						<StructureWizard project={project} />
-					</PageMain>
-				)}
+					)}
+				</PageMain>
 			</>
 		);
 	}
@@ -175,14 +196,16 @@ function AddFloorsPage({
 						</p>
 					)}
 				</PageBand>
-				{!delivered && (
-					<PageMain>
+				<PageMain>
+					{delivered ? (
+						<DeliveredBlock projectId={project.id} />
+					) : (
 						<StructureWizard
 							project={project}
 							start={extendedDraft(tower, typologies.data.typologies, named)}
 						/>
-					</PageMain>
-				)}
+					)}
+				</PageMain>
 			</>
 		);
 	}

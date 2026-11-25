@@ -81,12 +81,12 @@ for (const device of devices) {
 	});
 
 	let shots = 0;
-	const shot = async (name: string) => {
+	const shot = async (name: string, options: { screenOnly?: boolean } = {}) => {
 		shots += 1;
 		const file = resolve(out, `${run}-${device}-${String(shots).padStart(2, "0")}-${name}.png`);
 		const viewport = page.viewportSize();
 		const scrollHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-		const grow = viewport !== null && scrollHeight > viewport.height;
+		const grow = !options.screenOnly && viewport !== null && scrollHeight > viewport.height;
 		if (grow) await page.setViewportSize({ width: viewport.width, height: scrollHeight });
 		try {
 			await page.screenshot({ path: file });
