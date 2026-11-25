@@ -154,6 +154,22 @@ describe("the room suggest field in a typology", () => {
 		expect(screen.queryByRole("alert")).toBeNull();
 	});
 
+	test("drops the refusal once a room picked from the reopened list is added", async () => {
+		await openEditor(["Sala"]);
+		const input = await field();
+
+		await userEvent.type(input, "sala{Enter}");
+		expect(await screen.findByRole("alert")).toHaveTextContent(
+			"Esse cômodo já está na tipologia.",
+		);
+		await userEvent.keyboard("{ArrowDown}");
+		await userEvent.click(screen.getByRole("option", { name: "Salão" }));
+
+		expect(rooms()).toEqual(["Sala", "Salão"]);
+		expect(screen.queryByRole("alert")).toBeNull();
+		expect(input).toBeValid();
+	});
+
 	test("adds the fixed spelling of a typed name, from the text and from the list", async () => {
 		await openEditor([]);
 		const input = await field();

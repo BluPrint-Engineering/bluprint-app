@@ -124,6 +124,7 @@ export function RoomSuggestField({
 			setRefused(maxMessage);
 			return;
 		}
+		setRefused(undefined);
 		onValueChange(name);
 		onAdd(name);
 	}
