@@ -1,4 +1,8 @@
-import type { ProjectSummary, Typology } from "@bluprint/shared";
+import type {
+	ProjectSummary,
+	Typology,
+	TypologyLocationType,
+} from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Plus } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
@@ -7,12 +11,13 @@ import { LockNote } from "@/components/LockNote";
 import { Button } from "@/components/ui/button";
 import { useSessionDraft } from "@/features/auth";
 import { firstLoadState } from "@/lib/firstLoadState";
+import { matchesSearch } from "@/utils/matchesSearch";
 import {
 	isTypologyInUse,
 	typologiesQueryOptions,
 	useDeleteTypologyMutation,
 } from "../api";
-import { STRUCTURE_LOCKED } from "../lockedText";
+import { plural } from "../plural";
 import { SectionCard, SectionNote } from "./SectionCard";
 import { SectionFailure, SectionSkeleton } from "./SectionLoad";
 import { TYPOLOGIES_SECTION_ID } from "./sectionIds";
@@ -22,49 +27,89 @@ import {
 	TypologyNameDialog,
 } from "./TypologyNameDialog";
 import { TypologyRow } from "./TypologyRow";
+import { TypologySearch } from "./TypologySearch";
+import { deleteInUseText } from "./typologySaveText";
 
-function typologyDraft(
+const LEAD =
+	"Cada unidade e cada área comum acompanha a sua tipologia. O que for mudado num local continua só nele.";
+const EMPTY =
+	"Nenhuma tipologia. Elas nascem no assistente, junto com a estrutura, ou aqui.";
+const LOCKED =
+	"A obra foi entregue: as tipologias não podem mais ser alteradas.";
+const SEARCH_FROM = 7;
+
+const GROUPS = [
+	{
+		locationType: "unit",
+		title: "Unidades",
+		empty: "Nenhuma tipologia de unidade.",
+		create: "Nova tipologia",
+	},
+	{
+		locationType: "common_area",
+		title: "Áreas comuns",
+		empty: "Nenhuma tipologia de área comum.",
+		create: "Nova tipologia de área comum",
+	},
+] as const satisfies readonly {
+	locationType: TypologyLocationType;
+	title: string;
+	empty: string;
+	create: string;
+}[];
+
+function isLocationType(value: unknown): value is TypologyLocationType {
+	return value === "unit" || value === "common_area";
+}
+
+function createdDraft(
 	variables: unknown,
-	mode: "create" | "update",
-): { typologyId?: string; rooms?: true } | undefined {
+): { locationType: TypologyLocationType } | undefined {
 	if (typeof variables !== "object" || variables === null) return undefined;
-	if (mode === "create") {
-		return "name" in variables && typeof variables.name === "string"
-			? {}
-			: undefined;
+	if (!("name" in variables) || typeof variables.name !== "string") {
+		return undefined;
 	}
+	return "locationType" in variables && isLocationType(variables.locationType)
+		? { locationType: variables.locationType }
+		: undefined;
+}
+
+function updatedDraft(
+	variables: unknown,
+): { typologyId: string; rooms: boolean } | undefined {
+	if (typeof variables !== "object" || variables === null) return undefined;
 	if (
 		!("typologyId" in variables) ||
 		typeof variables.typologyId !== "string"
 	) {
 		return undefined;
 	}
-	return "rooms" in variables && Array.isArray(variables.rooms)
-		? { typologyId: variables.typologyId, rooms: true }
-		: { typologyId: variables.typologyId };
+	return {
+		typologyId: variables.typologyId,
+		rooms: "rooms" in variables && Array.isArray(variables.rooms),
+	};
 }
-
-const LEAD =
-	"Cada unidade acompanha a sua tipologia; o que for mudado numa unidade continua só nela.";
-const EMPTY =
-	"Nenhuma tipologia. Elas nascem no assistente, junto com a estrutura, ou aqui.";
 
 export function TypologiesSection({ project }: { project: ProjectSummary }) {
 	const query = useQuery(typologiesQueryOptions(project.id));
 	const remove = useDeleteTypologyMutation(project.id);
-	const created = useSessionDraft("create-typology", (variables) =>
-		typologyDraft(variables, "create"),
-	);
-	const updated = useSessionDraft("update-typology", (variables) =>
-		typologyDraft(variables, "update"),
-	);
+	const created = useSessionDraft("create-typology", createdDraft);
+	const updated = useSessionDraft("update-typology", updatedDraft);
 	const [editingId, setEditingId] = useState<string>();
 	const [naming, setNaming] = useState<NameDialogTarget | undefined>(
-		created ? { mode: "create" } : undefined,
+		created
+			? { mode: "create", locationType: created.locationType }
+			: undefined,
 	);
-	const opened = useRef(false);
-	const newButton = useRef<HTMLButtonElement>(null);
+	const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
+	const [search, setSearch] = useState("");
+	const restoredUpdate = useRef(false);
+	const createButtons = useRef(
+		new Map<TypologyLocationType, HTMLButtonElement>(),
+	);
 	const triggers = useRef(new Map<string, HTMLButtonElement>());
+	const newRoomField = useRef<HTMLInputElement>(null);
+	const createdNow = useRef(false);
 	const closedEditor = useRef<string>(undefined);
 	useEffect(() => {
 		if (editingId !== undefined || closedEditor.current === undefined) return;
@@ -72,31 +117,42 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 		closedEditor.current = undefined;
 	}, [editingId]);
 	useEffect(() => {
-		if (opened.current || !updated || !query.data) return;
+		if (restoredUpdate.current || !updated || !query.data) return;
 		const typology = query.data.typologies.find(
 			(item) => item.id === updated.typologyId,
 		);
 		if (!typology) return;
-		opened.current = true;
+		restoredUpdate.current = true;
 		if (updated.rooms) setEditingId(typology.id);
 		else setNaming({ mode: "rename", typology });
 	}, [query.data, updated]);
 	const editable = project.status === "active";
 
-	function deleteTypology({ id, name }: Typology) {
-		remove.mutate(id, {
-			onSuccess: () => toast.success(`${name} excluída.`),
+	function deleteTypology(typology: Typology) {
+		remove.mutate(typology.id, {
+			onSuccess: () => toast.success(`${typology.name} excluída.`),
 			onError: (failure) =>
 				toast.error(
 					isTypologyInUse(failure)
-						? `Não foi possível excluir a ${name}: unidades passaram a usá-la.`
-						: `Não foi possível excluir a ${name}. Confira sua conexão e tente de novo.`,
+						? deleteInUseText(typology)
+						: `Não foi possível excluir a ${typology.name}. Confira sua conexão e tente de novo.`,
 				),
+		});
+	}
+
+	function toggle(id: string) {
+		setExpanded((current) => {
+			const next = new Set(current);
+			if (!next.delete(id)) next.add(id);
+			return next;
 		});
 	}
 
 	const state = query.data ? undefined : firstLoadState(query);
 	const typologies = query.data?.typologies ?? [];
+	const searchable = typologies.length >= SEARCH_FROM;
+	const searching = searchable && search.trim() !== "";
+	const editing = editable ? editingId : undefined;
 
 	return (
 		<SectionCard id={TYPOLOGIES_SECTION_ID} title="Tipologias">
@@ -111,67 +167,140 @@ export function TypologiesSection({ project }: { project: ProjectSummary }) {
 			{query.data && (
 				<>
 					<SectionNote>{typologies.length > 0 ? LEAD : EMPTY}</SectionNote>
-					<ul className="-mx-(--card-spacing) border-t border-border">
-						{typologies.map((typology) => (
-							<li
-								key={typology.id}
-								className="border-t border-border first:border-t-0"
+					{searchable && <TypologySearch value={search} onChange={setSearch} />}
+					{GROUPS.map((group) => {
+						const all = typologies.filter(
+							(typology) => typology.locationType === group.locationType,
+						);
+						const shown = searching
+							? all.filter(
+									(typology) =>
+										typology.id === editing ||
+										matchesSearch(typology.name, search),
+								)
+							: all;
+						const createOff = editing !== undefined;
+						return (
+							<section
+								key={group.locationType}
+								aria-labelledby={`${TYPOLOGIES_SECTION_ID}-${group.locationType}`}
+								className="-mx-(--card-spacing) grid"
 							>
-								{editable && editingId === typology.id ? (
-									<TypologyEditor
-										projectId={project.id}
-										typology={typology}
-										onClose={() => {
-											closedEditor.current = typology.id;
-											setEditingId(undefined);
-										}}
-									/>
-								) : (
-									<TypologyRow
-										typology={typology}
-										editable={editable}
-										onEditRooms={() => setEditingId(typology.id)}
-										onRename={() => setNaming({ mode: "rename", typology })}
-										onDelete={() => deleteTypology(typology)}
-										triggerRef={(trigger) => {
-											if (trigger) triggers.current.set(typology.id, trigger);
-											else triggers.current.delete(typology.id);
-										}}
-									/>
-								)}
-							</li>
-						))}
-						{editable && (
-							<li className="border-t border-border py-(--space-1) pl-(--space-2)">
-								<Button
-									type="button"
-									variant="ghost"
-									ref={newButton}
-									className="text-primary"
-									onClick={() => setNaming({ mode: "create" })}
-								>
-									<Plus aria-hidden="true" />
-									Nova tipologia
-								</Button>
-							</li>
-						)}
-					</ul>
-					{!editable && <LockNote>{STRUCTURE_LOCKED}</LockNote>}
+								<div className="flex items-baseline justify-between gap-(--space-2) px-(--space-4) pb-(--space-2)">
+									<h4
+										id={`${TYPOLOGIES_SECTION_ID}-${group.locationType}`}
+										className="text-base font-semibold"
+									>
+										{group.title}
+									</h4>
+									<span className="text-sm text-muted-foreground">
+										{plural(all.length, "tipologia", "tipologias")}
+									</span>
+								</div>
+								<ul className="border-t border-border">
+									{shown.map((typology) => (
+										<li
+											key={typology.id}
+											className="border-t border-border first:border-t-0"
+										>
+											{typology.id === editing ? (
+												<TypologyEditor
+													projectId={project.id}
+													typology={typology}
+													fieldRef={newRoomField}
+													onClose={() => {
+														closedEditor.current = typology.id;
+														setEditingId(undefined);
+													}}
+												/>
+											) : (
+												<TypologyRow
+													typology={typology}
+													expanded={expanded.has(typology.id)}
+													onToggle={() => toggle(typology.id)}
+													{...(editable && {
+														actions: {
+															editRoomsDisabled: editing !== undefined,
+															onEditRooms: () => setEditingId(typology.id),
+															onRename: () =>
+																setNaming({ mode: "rename", typology }),
+															onDelete: () => deleteTypology(typology),
+															triggerRef: (trigger) => {
+																if (trigger) {
+																	triggers.current.set(typology.id, trigger);
+																} else triggers.current.delete(typology.id);
+															},
+														},
+													})}
+												/>
+											)}
+										</li>
+									))}
+									{shown.length === 0 && (
+										<li className="px-(--space-4) py-(--space-3) text-sm text-muted-foreground">
+											{searching
+												? "Nenhuma tipologia com esse nome."
+												: group.empty}
+										</li>
+									)}
+									{editable && !searching && (
+										<li className="border-t border-border py-(--space-1) pl-(--space-2)">
+											<Button
+												type="button"
+												variant="ghost"
+												ref={(button) => {
+													if (button) {
+														createButtons.current.set(
+															group.locationType,
+															button,
+														);
+													} else
+														createButtons.current.delete(group.locationType);
+												}}
+												aria-disabled={createOff || undefined}
+												className="text-primary aria-disabled:pointer-events-none aria-disabled:opacity-50"
+												onClick={() => {
+													if (createOff) return;
+													setNaming({
+														mode: "create",
+														locationType: group.locationType,
+													});
+												}}
+											>
+												<Plus aria-hidden="true" />
+												{group.create}
+											</Button>
+										</li>
+									)}
+								</ul>
+							</section>
+						);
+					})}
+					{!editable && <LockNote>{LOCKED}</LockNote>}
 				</>
 			)}
 			{naming && (
 				<TypologyNameDialog
-					key={naming.mode === "rename" ? naming.typology.id : "create"}
+					key={
+						naming.mode === "rename" ? naming.typology.id : naming.locationType
+					}
 					projectId={project.id}
 					target={naming}
 					typologies={typologies}
 					onClose={() => setNaming(undefined)}
-					onCreated={(created) => setEditingId(created.id)}
-					returnFocus={() =>
-						naming.mode === "rename"
+					onCreated={(typology) => {
+						createdNow.current = true;
+						setEditingId(typology.id);
+					}}
+					returnFocus={() => {
+						if (createdNow.current) {
+							createdNow.current = false;
+							return newRoomField.current;
+						}
+						return naming.mode === "rename"
 							? triggers.current.get(naming.typology.id)
-							: newButton.current
-					}
+							: createButtons.current.get(naming.locationType);
+					}}
 				/>
 			)}
 		</SectionCard>

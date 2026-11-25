@@ -1143,7 +1143,7 @@ describe("structure wizard", () => {
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText("Já existe outra tipologia com esse nome."),
+				await screen.findByText("Esse nome já existe nesta obra."),
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(

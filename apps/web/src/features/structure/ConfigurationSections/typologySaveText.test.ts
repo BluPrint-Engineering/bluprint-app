@@ -1,6 +1,12 @@
 import type { Typology } from "@bluprint/shared";
 import { describe, expect, test } from "vitest";
-import { followersText, savedText, unitsChangedText } from "./typologySaveText";
+import {
+	deleteInUseText,
+	followersText,
+	savedText,
+	saveFailedText,
+	unitsChangedText,
+} from "./typologySaveText";
 
 function typology(
 	locationCount: number,
@@ -9,7 +15,7 @@ function typology(
 ): Typology {
 	return {
 		id: "0190b000-0000-7000-8000-000000000001",
-		name: locationType === "unit" ? "Tipologia A" : "Hall padrão",
+		name: locationType === "unit" ? "Tipologia B" : "Hall padrão",
 		locationType,
 		rooms: [],
 		locationCount,
@@ -27,36 +33,30 @@ describe("followersText", () => {
 });
 
 describe("unitsChangedText", () => {
-	test("says how many units change and that changed units keep their changes", () => {
-		expect(unitsChangedText(typology(44, 1))).toBe(
-			"Salvar muda as 44 unidades da Tipologia A. 1 unidade com alterações mantém o que foi mudado nela.",
+	test("says how many units change and that a changed location keeps its changes", () => {
+		expect(unitsChangedText(typology(18, 0))).toBe(
+			"Salvar muda as 18 unidades da Tipologia B. Um local com alterações mantém o que foi mudado nele.",
 		);
-		expect(unitsChangedText(typology(44, 3))).toBe(
-			"Salvar muda as 44 unidades da Tipologia A. 3 unidades com alterações mantêm o que foi mudado nelas.",
-		);
-	});
-
-	test("leaves the changes out when no unit has any", () => {
-		expect(unitsChangedText(typology(44, 0))).toBe(
-			"Salvar muda as 44 unidades da Tipologia A.",
+		expect(unitsChangedText(typology(18, 3))).toBe(
+			"Salvar muda as 18 unidades da Tipologia B. Um local com alterações mantém o que foi mudado nele.",
 		);
 	});
 
 	test("agrees with a single unit and with none", () => {
 		expect(unitsChangedText(typology(1, 0))).toBe(
-			"Salvar muda 1 unidade da Tipologia A.",
+			"Salvar muda 1 unidade da Tipologia B. Um local com alterações mantém o que foi mudado nele.",
 		);
 		expect(unitsChangedText(typology(0, 0))).toBe(
-			"Nenhuma unidade usa a Tipologia A ainda.",
+			"Nenhuma unidade usa a Tipologia B ainda.",
 		);
 	});
 
 	test("speaks of common areas for a common-area typology", () => {
-		expect(unitsChangedText(typology(12, 2, "common_area"))).toBe(
-			"Salvar muda as 12 áreas comuns da Hall padrão. 2 áreas comuns com alterações mantêm o que foi mudado nelas.",
+		expect(unitsChangedText(typology(16, 2, "common_area"))).toBe(
+			"Salvar muda as 16 áreas comuns da Hall padrão. Um local com alterações mantém o que foi mudado nele.",
 		);
 		expect(unitsChangedText(typology(1, 1, "common_area"))).toBe(
-			"Salvar muda 1 área comum da Hall padrão. 1 área comum com alterações mantém o que foi mudado nela.",
+			"Salvar muda 1 área comum da Hall padrão. Um local com alterações mantém o que foi mudado nele.",
 		);
 		expect(unitsChangedText(typology(0, 0, "common_area"))).toBe(
 			"Nenhuma área comum usa a Hall padrão ainda.",
@@ -66,24 +66,43 @@ describe("unitsChangedText", () => {
 
 describe("savedText", () => {
 	test("counts the units updated", () => {
-		expect(savedText(typology(44, 0), 44)).toBe(
-			"Tipologia A salva. 44 unidades atualizadas.",
+		expect(savedText(typology(18, 0), 18)).toBe(
+			"Tipologia B salva. 18 unidades atualizadas.",
 		);
-		expect(savedText(typology(44, 0), 1)).toBe(
-			"Tipologia A salva. 1 unidade atualizada.",
+		expect(savedText(typology(18, 0), 1)).toBe(
+			"Tipologia B salva. 1 unidade atualizada.",
 		);
 	});
 
 	test("counts the common areas updated", () => {
-		expect(savedText(typology(12, 0, "common_area"), 12)).toBe(
-			"Hall padrão salva. 12 áreas comuns atualizadas.",
+		expect(savedText(typology(16, 0, "common_area"), 16)).toBe(
+			"Hall padrão salva. 16 áreas comuns atualizadas.",
 		);
-		expect(savedText(typology(12, 0, "common_area"), 1)).toBe(
+		expect(savedText(typology(16, 0, "common_area"), 1)).toBe(
 			"Hall padrão salva. 1 área comum atualizada.",
 		);
 	});
 
 	test("says only that it saved when no unit changed", () => {
-		expect(savedText(typology(44, 0), 0)).toBe("Tipologia A salva.");
+		expect(savedText(typology(18, 0), 0)).toBe("Tipologia B salva.");
+	});
+});
+
+describe("saveFailedText", () => {
+	test("says the typology did not change", () => {
+		expect(saveFailedText(typology(18, 0))).toBe(
+			"A Tipologia B não mudou. Confira a conexão e tente de novo.",
+		);
+	});
+});
+
+describe("deleteInUseText", () => {
+	test("names the kind of location that began to use it", () => {
+		expect(deleteInUseText(typology(0, 0))).toBe(
+			"Não foi possível excluir a Tipologia B: unidades passaram a usá-la.",
+		);
+		expect(deleteInUseText(typology(0, 0, "common_area"))).toBe(
+			"Não foi possível excluir a Hall padrão: áreas comuns passaram a usá-la.",
+		);
 	});
 });

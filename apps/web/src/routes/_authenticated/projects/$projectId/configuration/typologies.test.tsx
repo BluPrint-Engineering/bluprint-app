@@ -1,11 +1,11 @@
 import {
 	PROJECT_DELIVERED,
+	type ProjectAccessRole,
 	type ProjectSummary,
 	ROOM_NAME_TAKEN,
 	TYPOLOGY_IN_USE,
 	TYPOLOGY_NAME_TAKEN,
 	type Typology,
-	type TypologyList,
 } from "@bluprint/shared";
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -24,31 +24,55 @@ import {
 	combine,
 	configurationSectionsApi,
 	emptyStructure,
+	type TypologyWrite,
 	typologyOf,
+	typologyServer,
 } from "@/test/structureApi";
 import { setViewport } from "@/test/viewport";
 
 const OBRA: ProjectSummary = { ...project(7), name: "Casa Moinhos" };
 const CONFIG_PATH = `/projects/${OBRA.id}/configuration`;
-const BASE = `/api/projects/${OBRA.id}`;
-const LOCKED = "A obra foi entregue: a estrutura não pode mais ser alterada.";
+const LOCKED =
+	"A obra foi entregue: as tipologias não podem mais ser alteradas.";
 
 const tipologiaA = typologyOf(
 	"Tipologia A",
 	["Sala", "Cozinha", "Sacada", "Quarto", "Banheiro", "Suíte", "Despensa"],
 	{ locations: 44, changed: 1 },
 );
-const tipologiaB = typologyOf("Tipologia B", ["Sala", "Quarto"], {
-	locations: 1,
-	changed: 0,
+const hallPadrao = typologyOf(
+	"Hall padrão",
+	["Circulação", "Escada", "Elevadores"],
+	{ locationType: "common_area", locations: 16 },
+);
+const tipologiaB = typologyOf("Tipologia B", ["Sala", "Quarto", "Banheiro"], {
+	locations: 18,
 });
-const tipologiaC = typologyOf("Tipologia C", ["Sala"]);
+const corredor = typologyOf("Corredor", ["Circulação"], {
+	locationType: "common_area",
+});
+const cobertura = typologyOf("Cobertura", []);
+const hallSocial = typologyOf("Hall social", ["Recepção"], {
+	locationType: "common_area",
+	locations: 1,
+});
+const duplex = typologyOf("Duplex", ["Sala"], { locations: 1 });
+const garagem = typologyOf("Garagem", ["Vagas"], {
+	locationType: "common_area",
+	locations: 2,
+});
 
-interface Write {
-	method: string;
-	path: string;
-	body: unknown;
-}
+const EIGHT = [
+	tipologiaA,
+	hallPadrao,
+	tipologiaB,
+	corredor,
+	cobertura,
+	hallSocial,
+	duplex,
+	garagem,
+];
+const SIX = [tipologiaA, hallPadrao, tipologiaB, corredor, cobertura, duplex];
 
 function problem(status: number, code: string, extra: object = {}) {
 	return json(
@@ -57,51 +81,66 @@ function problem(status: number, code: string, extra: object = {}) {
 	);
 }
 
+function deferred() {
+	let resolve: (response: Response) => void = () => {};
+	const promise = new Promise<Response>((done) => {
+		resolve = done;
+	});
+	return { promise, resolve };
+}
+
 function typologiesApi({
 	summary = OBRA,
-	list = { typologies: [tipologiaA, tipologiaB, tipologiaC] },
+	typologies = EIGHT,
 	answer,
 }: {
 	summary?: ProjectSummary;
-	list?: TypologyList;
-	answer?: (write: Write) => Promise<Response> | undefined;
+	typologies?: Typology[];
+	answer?: (
+		write: TypologyWrite,
+		attempt: number,
+	) => Promise<Response> | undefined;
 } = {}) {
-	const writes: Write[] = [];
-	let current = list;
+	const server = typologyServer(OBRA.id, typologies, answer);
 	const handler: ApiHandler = combine(
-		(url, init) => {
-			const method = init?.method ?? "GET";
-			if (url.pathname === BASE) return json(summary);
-			if (!url.pathname.startsWith(`${BASE}/typologies`)) return undefined;
-			if (method === "GET") return json(current);
-			const write = {
-				method,
-				path: url.pathname.slice(BASE.length),
-				body: init?.body ? (JSON.parse(String(init.body)) as unknown) : null,
-			};
-			writes.push(write);
-			return answer?.(write);
-		},
-		configurationSectionsApi(OBRA.id, emptyStructure, list),
+		(url) =>
+			url.pathname === `/api/projects/${OBRA.id}` ? json(summary) : undefined,
+		server.handler,
+		configurationSectionsApi(OBRA.id, emptyStructure),
 	);
-	return {
-		handler,
-		writes,
-		replace(next: TypologyList) {
-			current = next;
-		},
-	};
+	return { handler, writes: server.writes };
 }
 
-async function openConfiguration(handler: ApiHandler) {
+async function openConfiguration(handler: ApiHandler, first = "Tipologia A") {
 	const stubbed = stubApi(signedIn, { api: handler });
 	renderAt(CONFIG_PATH);
 	await screen.findByRole("heading", { level: 3, name: "Tipologias" });
-	await screen.findByText("Tipologia A");
+	await card().findByText(first);
 	return stubbed;
 }
 
 const card = () => within(screen.getByRole("region", { name: "Tipologias" }));
+const group = (name: "Unidades" | "Áreas comuns") =>
+	within(card().getByRole("region", { name }));
+const rowsOf = (name: "Unidades" | "Áreas comuns") =>
+	group(name)
+		.queryAllByRole("button", { expanded: false })
+		.filter((button) => !button.hasAttribute("aria-haspopup"))
+		.map((button) => button.firstElementChild?.textContent);
+const roomsUnder = (name: string) =>
+	within(
+		card()
+			.getByRole("button", { name: new RegExp(`^${name}`), expanded: true })
+			.closest("li") ?? document.body,
+	)
+		.getAllByRole("listitem")
+		.map((item) => item.textContent);
+const row = (name: string) =>
+	card().getByRole("button", { name: new RegExp(`^${name}`), expanded: false });
+const createButton = (name: string) => card().getByRole("button", { name });
+const field = () => screen.getByRole("textbox", { name: "Novo cômodo" });
+const removeButtons = () =>
+	screen.queryAllByRole("button", { name: /^Tirar / });
 
 async function chooseFromMenu(typeName: string, action: string) {
 	await userEvent.click(
@@ -110,7 +149,11 @@ async function chooseFromMenu(typeName: string, action: string) {
 	await userEvent.click(await screen.findByRole("menuitem", { name: action }));
 }
 
-function editedRooms(write: Write) {
+async function addRoom(name: string) {
+	await userEvent.type(field(), `${name}{Enter}`);
+}
+
+function sentRooms(write: TypologyWrite) {
 	return (write.body as { rooms: { id: string; name: string }[] }).rooms;
 }
 
@@ -119,65 +162,59 @@ afterEach(() => {
 	toast.dismiss();
 });
 
-describe("Tipologias on the configuration (C1)", () => {
-	test("lists each tipologia with its rooms and units, and the way to add one", async () => {
+describe("Tipologias in two groups (C1)", () => {
+	test("lists unit and common-area tipologias apart, each group with its total and in the order they were created", async () => {
 		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		expect(
 			card().getByText(
-				"Cada unidade acompanha a sua tipologia; o que for mudado numa unidade continua só nela.",
+				"Cada unidade e cada área comum acompanha a sua tipologia. O que for mudado num local continua só nele.",
 			),
 		).toBeInTheDocument();
-		expect(card().getByText("7 cômodos · 44 unidades")).toBeInTheDocument();
-		expect(card().getByText("2 cômodos · 1 unidade")).toBeInTheDocument();
-		expect(card().getByText("1 cômodo · 0 unidades")).toBeInTheDocument();
-		expect(
-			card().getByRole("button", { name: "Nova tipologia" }),
-		).toBeInTheDocument();
+		expect(group("Unidades").getByText("4 tipologias")).toBeInTheDocument();
+		expect(group("Áreas comuns").getByText("4 tipologias")).toBeInTheDocument();
+		expect(rowsOf("Unidades")).toEqual([
+			"Tipologia A",
+			"Tipologia B",
+			"Cobertura",
+			"Duplex",
+		]);
+		expect(rowsOf("Áreas comuns")).toEqual([
+			"Hall padrão",
+			"Corredor",
+			"Hall social",
+			"Garagem",
+		]);
 	});
 
-	test("counts common areas, not units, on a common-area tipologia", async () => {
-		const hallPadrao = typologyOf(
-			"Hall padrão",
-			["Circulação", "Escada", "Elevadores"],
-			{ locationType: "common_area", locations: 12, changed: 1 },
-		);
-		const corredor = typologyOf("Corredor", ["Circulação"], {
-			locationType: "common_area",
-			locations: 1,
-		});
-		const { handler } = typologiesApi({
-			list: { typologies: [tipologiaA, hallPadrao, corredor] },
-		});
+	test("counts rooms and units or common areas, and marks only the unused ones Sem uso", async () => {
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
-		expect(card().getByText("7 cômodos · 44 unidades")).toBeInTheDocument();
-		expect(card().getByText("3 cômodos · 12 áreas comuns")).toBeInTheDocument();
-		expect(card().getByText("1 cômodo · 1 área comum")).toBeInTheDocument();
-
-		await userEvent.click(
-			screen.getByRole("button", { name: "Ações da Hall padrão" }),
-		);
 		expect(
-			await screen.findByRole("menuitem", {
-				name: "Excluir (só sem áreas comuns)",
-			}),
-		).toHaveAttribute("aria-disabled", "true");
-		await userEvent.click(
-			screen.getByRole("menuitem", { name: "Editar cômodos" }),
-		);
-		expect(
-			await screen.findByText(
-				"Salvar muda as 12 áreas comuns da Hall padrão. 1 área comum com alterações mantém o que foi mudado nela.",
-			),
+			group("Unidades").getByText("7 cômodos · 44 unidades"),
 		).toBeInTheDocument();
+		expect(
+			group("Unidades").getByText("1 cômodo · 1 unidade"),
+		).toBeInTheDocument();
+		expect(
+			group("Áreas comuns").getByText("3 cômodos · 16 áreas comuns"),
+		).toBeInTheDocument();
+		expect(
+			group("Áreas comuns").getByText("1 cômodo · 1 área comum"),
+		).toBeInTheDocument();
+		expect(card().getAllByText("Sem uso")).toHaveLength(2);
+		expect(within(row("Cobertura")).getByText("Sem uso")).toBeInTheDocument();
+		expect(within(row("Corredor")).getByText("Sem uso")).toBeInTheDocument();
+		expect(
+			within(row("Corredor")).queryByText(/áreas comuns/),
+		).not.toBeInTheDocument();
 	});
 
-	test("explains where tipologias come from when there are none", async () => {
-		const { handler } = typologiesApi({ list: { typologies: [] } });
+	test("shows both groups empty and both ways to create on a project without tipologias (C8)", async () => {
+		const { handler } = typologiesApi({ typologies: [] });
 		stubApi(signedIn, { api: handler });
-
 		renderAt(CONFIG_PATH);
 
 		expect(
@@ -185,12 +222,36 @@ describe("Tipologias on the configuration (C1)", () => {
 				"Nenhuma tipologia. Elas nascem no assistente, junto com a estrutura, ou aqui.",
 			),
 		).toBeInTheDocument();
+		expect(group("Unidades").getByText("0 tipologias")).toBeInTheDocument();
+		expect(group("Áreas comuns").getByText("0 tipologias")).toBeInTheDocument();
 		expect(
-			card().getByRole("button", { name: "Nova tipologia" }),
+			group("Unidades").getByText("Nenhuma tipologia de unidade."),
 		).toBeInTheDocument();
+		expect(
+			group("Áreas comuns").getByText("Nenhuma tipologia de área comum."),
+		).toBeInTheDocument();
+		expect(
+			group("Unidades").getByRole("button", { name: "Nova tipologia" }),
+		).toBeInTheDocument();
+		expect(
+			group("Áreas comuns").getByRole("button", {
+				name: "Nova tipologia de área comum",
+			}),
+		).toBeInTheDocument();
+		expect(
+			card().queryByRole("textbox", { name: "Buscar tipologia" }),
+		).not.toBeInTheDocument();
 	});
 
-	test("offers the menu, and disables the exclusion while units follow the tipologia", async () => {
+	test("says 1 tipologia in a group of one", async () => {
+		const { handler } = typologiesApi({ typologies: [tipologiaA] });
+		await openConfiguration(handler);
+
+		expect(group("Unidades").getByText("1 tipologia")).toBeInTheDocument();
+		expect(group("Áreas comuns").getByText("0 tipologias")).toBeInTheDocument();
+	});
+
+	test("offers Editar cômodos, Renomear and Excluir, disabled while the tipologia is in use", async () => {
 		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
@@ -199,26 +260,55 @@ describe("Tipologias on the configuration (C1)", () => {
 		);
 
 		expect(
-			await screen.findByRole("menuitem", { name: "Editar cômodos" }),
-		).toBeInTheDocument();
+			(await screen.findAllByRole("menuitem")).map((item) => item.textContent),
+		).toEqual(["Editar cômodos", "Renomear", "Excluir (só sem uso)"]);
 		expect(
-			screen.getByRole("menuitem", { name: "Renomear" }),
-		).toBeInTheDocument();
-		expect(
-			screen.getByRole("menuitem", { name: "Excluir (só sem unidades)" }),
+			screen.getByRole("menuitem", { name: "Excluir (só sem uso)" }),
 		).toHaveAttribute("aria-disabled", "true");
-	});
+		await userEvent.keyboard("{Escape}");
 
-	test("lets the assistant edit tipologias too", async () => {
-		const { handler } = typologiesApi({
-			summary: { ...OBRA, role: "assistant" },
-		});
-		await openConfiguration(handler);
-
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ações da Hall padrão" }),
+		);
 		expect(
-			card().getByRole("button", { name: "Ações da Tipologia A" }),
-		).toBeInTheDocument();
+			await screen.findByRole("menuitem", { name: "Excluir (só sem uso)" }),
+		).toHaveAttribute("aria-disabled", "true");
+		await userEvent.keyboard("{Escape}");
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ações da Corredor" }),
+		);
+		expect(
+			await screen.findByRole("menuitem", { name: "Excluir tipologia" }),
+		).not.toHaveAttribute("aria-disabled");
 	});
+
+	test.each<ProjectAccessRole>(["admin", "manager", "assistant"])(
+		"gives the %s the same menus and buttons",
+		async (role) => {
+			const { handler } = typologiesApi({ summary: { ...OBRA, role } });
+			await openConfiguration(handler);
+
+			expect(
+				card()
+					.getAllByRole("button", { name: /^Ações da / })
+					.map((button) => button.getAttribute("aria-label")),
+			).toEqual([
+				"Ações da Tipologia A",
+				"Ações da Tipologia B",
+				"Ações da Cobertura",
+				"Ações da Duplex",
+				"Ações da Hall padrão",
+				"Ações da Corredor",
+				"Ações da Hall social",
+				"Ações da Garagem",
+			]);
+			expect(createButton("Nova tipologia")).toBeInTheDocument();
+			expect(createButton("Nova tipologia de área comum")).toBeInTheDocument();
+			await chooseFromMenu("Tipologia B", "Editar cômodos");
+			expect(field()).toBeInTheDocument();
+		},
+	);
 
 	test("lists Tipologias in the side navigation", async () => {
 		const { handler } = typologiesApi();
@@ -240,7 +330,7 @@ describe("Tipologias on the configuration (C1)", () => {
 		const { handler } = typologiesApi();
 		stubApi(signedIn, {
 			api: (url, init) =>
-				failing && url.pathname === `${BASE}/typologies`
+				failing && url.pathname === `/api/projects/${OBRA.id}/typologies`
 					? problem(500, "INTERNAL_ERROR")
 					: handler(url, init),
 		});
@@ -256,91 +346,342 @@ describe("Tipologias on the configuration (C1)", () => {
 	});
 });
 
-describe("editing a tipologia in place (C2)", () => {
-	test("opens the row with its rooms, the field and how many units change", async () => {
+describe("opening a tipologia's rooms (C2)", () => {
+	test("opens the rooms one per row on a tap, and keeps two rows open together", async () => {
 		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
-		await chooseFromMenu("Tipologia A", "Editar cômodos");
+		await userEvent.click(row("Tipologia B"));
+		await userEvent.click(row("Hall padrão"));
 
-		const tags = within(
-			screen.getByRole("button", { name: "Tirar Sala" }).closest("ul") ??
-				document.body,
-		);
-		expect(tags.getAllByRole("listitem")).toHaveLength(7);
+		const openRows = card().getAllByRole("button", { expanded: true });
 		expect(
-			screen.getByRole("textbox", { name: "Novo cômodo" }),
+			openRows.map((button) => button.firstElementChild?.textContent),
+		).toEqual(["Tipologia B", "Hall padrão"]);
+		expect(roomsUnder("Tipologia B")).toEqual(["Sala", "Quarto", "Banheiro"]);
+		expect(roomsUnder("Hall padrão")).toEqual([
+			"Circulação",
+			"Escada",
+			"Elevadores",
+		]);
+		expect(screen.queryByRole("button", { name: /^Tirar / })).toBeNull();
+	});
+
+	test("says Sem cômodo for a tipologia without rooms, and closes on a second tap", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+
+		await userEvent.click(row("Cobertura"));
+		expect(card().getByText("Sem cômodo.")).toBeInTheDocument();
+
+		await userEvent.click(
+			card().getByRole("button", { name: /^Cobertura/, expanded: true }),
+		);
+		expect(card().queryByText("Sem cômodo.")).not.toBeInTheDocument();
+	});
+});
+
+describe("searching Tipologias (C5)", () => {
+	test("offers the search with more than 6 tipologias and not with 6", async () => {
+		const eight = typologiesApi();
+		await openConfiguration(eight.handler);
+		expect(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+		).toHaveAttribute("placeholder", "Buscar tipologia");
+	});
+
+	test("hides the search with 6 tipologias", async () => {
+		const six = typologiesApi({ typologies: SIX });
+		await openConfiguration(six.handler);
+
+		expect(
+			card().queryByRole("textbox", { name: "Buscar tipologia" }),
+		).not.toBeInTheDocument();
+	});
+
+	test.each(["hall", "HALL", "háll"])(
+		"finds the two halls by %s, keeps the totals and hides the ways to create",
+		async (typed) => {
+			const { handler } = typologiesApi();
+			await openConfiguration(handler);
+
+			await userEvent.type(
+				card().getByRole("textbox", { name: "Buscar tipologia" }),
+				typed,
+			);
+
+			expect(rowsOf("Áreas comuns")).toEqual(["Hall padrão", "Hall social"]);
+			expect(
+				group("Unidades").getByText("Nenhuma tipologia com esse nome."),
+			).toBeInTheDocument();
+			expect(group("Unidades").getByText("4 tipologias")).toBeInTheDocument();
+			expect(
+				group("Áreas comuns").getByText("4 tipologias"),
+			).toBeInTheDocument();
+			expect(
+				card().queryByRole("button", { name: "Nova tipologia" }),
+			).not.toBeInTheDocument();
+			expect(
+				card().queryByRole("button", { name: "Nova tipologia de área comum" }),
+			).not.toBeInTheDocument();
+		},
+	);
+
+	test("brings everything back when the search is cleared", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		const search = card().getByRole("textbox", { name: "Buscar tipologia" });
+		await userEvent.type(search, "dup");
+		expect(card().queryByText("Tipologia A")).not.toBeInTheDocument();
+
+		await userEvent.click(card().getByRole("button", { name: "Limpar busca" }));
+
+		expect(search).toHaveValue("");
+		expect(search).toHaveFocus();
+		expect(card().getByText("Tipologia A")).toBeInTheDocument();
+		expect(createButton("Nova tipologia")).toBeInTheDocument();
+	});
+});
+
+describe("creating a tipologia", () => {
+	test("Nova tipologia creates a unit tipologia with an id of the client's and opens it to fill, focus on Novo cômodo", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+
+		await userEvent.click(createButton("Nova tipologia"));
+		const dialog = within(
+			screen.getByRole("dialog", { name: "Nova tipologia" }),
+		);
+		expect(dialog.getByText("Ex.: Tipologia D, Garden.")).toBeInTheDocument();
+		expect(
+			dialog.getByText("Os cômodos entram depois, no cartão da tipologia."),
+		).toBeInTheDocument();
+		await userEvent.type(
+			dialog.getByRole("textbox", { name: "Nome" }),
+			" Tipologia D {Enter}",
+		);
+
+		await waitFor(() => expect(field()).toHaveFocus());
+		expect(writes).toEqual([
+			{
+				method: "POST",
+				path: "/typologies",
+				body: {
+					id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+					name: "Tipologia D",
+					locationType: "unit",
+					rooms: [],
+				},
+			},
+		]);
+		expect(group("Unidades").getByText("Tipologia D")).toBeInTheDocument();
+		expect(group("Unidades").getByText("5 tipologias")).toBeInTheDocument();
+	});
+
+	test("Nova tipologia de área comum creates in Áreas comuns and opens the row to edit", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+
+		await userEvent.click(createButton("Nova tipologia de área comum"));
+		const dialog = within(
+			screen.getByRole("dialog", { name: "Nova tipologia de área comum" }),
+		);
+		expect(
+			dialog.getByText("Ex.: Hall, Corredor, Garagem."),
+		).toBeInTheDocument();
+		await userEvent.type(
+			dialog.getByRole("textbox", { name: "Nome" }),
+			"Depósito",
+		);
+		await userEvent.click(dialog.getByRole("button", { name: "Criar" }));
+
+		await waitFor(() => expect(field()).toHaveFocus());
+		expect(nth(writes, 0).body).toMatchObject({
+			name: "Depósito",
+			locationType: "common_area",
+		});
+		expect(group("Áreas comuns").getByText("Depósito")).toBeInTheDocument();
+		expect(
+			within(
+				group("Áreas comuns").getByText("Depósito").closest("li") ??
+					document.body,
+			).getByRole("textbox", { name: "Novo cômodo" }),
+		).toBeInTheDocument();
+		expect(group("Unidades").queryByText("Depósito")).not.toBeInTheDocument();
+		expect(group("Áreas comuns").getByText("5 tipologias")).toBeInTheDocument();
+		expect(
+			screen.getByText("Nenhuma área comum usa a Depósito ainda."),
+		).toBeInTheDocument();
+	});
+
+	test("asks for a name and refuses one the project has, ignoring accents, before sending", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await userEvent.click(createButton("Nova tipologia de área comum"));
+
+		await userEvent.click(screen.getByRole("button", { name: "Criar" }));
+		expect(await screen.findByText("Informe o nome.")).toBeInTheDocument();
+
+		await userEvent.type(
+			screen.getByRole("textbox", { name: "Nome" }),
+			"tipologia á{Enter}",
+		);
+		expect(
+			await screen.findByText("Esse nome já existe nesta obra."),
+		).toBeInTheDocument();
+		expect(writes).toEqual([]);
+	});
+
+	test("says the name is taken when the server refuses it, and keeps the dialog", async () => {
+		const { handler } = typologiesApi({
+			answer: () =>
+				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia E"] }),
+		});
+		await openConfiguration(handler);
+		await userEvent.click(createButton("Nova tipologia"));
+
+		await userEvent.type(
+			screen.getByRole("textbox", { name: "Nome" }),
+			"Tipologia E{Enter}",
+		);
+
+		expect(
+			await screen.findByText("Esse nome já existe nesta obra."),
+		).toBeInTheDocument();
+		expect(screen.getByRole("dialog")).toBeInTheDocument();
+	});
+
+	test.each(["Nova tipologia", "Nova tipologia de área comum"])(
+		"returns focus to %s on Cancelar and on Esc",
+		async (name) => {
+			const { handler } = typologiesApi();
+			await openConfiguration(handler);
+
+			await userEvent.click(createButton(name));
+			await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+			await waitFor(() => expect(createButton(name)).toHaveFocus());
+
+			await userEvent.click(createButton(name));
+			await userEvent.keyboard("{Escape}");
+			await waitFor(() => expect(createButton(name)).toHaveFocus());
+		},
+	);
+});
+
+describe("editing a tipologia in place (C4)", () => {
+	test("lists the rooms one per row, each with Tirar, the field and how many units change", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+
+		expect(
+			removeButtons().map((button) => button.getAttribute("aria-label")),
+		).toEqual(["Tirar Sala", "Tirar Quarto", "Tirar Banheiro"]);
+		expect(field()).toBeInTheDocument();
+		expect(
+			screen.getByRole("button", { name: "Adicionar" }),
 		).toBeInTheDocument();
 		expect(
 			screen.getByText(
-				"Salvar muda as 44 unidades da Tipologia A. 1 unidade com alterações mantém o que foi mudado nela.",
+				"Salvar muda as 18 unidades da Tipologia B. Um local com alterações mantém o que foi mudado nele.",
 			),
 		).toBeInTheDocument();
-		expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument();
+		expect(screen.queryByText("Novo")).not.toBeInTheDocument();
 	});
 
-	test("adds a room and sends the whole ordered list with an id for the new one", async () => {
-		const { handler, writes } = typologiesApi({
-			answer: () =>
-				json({
-					typology: {
-						...tipologiaA,
-						rooms: [...tipologiaA.rooms, { id: "x", name: "Lavanderia" }],
-					},
-					updatedLocationCount: 44,
-				}),
-		});
+	test("marks Novo only on the rooms not saved yet", async () => {
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
-		await chooseFromMenu("Tipologia A", "Editar cômodos");
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
 
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Novo cômodo" }),
-			"  Lavanderia {Enter}",
-		);
-		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		await addRoom("Lavabo");
 
-		await waitFor(() => expect(writes).toHaveLength(1));
-		const [write] = writes;
-		expect(write).toMatchObject({
-			method: "PATCH",
-			path: `/typologies/${tipologiaA.id}`,
-		});
-		const rooms = editedRooms(nth(writes, 0));
-		expect(rooms.map(({ name }) => name)).toEqual([
-			...tipologiaA.rooms.map(({ name }) => name),
-			"Lavanderia",
-		]);
-		expect(rooms.slice(0, 7)).toEqual(tipologiaA.rooms);
-		expect(nth(rooms, 7).id).toMatch(/^[0-9a-f-]{36}$/);
+		const lavabo = screen.getByText("Lavabo").closest("li");
+		expect(
+			within(lavabo ?? document.body).getByText("Novo"),
+		).toBeInTheDocument();
+		expect(screen.getAllByText("Novo")).toHaveLength(1);
 	});
 
-	test("toasts how many units were updated, and closes the row", async () => {
-		const { handler } = typologiesApi({
-			answer: () => json({ typology: tipologiaA, updatedLocationCount: 44 }),
-		});
+	test("speaks of common areas, of a single unit and of an unused tipologia", async () => {
+		const { handler } = typologiesApi();
 		await openConfiguration(handler);
-		await chooseFromMenu("Tipologia A", "Editar cômodos");
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Novo cômodo" }),
-			"Lavanderia{Enter}",
-		);
 
+		await chooseFromMenu("Hall padrão", "Editar cômodos");
+		expect(
+			screen.getByText(
+				"Salvar muda as 16 áreas comuns da Hall padrão. Um local com alterações mantém o que foi mudado nele.",
+			),
+		).toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+		await chooseFromMenu("Duplex", "Editar cômodos");
+		expect(
+			screen.getByText(
+				"Salvar muda 1 unidade da Duplex. Um local com alterações mantém o que foi mudado nele.",
+			),
+		).toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+		await chooseFromMenu("Cobertura", "Editar cômodos");
+		expect(
+			screen.getByText("Nenhuma unidade usa a Cobertura ainda."),
+		).toBeInTheDocument();
+		expect(screen.getByText("Sem cômodo.")).toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+
+		await chooseFromMenu("Corredor", "Editar cômodos");
+		expect(
+			screen.getByText("Nenhuma área comum usa a Corredor ainda."),
+		).toBeInTheDocument();
+	});
+
+	test("sends the whole ordered list with an id for the new room, toasts how many units changed and returns focus to the menu", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+
+		await userEvent.type(field(), "  Lavabo {Enter}");
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
 		expect(
-			await screen.findByText("Tipologia A salva. 44 unidades atualizadas."),
+			await screen.findByText("Tipologia B salva. 18 unidades atualizadas."),
 		).toBeInTheDocument();
-		await waitFor(() => {
+		await waitFor(() =>
 			expect(
-				screen.queryByRole("textbox", { name: "Novo cômodo" }),
-			).not.toBeInTheDocument();
+				screen.getByRole("button", { name: "Ações da Tipologia B" }),
+			).toHaveFocus(),
+		);
+		expect(writes).toHaveLength(1);
+		expect(nth(writes, 0)).toMatchObject({
+			method: "PATCH",
+			path: `/typologies/${tipologiaB.id}`,
 		});
+		const rooms = sentRooms(nth(writes, 0));
+		expect(rooms.slice(0, 3)).toEqual(tipologiaB.rooms);
+		expect(nth(rooms, 3)).toEqual({
+			id: expect.stringMatching(/^[0-9a-f-]{36}$/),
+			name: "Lavabo",
+		});
+		expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull();
+	});
+
+	test("says 1 área comum atualizada for a common-area tipologia of one", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Hall social", "Editar cômodos");
+
+		await addRoom("Escada");
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		expect(
+			await screen.findByText("Hall social salva. 1 área comum atualizada."),
+		).toBeInTheDocument();
 	});
 
 	test("takes a room out of the list that is sent", async () => {
-		const { handler, writes } = typologiesApi({
-			answer: () => json({ typology: tipologiaA, updatedLocationCount: 43 }),
-		});
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
@@ -350,7 +691,7 @@ describe("editing a tipologia in place (C2)", () => {
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
 		await waitFor(() => expect(writes).toHaveLength(1));
-		expect(editedRooms(nth(writes, 0)).map(({ name }) => name)).toEqual([
+		expect(sentRooms(nth(writes, 0)).map(({ name }) => name)).toEqual([
 			"Sala",
 			"Cozinha",
 			"Sacada",
@@ -361,39 +702,30 @@ describe("editing a tipologia in place (C2)", () => {
 	});
 
 	test("brings a room back with the id it had when the same name is added again", async () => {
-		const { handler, writes } = typologiesApi({
-			answer: () => json({ typology: tipologiaA, updatedLocationCount: 0 }),
-		});
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
 		await userEvent.click(
 			screen.getByRole("button", { name: "Tirar Despensa" }),
 		);
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Novo cômodo" }),
-			"despensa{Enter}",
-		);
+		await addRoom("despensa");
 		await userEvent.click(screen.getByRole("button", { name: "Tirar Sacada" }));
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
 		await waitFor(() => expect(writes).toHaveLength(1));
-		const rooms = editedRooms(nth(writes, 0));
-		expect(nth(rooms, 5)).toEqual(nth(tipologiaA.rooms, 6));
+		expect(nth(sentRooms(nth(writes, 0)), 5)).toEqual(nth(tipologiaA.rooms, 6));
 	});
 
-	test("refuses a room the tipologia already has", async () => {
+	test("refuses a room the tipologia already has, ignoring accents", async () => {
 		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Novo cômodo" }),
-			" sala {Enter}",
-		);
+		await addRoom(" suite ");
 
 		expect(
-			await screen.findByText("Esta tipologia já tem esse cômodo."),
+			await screen.findByText("Esse cômodo já está na tipologia."),
 		).toBeInTheDocument();
 		expect(writes).toEqual([]);
 	});
@@ -413,39 +745,25 @@ describe("editing a tipologia in place (C2)", () => {
 		expect(writes).toEqual([]);
 	});
 
-	test("drops the draft on Cancelar", async () => {
+	test("drops the draft on Cancelar without asking, and returns focus to the menu", async () => {
 		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 		await userEvent.click(screen.getByRole("button", { name: "Tirar Sala" }));
 
 		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
-		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Ações da Tipologia A" }),
+			).toHaveFocus(),
+		);
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+		await chooseFromMenu("Tipologia A", "Editar cômodos");
 		expect(
 			screen.getByRole("button", { name: "Tirar Sala" }),
 		).toBeInTheDocument();
 		expect(writes).toEqual([]);
-	});
-
-	test("keeps the draft and says so when saving fails", async () => {
-		const { handler } = typologiesApi({
-			answer: () => problem(500, "INTERNAL_ERROR"),
-		});
-		await openConfiguration(handler);
-		await chooseFromMenu("Tipologia A", "Editar cômodos");
-		await userEvent.click(screen.getByRole("button", { name: "Tirar Sala" }));
-
-		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
-
-		expect(
-			await screen.findByText(
-				"Não foi possível salvar a tipologia. Confira sua conexão e tente de novo.",
-			),
-		).toBeInTheDocument();
-		expect(
-			screen.queryByRole("button", { name: "Tirar Sala" }),
-		).not.toBeInTheDocument();
 	});
 
 	test("names the rooms a unit has that the tipologia cannot take over", async () => {
@@ -455,190 +773,293 @@ describe("editing a tipologia in place (C2)", () => {
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Novo cômodo" }),
-			"Estar{Enter}",
-		);
+		await addRoom("Estar");
 
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
+		const alert = await screen.findByRole("alert");
 		expect(
-			await screen.findByText(
+			within(alert).getByText("Não foi possível salvar"),
+		).toBeInTheDocument();
+		expect(
+			within(alert).getByText(
 				"A tipologia não pode ter os cômodos Estar, Varanda: uma unidade já tem cômodos com esses nomes. Renomeie os cômodos na unidade e tente de novo.",
 			),
 		).toBeInTheDocument();
 	});
 
-	test("says only that nobody follows a tipologia without units", async () => {
-		const { handler } = typologiesApi();
-		await openConfiguration(handler);
-
-		await chooseFromMenu("Tipologia C", "Editar cômodos");
-
-		expect(
-			screen.getByText("Nenhuma unidade usa a Tipologia C ainda."),
-		).toBeInTheDocument();
-	});
-
-	test("shows the tipologia in a row full width on the phone", async () => {
+	test("lays Salvar and Cancelar side by side on the phone", async () => {
 		setViewport("phone");
 		const { handler } = typologiesApi();
 		await openConfiguration(handler);
 
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 
-		expect(screen.getByRole("button", { name: "Salvar" })).toBeInTheDocument();
+		expect(screen.getByRole("button", { name: "Salvar" }).parentElement).toBe(
+			screen.getByRole("button", { name: "Cancelar" }).parentElement,
+		);
+	});
+});
+
+describe("saving a tipologia (C6, C7)", () => {
+	test("locks the whole editor while saving", async () => {
+		const pending = deferred();
+		const { handler } = typologiesApi({ answer: () => pending.promise });
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		await addRoom("Lavabo");
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		const saving = await screen.findByRole("button", { name: "Salvando…" });
+		expect(saving).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Cancelar" })).toBeDisabled();
+		for (const button of removeButtons()) expect(button).toBeDisabled();
+		expect(field()).toBeDisabled();
+		expect(screen.getByRole("button", { name: "Adicionar" })).toBeDisabled();
+		pending.resolve(
+			new Response(
+				JSON.stringify({ typology: tipologiaB, updatedLocationCount: 18 }),
+			),
+		);
+		expect(
+			await screen.findByText("Tipologia B salva. 18 unidades atualizadas."),
+		).toBeInTheDocument();
+	});
+
+	test("keeps the whole draft on a failure and sends the same list, with the same ids, on Tentar de novo", async () => {
+		const { handler, writes } = typologiesApi({
+			answer: (_write, attempt) =>
+				attempt === 1 ? problem(500, "INTERNAL_ERROR") : undefined,
+		});
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		await userEvent.click(screen.getByRole("button", { name: "Tirar Quarto" }));
+		await addRoom("Lavabo");
+
+		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+
+		const alert = await screen.findByRole("alert");
+		expect(
+			within(alert).getByText("Não foi possível salvar"),
+		).toBeInTheDocument();
+		expect(
+			within(alert).getByText(
+				"A Tipologia B não mudou. Confira a conexão e tente de novo.",
+			),
+		).toBeInTheDocument();
+		expect(
+			removeButtons().map((button) => button.getAttribute("aria-label")),
+		).toEqual(["Tirar Sala", "Tirar Banheiro", "Tirar Lavabo"]);
+		const lavabo = screen.getByText("Lavabo").closest("li");
+		expect(
+			within(lavabo ?? document.body).getByText("Novo"),
+		).toBeInTheDocument();
+		expect(screen.queryByRole("button", { name: "Salvar" })).toBeNull();
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Tentar de novo" }),
+		);
+
+		expect(
+			await screen.findByText("Tipologia B salva. 18 unidades atualizadas."),
+		).toBeInTheDocument();
+		expect(writes).toHaveLength(2);
+		expect(nth(writes, 1)).toEqual(nth(writes, 0));
+		expect(sentRooms(nth(writes, 1)).map(({ name }) => name)).toEqual([
+			"Sala",
+			"Banheiro",
+			"Lavabo",
+		]);
+	});
+});
+
+describe("one tipologia in edit at a time", () => {
+	test("turns off Editar cômodos of the others and both ways to create, keeping Renomear and Excluir", async () => {
+		const { handler, writes } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		await addRoom("Lavabo");
+
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ações da Tipologia A" }),
+		);
+		expect(
+			await screen.findByRole("menuitem", { name: "Editar cômodos" }),
+		).toHaveAttribute("aria-disabled", "true");
+		expect(
+			screen.getByRole("menuitem", { name: "Renomear" }),
+		).not.toHaveAttribute("aria-disabled");
+		await userEvent.keyboard("{Escape}");
+		expect(createButton("Nova tipologia")).toHaveAttribute(
+			"aria-disabled",
+			"true",
+		);
+		expect(createButton("Nova tipologia de área comum")).toHaveAttribute(
+			"aria-disabled",
+			"true",
+		);
+		await userEvent.click(createButton("Nova tipologia de área comum"));
+		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+		await chooseFromMenu("Cobertura", "Excluir tipologia");
+		expect(await screen.findByText("Cobertura excluída.")).toBeInTheDocument();
+		await chooseFromMenu("Duplex", "Renomear");
+		const name = screen.getByRole("textbox", { name: "Nome" });
+		await userEvent.clear(name);
+		await userEvent.type(name, "Duplex Garden{Enter}");
+		expect(await card().findByText("Duplex Garden")).toBeInTheDocument();
+
+		expect(
+			screen.getAllByRole("textbox", { name: "Novo cômodo" }),
+		).toHaveLength(1);
+		expect(
+			removeButtons().map((button) => button.getAttribute("aria-label")),
+		).toEqual(["Tirar Sala", "Tirar Quarto", "Tirar Banheiro", "Tirar Lavabo"]);
+		expect(writes.map(({ method }) => method)).toEqual(["DELETE", "PATCH"]);
+
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+		expect(createButton("Nova tipologia")).not.toHaveAttribute("aria-disabled");
+		expect(createButton("Nova tipologia de área comum")).not.toHaveAttribute(
+			"aria-disabled",
+		);
+		await userEvent.click(
+			screen.getByRole("button", { name: "Ações da Tipologia A" }),
+		);
+		expect(
+			await screen.findByRole("menuitem", { name: "Editar cômodos" }),
+		).not.toHaveAttribute("aria-disabled");
+	});
+
+	test("keeps the tipologia in edit on screen while a search leaves it out", async () => {
+		const { handler } = typologiesApi();
+		await openConfiguration(handler);
+		await chooseFromMenu("Tipologia B", "Editar cômodos");
+		await addRoom("Lavabo");
+
+		await userEvent.type(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+			"hall",
+		);
+
+		expect(
+			screen.getByRole("button", { name: "Tirar Lavabo" }),
+		).toBeInTheDocument();
+		expect(card().getByText("Hall padrão")).toBeInTheDocument();
 	});
 });
 
 describe("renaming a tipologia", () => {
-	test("sends the trimmed name and closes the dialog", async () => {
-		const { handler, writes } = typologiesApi({
-			answer: () =>
-				json({
-					typology: { ...tipologiaB, name: "Tipologia Z" },
-					updatedLocationCount: 0,
-				}),
-		});
+	test("sends the trimmed name and returns focus to the menu", async () => {
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 
 		await chooseFromMenu("Tipologia B", "Renomear");
-		const field = screen.getByRole("textbox", { name: "Nome" });
-		expect(field).toHaveValue("Tipologia B");
-		await userEvent.clear(field);
-		await userEvent.type(field, "  Tipologia Z {Enter}");
+		const dialog = within(
+			screen.getByRole("dialog", { name: "Renomear a tipologia" }),
+		);
+		expect(
+			dialog.getByText("O nome novo vale em todos os locais da tipologia."),
+		).toBeInTheDocument();
+		const name = dialog.getByRole("textbox", { name: "Nome" });
+		expect(name).toHaveValue("Tipologia B");
+		await userEvent.clear(name);
+		await userEvent.type(name, "  Tipologia Z {Enter}");
 
-		await waitFor(() => expect(writes).toHaveLength(1));
-		expect(writes[0]).toEqual({
-			method: "PATCH",
-			path: `/typologies/${tipologiaB.id}`,
-			body: { name: "Tipologia Z" },
-		});
-		await waitFor(() => {
-			expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-		});
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Ações da Tipologia Z" }),
+			).toHaveFocus(),
+		);
+		expect(writes).toEqual([
+			{
+				method: "PATCH",
+				path: `/typologies/${tipologiaB.id}`,
+				body: { name: "Tipologia Z" },
+			},
+		]);
 	});
 
-	test("says the name is taken, with the dialog still open", async () => {
+	test("refuses a name the project has, before and after sending", async () => {
 		const { handler } = typologiesApi({
 			answer: () =>
-				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] }),
+				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia W"] }),
 		});
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia B", "Renomear");
-		const field = screen.getByRole("textbox", { name: "Nome" });
-		await userEvent.clear(field);
+		const name = screen.getByRole("textbox", { name: "Nome" });
 
-		await userEvent.type(field, "tipologia a{Enter}");
-
+		await userEvent.clear(name);
+		await userEvent.type(name, "corredor{Enter}");
 		expect(
-			await screen.findByText("Já existe a tipologia tipologia a nesta obra."),
+			await screen.findByText("Esse nome já existe nesta obra."),
+		).toBeInTheDocument();
+
+		await userEvent.clear(name);
+		await userEvent.type(name, "Tipologia W{Enter}");
+		expect(
+			await screen.findByText("Esse nome já existe nesta obra."),
 		).toBeInTheDocument();
 		expect(screen.getByRole("dialog")).toBeInTheDocument();
 	});
 
-	test("asks for a name before sending", async () => {
+	test("asks for a name before sending, and returns focus to the menu on Cancelar", async () => {
 		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 		await chooseFromMenu("Tipologia B", "Renomear");
 		await userEvent.clear(screen.getByRole("textbox", { name: "Nome" }));
 
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
+		expect(await screen.findByText("Informe o nome.")).toBeInTheDocument();
+		await userEvent.click(screen.getByRole("button", { name: "Cancelar" }));
 
-		expect(
-			await screen.findByText("Informe o nome da tipologia."),
-		).toBeInTheDocument();
+		await waitFor(() =>
+			expect(
+				screen.getByRole("button", { name: "Ações da Tipologia B" }),
+			).toHaveFocus(),
+		);
 		expect(writes).toEqual([]);
 	});
 });
 
-describe("creating a tipologia", () => {
-	test("creates it empty with an id of the client's and opens its rooms to fill", async () => {
-		const created: Typology = typologyOf("Tipologia D", []);
-		const api = typologiesApi({
-			answer: () => {
-				api.replace({
-					typologies: [tipologiaA, tipologiaB, tipologiaC, created],
-				});
-				return json(created, 201);
-			},
-		});
-		await openConfiguration(api.handler);
-
-		await userEvent.click(
-			card().getByRole("button", { name: "Nova tipologia" }),
-		);
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Nome" }),
-			" Tipologia D {Enter}",
-		);
-
-		await waitFor(() => expect(api.writes).toHaveLength(1));
-		expect(api.writes[0]).toMatchObject({
-			method: "POST",
-			path: "/typologies",
-			body: { name: "Tipologia D", rooms: [] },
-		});
-		expect((nth(api.writes, 0).body as { id: string }).id).toMatch(
-			/^[0-9a-f-]{36}$/,
-		);
-		expect(
-			await screen.findByRole("textbox", { name: "Novo cômodo" }),
-		).toBeInTheDocument();
-	});
-
-	test("says the name is taken and keeps the dialog", async () => {
-		const { handler } = typologiesApi({
-			answer: () =>
-				problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] }),
-		});
-		await openConfiguration(handler);
-		await userEvent.click(
-			card().getByRole("button", { name: "Nova tipologia" }),
-		);
-
-		await userEvent.type(
-			screen.getByRole("textbox", { name: "Nome" }),
-			"Tipologia A{Enter}",
-		);
-
-		expect(
-			await screen.findByText("Já existe a tipologia Tipologia A nesta obra."),
-		).toBeInTheDocument();
-	});
-});
-
 describe("deleting a tipologia", () => {
-	test("deletes one without units and toasts it", async () => {
-		const { handler, writes } = typologiesApi({
-			answer: () => json({ typologies: [tipologiaA, tipologiaB] }),
-		});
+	test("deletes one without use at once and toasts it", async () => {
+		const { handler, writes } = typologiesApi();
 		await openConfiguration(handler);
 
-		await chooseFromMenu("Tipologia C", "Excluir tipologia");
+		await chooseFromMenu("Cobertura", "Excluir tipologia");
 
-		expect(
-			await screen.findByText("Tipologia C excluída."),
-		).toBeInTheDocument();
+		expect(await screen.findByText("Cobertura excluída.")).toBeInTheDocument();
 		expect(writes).toEqual([
-			{ method: "DELETE", path: `/typologies/${tipologiaC.id}`, body: null },
+			{ method: "DELETE", path: `/typologies/${cobertura.id}`, body: null },
 		]);
+		await waitFor(() =>
+			expect(group("Unidades").getByText("3 tipologias")).toBeInTheDocument(),
+		);
 	});
 
-	test("says units began to follow it when the server refuses", async () => {
-		const { handler } = typologiesApi({
-			answer: () => problem(409, TYPOLOGY_IN_USE),
-		});
-		await openConfiguration(handler);
+	test.each([
+		[
+			"Cobertura",
+			"Não foi possível excluir a Cobertura: unidades passaram a usá-la.",
+		],
+		[
+			"Corredor",
+			"Não foi possível excluir a Corredor: áreas comuns passaram a usá-la.",
+		],
+	])(
+		"says locations began to use %s when the server refuses",
+		async (typeName, message) => {
+			const { handler } = typologiesApi({
+				answer: () => problem(409, TYPOLOGY_IN_USE),
+			});
+			await openConfiguration(handler);
 
-		await chooseFromMenu("Tipologia C", "Excluir tipologia");
+			await chooseFromMenu(typeName, "Excluir tipologia");
 
-		expect(
-			await screen.findByText(
-				"Não foi possível excluir a Tipologia C: unidades passaram a usá-la.",
-			),
-		).toBeInTheDocument();
-	});
+			expect(await screen.findByText(message)).toBeInTheDocument();
+		},
+	);
 
 	test("toasts a failure and keeps the row", async () => {
 		const { handler } = typologiesApi({
@@ -646,33 +1067,49 @@ describe("deleting a tipologia", () => {
 		});
 		await openConfiguration(handler);
 
-		await chooseFromMenu("Tipologia C", "Excluir tipologia");
+		await chooseFromMenu("Cobertura", "Excluir tipologia");
 
 		expect(
 			await screen.findByText(
-				"Não foi possível excluir a Tipologia C. Confira sua conexão e tente de novo.",
+				"Não foi possível excluir a Cobertura. Confira sua conexão e tente de novo.",
 			),
 		).toBeInTheDocument();
-		expect(card().getByText("Tipologia C")).toBeInTheDocument();
+		expect(card().getByText("Cobertura")).toBeInTheDocument();
 	});
 });
 
-describe("Tipologias of a delivered project (C6)", () => {
+describe("Tipologias of a delivered project (C9)", () => {
 	const delivered: ProjectSummary = {
 		...project(7, "manager", "delivered"),
 		name: "Casa Moinhos",
 	};
 
-	test("lists them to read, with nothing to change and the reason why", async () => {
+	test("reads, opens and searches them, with nothing to change and the lock line", async () => {
 		const { handler } = typologiesApi({ summary: delivered });
 		await openConfiguration(handler);
 
-		expect(card().getByText("7 cômodos · 44 unidades")).toBeInTheDocument();
-		expect(card().queryByRole("button")).not.toBeInTheDocument();
+		expect(group("Unidades").getByText("4 tipologias")).toBeInTheDocument();
+		expect(
+			group("Unidades").getByText("7 cômodos · 44 unidades"),
+		).toBeInTheDocument();
+		expect(card().getAllByText("Sem uso")).toHaveLength(2);
 		expect(card().getByText(LOCKED)).toBeInTheDocument();
+		expect(card().queryByRole("button", { name: /^Ações da / })).toBeNull();
+		expect(
+			card().queryByRole("button", { name: /^Nova tipologia/ }),
+		).toBeNull();
+
+		await userEvent.click(row("Tipologia B"));
+		expect(card().getByText("Banheiro")).toBeInTheDocument();
+		await userEvent.type(
+			card().getByRole("textbox", { name: "Buscar tipologia" }),
+			"hall",
+		);
+		expect(card().queryByText("Tipologia A")).not.toBeInTheDocument();
+		expect(card().getByText("Hall social")).toBeInTheDocument();
 	});
 
-	test("reloads the project as closed when a save finds it delivered", async () => {
+	test("turns read-only when a save finds the project delivered", async () => {
 		let closed = false;
 		const open = typologiesApi({
 			answer: () => {
@@ -681,23 +1118,19 @@ describe("Tipologias of a delivered project (C6)", () => {
 			},
 		});
 		const closedApi = typologiesApi({ summary: delivered });
-		stubApi(signedIn, {
-			api: (url, init) =>
-				(closed ? closedApi.handler : open.handler)(url, init),
-		});
-		renderAt(CONFIG_PATH);
-		await screen.findByText("Tipologia A");
+		await openConfiguration((url, init) =>
+			(closed ? closedApi.handler : open.handler)(url, init),
+		);
 		await chooseFromMenu("Tipologia A", "Editar cômodos");
 		await userEvent.click(screen.getByRole("button", { name: "Tirar Sala" }));
 
 		await userEvent.click(screen.getByRole("button", { name: "Salvar" }));
 
-		await waitFor(() => {
-			expect(
-				within(screen.getByRole("region", { name: "Tipologias" })).getByText(
-					LOCKED,
-				),
-			).toBeInTheDocument();
-		});
+		expect(await card().findByText(LOCKED)).toBeInTheDocument();
+		expect(screen.queryByRole("textbox", { name: "Novo cômodo" })).toBeNull();
+		expect(card().queryByRole("button", { name: /^Ações da / })).toBeNull();
+		expect(
+			card().queryByRole("button", { name: /^Nova tipologia/ }),
+		).toBeNull();
 	});
 });

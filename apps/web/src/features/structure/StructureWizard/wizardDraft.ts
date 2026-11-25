@@ -660,7 +660,7 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 				(other, at) => at < index && sameRoomName(other.name, typology.name),
 			)
 		) {
-			errors[id] = "Já existe outra tipologia com esse nome.";
+			errors[id] = "Esse nome já existe nesta obra.";
 		}
 	});
 

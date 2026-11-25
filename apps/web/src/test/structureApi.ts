@@ -651,6 +651,82 @@ export function typologiesApi(
 			: undefined;
 }
 
+export interface TypologyWrite {
+	method: string;
+	path: string;
+	body: unknown;
+}
+
+export function typologyServer(
+	projectId: string,
+	initial: Typology[],
+	answer?: (write: TypologyWrite, attempt: number) => Reply | undefined,
+) {
+	const base = `/api/projects/${projectId}`;
+	const writes: TypologyWrite[] = [];
+	let typologies = initial;
+	const handler: ApiHandler = (url, init) => {
+		const list = `${base}/typologies`;
+		if (url.pathname !== list && !url.pathname.startsWith(`${list}/`)) {
+			return undefined;
+		}
+		const method = init?.method ?? "GET";
+		if (method === "GET") {
+			return url.pathname === list ? json({ typologies }) : undefined;
+		}
+		const body = init?.body
+			? (JSON.parse(String(init.body)) as Record<string, unknown>)
+			: null;
+		const write = { method, path: url.pathname.slice(base.length), body };
+		writes.push(write);
+		const answered = answer?.(write, writes.length);
+		if (answered) return answered;
+
+		if (method === "POST" && url.pathname === list && body) {
+			const created: Typology = {
+				id: String(body.id),
+				name: String(body.name),
+				locationType:
+					body.locationType === "common_area" ? "common_area" : "unit",
+				rooms: (body.rooms as Typology["rooms"] | undefined) ?? [],
+				locationCount: 0,
+				changedLocationCount: 0,
+			};
+			typologies = [...typologies, created];
+			return json(created, 201);
+		}
+		const id = url.pathname.slice(list.length + 1);
+		const found = typologies.find((each) => each.id === id);
+		if (!found) return undefined;
+		if (method === "PATCH" && body) {
+			const typology: Typology = {
+				...found,
+				...(typeof body.name === "string" && { name: body.name }),
+				...(Array.isArray(body.rooms) && {
+					rooms: body.rooms as Typology["rooms"],
+				}),
+			};
+			typologies = typologies.map((each) => (each.id === id ? typology : each));
+			return json({
+				typology,
+				updatedLocationCount: Array.isArray(body.rooms)
+					? typology.locationCount
+					: 0,
+			});
+		}
+		if (method === "DELETE") {
+			typologies = typologies.filter((each) => each.id !== id);
+			return json({ typologies });
+		}
+		return undefined;
+	};
+	return {
+		handler,
+		writes,
+		typologies: () => typologies,
+	};
+}
+
 export function configurationSectionsApi(
 	projectId: string,
 	structure: Structure = emptyStructure,

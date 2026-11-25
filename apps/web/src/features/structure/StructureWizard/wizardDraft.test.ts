@@ -398,7 +398,7 @@ describe("typologies in the draft", () => {
 			"Informe o nome da tipologia.",
 		);
 		expect(errors[typologyFieldId(third?.key ?? "")]).toBe(
-			"Já existe outra tipologia com esse nome.",
+			"Esse nome já existe nesta obra.",
 		);
 		expect(errors[typologyFieldId(first?.key ?? "")]).toBeUndefined();
 	});

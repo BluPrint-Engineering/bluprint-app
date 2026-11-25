@@ -30,7 +30,7 @@ test("refuses accent variants of typology and room names before sending", async 
 		"tipologia a{Enter}",
 	);
 	expect(
-		await screen.findByText("Já existe a tipologia tipologia a nesta obra."),
+		await screen.findByText("Esse nome já existe nesta obra."),
 	).toBeInTheDocument();
 	await userEvent.click(
 		within(screen.getByRole("dialog")).getByRole("button", {
@@ -48,7 +48,7 @@ test("refuses accent variants of typology and room names before sending", async 
 		"suite{Enter}",
 	);
 	expect(
-		await screen.findByText("Esta tipologia já tem esse cômodo."),
+		await screen.findByText("Esse cômodo já está na tipologia."),
 	).toBeInTheDocument();
 	expect(
 		fetchMock.mock.calls.filter(

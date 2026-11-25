@@ -69,7 +69,7 @@ test("wizard refuses typology names differing only by accents before sending", a
 		screen.getByRole("button", { name: "Criar estrutura" }),
 	);
 	expect(
-		await screen.findByText("Já existe outra tipologia com esse nome."),
+		await screen.findByText("Esse nome já existe nesta obra."),
 	).toBeInTheDocument();
 	expect(
 		fetchMock.mock.calls.filter(([, init]) => init?.method === "POST"),

@@ -2,7 +2,6 @@ import type {
 	LocationDetail,
 	OrganizationReservations,
 	ProjectSummary,
-	Typology,
 } from "@bluprint/shared";
 import { onlineManager } from "@tanstack/react-query";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
@@ -28,6 +27,7 @@ import {
 	tower,
 	typologiesApi,
 	typologyOf,
+	typologyServer,
 	writableApi,
 } from "./structureApi";
 
@@ -830,49 +830,20 @@ function configurationPage(): Page {
 	const api = writableApi(ADMIN_PROJECT, structureOf([]), { remaining: 0 });
 	const base = `/api/projects/${ADMIN_PROJECT.id}`;
 	const typeA = typologyOf("Tipologia A", ["Sala"]);
-	let typologies: Typology[] = [typeA];
-	const own = (url: URL, init?: RequestInit) => {
-		const method = init?.method ?? "GET";
-		const body = init?.body
-			? (JSON.parse(String(init.body)) as Record<string, unknown>)
-			: {};
-		if (url.pathname === base && method === "PATCH") {
-			api.state.summary = { ...api.state.summary, name: String(body.name) };
-			return json(api.state.summary);
-		}
-		if (url.pathname === `${base}/typologies`) {
-			if (method === "GET") return json({ typologies });
-			const created: Typology = {
-				id: String(body.id),
-				name: String(body.name),
-				locationType: "unit",
-				rooms: [],
-				locationCount: 0,
-				changedLocationCount: 0,
-			};
-			typologies = [...typologies, created];
-			return json(created, 201);
-		}
-		const one = new RegExp(`^${base}/typologies/([^/]+)$`).exec(url.pathname);
-		if (one && method === "PATCH") {
-			typologies = typologies.map((each) =>
-				each.id === one[1]
-					? {
-							...each,
-							...(typeof body.name === "string" && { name: body.name }),
-							...(Array.isArray(body.rooms) && {
-								rooms: body.rooms as Typology["rooms"],
-							}),
-						}
-					: each,
-			);
-			const typology = typologies.find((each) => each.id === one[1]);
-			return json({ typology, updatedLocationCount: 0 });
-		}
-		return undefined;
+	const typologies = typologyServer(ADMIN_PROJECT.id, [typeA]);
+	const renameProject = (url: URL, init?: RequestInit) => {
+		if (url.pathname !== base || init?.method !== "PATCH") return undefined;
+		const body = JSON.parse(String(init.body)) as { name: string };
+		api.state.summary = { ...api.state.summary, name: body.name };
+		return json(api.state.summary);
 	};
 	const server = expiringServer(
-		combine(own, structureApi(ADMIN_PROJECT.id, structureOf([])), api.handler),
+		combine(
+			renameProject,
+			typologies.handler,
+			structureApi(ADMIN_PROJECT.id, structureOf([])),
+			api.handler,
+		),
 	);
 	const tags = () => screen.queryAllByRole("button", { name: /^Tirar / });
 	return {
@@ -907,11 +878,19 @@ function configurationPage(): Page {
 				cancel: CANCEL,
 				shows: ["Nova tipologia"],
 				focusAfterCancel: byRole("button", "Nova tipologia"),
-				focusAfterSave: byRole("button", "Nova tipologia"),
-				afterSave: async () => {
-					await screen.findByRole("textbox", { name: "Novo cômodo" });
-					await CANCEL();
-				},
+				focusAfterSave: byRole("textbox", "Novo cômodo"),
+				afterSave: CANCEL,
+				request: `POST ${base}/typologies`,
+			},
+			createCommonAreaTypology: {
+				open: click("button", "Nova tipologia de área comum"),
+				...textField("Nome", "Corredor", ""),
+				submit: click("button", "Criar"),
+				cancel: CANCEL,
+				shows: ["Nova tipologia de área comum"],
+				focusAfterCancel: byRole("button", "Nova tipologia de área comum"),
+				focusAfterSave: byRole("textbox", "Novo cômodo"),
+				afterSave: CANCEL,
 				request: `POST ${base}/typologies`,
 			},
 			renameTypology: {
@@ -927,13 +906,28 @@ function configurationPage(): Page {
 			editRooms: {
 				open: () => pick("Ações da Tipologia A", "Editar cômodos"),
 				fill: async () => {
+					await user.type(
+						await screen.findByRole("textbox", { name: "Novo cômodo" }),
+						"Lavabo{Enter}",
+					);
 					await user.click(
 						await screen.findByRole("button", { name: "Tirar Sala" }),
 					);
 				},
 				expectTyped: async () => {
 					await screen.findByRole("textbox", { name: "Novo cômodo" });
-					expect(tags()).toEqual([]);
+					expect(tags().map((tag) => tag.getAttribute("aria-label"))).toEqual([
+						"Tirar Lavabo",
+					]);
+					expect(screen.getByText("Novo")).toBeInTheDocument();
+					for (const create of [
+						"Nova tipologia",
+						"Nova tipologia de área comum",
+					]) {
+						expect(
+							screen.getByRole("button", { name: create }),
+						).toHaveAttribute("aria-disabled", "true");
+					}
 				},
 				expectCurrent: async () => {
 					await screen.findByRole("textbox", { name: "Novo cômodo" });
@@ -1282,6 +1276,7 @@ export const ROWS: Row[] = [
 	[43, "facade", "addAreaFromMenu", "create-structure", "entry"],
 	[44, "facadeBlank", "addTower", "create-structure", "entry"],
 	[45, "commonArea", "changeTypology", "change-typology", "entry"],
+	[46, "configuration", "createCommonAreaTypology", "create-typology", "entry"],
 ];
 
 function rowsReturningFocus(rows: Row[]): Row[] {
