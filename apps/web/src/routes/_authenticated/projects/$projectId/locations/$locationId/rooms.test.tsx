@@ -169,6 +169,12 @@ afterEach(() => {
 
 const addField = () =>
 	screen.getByRole("combobox", { name: "Adicionar cômodo" });
+const addFieldMarkedInvalid = () =>
+	expect(
+		screen
+			.getByText("Adicionar cômodo", { selector: "label" })
+			.closest("[data-slot=field]"),
+	).toHaveAttribute("data-invalid", "true");
 const addFieldGone = () =>
 	expect(
 		screen.queryByRole("combobox", { name: "Adicionar cômodo" }),
@@ -333,6 +339,7 @@ describe("adding a room (U3)", () => {
 		);
 		expect(addField()).toHaveValue("sala");
 		expect(addField()).toBeInvalid();
+		addFieldMarkedInvalid();
 		expect(writes).toEqual([]);
 	});
 
@@ -350,6 +357,7 @@ describe("adding a room (U3)", () => {
 			"Esse cômodo já está na unidade.",
 		);
 		expect(addField()).toHaveValue("Despensa");
+		addFieldMarkedInvalid();
 	});
 
 	test("sends nothing for an empty field", async () => {

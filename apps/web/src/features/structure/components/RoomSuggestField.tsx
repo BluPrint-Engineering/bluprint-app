@@ -10,6 +10,7 @@ import {
 	useState,
 } from "react";
 import { Button } from "@/components/ui/button";
+import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import {
@@ -22,7 +23,7 @@ import {
 const NO_ACTIVE = -1;
 
 export function RoomSuggestField({
-	id,
+	label,
 	ariaLabel,
 	placeholder = "Novo cômodo",
 	value,
@@ -40,7 +41,7 @@ export function RoomSuggestField({
 	autoFocus = false,
 	inputRef,
 }: {
-	id?: string;
+	label?: string;
 	ariaLabel?: string;
 	placeholder?: string;
 	value: string;
@@ -59,7 +60,7 @@ export function RoomSuggestField({
 	inputRef?: Ref<HTMLInputElement>;
 }) {
 	const generatedId = useId();
-	const fieldId = id ?? `${generatedId}-field`;
+	const fieldId = `${generatedId}-field`;
 	const listId = `${generatedId}-list`;
 	const errorId = `${generatedId}-error`;
 	const input = useRef<HTMLInputElement | null>(null);
@@ -158,45 +159,50 @@ export function RoomSuggestField({
 
 	return (
 		<div className="grid gap-(--space-1)">
-			<div className="flex gap-(--space-2)">
-				<Input
-					ref={setInput}
-					id={fieldId}
-					role="combobox"
-					aria-label={ariaLabel}
-					aria-expanded={expanded}
-					aria-controls={listId}
-					aria-autocomplete="list"
-					aria-activedescendant={activeId}
-					aria-invalid={shownError !== undefined}
-					aria-describedby={shownError === undefined ? undefined : errorId}
-					placeholder={placeholder}
-					autoComplete="off"
-					autoFocus={autoFocus}
-					enterKeyHint="done"
-					maxLength={ROOM_NAME_MAX_LENGTH}
-					readOnly={pending}
-					disabled={disabled}
-					value={value}
-					onChange={(event) => {
-						setRefused(undefined);
-						setActive(NO_ACTIVE);
-						setOpen(true);
-						onValueChange(event.target.value);
-					}}
-					onKeyDown={onKeyDown}
-					onBlur={close}
-				/>
-				<Button
-					type="button"
-					variant="outline"
-					disabled={busy || value.trim() === ""}
-					onClick={confirmTyped}
-				>
-					{pending && <Spinner aria-hidden />}
-					{pending ? "Adicionando…" : "Adicionar"}
-				</Button>
-			</div>
+			<Field data-invalid={shownError !== undefined}>
+				{label !== undefined && (
+					<FieldLabel htmlFor={fieldId}>{label}</FieldLabel>
+				)}
+				<div className="flex gap-(--space-2)">
+					<Input
+						ref={setInput}
+						id={fieldId}
+						role="combobox"
+						aria-label={ariaLabel}
+						aria-expanded={expanded}
+						aria-controls={listId}
+						aria-autocomplete="list"
+						aria-activedescendant={activeId}
+						aria-invalid={shownError !== undefined}
+						aria-describedby={shownError === undefined ? undefined : errorId}
+						placeholder={placeholder}
+						autoComplete="off"
+						autoFocus={autoFocus}
+						enterKeyHint="done"
+						maxLength={ROOM_NAME_MAX_LENGTH}
+						readOnly={pending}
+						disabled={disabled}
+						value={value}
+						onChange={(event) => {
+							setRefused(undefined);
+							setActive(NO_ACTIVE);
+							setOpen(true);
+							onValueChange(event.target.value);
+						}}
+						onKeyDown={onKeyDown}
+						onBlur={close}
+					/>
+					<Button
+						type="button"
+						variant="outline"
+						disabled={busy || value.trim() === ""}
+						onClick={confirmTyped}
+					>
+						{pending && <Spinner aria-hidden />}
+						{pending ? "Adicionando…" : "Adicionar"}
+					</Button>
+				</div>
+			</Field>
 			{expanded && (
 				<div
 					id={listId}

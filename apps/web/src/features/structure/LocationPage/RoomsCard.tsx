@@ -5,14 +5,7 @@ import {
 	type Room,
 } from "@bluprint/shared";
 import { Ellipsis, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
-import {
-	type ReactNode,
-	type Ref,
-	useEffect,
-	useId,
-	useRef,
-	useState,
-} from "react";
+import { type ReactNode, type Ref, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -23,7 +16,6 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Field, FieldLabel } from "@/components/ui/field";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
 import { uuidV7 } from "@/lib/uuidV7";
 import {
@@ -85,7 +77,6 @@ function AddRoomRow({
 	location: LocationDetail;
 	holder: RoomHolder;
 }) {
-	const fieldId = useId();
 	const add = useAddRoomMutation(projectId, location.id);
 	const usedNames = useRoomNames(projectId);
 	const restored = useSessionDraft("add-room", (variables) => {
@@ -165,32 +156,29 @@ function AddRoomRow({
 					if (event.key === "Escape" && !add.isPending) close();
 				}}
 			>
-				<Field data-invalid={!!error || failed}>
-					<FieldLabel htmlFor={fieldId}>Adicionar cômodo</FieldLabel>
-					<RoomSuggestField
-						id={fieldId}
-						autoFocus
-						value={name}
-						onValueChange={(next) => {
-							setError(undefined);
-							setName(next);
-						}}
-						onAdd={submit}
-						used={usedNames}
-						present={location.rooms.map((room) => room.name)}
-						presentLabel="Já está aqui"
-						duplicateMessage={roomNameTakenText(holder)}
-						maxItems={MAX_ROOMS_PER_LOCATION}
-						maxMessage={roomLimitText(holder)}
-						pending={add.isPending}
-						error={
-							error ??
-							(failed
-								? "Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo."
-								: undefined)
-						}
-					/>
-				</Field>
+				<RoomSuggestField
+					label="Adicionar cômodo"
+					autoFocus
+					value={name}
+					onValueChange={(next) => {
+						setError(undefined);
+						setName(next);
+					}}
+					onAdd={submit}
+					used={usedNames}
+					present={location.rooms.map((room) => room.name)}
+					presentLabel="Já está aqui"
+					duplicateMessage={roomNameTakenText(holder)}
+					maxItems={MAX_ROOMS_PER_LOCATION}
+					maxMessage={roomLimitText(holder)}
+					pending={add.isPending}
+					error={
+						error ??
+						(failed
+							? "Não foi possível adicionar o cômodo. Confira sua conexão e tente de novo."
+							: undefined)
+					}
+				/>
 				<div className="flex gap-(--space-2) max-md:*:flex-1">
 					<Button
 						type="button"
