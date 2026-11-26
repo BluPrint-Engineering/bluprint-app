@@ -7,7 +7,9 @@ import {
 	createStructureResultSchema,
 	DISCIPLINE_LIMIT_REACHED,
 	DISCIPLINE_NAME_TAKEN,
+	type DisciplineBatch,
 	type DisciplineList,
+	disciplineBatchResultSchema,
 	disciplineListSchema,
 	disciplineSchema,
 	LOCATION_NAME_TAKEN,
@@ -741,4 +743,45 @@ export function useDeleteTypologyMutation(projectId: string) {
 			{ method: "DELETE" },
 		),
 	);
+}
+
+export function isLocationNotFound(error: unknown) {
+	return (
+		error instanceof ApiError && error.problem?.code === LOCATION_NOT_FOUND
+	);
+}
+
+export function useApplyDisciplineBatchMutation(projectId: string) {
+	const queryClient = useQueryClient();
+	return useMutation({
+		mutationFn: (batch: DisciplineBatch) =>
+			apiFetch(
+				`/projects/${projectId}/discipline-batches`,
+				disciplineBatchResultSchema,
+				{
+					method: "POST",
+					headers: JSON_HEADERS,
+					body: JSON.stringify(batch),
+				},
+			),
+		onSuccess: () => {
+			void queryClient.invalidateQueries({ queryKey: ["projects"] });
+			return queryClient.invalidateQueries({
+				queryKey: ["structure", projectId, "location"],
+			});
+		},
+		onError: (error) => {
+			if (isProjectDelivered(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: projectQueryOptions(projectId).queryKey,
+				});
+			}
+			if (isLocationNotFound(error)) {
+				return queryClient.invalidateQueries({
+					queryKey: structureQueryOptions(projectId).queryKey,
+					exact: true,
+				});
+			}
+		},
+	});
 }

@@ -33,6 +33,10 @@ import { STRUCTURE_LOCKED } from "../lockedText";
 import type { Scope } from "../naming";
 import { floorChildCounts, NO_CHILDREN, towerChildCounts } from "../removeText";
 import { CommonAreaBody } from "./CommonAreaBody";
+import {
+	DisciplineBatchHost,
+	DisciplineBatchMenuItem,
+} from "./DisciplineBatchHost";
 import { FloorBody } from "./FloorBody";
 import { describeLocation } from "./locationBand";
 import { TowerBody } from "./TowerBody";
@@ -181,11 +185,17 @@ function LocationView({
 					</DropdownMenuItem>
 				</>
 			)}
+			{(tower || floor) && <DisciplineBatchMenuItem trigger={pageMenu} />}
 		</LocationMenu>
 	);
 
 	return (
-		<>
+		<DisciplineBatchHost
+			projectId={projectId}
+			structure={structure}
+			location={location}
+			editable={canEdit}
+		>
 			<PageBand>
 				<div className="grid grid-cols-[1fr_auto] items-center gap-x-(--space-3) gap-y-(--space-2) md:items-start md:gap-x-(--space-4)">
 					<div className="min-w-0 md:col-start-1 md:row-start-1">
@@ -261,7 +271,7 @@ function LocationView({
 					/>
 				)}
 			</PageMain>
-		</>
+		</DisciplineBatchHost>
 	);
 }
 

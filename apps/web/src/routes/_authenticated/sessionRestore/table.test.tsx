@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { rememberFailedSubmission } from "@/features/auth";
 import { sessionDraftKinds } from "@/features/auth/sessionDraft";
@@ -137,5 +138,75 @@ describe("an action without fields lost to an expired session", () => {
 			expect(page.server.writes).toHaveLength(1);
 			expect(page.server.writes[0]).toMatch(new RegExp(`^${method} .*${path}`));
 		},
+	);
+});
+
+describe("a discipline batch lost to an expired session", () => {
+	afterEach(() => {
+		localStorage.clear();
+		vi.unstubAllGlobals();
+	});
+
+	const CARD = "Aplicar às unidades e áreas comuns";
+	const ENTRIES = [
+		["floor", "the card button", () => click("button", CARD)()],
+		[
+			"floor",
+			"the menu item",
+			() => pick("Ações do andar", "Disciplinas em lote"),
+		],
+		["tower", "the card button", () => click("button", CARD)()],
+		[
+			"tower",
+			"the menu item",
+			() => pick("Ações da torre", "Disciplinas em lote"),
+		],
+		[
+			"unit",
+			"the card button",
+			() => click("button", "Aplicar a outros locais")(),
+		],
+		[
+			"commonArea",
+			"the card button",
+			() => click("button", "Aplicar a outros locais")(),
+		],
+	] as const;
+
+	test.each(ENTRIES)(
+		"on %s opened by %s, does not reopen or repeat the batch after signing back in",
+		async (key, _entry, open) => {
+			const page = PAGES[key]();
+			renderAt(page.path);
+			await page.ready();
+			await waitFor(async () =>
+				expect(
+					(await screen.findAllByRole("button", { name: /^Aplicar / }))[0],
+				).toBeEnabled(),
+			);
+			await open();
+			page.server.expireNextWrite();
+			await userEvent.click(
+				await screen.findByRole("button", {
+					name: /^Aplicar a \d+ (local|locais)$/,
+				}),
+			);
+			await screen.findByLabelText("E-mail");
+			await signInAgain();
+			await page.ready();
+
+			await expectNothingOpen(page);
+			expect(
+				screen.queryByRole("dialog", { name: "Disciplinas em lote" }),
+			).not.toBeInTheDocument();
+			expect(page.server.writes).toHaveLength(1);
+			expect(page.server.writes[0]).toMatch(/^POST .*\/discipline-batches$/);
+			expect(
+				Object.keys(localStorage).filter((name) =>
+					name.startsWith("bluprint.session-draft."),
+				),
+			).toEqual([]);
+		},
+		30_000,
 	);
 });

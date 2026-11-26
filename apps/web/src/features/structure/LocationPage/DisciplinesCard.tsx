@@ -6,32 +6,29 @@ import {
 	MAX_EXTRA_DISCIPLINES,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Check, Info, Plus, X } from "lucide-react";
+import { Check, Info, Plus, SlidersHorizontal, X } from "lucide-react";
 import { type RefObject, useId, useRef, useState } from "react";
-import { toast } from "sonner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useClearSessionDraft, useSessionDraft } from "@/features/auth";
-import { isProjectDelivered } from "../../projects/api";
 import {
-	disciplineNameTakenOf,
 	disciplinesQueryOptions,
-	isDisciplineLimitReached,
-	useCreateDisciplineMutation,
 	useSetLocationDisciplineMutation,
 } from "../api";
 import {
 	DISCIPLINE_LIMIT_TEXT,
 	NewDisciplineDialog,
-	type NewDisciplineRefusal,
 } from "../components/NewDisciplineDialog";
+import { useCreateDiscipline } from "../components/useCreateDiscipline";
 import {
+	batchCardLabel,
 	generalSentence,
 	NONE_TURNED_ON,
 	OFF_HERE,
 	ownListSentence,
 } from "../disciplinesText";
+import { useDisciplineBatch } from "./DisciplineBatchHost";
 
 const ROW =
 	"flex min-h-14 items-center gap-(--space-3) py-(--space-2) px-(--space-4)";
@@ -111,7 +108,6 @@ function NewDisciplineEntry({
 	card: RefObject<HTMLElement | null>;
 }) {
 	const catalog = useQuery(disciplinesQueryOptions(projectId));
-	const create = useCreateDisciplineMutation(projectId);
 	const restored = useSessionDraft(
 		"create-discipline",
 		(variables) => createDisciplineSchema.safeParse(variables).data,
@@ -131,25 +127,10 @@ function NewDisciplineEntry({
 		setDialog(null);
 	}
 
-	async function send(
-		discipline: CreateDiscipline,
-	): Promise<NewDisciplineRefusal | undefined> {
-		try {
-			const created = await create.mutateAsync(discipline);
-			toast.success(`Disciplina ${created.name} criada.`);
-			setDialog(null);
-			return undefined;
-		} catch (failure) {
-			const takenAs = disciplineNameTakenOf(failure);
-			if (takenAs !== undefined) return { nameTakenAs: takenAs };
-			if (isDisciplineLimitReached(failure)) return { limitReached: true };
-			if (isProjectDelivered(failure)) {
-				close();
-				return undefined;
-			}
-			throw failure;
-		}
-	}
+	const send = useCreateDiscipline(projectId, {
+		onCreated: () => setDialog(null),
+		onDelivered: close,
+	});
 
 	return (
 		<>
@@ -180,6 +161,23 @@ function NewDisciplineEntry({
 				/>
 			)}
 		</>
+	);
+}
+
+function BatchEntry({ type }: { type: LocationDetail["type"] }) {
+	const batch = useDisciplineBatch();
+	return (
+		<Button
+			type="button"
+			variant="ghost"
+			size="lg"
+			disabled={!batch.ready}
+			className="text-primary max-md:w-full md:justify-self-start"
+			onClick={(event) => batch.open(event.currentTarget)}
+		>
+			<SlidersHorizontal aria-hidden="true" />
+			{batchCardLabel(type)}
+		</Button>
 	);
 }
 
@@ -251,6 +249,7 @@ export function DisciplinesCard({
 					card={card}
 				/>
 			)}
+			{editable && <BatchEntry type={location.type} />}
 		</section>
 	);
 }

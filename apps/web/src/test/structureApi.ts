@@ -4,6 +4,7 @@ import {
 	DISCIPLINE_LIMIT_REACHED,
 	DISCIPLINE_NAME_TAKEN,
 	type Discipline,
+	type DisciplineBatch,
 	type DroppedRoom,
 	EXTRA_DISCIPLINE_COLORS,
 	LOCATION_NOT_FOUND,
@@ -927,4 +928,76 @@ export function catalogApi(
 		return json(discipline, 201);
 	};
 	return { handler, created, catalog };
+}
+
+function batchTargets(
+	structure: Structure,
+	target: DisciplineBatch["target"],
+): string[] {
+	if (target.type === "locations") return target.locationIds;
+	if (target.type === "floor") {
+		const found = structure.towers
+			.flatMap((t) => t.floors)
+			.find((f) => f.id === target.locationId);
+		return found
+			? [...found.units, ...found.commonAreas].map(({ id }) => id)
+			: [];
+	}
+	const found = structure.towers.find((t) => t.id === target.locationId);
+	return found
+		? [
+				...found.floors.flatMap((f) => [...f.units, ...f.commonAreas]),
+				...found.commonAreas,
+			].map(({ id }) => id)
+		: [];
+}
+
+export function batchApi(
+	projectId: string,
+	structure: Structure,
+	details: Record<string, Partial<LocationDetail>>,
+	answer?: (body: DisciplineBatch, attempt: number) => Reply | undefined,
+) {
+	const received: DisciplineBatch[] = [];
+	const handler: ApiHandler = (url, init) => {
+		if (
+			url.pathname !== `/api/projects/${projectId}/discipline-batches` ||
+			init?.method !== "POST"
+		) {
+			return undefined;
+		}
+		const body = JSON.parse(String(init.body)) as DisciplineBatch;
+		received.push(body);
+		const answered = answer?.(body, received.length);
+		if (answered) return answered;
+		const known = new Set(everyNode(structure).map(({ id }) => id));
+		const ids = batchTargets(structure, body.target);
+		const gone = ids.filter((id) => !known.has(id));
+		if (gone.length > 0) {
+			return json(
+				{
+					type: "about:blank",
+					title: "Not Found",
+					status: 404,
+					code: LOCATION_NOT_FOUND,
+					ids: gone,
+				},
+				404,
+			);
+		}
+		for (const id of ids) {
+			details[id] = {
+				...details[id],
+				disciplines: (details[id]?.disciplines ?? []).map((each) =>
+					body.on.includes(each.id)
+						? { ...each, applies: true }
+						: body.off.includes(each.id)
+							? { ...each, applies: false }
+							: each,
+				),
+			};
+		}
+		return json({ locations: ids.length });
+	};
+	return { handler, received };
 }
