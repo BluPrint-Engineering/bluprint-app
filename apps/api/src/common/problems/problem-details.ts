@@ -15,6 +15,7 @@ export interface ProblemInit {
 	projectId?: string | undefined;
 	items?: ProblemDetails["items"];
 	names?: string[] | undefined;
+	ids?: string[] | undefined;
 	name?: string | undefined;
 }
 
@@ -36,6 +37,7 @@ export function problemDetails({
 	projectId,
 	items,
 	names,
+	ids,
 	name,
 }: ProblemInit): ProblemDetails {
 	return {
@@ -52,6 +54,7 @@ export function problemDetails({
 		...(projectId !== undefined && { projectId }),
 		...(items !== undefined && { items }),
 		...(names !== undefined && { names }),
+		...(ids !== undefined && { ids }),
 		...(name !== undefined && { name }),
 	};
 }

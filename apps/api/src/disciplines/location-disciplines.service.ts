@@ -1,6 +1,4 @@
 import {
-	DISCIPLINE_IS_GENERAL,
-	DISCIPLINE_NOT_FOUND,
 	disciplineApplies,
 	LOCATION_NOT_FOUND,
 	type LocationDiscipline,
@@ -14,36 +12,9 @@ import { Injectable } from "@nestjs/common";
 import { ProblemException } from "../common/problems/problem.exception";
 import { ProjectsService } from "../projects/projects.service";
 import { UnitsService } from "../units/units.service";
-import {
-	type DisciplineRow,
-	DisciplinesRepository,
-} from "./disciplines.repository";
+import { assertSpecific } from "./discipline-problems";
+import { DisciplinesRepository } from "./disciplines.repository";
 import { LocationDisciplinesRepository } from "./location-disciplines.repository";
-
-const disciplineNotFound = (status: 400 | 404) =>
-	new ProblemException({
-		status,
-		code: DISCIPLINE_NOT_FOUND,
-		detail: "The discipline does not exist in this project.",
-	});
-
-const disciplineIsGeneral = () =>
-	new ProblemException({
-		status: 409,
-		code: DISCIPLINE_IS_GENERAL,
-		detail: "General applies at every location and cannot be changed.",
-	});
-
-function assertSpecific(
-	target: DisciplineRow | undefined,
-	projectId: string,
-	missingStatus: 400 | 404,
-): asserts target is DisciplineRow {
-	if (!target || target.projectId !== projectId) {
-		throw disciplineNotFound(missingStatus);
-	}
-	if (target.type === "general") throw disciplineIsGeneral();
-}
 
 @Injectable()
 export class LocationDisciplinesService {

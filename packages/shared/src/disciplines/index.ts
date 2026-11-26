@@ -1,4 +1,5 @@
 export * from "./create-discipline.js";
+export * from "./discipline-batch.js";
 export * from "./discipline.js";
 export * from "./discipline-applies.js";
 export * from "./discipline-colors.js";

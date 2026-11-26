@@ -71,6 +71,13 @@ export const problemDetailsSchema = z.object({
 				"The names that clashed, as the request sent them, present on `LOCATION_NAME_TAKEN` and `TYPOLOGY_NAME_TAKEN`.",
 			example: ["Torre A", "901"],
 		}),
+	ids: z
+		.array(z.uuid())
+		.optional()
+		.meta({
+			description:
+				"The ids of the locations that do not exist in the project, present on `LOCATION_NOT_FOUND` from `POST .../discipline-batches`.",
+		}),
 	name: z.string().optional().meta({
 		description:
 			"The name as it is already spelled in the project, present on `DISCIPLINE_NAME_TAKEN`.",
