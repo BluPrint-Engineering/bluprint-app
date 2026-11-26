@@ -217,6 +217,7 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 	const typologies: TypologyDraft[] = [];
 	for (const item of draft.typologies) {
 		const typology = record(item);
+		if (typology?.existing === true) continue;
 		const rooms = typology && strings(typology.rooms);
 		const locationType =
 			typology?.locationType === "common_area" ||

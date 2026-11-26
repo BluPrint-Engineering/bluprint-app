@@ -833,6 +833,46 @@ describe("readWizardDraft", () => {
 		expect(readWizardDraft(old)).toBeUndefined();
 	});
 
+	test("drops the project's typologies an older draft kept, keeping the rules that point at them", () => {
+		const draft = draftOf({});
+		const stored = {
+			...JSON.parse(JSON.stringify(draft)),
+			typologies: [
+				{
+					key: "server-type-c",
+					name: "Tipologia C",
+					rooms: ["Sala"],
+					existing: true,
+				},
+				{ key: "type-1", name: "Tipologia A", rooms: ["Sala", "Cozinha"] },
+			],
+			rules: [
+				{
+					key: "rule-1",
+					tower: 0,
+					finals: "01",
+					from: "1",
+					to: "12",
+					typology: "server-type-c",
+				},
+			],
+		};
+
+		const restored = readWizardDraft(stored);
+
+		expect(restored?.typologies).toEqual([
+			{
+				key: "type-1",
+				name: "Tipologia A",
+				rooms: ["Sala", "Cozinha"],
+				locationType: "unit",
+			},
+		]);
+		expect(restored?.rules.map(({ typology }) => typology)).toEqual([
+			"server-type-c",
+		]);
+	});
+
 	test("drops a draft with a tower without ranges", () => {
 		const draft = JSON.parse(JSON.stringify(draftOf({}))) as {
 			towers: Record<string, unknown>[];

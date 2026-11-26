@@ -34,7 +34,7 @@ function problem(status: number, code: string, extra: object = {}) {
 	);
 }
 
-function wizardApi(create?: (body: CreateStructure) => Response): {
+function wizardApi(create?: (body: CreateStructure) => Promise<Response>): {
 	handler: ApiHandler;
 	sent: CreateStructure[];
 } {
@@ -239,6 +239,33 @@ describe("typologies in the wizard", () => {
 		expect(
 			screen.getByRole("textbox", { name: "Nome da tipologia" }),
 		).toHaveFocus();
+	});
+
+	test("keeps the taken typology name refused after the next edit, showing the project's typology", async () => {
+		const listed = { typologies: [] as ReturnType<typeof typologyOf>[] };
+		const { handler: wizard } = wizardApi(() => {
+			listed.typologies = [typologyOf("Tipologia A", ["Sala"])];
+			return problem(409, TYPOLOGY_NAME_TAKEN, { names: ["Tipologia A"] });
+		});
+		open(combine(typologiesApi(OBRA.id, listed), wizard));
+		await user.type(
+			await screen.findByRole("textbox", { name: "Primeiro andar" }),
+			"1",
+		);
+		await user.type(screen.getByRole("textbox", { name: "Último andar" }), "1");
+		await user.type(screen.getByRole("textbox", { name: "Finais" }), "01");
+		await user.click(screen.getByRole("button", { name: "Criar estrutura" }));
+		expect(
+			await screen.findByText(
+				"Já existe na obra. Os cômodos mudam na Configuração.",
+			),
+		).toBeInTheDocument();
+
+		await addRoom("Copa", "Tipologia A");
+
+		expect(
+			screen.getByText("Esse nome já existe nesta obra."),
+		).toBeInTheDocument();
 	});
 
 	test("links the created structure to the typologies section", async () => {
