@@ -504,6 +504,40 @@ describe("structure wizard", () => {
 			).toBeNull();
 		});
 
+		test("offers only the latest version once another tab changed a draft whose answer was lost", async () => {
+			const { handler, sent } = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+
+			changeInOtherTab();
+
+			await screen.findByText("Este rascunho mudou em outra aba");
+			expect(
+				screen.queryByRole("button", { name: "Tentar de novo" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.queryByRole("button", { name: "Voltar a editar" }),
+			).not.toBeInTheDocument();
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+
+			expect(
+				await screen.findByText("Rascunho restaurado"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("textbox", { name: "Último andar" }),
+			).not.toBeDisabled();
+			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
+				"9",
+			);
+			expect(sent).toHaveLength(1);
+		});
+
 		test("finishes a creation that the check finds after another tab changed the draft", async () => {
 			let release: () => void = () => {};
 			const { handler, sent, created } = wizardApi({

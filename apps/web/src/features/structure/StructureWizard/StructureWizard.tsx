@@ -912,18 +912,19 @@ export function StructureWizard({
 					}}
 				/>
 			)}
-			{openingCheck && submission === "checking" && (
+			{!stale && openingCheck && submission === "checking" && (
 				<CheckingStatus extending={extend !== undefined} />
 			)}
-			{(submission === "uncertain" ||
-				(submission === "checking" && !openingCheck)) && (
-				<UncertainAlert
-					checking={submission === "checking" ? checkAction : undefined}
-					noConnection={connectionMessage}
-					onRetry={() => void checkAttempt("retry")}
-					onEdit={() => void checkAttempt("edit")}
-				/>
-			)}
+			{!stale &&
+				(submission === "uncertain" ||
+					(submission === "checking" && !openingCheck)) && (
+					<UncertainAlert
+						checking={submission === "checking" ? checkAction : undefined}
+						noConnection={connectionMessage}
+						onRetry={() => void checkAttempt("retry")}
+						onEdit={() => void checkAttempt("edit")}
+					/>
+				)}
 			{!openingCheck && (
 				<fieldset
 					disabled={stale || submission !== "editing"}
