@@ -1,7 +1,6 @@
 import {
 	DISCIPLINE_NAME_TAKEN,
 	LOCATION_NAME_TAKEN,
-	LOCATION_NOT_FOUND,
 	MAX_LOCATIONS_PER_REQUEST,
 	NO_UNITS_LEFT,
 	PROJECT_DELIVERED,
@@ -12,7 +11,12 @@ import {
 	TYPOLOGY_NAME_TAKEN,
 } from "@bluprint/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link, useBlocker, useNavigate, useRouteContext } from "@tanstack/react-router";
+import {
+	Link,
+	useBlocker,
+	useNavigate,
+	useRouteContext,
+} from "@tanstack/react-router";
 import { Check, CircleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -33,7 +37,6 @@ import {
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
 	isBlankStructure,
-	locationQueryOptions,
 	namesTakenOf,
 	projectUnitsQueryOptions,
 	structureQueryOptions,
@@ -50,6 +53,15 @@ import {
 	missingReserveTitle,
 	nameTakenText,
 } from "../reserveText";
+import {
+	CheckingStatus,
+	StaleDraftAlert,
+	UncertainAlert,
+} from "./AttemptAlerts";
+import {
+	attemptOutcome,
+	type CheckAction,
+} from "./attemptCheck";
 import { buildPlan, reserveUsed } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
 import { DiscardDraftDialog } from "./DiscardDraftDialog";
@@ -240,9 +252,7 @@ export function StructureWizard({
 		"editing" | "sending" | "uncertain" | "checking"
 	>(stored?.attempt ? "checking" : "editing");
 	const [connectionMessage, setConnectionMessage] = useState(false);
-	const [checkAction, setCheckAction] = useState<"open" | "retry" | "edit">(
-		"open",
-	);
+	const [checkAction, setCheckAction] = useState<CheckAction>("open");
 	const [openingCheck, setOpeningCheck] = useState(
 		stored?.attempt !== undefined,
 	);
@@ -254,6 +264,7 @@ export function StructureWizard({
 	const navigationBlocker = useBlocker({
 		shouldBlockFn: ({ current, next }) =>
 			dirty &&
+			!staleRef.current &&
 			!bypassBlock.current &&
 			next.pathname !== "/login" &&
 			current.pathname !== next.pathname,
@@ -415,7 +426,6 @@ export function StructureWizard({
 	}
 
 	function success(counts: StructureCounts) {
-		if (staleRef.current) return;
 		localStorage.removeItem(storageKey);
 		bypassBlock.current = true;
 		void queryClient.invalidateQueries({ queryKey: ["structure", project.id] });
@@ -444,7 +454,13 @@ export function StructureWizard({
 		toast.success(createdToast(counts.towers, counts.units), {
 			duration: 12_000,
 			description: (
-				<Link to="/projects/$projectId/configuration" params={{ projectId: project.id }} hash="tipologias" className="font-medium text-primary underline underline-offset-3" onClick={() => toast.dismiss()}>
+				<Link
+					to="/projects/$projectId/configuration"
+					params={{ projectId: project.id }}
+					hash="tipologias"
+					className="font-medium text-primary underline underline-offset-3"
+					onClick={() => toast.dismiss()}
+				>
 					Ver tipologias
 				</Link>
 			),
@@ -454,6 +470,7 @@ export function StructureWizard({
 			params: { projectId: project.id },
 			replace: true,
 		});
+
 	}
 
 	function clearAttempt() {
@@ -467,7 +484,15 @@ export function StructureWizard({
 
 	function send() {
 		if (staleRef.current) return;
-		const { typologies, locations } = buildPlan(draft, idFor, existing.map(({ id, name, locationType }) => ({ id, name, locationType })));
+		const { typologies, locations } = buildPlan(
+			draft,
+			idFor,
+			existing.map(({ id, name, locationType }) => ({
+				id,
+				name,
+				locationType,
+			})),
+		);
 		const first = locations[0];
 		if (!first) return;
 		attemptId.current = first.id;
@@ -501,81 +526,73 @@ export function StructureWizard({
 		send();
 	}
 
-	async function checkAttempt(action: "open" | "retry" | "edit") {
+	async function checkAttempt(action: CheckAction) {
 		const id = attemptId.current;
 		if (!id) return;
 		setSubmission("checking");
 		setCheckAction(action);
 		setConnectionMessage(false);
-		try {
-			await queryClient.fetchQuery({
-				...locationQueryOptions(project.id, id),
-				staleTime: 0,
-				retry: false,
-			});
-			if (staleRef.current) return;
+		const outcome = await attemptOutcome(queryClient, project.id, id);
+		if (outcome === "created") {
 			success(buildPlan(draft, idFor).counts);
-		} catch (error) {
+			return;
+		}
+		if (staleRef.current) return;
+		setOpeningCheck(false);
+		if (outcome === "unknown") {
+			setConnectionMessage(action === "edit");
+			setSubmission("uncertain");
+			return;
+		}
+		try {
+			const [freshProject, structure] = await Promise.all([
+				queryClient.fetchQuery({
+					...projectQueryOptions(project.id),
+					staleTime: 0,
+					retry: false,
+				}),
+				queryClient.fetchQuery({
+					...structureQueryOptions(project.id),
+					staleTime: 0,
+					retry: false,
+				}),
+			]);
 			if (staleRef.current) return;
-			setOpeningCheck(false);
-			if (
-				error instanceof ApiError &&
-				error.status === 404 &&
-				error.problem?.code === LOCATION_NOT_FOUND
-			) {
-				try {
-					const [freshProject, structure] = await Promise.all([
-						queryClient.fetchQuery({
-							...projectQueryOptions(project.id),
-							staleTime: 0,
-							retry: false,
-						}),
-						queryClient.fetchQuery({
-							...structureQueryOptions(project.id),
-							staleTime: 0,
-							retry: false,
-						}),
-					]);
-					if (staleRef.current) return;
-					if (freshProject.status === "delivered") {
-						localStorage.removeItem(storageKey);
-						bypassBlock.current = true;
-						return;
-					}
-					const usable = extend
-						? structure.towers.some((tower) => tower.id === extend.towerId)
-						: isBlankStructure(structure);
-					if (!usable) {
-						localStorage.removeItem(storageKey);
-						bypassBlock.current = true;
-						toast.info(
-							extend
-								? "A torre não existe mais. O rascunho foi descartado."
-								: "Esta obra já tem estrutura. O rascunho foi descartado.",
-						);
-						void navigate({
-							to: "/projects/$projectId",
-							params: { projectId: project.id },
-							replace: true,
-						});
-						return;
-					}
-				} catch {
-					setConnectionMessage(action === "edit");
-					setSubmission("uncertain");
-					return;
-				}
-				if (action === "retry") send();
-				else {
-					clearAttempt();
-					ids.current = new Map();
-					setSubmission("editing");
-					if (action === "open") setRestored(true);
-				}
-			} else {
-				setConnectionMessage(action === "edit");
-				setSubmission("uncertain");
+			if (freshProject.status === "delivered") {
+				localStorage.removeItem(storageKey);
+				bypassBlock.current = true;
+				return;
 			}
+			const usable = extend
+				? structure.towers.some((tower) => tower.id === extend.towerId)
+				: isBlankStructure(structure);
+			if (!usable) {
+				localStorage.removeItem(storageKey);
+				bypassBlock.current = true;
+				toast.info(
+					extend
+						? "A torre não existe mais. O rascunho foi descartado."
+						: "Esta obra já tem estrutura. O rascunho foi descartado.",
+				);
+				void navigate({
+					to: "/projects/$projectId",
+					params: { projectId: project.id },
+					replace: true,
+				});
+				return;
+			}
+		} catch {
+			setConnectionMessage(action === "edit");
+			setSubmission("uncertain");
+			return;
+		}
+		if (action === "retry") send();
+		else {
+			clearAttempt();
+			ids.current = new Map();
+			create.reset();
+			setSubmission("editing");
+			if (action === "open") setRestored(true);
 		}
 	}
 
@@ -912,86 +929,39 @@ export function StructureWizard({
 				</Alert>
 			)}
 			{stale && (
-				<Alert>
-					<AlertTitle>Este rascunho mudou em outra aba</AlertTitle>
-					<AlertDescription>
-						<p>
-							Continue a partir da versão mais recente para não perder nada.
-						</p>
-						<Button
-							className="mt-(--space-2)"
-							type="button"
-							onClick={() => {
-								const latest = readStructureDraft(storageKey);
-								setDraft(
-									(latest && restoreWizardDraft(latest.draft, start)) ??
-										start ??
-										initialDraft(),
-								);
-								setDirty(latest !== undefined);
-								setRestored(latest !== undefined && !latest.attempt);
-								ids.current = new Map(
-									Object.entries(latest?.attempt?.ids ?? {}),
-								);
-								attemptId.current = latest?.attempt?.firstLocationId;
-								setSubmission(latest?.attempt ? "checking" : "editing");
-								setOpeningCheck(latest?.attempt !== undefined);
-								checkStarted.current = false;
-								setCheckOnRender(latest?.attempt !== undefined);
-								staleRef.current = false;
-								setStale(false);
-							}}
-						>
-							Carregar a versão mais recente
-						</Button>
-					</AlertDescription>
-				</Alert>
+				<StaleDraftAlert
+					onLoad={() => {
+						const latest = readStructureDraft(storageKey);
+						setDraft(
+							(latest && restoreWizardDraft(latest.draft, start)) ??
+								start ??
+								initialDraft(),
+						);
+						setDirty(latest !== undefined);
+						setRestored(latest !== undefined && !latest.attempt);
+						ids.current = new Map(Object.entries(latest?.attempt?.ids ?? {}));
+						attemptId.current = latest?.attempt?.firstLocationId;
+						create.reset();
+						setSubmission(latest?.attempt ? "checking" : "editing");
+						setOpeningCheck(latest?.attempt !== undefined);
+						checkStarted.current = false;
+						setCheckOnRender(latest?.attempt !== undefined);
+						staleRef.current = false;
+						setStale(false);
+					}}
+				/>
 			)}
 			{openingCheck && submission === "checking" && (
-				<p role="status">
-					{extend
-						? "Conferindo se os andares foram adicionados…"
-						: "Conferindo se a estrutura foi criada…"}
-				</p>
+				<CheckingStatus extending={extend !== undefined} />
 			)}
 			{(submission === "uncertain" ||
 				(submission === "checking" && !openingCheck)) && (
-				<Alert variant="destructive">
-					<AlertTitle>Não foi possível confirmar</AlertTitle>
-					<AlertDescription>
-						<p>
-							A conexão caiu antes da resposta. Tente de novo: nada é criado
-							duas vezes.
-						</p>
-						{connectionMessage && (
-							<p>
-								Ainda sem conexão. Para editar, o app precisa confirmar antes
-								que nada foi criado.
-							</p>
-						)}
-						<div className="flex flex-wrap gap-2">
-							<Button
-								type="button"
-								disabled={submission === "checking"}
-								onClick={() => void checkAttempt("retry")}
-							>
-								{submission === "checking" && checkAction === "retry"
-									? "Conferindo…"
-									: "Tentar de novo"}
-							</Button>
-							<Button
-								type="button"
-								variant="outline"
-								disabled={submission === "checking"}
-								onClick={() => void checkAttempt("edit")}
-							>
-								{submission === "checking" && checkAction === "edit"
-									? "Conferindo…"
-									: "Voltar a editar"}
-							</Button>
-						</div>
-					</AlertDescription>
-				</Alert>
+				<UncertainAlert
+					checking={submission === "checking" ? checkAction : undefined}
+					noConnection={connectionMessage}
+					onRetry={() => void checkAttempt("retry")}
+					onEdit={() => void checkAttempt("edit")}
+				/>
 			)}
 			{!openingCheck && (
 				<fieldset
@@ -1012,7 +982,7 @@ export function StructureWizard({
 					navigationBlocker.reset?.();
 				}}
 				onDiscard={() => {
-					localStorage.removeItem(storageKey);
+					if (!staleRef.current) localStorage.removeItem(storageKey);
 					setDirty(false);
 					setDiscardOpen(false);
 					if (signOutAnswer.current) {
@@ -1023,6 +993,7 @@ export function StructureWizard({
 						bypassBlock.current = true;
 						navigationBlocker.proceed();
 					} else {
+						create.reset();
 						setDraft(start ?? initialDraft());
 						setRestored(false);
 					}

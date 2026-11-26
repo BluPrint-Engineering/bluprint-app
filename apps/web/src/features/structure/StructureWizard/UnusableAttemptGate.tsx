@@ -1,13 +1,15 @@
-import { LOCATION_NOT_FOUND } from "@bluprint/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { ApiError } from "@/lib/api";
-import { locationQueryOptions } from "../api";
-import { createdToast, floorsAddedToast } from "../reserveText";
+import {
+	CheckingStatus,
+	StaleDraftAlert,
+	UncertainAlert,
+} from "./AttemptAlerts";
+import {
+	attemptOutcome,
+	type CheckAction,
+	useFinishAttempt,
+} from "./attemptCheck";
 import { buildPlan } from "./buildPlan";
 import type { StructureDraft } from "./structureDraftStore";
 import { initialDraft, restoreWizardDraft } from "./wizardDraft";
@@ -28,8 +30,8 @@ export function UnusableAttemptGate({
 	onMissing: () => void;
 }) {
 	const queryClient = useQueryClient();
-	const navigate = useNavigate();
-	const [state, setState] = useState<"checking" | "uncertain">("checking");
+	const finish = useFinishAttempt(projectId, storageKey);
+	const [checking, setChecking] = useState<CheckAction | undefined>("open");
 	const [noConnection, setNoConnection] = useState(false);
 	const [stale, setStale] = useState(false);
 	const staleRef = useRef(false);
@@ -44,21 +46,20 @@ export function UnusableAttemptGate({
 		window.addEventListener("storage", changed);
 		return () => window.removeEventListener("storage", changed);
 	}, [storageKey]);
-	async function check(edit = false) {
+	async function check(action: CheckAction) {
 		if (!stored.attempt) return;
-		setState("checking");
+		setChecking(action);
 		setNoConnection(false);
-		try {
-			await queryClient.fetchQuery({
-				...locationQueryOptions(projectId, stored.attempt.firstLocationId),
-				staleTime: 0,
-				retry: false,
-			});
-			if (staleRef.current) return;
-			const base = initialDraft();
+		const outcome = await attemptOutcome(
+			queryClient,
+			projectId,
+			stored.attempt.firstLocationId,
+		);
+		if (staleRef.current) return;
+		if (outcome === "created") {
 			const start = towerId
 				? {
-						...base,
+						...initialDraft(),
 						extend: {
 							towerId,
 							towerName: "",
@@ -70,97 +71,32 @@ export function UnusableAttemptGate({
 					}
 				: undefined;
 			const draft = restoreWizardDraft(stored.draft, start);
-			if (!draft) throw new Error("Invalid draft");
-			const counts = buildPlan(draft, (key) => key).counts;
+			finish(
+				buildPlan(draft, (key) => key).counts,
+				towerId === undefined ? undefined : { id: towerId, name: towerName },
+			);
+		} else if (outcome === "missing") {
 			localStorage.removeItem(storageKey);
-			void queryClient.invalidateQueries({
-				queryKey: ["structure", projectId],
-			});
-			toast.success(
-				towerId
-					? floorsAddedToast(counts.floors, towerName)
-					: createdToast(counts.towers, counts.units),
-			);
-			void navigate(
-				towerId && towerName
-					? {
-							to: "/projects/$projectId/locations/$locationId",
-							params: { projectId, locationId: towerId },
-							replace: true,
-						}
-					: {
-							to: "/projects/$projectId",
-							params: { projectId },
-							replace: true,
-						},
-			);
-		} catch (error) {
-			if (staleRef.current) return;
-			if (
-				error instanceof ApiError &&
-				error.status === 404 &&
-				error.problem?.code === LOCATION_NOT_FOUND
-			) {
-				localStorage.removeItem(storageKey);
-				onMissing();
-			} else {
-				setNoConnection(edit);
-				setState("uncertain");
-			}
+			onMissing();
+		} else {
+			setNoConnection(action === "edit");
+			setChecking(undefined);
 		}
 	}
 	useEffect(() => {
 		if (started.current) return;
 		started.current = true;
-		void check();
+		void check("open");
 	});
-	if (stale)
-		return (
-			<Alert>
-				<AlertTitle>Este rascunho mudou em outra aba</AlertTitle>
-				<AlertDescription>
-					<p>Continue a partir da versão mais recente para não perder nada.</p>
-					<Button type="button" onClick={() => window.location.reload()}>
-						Carregar a versão mais recente
-					</Button>
-				</AlertDescription>
-			</Alert>
-		);
-	if (state === "checking")
-		return (
-			<p role="status">
-				{towerId
-					? "Conferindo se os andares foram adicionados…"
-					: "Conferindo se a estrutura foi criada…"}
-			</p>
-		);
+	if (stale) return <StaleDraftAlert onLoad={() => window.location.reload()} />;
+	if (checking === "open")
+		return <CheckingStatus extending={towerId !== undefined} />;
 	return (
-		<Alert variant="destructive">
-			<AlertTitle>Não foi possível confirmar</AlertTitle>
-			<AlertDescription>
-				<p>
-					A conexão caiu antes da resposta. Tente de novo: nada é criado duas
-					vezes.
-				</p>
-				{noConnection && (
-					<p>
-						Ainda sem conexão. Para editar, o app precisa confirmar antes que
-						nada foi criado.
-					</p>
-				)}
-				<div className="flex flex-wrap gap-2">
-					<Button type="button" onClick={() => void check()}>
-						Tentar de novo
-					</Button>
-					<Button
-						type="button"
-						variant="outline"
-						onClick={() => void check(true)}
-					>
-						Voltar a editar
-					</Button>
-				</div>
-			</AlertDescription>
-		</Alert>
+		<UncertainAlert
+			checking={checking}
+			noConnection={noConnection}
+			onRetry={() => void check("retry")}
+			onEdit={() => void check("edit")}
+		/>
 	);
 }

@@ -469,6 +469,186 @@ describe("structure wizard", () => {
 			);
 		});
 
+		test("unlocks editing after a 500 without the old nothing-saved alert", async () => {
+			const { handler } = wizardApi({
+				create: () =>
+					json({ type: "about:blank", title: "Internal", status: 500 }, 500),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Voltar a editar" }));
+			await waitFor(() =>
+				expect(
+					screen.getByRole("textbox", { name: "Último andar" }),
+				).toBeEnabled(),
+			);
+
+			expect(screen.queryByText(/Nada foi salvo/)).not.toBeInTheDocument();
+			expect(
+				screen.queryByText("Não foi possível confirmar"),
+			).not.toBeInTheDocument();
+		});
+
+		test("leaves a stale tab without asking and keeps the other tab's draft", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await typeInto("Primeiro andar", "1");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id);
+			const stored = readStructureDraft(key);
+			const range = stored?.draft.towers[0]?.ranges[0];
+			if (!stored || !range) throw new Error("missing saved range");
+			range.first = "7";
+			writeStructureDraft(key, stored);
+			const newer = localStorage.getItem(key);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", { key, newValue: newer }),
+				),
+			);
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			await user.click(screen.getByRole("link", { name: "BluPrint, obras" }));
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				screen.queryByText("Descartar o que você montou?"),
+			).not.toBeInTheDocument();
+			expect(localStorage.getItem(key)).toBe(newer);
+		});
+
+		test("asks before the browser's back leaves a changed draft", async () => {
+			stubApi(signedIn, { api: wizardApi().handler });
+			const { router } = renderAt("/projects", { browserHistory: true });
+			await act(() =>
+				router.navigate({
+					to: "/projects/$projectId/structure/new",
+					params: { projectId: OBRA.id },
+				}),
+			);
+			await typeInto("Primeiro andar", "1");
+
+			act(() => router.history.back());
+
+			expect(
+				await screen.findByText("Descartar o que você montou?"),
+			).toBeInTheDocument();
+			await user.click(
+				screen.getByRole("button", { name: "Continuar montando" }),
+			);
+			expect(router.state.location.pathname).toBe(WIZARD_PATH);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).not.toBeNull();
+
+			act(() => router.history.back());
+			await user.click(
+				await screen.findByRole("button", { name: "Descartar" }),
+			);
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+			window.history.replaceState(null, "", "/");
+		});
+
+		test("leaves without asking when nothing changed", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await screen.findByRole("textbox", { name: "Último andar" });
+
+			await user.click(screen.getByRole("link", { name: "BluPrint, obras" }));
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				screen.queryByText("Descartar o que você montou?"),
+			).not.toBeInTheDocument();
+		});
+
+		test("opens the project after creating without asking to discard", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await describeTower("2", "01, 02");
+
+			await user.click(await createButton());
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				screen.queryByText("Descartar o que você montou?"),
+			).not.toBeInTheDocument();
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("drops the draft of another account that used this browser", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+			const mine = structureDraftKey(signedIn.user.id, OBRA.id);
+			const theirs = structureDraftKey("another-account", OBRA.id);
+			localStorage.setItem(theirs, localStorage.getItem(mine) ?? "");
+			localStorage.removeItem(mine);
+
+			open(handler);
+
+			expect(
+				await screen.findByRole("textbox", { name: "Último andar" }),
+			).toHaveValue("");
+			expect(screen.queryByText("Rascunho restaurado")).not.toBeInTheDocument();
+			expect(localStorage.getItem(theirs)).toBeNull();
+		});
+
+		test("drops the draft with a notice when someone else created the structure", async () => {
+			open(wizardApi().handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+
+			const { router } = open(
+				wizardApi({ structure: structureOf([tower("Torre A")]) }).handler,
+			);
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText(
+					"Esta obra já tem estrutura. O rascunho foi descartado.",
+				),
+			).toBeInTheDocument();
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("drops the draft and shows the delivered project", async () => {
+			open(wizardApi().handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+
+			open(wizardApi({ summary: { ...OBRA, status: "delivered" } }).handler);
+
+			expect(
+				await screen.findByText("A obra foi entregue"),
+			).toBeInTheDocument();
+			await waitFor(() =>
+				expect(
+					localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+				).toBeNull(),
+			);
+		});
+
 		test("opens with the band, one tower, both sections and an empty preview (W1)", async () => {
 			const { handler } = wizardApi();
 			open(handler);

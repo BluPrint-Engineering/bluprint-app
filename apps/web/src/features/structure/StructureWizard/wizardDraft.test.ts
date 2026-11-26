@@ -5,8 +5,10 @@ import {
 	initialDraft,
 	nextTowerName,
 	type RangeDraft,
-	readWizardDraft,
+	restoreWizardDraft,
 	ruleFieldId,
+	storedWizardDraftSchema,
+	storeWizardDraft,
 	type TowerDraft,
 	typologyFieldId,
 	validateDraft,
@@ -777,13 +779,18 @@ describe("a draft restored after the tab reloaded", () => {
 		vi.resetModules();
 		const firstPage = await import("./wizardDraft");
 		const stored: unknown = JSON.parse(
-			JSON.stringify(firstPage.withNewRule(firstPage.initialDraft())),
+			JSON.stringify(
+				firstPage.storeWizardDraft(
+					firstPage.withNewRule(firstPage.initialDraft()),
+				),
+			),
 		);
 		vi.resetModules();
 		const reloaded = await import("./wizardDraft");
 
-		const restored = reloaded.readWizardDraft(stored);
-		if (!restored) throw new Error("the stored draft did not read back");
+		const restored = reloaded.restoreWizardDraft(
+			reloaded.storedWizardDraftSchema.parse(stored),
+		);
 		const grown = reloaded.withTowerCount(
 			reloaded.withNewRange(
 				reloaded.withNewRule(
@@ -801,7 +808,7 @@ describe("a draft restored after the tab reloaded", () => {
 	});
 });
 
-describe("readWizardDraft", () => {
+describe("a stored draft", () => {
 	test("reads back the ranges, finals as typed, the box without units and the numbering", () => {
 		const draft = {
 			...draftOf({
@@ -813,7 +820,13 @@ describe("readWizardDraft", () => {
 			numbering: "letters" as const,
 		};
 
-		expect(readWizardDraft(JSON.parse(JSON.stringify(draft)))).toEqual(draft);
+		expect(
+			restoreWizardDraft(
+				storedWizardDraftSchema.parse(
+					JSON.parse(JSON.stringify(storeWizardDraft(draft))),
+				),
+			),
+		).toEqual(draft);
 	});
 
 	test("drops a draft of the format before floor ranges whole", () => {
@@ -830,7 +843,7 @@ describe("readWizardDraft", () => {
 			})),
 		};
 
-		expect(readWizardDraft(old)).toBeUndefined();
+		expect(storedWizardDraftSchema.safeParse(old).success).toBe(false);
 	});
 
 	test("drops the project's typologies an older draft kept, keeping the rules that point at them", () => {
@@ -879,10 +892,10 @@ describe("readWizardDraft", () => {
 		};
 
 		expect(
-			readWizardDraft({
+			storedWizardDraftSchema.safeParse({
 				...draft,
 				towers: draft.towers.map((tower) => ({ ...tower, ranges: [] })),
-			}),
-		).toBeUndefined();
+			}).success,
+		).toBe(false);
 	});
 });

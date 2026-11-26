@@ -78,10 +78,13 @@ export function stubApi(
 
 export const signedIn = SESSION;
 
-export function renderAt(path: string) {
-	const { router, queryClient } = createApp({
-		history: createMemoryHistory({ initialEntries: [path] }),
-	});
+export function renderAt(path: string, { browserHistory = false } = {}) {
+	if (browserHistory) window.history.replaceState(null, "", path);
+	const { router, queryClient } = createApp(
+		browserHistory
+			? {}
+			: { history: createMemoryHistory({ initialEntries: [path] }) },
+	);
 	queryClient.setDefaultOptions({ queries: { retryDelay: 0 } });
 	render(
 		<QueryClientProvider client={queryClient}>
