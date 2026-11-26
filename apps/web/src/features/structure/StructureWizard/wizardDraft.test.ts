@@ -35,6 +35,8 @@ function draftOf(...towers: TowerOf[]): WizardDraft {
 				name: `Torre ${String.fromCharCode(65 + index)}`,
 				ground: true,
 				hall: true,
+				entranceTypology: null,
+				hallTypology: null,
 				...tower,
 				ranges: (
 					ranges ?? [
@@ -70,7 +72,14 @@ function floorArea(
 	floor: string,
 	area: Partial<FloorAreaDraft> = {},
 ): FloorAreaDraft {
-	return { key: `area-${floor}`, tower: 0, floor, name: "Terraço", ...area };
+	return {
+		key: `area-${floor}`,
+		tower: 0,
+		floor,
+		name: "Terraço",
+		typology: null,
+		...area,
+	};
 }
 
 function withFloorAreas(
@@ -636,26 +645,24 @@ describe("typologies in the draft", () => {
 		]);
 	});
 
-	test("names a new typology with the first free letter", () => {
-		const draft = withNewTypology(withNewTypology(initialDraft()));
+	test("adds a typology with the given name and kind", () => {
+		const draft = withNewTypology(
+			withNewTypology(initialDraft(), "Hall padrão", "common_area"),
+			"Corredor",
+			"common_area",
+		);
 
-		expect(draft.typologies.map((typology) => typology.name)).toEqual([
-			"Tipologia A",
-			"Tipologia B",
-			"Tipologia C",
-		]);
 		expect(
-			withNewTypology({
-				...draft,
-				typologies: draft.typologies.filter(
-					(typology) => typology.name !== "Tipologia B",
-				),
-			}).typologies.map((typology) => typology.name),
-		).toEqual(["Tipologia A", "Tipologia C", "Tipologia B"]);
+			draft.typologies.map(({ name, locationType }) => [name, locationType]),
+		).toEqual([
+			["Tipologia A", "unit"],
+			["Hall padrão", "common_area"],
+			["Corredor", "common_area"],
+		]);
 	});
 
 	test("takes a typology out together with the rules that point at it", () => {
-		const draft = withNewTypology(initialDraft());
+		const draft = withNewTypology(initialDraft(), "Tipologia B", "unit");
 		const [first, second] = draft.typologies;
 
 		const only = withoutTypology(draft, first?.key ?? "");
@@ -679,7 +686,11 @@ describe("typologies in the draft", () => {
 	});
 
 	test("asks for a typology's name and refuses one that repeats an earlier name", () => {
-		const draft = withNewTypology(withNewTypology(initialDraft()));
+		const draft = withNewTypology(
+			withNewTypology(initialDraft(), "Tipologia B", "unit"),
+			"Tipologia C",
+			"unit",
+		);
 		const [first, second, third] = draft.typologies;
 		const named = {
 			...draft,
@@ -775,7 +786,9 @@ describe("a draft restored after the tab reloaded", () => {
 		if (!restored) throw new Error("the stored draft did not read back");
 		const grown = reloaded.withTowerCount(
 			reloaded.withNewRange(
-				reloaded.withNewRule(reloaded.withNewTypology(restored)),
+				reloaded.withNewRule(
+					reloaded.withNewTypology(restored, "Tipologia B", "unit"),
+				),
 				0,
 			),
 			restored.towers.length + 1,

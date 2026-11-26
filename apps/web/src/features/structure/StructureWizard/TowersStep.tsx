@@ -1,3 +1,4 @@
+import type { Typology } from "@bluprint/shared";
 import { CircleAlert, Minus, Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { cn } from "@/lib/utils";
+import { TypologyNameDialog } from "../ConfigurationSections/TypologyNameDialog";
 import { plural } from "../plural";
+import { CommonAreaTypologySelect } from "./CommonAreaTypologySelect";
 import {
 	type RangeField,
 	type RangeFloors,
@@ -19,6 +22,7 @@ import {
 	readRange,
 	towerFloors,
 } from "./floorRanges";
+import { catalogOf, ofKind, takenTypologyNames } from "./typologyCatalog";
 import {
 	type DraftErrors,
 	type Numbering,
@@ -30,6 +34,7 @@ import {
 	towerLabel,
 	type WizardDraft,
 	withNewRange,
+	withNewTypology,
 	withNumbering,
 	withoutRange,
 	withRange,
@@ -296,6 +301,8 @@ function TowerCard({
 	named,
 	errors,
 	edit,
+	commonTypes,
+	onCreateType,
 }: {
 	tower: TowerDraft;
 	index: number;
@@ -303,6 +310,11 @@ function TowerCard({
 	named: boolean;
 	errors: DraftErrors;
 	edit: Edit;
+	commonTypes: { key: string; name: string }[];
+	onCreateType: (
+		select: HTMLSelectElement,
+		apply: (draft: WizardDraft, key: string) => WizardDraft,
+	) => void;
 }) {
 	const extending = draft.extend !== undefined;
 	const toggle = (field: "ground" | "hall", value: boolean) =>
@@ -332,14 +344,55 @@ function TowerCard({
 		/>
 	));
 
-	const hall = (
-		<CheckField
-			id={`tower-${index}-hall`}
-			label="Hall em cada andar"
-			description="Um Hall em cada andar da torre. Cada um usa 1 da reserva."
-			checked={tower.hall}
-			onCheckedChange={(checked) => toggle("hall", checked)}
+	const setType = (
+		field: "entranceTypology" | "hallTypology",
+		key: string | null,
+	) =>
+		edit((current) => ({
+			...current,
+			towers: current.towers.map((other, at) =>
+				at === index ? { ...other, [field]: key } : other,
+			),
+		}));
+	const typeSelect = (
+		id: string,
+		label: string,
+		field: "entranceTypology" | "hallTypology",
+		value: string | null,
+	) => (
+		<CommonAreaTypologySelect
+			id={id}
+			label={label}
+			value={value}
+			options={commonTypes}
+			onChange={(key) => setType(field, key)}
+			onCreate={(select) =>
+				onCreateType(select, (current, key) => ({
+					...current,
+					towers: current.towers.map((other, at) =>
+						at === index ? { ...other, [field]: key } : other,
+					),
+				}))
+			}
 		/>
+	);
+	const hall = (
+		<>
+			<CheckField
+				id={`tower-${index}-hall`}
+				label="Hall em cada andar"
+				description="Um Hall em cada andar da torre. Cada um usa 1 da reserva."
+				checked={tower.hall}
+				onCheckedChange={(checked) => toggle("hall", checked)}
+			/>
+			{tower.hall &&
+				typeSelect(
+					`tower-${index}-hall-type`,
+					"Tipologia dos halls (opcional)",
+					"hallTypology",
+					tower.hallTypology,
+				)}
+		</>
 	);
 
 	if (extending) {
@@ -402,7 +455,7 @@ function TowerCard({
 				</Button>
 				<span className="text-sm font-semibold">{total}</span>
 			</div>
-			<div className="grid border-t border-border pt-(--space-3)">
+			<div className="grid gap-(--space-3) border-t border-border pt-(--space-3)">
 				<CheckField
 					id={`tower-${index}-ground`}
 					label="Térreo sem unidades"
@@ -410,6 +463,13 @@ function TowerCard({
 					checked={tower.ground}
 					onCheckedChange={(checked) => toggle("ground", checked)}
 				/>
+				{tower.ground &&
+					typeSelect(
+						`tower-${index}-entrance-type`,
+						"Tipologia do hall de entrada (opcional)",
+						"entranceTypology",
+						tower.entranceTypology,
+					)}
 				{hall}
 			</div>
 		</div>
@@ -421,30 +481,63 @@ export function TowersStep({
 	errors,
 	edit,
 	desktop,
+	existing,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
 	edit: Edit;
 	desktop: boolean;
+	existing: readonly Typology[];
 }) {
 	const [refusal, setRefusal] = useState<string>();
+	const [naming, setNaming] = useState<{
+		returnFocus: () => HTMLElement | null;
+		apply: (draft: WizardDraft, key: string) => WizardDraft;
+	}>();
+	const commonTypes = ofKind(catalogOf(draft, existing), "common_area");
 	const count = draft.towers.length;
+	const createType = (
+		select: HTMLSelectElement,
+		apply: (draft: WizardDraft, key: string) => WizardDraft,
+	) => setNaming({ returnFocus: () => select, apply });
 	const setCount = (next: number) =>
 		edit((current) => withTowerCount(current, next));
+	const nameDialog = naming && (
+		<TypologyNameDialog
+			draft={{
+				locationType: "common_area",
+				takenNames: takenTypologyNames(draft, existing),
+			}}
+			onClose={() => setNaming(undefined)}
+			onCreate={(name) =>
+				edit((current) => {
+					const next = withNewTypology(current, name, "common_area");
+					const key = next.typologies.at(-1)?.key;
+					return key ? naming.apply(next, key) : next;
+				})
+			}
+			returnFocus={naming.returnFocus}
+		/>
+	);
 
 	if (draft.extend) {
 		const [tower] = draft.towers;
 		return (
-			tower && (
-				<TowerCard
-					tower={tower}
-					index={0}
-					draft={draft}
-					named={false}
-					errors={errors}
-					edit={edit}
-				/>
-			)
+			<>
+				{tower && (
+					<TowerCard
+						tower={tower}
+						index={0}
+						draft={draft}
+						named={false}
+						errors={errors}
+						edit={edit}
+						commonTypes={commonTypes}
+						onCreateType={createType}
+					/>
+				)}
+				{nameDialog}
+			</>
 		);
 	}
 
@@ -456,81 +549,93 @@ export function TowersStep({
 	}
 
 	return (
-		<div className="grid gap-(--space-4)">
-			<div className="flex flex-wrap items-center justify-between gap-(--space-3)">
-				<span className="font-medium">Quantas torres?</span>
-				<div className="flex items-center gap-(--space-2)">
-					<Button
-						type="button"
-						variant="outline"
-						size="icon"
-						aria-label="Uma torre a menos"
-						disabled={count <= 1}
-						onClick={() => setCount(count - 1)}
-					>
-						<Minus aria-hidden="true" className="size-5" />
-					</Button>
-					<span
-						aria-live="polite"
-						className="min-w-12 text-center font-mono text-lg font-semibold"
-					>
-						{count}
+		<>
+			<div className="grid gap-(--space-4)">
+				<div className="flex flex-wrap items-center justify-between gap-(--space-3)">
+					<span className="font-medium">Quantas torres?</span>
+					<div className="flex items-center gap-(--space-2)">
+						<Button
+							type="button"
+							variant="outline"
+							size="icon"
+							aria-label="Uma torre a menos"
+							disabled={count <= 1}
+							onClick={() => setCount(count - 1)}
+						>
+							<Minus aria-hidden="true" className="size-5" />
+						</Button>
+						<span
+							aria-live="polite"
+							className="min-w-12 text-center font-mono text-lg font-semibold"
+						>
+							{count}
+						</span>
+						<Button
+							type="button"
+							variant="outline"
+							size="icon"
+							aria-label="Uma torre a mais"
+							onClick={() => setCount(count + 1)}
+						>
+							<Plus aria-hidden="true" className="size-5" />
+						</Button>
+					</div>
+				</div>
+				{count === 1 && (
+					<p className="text-sm text-muted-foreground">
+						Com uma torre só, ela não aparece na navegação: a obra abre direto
+						na fachada.
+					</p>
+				)}
+				{draft.towers.map((tower, index) => (
+					<TowerCard
+						key={tower.key}
+						tower={tower}
+						index={index}
+						draft={draft}
+						named={count > 1}
+						errors={errors}
+						edit={edit}
+						commonTypes={commonTypes}
+						onCreateType={createType}
+					/>
+				))}
+				<div className="grid gap-(--space-2)">
+					<span className="font-medium" id="numbering-label">
+						Numeração das unidades
 					</span>
-					<Button
-						type="button"
-						variant="outline"
-						size="icon"
-						aria-label="Uma torre a mais"
-						onClick={() => setCount(count + 1)}
+					<ToggleGroup
+						type="single"
+						aria-labelledby="numbering-label"
+						aria-describedby={refusal ? "numbering-error" : undefined}
+						value={draft.numbering}
+						onValueChange={(next) => {
+							if (next === "digits" || next === "letters")
+								changeNumbering(next);
+						}}
+						className={cn(!desktop && "w-full")}
 					>
-						<Plus aria-hidden="true" className="size-5" />
-					</Button>
+						<ToggleGroupItem
+							value="digits"
+							className={cn(!desktop && "flex-1")}
+						>
+							101, 102
+						</ToggleGroupItem>
+						<ToggleGroupItem
+							value="letters"
+							className={cn(!desktop && "flex-1")}
+						>
+							1A, 1B
+						</ToggleGroupItem>
+					</ToggleGroup>
+					{refusal && <FieldError id="numbering-error">{refusal}</FieldError>}
+					<FieldDescription>
+						Vale para a obra toda. Depois, qualquer nome se troca na própria
+						unidade.
+					</FieldDescription>
 				</div>
 			</div>
-			{count === 1 && (
-				<p className="text-sm text-muted-foreground">
-					Com uma torre só, ela não aparece na navegação: a obra abre direto na
-					fachada.
-				</p>
-			)}
-			{draft.towers.map((tower, index) => (
-				<TowerCard
-					key={tower.key}
-					tower={tower}
-					index={index}
-					draft={draft}
-					named={count > 1}
-					errors={errors}
-					edit={edit}
-				/>
-			))}
-			<div className="grid gap-(--space-2)">
-				<span className="font-medium" id="numbering-label">
-					Numeração das unidades
-				</span>
-				<ToggleGroup
-					type="single"
-					aria-labelledby="numbering-label"
-					aria-describedby={refusal ? "numbering-error" : undefined}
-					value={draft.numbering}
-					onValueChange={(next) => {
-						if (next === "digits" || next === "letters") changeNumbering(next);
-					}}
-					className={cn(!desktop && "w-full")}
-				>
-					<ToggleGroupItem value="digits" className={cn(!desktop && "flex-1")}>
-						101, 102
-					</ToggleGroupItem>
-					<ToggleGroupItem value="letters" className={cn(!desktop && "flex-1")}>
-						1A, 1B
-					</ToggleGroupItem>
-				</ToggleGroup>
-				{refusal && <FieldError id="numbering-error">{refusal}</FieldError>}
-				<FieldDescription>
-					Vale para a obra toda. Depois, qualquer nome se troca na própria
-					unidade.
-				</FieldDescription>
-			</div>
-		</div>
+			{nameDialog}
+		</>
 	);
 }

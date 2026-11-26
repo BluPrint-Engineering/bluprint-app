@@ -1,29 +1,45 @@
-import { tidyLocationName } from "@bluprint/shared";
+import { type Typology, tidyLocationName } from "@bluprint/shared";
 import { Plus, X } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { uuidV7 } from "@/lib/uuidV7";
-import { AddTag, Tags } from "../components/Tags";
+import { TypologyNameDialog } from "../ConfigurationSections/TypologyNameDialog";
+import { AddTag } from "../components/Tags";
+import { CommonAreaTypologySelect } from "./CommonAreaTypologySelect";
 import { SELECT } from "./fieldStyles";
 import {
+	catalogOf,
+	ofKind,
+	takenTypologyNames,
+	typologyNameOf,
+} from "./typologyCatalog";
+import {
+	type AreaDraft,
 	type DraftErrors,
 	floorAreaFieldId,
 	floorAreaProblem,
 	listedFloorAreas,
 	SINGLE_TOWER_NAME,
 	type WizardDraft,
+	withNewTypology,
 } from "./wizardDraft";
 
 type Edit = (update: (draft: WizardDraft) => WizardDraft) => boolean;
 
-export type FloorAreaInput = { name: string; tower: number; floor: string };
+export type FloorAreaInput = {
+	name: string;
+	tower: number;
+	floor: string;
+	typology: string | null;
+};
 
 export const EMPTY_FLOOR_AREA: FloorAreaInput = {
 	name: "",
 	tower: 0,
 	floor: "",
+	typology: null,
 };
 
 function Group({
@@ -54,15 +70,19 @@ function FloorAreaForm({
 	onChange,
 	onAdd,
 	onCancel,
+	commonTypes,
+	onCreateType,
 }: {
 	draft: WizardDraft;
 	value: FloorAreaInput;
 	onChange: (value: FloorAreaInput) => void;
 	onAdd: (area: FloorAreaInput) => void;
 	onCancel: () => void;
+	commonTypes: { key: string; name: string }[];
+	onCreateType: (select: HTMLSelectElement) => void;
 }) {
 	const several = draft.towers.length > 1;
-	const { name, tower, floor } = value;
+	const { name, tower, floor, typology } = value;
 	const [errors, setErrors] = useState<{ name?: string; floor?: string }>({});
 
 	function submit(event: React.FormEvent) {
@@ -81,7 +101,7 @@ function FloorAreaForm({
 		}
 		setErrors(found);
 		if (Object.keys(found).length > 0) return;
-		onAdd({ tower, floor, name: trimmed });
+		onAdd({ tower, floor, name: trimmed, typology });
 	}
 
 	return (
@@ -143,6 +163,14 @@ function FloorAreaForm({
 					{errors.floor && <FieldError>{errors.floor}</FieldError>}
 				</Field>
 			</div>
+			<CommonAreaTypologySelect
+				id="floor-area-typology"
+				label="Tipologia da área comum"
+				value={typology}
+				options={commonTypes}
+				onChange={(key) => onChange({ ...value, typology: key })}
+				onCreate={onCreateType}
+			/>
 			<div className="flex gap-(--space-2)">
 				<Button type="submit" variant="outline">
 					Adicionar ao andar
@@ -155,24 +183,78 @@ function FloorAreaForm({
 	);
 }
 
+function areaLabel(name: string, typologyName: string | undefined): string {
+	return typologyName ? `${name} · ${typologyName}` : name;
+}
+
+function AreaTags({
+	areas,
+	catalog,
+	onRemove,
+}: {
+	areas: AreaDraft[];
+	catalog: ReturnType<typeof catalogOf>;
+	onRemove: (index: number) => void;
+}) {
+	if (areas.length === 0) return null;
+	return (
+		<ul className="flex flex-wrap gap-(--space-2)">
+			{areas.map((area, index) => (
+				<li
+					key={area.name}
+					className="inline-flex min-h-8 items-center gap-1 rounded-full bg-muted pl-3 text-sm"
+				>
+					<span className="[overflow-wrap:anywhere]">
+						{areaLabel(area.name, typologyNameOf(catalog, area.typology))}
+					</span>
+					<button
+						type="button"
+						aria-label={`Tirar ${area.name}`}
+						onClick={() => onRemove(index)}
+						className="relative grid size-7 shrink-0 place-items-center rounded-full text-muted-foreground outline-none after:absolute after:-inset-2 hover:text-foreground focus-visible:shadow-(--shadow-focus)"
+					>
+						<X className="size-4" aria-hidden="true" />
+					</button>
+				</li>
+			))}
+		</ul>
+	);
+}
+
 export function CommonAreasStep({
 	draft,
 	errors,
 	edit,
 	floorArea,
 	onFloorAreaChange,
+	existing,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
 	edit: Edit;
 	floorArea: FloorAreaInput | undefined;
 	onFloorAreaChange: (value: FloorAreaInput | undefined) => void;
+	existing: readonly Typology[];
 }) {
 	const several = draft.towers.length > 1;
 	const towerName = (index: number) =>
 		draft.extend?.towerName ??
 		(several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME);
 	const places = listedFloorAreas(draft);
+	const catalog = catalogOf(draft, existing);
+	const commonTypes = ofKind(catalog, "common_area");
+	const [projectType, setProjectType] = useState<string | null>(null);
+	const [towerType, setTowerType] = useState<string | null>(null);
+	const [naming, setNaming] = useState<{
+		returnFocus: () => HTMLElement | null;
+		apply: (key: string) => void;
+	}>();
+	const chosen = (picked: string | null) =>
+		commonTypes.some((option) => option.key === picked) ? picked : null;
+
+	function openCreate(select: HTMLSelectElement, apply: (key: string) => void) {
+		setNaming({ returnFocus: () => select, apply });
+	}
 
 	return (
 		<div className="grid gap-(--space-5)">
@@ -181,8 +263,9 @@ export function CommonAreasStep({
 					title="Da obra"
 					description="Fora das torres: garagem, fachada, piscina."
 				>
-					<Tags
-						items={draft.projectAreas}
+					<AreaTags
+						areas={draft.projectAreas}
+						catalog={catalog}
 						onRemove={(index) =>
 							edit((current) => ({
 								...current,
@@ -192,15 +275,26 @@ export function CommonAreasStep({
 							}))
 						}
 					/>
+					<CommonAreaTypologySelect
+						id="project-area-typology"
+						label="Tipologia da área comum"
+						value={chosen(projectType)}
+						options={commonTypes}
+						onChange={setProjectType}
+						onCreate={(select) => openCreate(select, setProjectType)}
+					/>
 					<AddTag
 						label="Área comum da obra"
 						placeholder="Ex.: Guarita"
-						existing={draft.projectAreas}
+						existing={draft.projectAreas.map((area) => area.name)}
 						duplicateMessage="Essa área comum já está na lista."
 						onAdd={(name) =>
 							edit((current) => ({
 								...current,
-								projectAreas: [...current.projectAreas, name],
+								projectAreas: [
+									...current.projectAreas,
+									{ name, typology: chosen(projectType) },
+								],
 							}))
 						}
 					/>
@@ -211,8 +305,9 @@ export function CommonAreasStep({
 					title="Em cada torre"
 					description="Criada uma vez em cada torre."
 				>
-					<Tags
-						items={draft.towerAreas}
+					<AreaTags
+						areas={draft.towerAreas}
+						catalog={catalog}
 						onRemove={(index) =>
 							edit((current) => ({
 								...current,
@@ -220,15 +315,26 @@ export function CommonAreasStep({
 							}))
 						}
 					/>
+					<CommonAreaTypologySelect
+						id="tower-area-typology"
+						label="Tipologia da área comum"
+						value={chosen(towerType)}
+						options={commonTypes}
+						onChange={setTowerType}
+						onCreate={(select) => openCreate(select, setTowerType)}
+					/>
 					<AddTag
 						label="Área comum de cada torre"
 						placeholder="Ex.: Salão de festas"
-						existing={draft.towerAreas}
+						existing={draft.towerAreas.map((area) => area.name)}
 						duplicateMessage="Essa área comum já está na lista."
 						onAdd={(name) =>
 							edit((current) => ({
 								...current,
-								towerAreas: [...current.towerAreas, name],
+								towerAreas: [
+									...current.towerAreas,
+									{ name, typology: chosen(towerType) },
+								],
 							}))
 						}
 					/>
@@ -253,7 +359,12 @@ export function CommonAreasStep({
 								>
 									<span className="grid min-w-0 flex-1 gap-(--space-1) [overflow-wrap:anywhere]">
 										<span>
-											<span className="font-medium">{area.name}</span>
+											<span className="font-medium">
+												{areaLabel(
+													area.name,
+													typologyNameOf(catalog, area.typology),
+												)}
+											</span>
 											<span className="text-sm text-muted-foreground">
 												{` · ${towerName(area.tower)}, ${area.floor}º andar`}
 											</span>
@@ -289,8 +400,14 @@ export function CommonAreasStep({
 					<FloorAreaForm
 						draft={draft}
 						value={floorArea}
+						commonTypes={commonTypes}
 						onChange={onFloorAreaChange}
 						onCancel={() => onFloorAreaChange(undefined)}
+						onCreateType={(select) =>
+							openCreate(select, (key) =>
+								onFloorAreaChange({ ...floorArea, typology: key }),
+							)
+						}
 						onAdd={(area) => {
 							const added = edit((current) => ({
 								...current,
@@ -311,6 +428,25 @@ export function CommonAreasStep({
 					</Button>
 				)}
 			</Group>
+			{naming && (
+				<TypologyNameDialog
+					draft={{
+						locationType: "common_area",
+						takenNames: takenTypologyNames(draft, existing),
+					}}
+					onClose={() => setNaming(undefined)}
+					onCreate={(name) => {
+						let created = "";
+						edit((current) => {
+							const next = withNewTypology(current, name, "common_area");
+							created = next.typologies.at(-1)?.key ?? "";
+							return next;
+						});
+						if (created) naming.apply(created);
+					}}
+					returnFocus={naming.returnFocus}
+				/>
+			)}
 		</div>
 	);
 }

@@ -4,6 +4,7 @@ import {
 	sameLocationName,
 	sameRoomName,
 	type Typology,
+	type TypologyLocationType,
 } from "@bluprint/shared";
 import {
 	convertFinals,
@@ -36,6 +37,13 @@ export interface TowerDraft {
 	ranges: RangeDraft[];
 	ground: boolean;
 	hall: boolean;
+	entranceTypology: string | null;
+	hallTypology: string | null;
+}
+
+export interface AreaDraft {
+	name: string;
+	typology: string | null;
 }
 
 export interface FloorAreaDraft {
@@ -43,6 +51,7 @@ export interface FloorAreaDraft {
 	tower: number;
 	floor: string;
 	name: string;
+	typology: string | null;
 }
 
 export interface ExtendDraft {
@@ -58,8 +67,8 @@ export interface WizardDraft {
 	extend?: ExtendDraft;
 	towers: TowerDraft[];
 	numbering: Numbering;
-	projectAreas: string[];
-	towerAreas: string[];
+	projectAreas: AreaDraft[];
+	towerAreas: AreaDraft[];
 	floorAreas: FloorAreaDraft[];
 	typologies: TypologyDraft[];
 	rules: RuleDraft[];
@@ -117,14 +126,37 @@ function strings(value: unknown): string[] | undefined {
 		: undefined;
 }
 
+function optionalKey(value: unknown): string | null | undefined {
+	if (value === undefined || value === null) return null;
+	return typeof value === "string" ? value : undefined;
+}
+
+function readAreas(value: unknown): AreaDraft[] | undefined {
+	if (!Array.isArray(value)) return undefined;
+	const areas: AreaDraft[] = [];
+	for (const item of value) {
+		if (typeof item === "string") {
+			areas.push({ name: item, typology: null });
+			continue;
+		}
+		const area = record(item);
+		const typology = area && optionalKey(area.typology);
+		if (!area || typeof area.name !== "string" || typology === undefined) {
+			return undefined;
+		}
+		areas.push({ name: area.name, typology });
+	}
+	return areas;
+}
+
 export function readWizardDraft(value: unknown): WizardDraft | undefined {
 	const draft = record(value);
 	if (!draft) return undefined;
 	if (draft.numbering !== "digits" && draft.numbering !== "letters") {
 		return undefined;
 	}
-	const projectAreas = strings(draft.projectAreas);
-	const towerAreas = strings(draft.towerAreas);
+	const projectAreas = readAreas(draft.projectAreas);
+	const towerAreas = readAreas(draft.towerAreas);
 	if (!projectAreas || !towerAreas || !Array.isArray(draft.towers)) {
 		return undefined;
 	}
@@ -132,9 +164,13 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 	for (const item of draft.towers) {
 		const tower = record(item);
 		const ranges = tower && readRanges(tower.ranges);
+		const entranceTypology = tower && optionalKey(tower.entranceTypology);
+		const hallTypology = tower && optionalKey(tower.hallTypology);
 		if (
 			!tower ||
 			!ranges ||
+			entranceTypology === undefined ||
+			hallTypology === undefined ||
 			typeof tower.key !== "string" ||
 			typeof tower.name !== "string" ||
 			typeof tower.ground !== "boolean" ||
@@ -148,6 +184,8 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			ranges,
 			ground: tower.ground,
 			hall: tower.hall,
+			entranceTypology,
+			hallTypology,
 		});
 	}
 	if (!Array.isArray(draft.floorAreas) || !Array.isArray(draft.typologies)) {
@@ -157,8 +195,10 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 	const floorAreas: FloorAreaDraft[] = [];
 	for (const item of draft.floorAreas) {
 		const area = record(item);
+		const typology = area && optionalKey(area.typology);
 		if (
 			!area ||
+			typology === undefined ||
 			typeof area.key !== "string" ||
 			typeof area.tower !== "number" ||
 			typeof area.floor !== "string" ||
@@ -171,15 +211,24 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			tower: area.tower,
 			floor: area.floor,
 			name: area.name,
+			typology,
 		});
 	}
 	const typologies: TypologyDraft[] = [];
 	for (const item of draft.typologies) {
 		const typology = record(item);
 		const rooms = typology && strings(typology.rooms);
+		const locationType =
+			typology?.locationType === "common_area" ||
+			typology?.locationType === "unit"
+				? typology.locationType
+				: typology?.locationType === undefined
+					? "unit"
+					: undefined;
 		if (
 			!typology ||
 			!rooms ||
+			!locationType ||
 			typeof typology.key !== "string" ||
 			typeof typology.name !== "string"
 		) {
@@ -189,7 +238,7 @@ export function readWizardDraft(value: unknown): WizardDraft | undefined {
 			key: typology.key,
 			name: typology.name,
 			rooms,
-			...(typology.existing === true ? { existing: true } : {}),
+			locationType,
 		});
 	}
 	const rules: RuleDraft[] = [];
@@ -296,6 +345,7 @@ export function initialDraft(): WizardDraft {
 		key: nextTypologyKey(),
 		name: FIRST_TYPOLOGY_NAME,
 		rooms: [],
+		locationType: "unit",
 	};
 	return {
 		towers: [
@@ -305,6 +355,8 @@ export function initialDraft(): WizardDraft {
 				ranges: [newRange()],
 				ground: true,
 				hall: false,
+				entranceTypology: null,
+				hallTypology: null,
 			},
 		],
 		numbering: "digits",
@@ -327,14 +379,14 @@ export function initialDraft(): WizardDraft {
 
 function mirroredRules(
 	tower: StructureTower,
-	typologies: TypologyDraft[],
+	unitTypeIds: ReadonlySet<string>,
 ): RuleDraft[] | undefined {
 	const units = describeTower(tower).lastFloor?.units ?? [];
 	if (units.length === 0) return undefined;
 	const finalsByType = new Map<string, number[]>();
 	units.forEach((unit, at) => {
 		const id = unit.typology?.id;
-		if (id === undefined || !typologies.some(({ key }) => key === id)) return;
+		if (id === undefined || !unitTypeIds.has(id)) return;
 		finalsByType.set(id, [...(finalsByType.get(id) ?? []), at + 1]);
 	});
 	return [...finalsByType].map(([typology, finals]) => ({
@@ -350,29 +402,47 @@ function mirroredRules(
 	}));
 }
 
+function hallTypologyOf(
+	tower: StructureTower,
+	existingTypes: Typology[],
+): string | null {
+	const hall = describeTower(tower).lastFloor?.commonAreas.find((area) =>
+		sameLocationName(area.name, FLOOR_HALL),
+	);
+	const id = hall?.typology?.id;
+	if (id === undefined) return null;
+	return existingTypes.some(
+		(typology) => typology.id === id && typology.locationType === "common_area",
+	)
+		? id
+		: null;
+}
+
 export function extendedDraft(
 	tower: StructureTower,
 	existingTypes: Typology[],
 	named: boolean,
 ): WizardDraft {
 	const now = describeTower(tower);
-	const typologies: TypologyDraft[] = existingTypes.map(
-		({ id, name, rooms }) => ({
-			key: id,
-			name,
-			rooms: rooms.map((room) => room.name),
-			existing: true,
-		}),
+	const unitTypes = existingTypes.filter(
+		(typology) => typology.locationType === "unit",
 	);
-	let rules = mirroredRules(tower, typologies);
+	const typologies: TypologyDraft[] = [];
+	let rules = mirroredRules(
+		tower,
+		new Set(unitTypes.map((typology) => typology.id)),
+	);
 	if (rules === undefined) {
-		const first = typologies[0];
-		const typology = first ?? {
-			key: nextTypologyKey(),
-			name: FIRST_TYPOLOGY_NAME,
-			rooms: [],
-		};
-		if (!first) typologies.push(typology);
+		const first = unitTypes[0];
+		const typology = first
+			? undefined
+			: {
+					key: nextTypologyKey(),
+					name: FIRST_TYPOLOGY_NAME,
+					rooms: [],
+					locationType: "unit" as const,
+				};
+		if (typology) typologies.push(typology);
 		rules = [
 			{
 				key: nextRuleKey(),
@@ -380,10 +450,15 @@ export function extendedDraft(
 				finals: ALL_FINALS,
 				from: "",
 				to: "",
-				typology: typology.key,
+				typology: first?.id ?? typology?.key ?? "",
 			},
 		];
 	}
+	const hasHall =
+		now.lastFloor === undefined ||
+		now.lastFloor.commonAreas.some((area) =>
+			sameLocationName(area.name, FLOOR_HALL),
+		);
 	const perFloor = now.lastFloor?.units.length ?? 0;
 	const numbering: Numbering = now.lettered ? "letters" : "digits";
 	const finals =
@@ -411,11 +486,9 @@ export function extendedDraft(
 					newRange(String((now.numbered.at(-1) ?? 0) + 1), finals.join(", ")),
 				],
 				ground: false,
-				hall:
-					now.lastFloor === undefined ||
-					now.lastFloor.commonAreas.some((area) =>
-						sameLocationName(area.name, FLOOR_HALL),
-					),
+				hall: hasHall,
+				entranceTypology: null,
+				hallTypology: hasHall ? hallTypologyOf(tower, existingTypes) : null,
 			},
 		],
 		numbering,
@@ -427,26 +500,41 @@ export function extendedDraft(
 	};
 }
 
-function freeTypologyName(taken: string[]): string {
-	for (const letter of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
-		const name = `Tipologia ${letter}`;
-		if (!taken.some((other) => sameRoomName(other, name))) return name;
-	}
-	return "";
+export function withNewTypology(
+	draft: WizardDraft,
+	name: string,
+	locationType: TypologyLocationType,
+): WizardDraft {
+	return {
+		...draft,
+		typologies: [
+			...draft.typologies,
+			{ key: nextTypologyKey(), name, rooms: [], locationType },
+		],
+	};
 }
 
-export function withNewTypology(draft: WizardDraft): WizardDraft {
+export function withCopiedTypology(
+	draft: WizardDraft,
+	source: { rooms: readonly string[]; locationType: TypologyLocationType },
+	name: string,
+): WizardDraft {
 	return {
 		...draft,
 		typologies: [
 			...draft.typologies,
 			{
 				key: nextTypologyKey(),
-				name: freeTypologyName(draft.typologies.map(({ name }) => name)),
-				rooms: [],
+				name,
+				rooms: [...source.rooms],
+				locationType: source.locationType,
 			},
 		],
 	};
+}
+
+function withoutChosen(selected: string | null, key: string): string | null {
+	return selected === key ? null : selected;
 }
 
 export function withoutTypology(draft: WizardDraft, key: string): WizardDraft {
@@ -454,11 +542,33 @@ export function withoutTypology(draft: WizardDraft, key: string): WizardDraft {
 		...draft,
 		typologies: draft.typologies.filter((typology) => typology.key !== key),
 		rules: draft.rules.filter((rule) => rule.typology !== key),
+		towers: draft.towers.map((tower) => ({
+			...tower,
+			entranceTypology: withoutChosen(tower.entranceTypology, key),
+			hallTypology: withoutChosen(tower.hallTypology, key),
+		})),
+		projectAreas: draft.projectAreas.map((area) => ({
+			...area,
+			typology: withoutChosen(area.typology, key),
+		})),
+		towerAreas: draft.towerAreas.map((area) => ({
+			...area,
+			typology: withoutChosen(area.typology, key),
+		})),
+		floorAreas: draft.floorAreas.map((area) => ({
+			...area,
+			typology: withoutChosen(area.typology, key),
+		})),
 	};
 }
 
-export function withNewRule(draft: WizardDraft): WizardDraft {
-	const typology = draft.typologies[0];
+export function withNewRule(
+	draft: WizardDraft,
+	typologyKey?: string,
+): WizardDraft {
+	const typology =
+		typologyKey ??
+		draft.typologies.find((item) => item.locationType === "unit")?.key;
 	if (!typology) return draft;
 	return {
 		...draft,
@@ -470,7 +580,7 @@ export function withNewRule(draft: WizardDraft): WizardDraft {
 				finals: ALL_FINALS,
 				from: "",
 				to: "",
-				typology: typology.key,
+				typology,
 			},
 		],
 	};
@@ -514,6 +624,7 @@ export function withTowerCount(draft: WizardDraft, count: number): WizardDraft {
 				key: nextRangeKey(),
 			})),
 			hall: false,
+			hallTypology: null,
 		});
 		const inherited = rules.filter((other) => other.tower === previousIndex);
 		for (const rule of inherited) {
@@ -655,8 +766,8 @@ export interface FloorAreaProblem {
 
 export function floorAreaProblem(
 	draft: WizardDraft,
-	area: Omit<FloorAreaDraft, "key">,
-	before: FloorAreaDraft[],
+	area: { tower: number; floor: string; name: string },
+	before: { tower: number; floor: string; name: string }[],
 ): FloorAreaProblem | undefined {
 	const tower = draft.towers[area.tower];
 	const floors = tower && towerFloors(tower.ranges, draft.numbering);
@@ -731,7 +842,10 @@ function extendProblem(
 		: `${label} já tem a unidade ${clash}. Comece em um andar acima dela.`;
 }
 
-export function validateDraft(draft: WizardDraft): DraftErrors {
+export function validateDraft(
+	draft: WizardDraft,
+	existingNames: readonly string[] = [],
+): DraftErrors {
 	const errors: DraftErrors = {};
 	const several = draft.towers.length > 1;
 
@@ -779,6 +893,7 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		if (typology.name.trim() === "") {
 			errors[id] = "Informe o nome da tipologia.";
 		} else if (
+			existingNames.some((other) => sameRoomName(other, typology.name)) ||
 			draft.typologies.some(
 				(other, at) => at < index && sameRoomName(other.name, typology.name),
 			)
@@ -800,6 +915,19 @@ export function validateDraft(draft: WizardDraft): DraftErrors {
 		}
 	}
 
+	return errors;
+}
+
+export function typologyNameTakenErrors(
+	draft: WizardDraft,
+	names: readonly string[],
+): DraftErrors {
+	const errors: DraftErrors = {};
+	for (const typology of draft.typologies) {
+		if (names.some((name) => sameRoomName(name, typology.name))) {
+			errors[typologyFieldId(typology.key)] = "Esse nome já existe nesta obra.";
+		}
+	}
 	return errors;
 }
 

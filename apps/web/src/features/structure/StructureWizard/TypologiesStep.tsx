@@ -1,16 +1,28 @@
 import {
 	MAX_ROOMS_PER_TYPOLOGY,
 	MAX_TYPOLOGIES_PER_REQUEST,
-	sameRoomName,
+	type Typology,
+	type TypologyLocationType,
 } from "@bluprint/shared";
 import { Plus, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { AddTag, Tags } from "../components/Tags";
+import { TypologyNameDialog } from "../ConfigurationSections/TypologyNameDialog";
+import { CopyTypologyDialog } from "../components/CopyTypologyDialog";
+import { RoomList } from "../components/RoomList";
+import { RoomSuggestField } from "../components/RoomSuggestField";
 import { plural } from "../plural";
 import { SELECT } from "./fieldStyles";
+import {
+	type CatalogTypology,
+	catalogOf,
+	ofKind,
+	takenTypologyNames,
+	usedRoomNames,
+} from "./typologyCatalog";
 import {
 	ALL_FINALS,
 	type RuleDraft,
@@ -22,6 +34,7 @@ import {
 	ruleFieldId,
 	typologyFieldId,
 	type WizardDraft,
+	withCopiedTypology,
 	withNewRule,
 	withNewTypology,
 	withoutTypology,
@@ -36,9 +49,39 @@ const RULE_GRID =
 	"grid-cols-[1fr_0.7fr_0.7fr_1.3fr_44px] items-start gap-(--space-2)";
 const RULE_GRID_WITH_TOWER = "grid-cols-[1.1fr_1fr_0.7fr_0.7fr_1.3fr_44px]";
 
-function ExistingTypologyCard({ typology }: { typology: TypologyDraft }) {
+const GROUPS = [
+	{ locationType: "unit", title: "Unidades", create: "Nova tipologia" },
+	{
+		locationType: "common_area",
+		title: "Áreas comuns",
+		description:
+			"Escolhidas no Hall em cada andar, no hall de entrada e em cada área comum.",
+		create: "Nova tipologia de área comum",
+	},
+] as const satisfies readonly {
+	locationType: TypologyLocationType;
+	title: string;
+	description?: string;
+	create: string;
+}[];
+
+export const typologyCardId = (key: string) => `${key}-card`;
+
+function ExistingTypologyCard({
+	typology,
+	onCopy,
+	copyDisabled,
+}: {
+	typology: CatalogTypology;
+	onCopy: (opener: HTMLElement) => void;
+	copyDisabled: boolean;
+}) {
 	return (
-		<div className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline)">
+		<div
+			id={typologyCardId(typology.key)}
+			tabIndex={-1}
+			className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline) outline-none focus-visible:shadow-(--shadow-focus)"
+		>
 			<div className="flex items-baseline justify-between gap-(--space-2)">
 				<span className="font-semibold [overflow-wrap:anywhere]">
 					{typology.name}
@@ -47,7 +90,20 @@ function ExistingTypologyCard({ typology }: { typology: TypologyDraft }) {
 					{plural(typology.rooms.length, "cômodo", "cômodos")}
 				</span>
 			</div>
-			<Tags items={typology.rooms} />
+			<RoomList rooms={typology.rooms.map((name) => ({ id: name, name }))} />
+			<p className="text-sm text-pretty text-muted-foreground">
+				Já existe na obra. Os cômodos mudam na Configuração.
+			</p>
+			<Button
+				type="button"
+				variant="outline"
+				className="justify-self-start"
+				aria-label={`Copiar ${typology.name}`}
+				disabled={copyDisabled}
+				onClick={(event) => onCopy(event.currentTarget)}
+			>
+				Copiar
+			</Button>
 		</div>
 	);
 }
@@ -56,13 +112,20 @@ function TypologyCard({
 	typology,
 	errors,
 	edit,
+	used,
+	onCopy,
+	copyDisabled,
 }: {
 	typology: TypologyDraft;
 	errors: DraftErrors;
 	edit: Edit;
+	used: readonly string[];
+	onCopy: (opener: HTMLElement) => void;
+	copyDisabled: boolean;
 }) {
 	const id = typologyFieldId(typology.key);
 	const error = errors[id];
+	const [typed, setTyped] = useState("");
 	const change = (update: (current: TypologyDraft) => TypologyDraft) =>
 		edit((draft) => ({
 			...draft,
@@ -73,7 +136,11 @@ function TypologyCard({
 	const label = typology.name.trim() || "tipologia";
 
 	return (
-		<div className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline)">
+		<div
+			id={typologyCardId(typology.key)}
+			tabIndex={-1}
+			className="grid content-start gap-(--space-3) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline) outline-none focus-visible:shadow-(--shadow-focus)"
+		>
 			<div className="flex items-end gap-(--space-2)">
 				<Field data-invalid={error !== undefined} className="min-w-0 flex-1">
 					<FieldLabel htmlFor={id}>Nome da tipologia</FieldLabel>
@@ -112,9 +179,8 @@ function TypologyCard({
 			<span className="text-sm text-muted-foreground">
 				{plural(typology.rooms.length, "cômodo", "cômodos")}
 			</span>
-			<Tags
-				items={typology.rooms}
-				removeLabel={(room) => `Tirar ${room} da ${label}`}
+			<RoomList
+				rooms={typology.rooms.map((name) => ({ id: name, name }))}
 				onRemove={(index) =>
 					change((current) => ({
 						...current,
@@ -122,22 +188,34 @@ function TypologyCard({
 					}))
 				}
 			/>
-			<AddTag
-				sameName={sameRoomName}
-				label={`Novo cômodo da ${label}`}
-				placeholder="Novo cômodo"
-				existing={typology.rooms}
-				duplicateMessage="Esse cômodo já está na tipologia."
-				maxItems={MAX_ROOMS_PER_TYPOLOGY}
-				maxMessage={`Uma tipologia tem até ${MAX_ROOMS_PER_TYPOLOGY} cômodos.`}
+			<RoomSuggestField
+				label="Novo cômodo"
+				value={typed}
+				onValueChange={setTyped}
 				onAdd={(name) => {
 					change((current) => ({
 						...current,
 						rooms: [...current.rooms, name],
 					}));
-					return true;
+					setTyped("");
 				}}
+				used={used}
+				present={typology.rooms}
+				presentLabel="Já está nesta tipologia"
+				duplicateMessage="Esse cômodo já está na tipologia."
+				maxItems={MAX_ROOMS_PER_TYPOLOGY}
+				maxMessage={`Uma tipologia tem até ${MAX_ROOMS_PER_TYPOLOGY} cômodos.`}
 			/>
+			<Button
+				type="button"
+				variant="outline"
+				className="justify-self-start"
+				aria-label={`Copiar ${label}`}
+				disabled={copyDisabled}
+				onClick={(event) => onCopy(event.currentTarget)}
+			>
+				Copiar
+			</Button>
 		</div>
 	);
 }
@@ -146,6 +224,7 @@ function RuleRow({
 	rule,
 	number,
 	draft,
+	unitTypes,
 	errors,
 	edit,
 	desktop,
@@ -153,6 +232,7 @@ function RuleRow({
 	rule: RuleDraft;
 	number: number;
 	draft: WizardDraft;
+	unitTypes: readonly CatalogTypology[];
 	errors: DraftErrors;
 	edit: Edit;
 	desktop: boolean;
@@ -226,7 +306,7 @@ function RuleRow({
 			value={rule.typology}
 			onChange={(event) => set({ typology: event.target.value })}
 		>
-			{draft.typologies.map((typology) => (
+			{unitTypes.map((typology) => (
 				<option key={typology.key} value={typology.key}>
 					{typology.name}
 				</option>
@@ -318,49 +398,124 @@ export function TypologiesStep({
 	errors,
 	edit,
 	desktop,
+	existing,
+	roomNames,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
 	edit: Edit;
 	desktop: boolean;
+	existing: readonly Typology[];
+	roomNames: readonly string[];
 }) {
 	const several = draft.towers.length > 1;
+	const catalog = catalogOf(draft, existing);
+	const unitTypes = ofKind(catalog, "unit");
+	const taken = takenTypologyNames(draft, existing);
+	const used = usedRoomNames(roomNames, draft.typologies);
+	const atLimit = draft.typologies.length >= MAX_TYPOLOGIES_PER_REQUEST;
+	const [naming, setNaming] = useState<{
+		locationType: TypologyLocationType;
+		returnFocus: () => HTMLElement | null;
+	}>();
+	const [copying, setCopying] = useState<CatalogTypology>();
+	const copyOpener = useRef<HTMLElement | null>(null);
+	const copiedKey = useRef<string | undefined>(undefined);
+	const [focusKey, setFocusKey] = useState<string>();
+
+	useEffect(() => {
+		if (focusKey === undefined) return;
+		const card = document.getElementById(typologyCardId(focusKey));
+		card?.focus();
+		if (card) setFocusKey(undefined);
+	}, [focusKey]);
+
+	function openCopy(typology: CatalogTypology, opener: HTMLElement) {
+		copyOpener.current = opener;
+		setCopying({ ...typology, rooms: [...typology.rooms] });
+	}
+
 	return (
 		<div className="grid gap-(--space-5)">
-			<div className="grid gap-(--space-3)">
-				<div
-					className={cn(
-						"grid gap-(--space-3)",
-						desktop && "grid-cols-[repeat(auto-fit,minmax(240px,1fr))]",
-					)}
-				>
-					{draft.typologies.map((typology) =>
-						typology.existing ? (
-							<ExistingTypologyCard key={typology.key} typology={typology} />
-						) : (
-							<TypologyCard
-								key={typology.key}
-								typology={typology}
-								errors={errors}
-								edit={edit}
-							/>
-						),
-					)}
-				</div>
-				<Button
-					type="button"
-					variant="outline"
-					className="justify-self-start"
-					disabled={
-						draft.typologies.filter(({ existing }) => !existing).length >=
-						MAX_TYPOLOGIES_PER_REQUEST
-					}
-					onClick={() => edit(withNewTypology)}
-				>
-					<Plus className="size-5" aria-hidden="true" />
-					Nova tipologia
-				</Button>
-			</div>
+			{GROUPS.map((group) => {
+				const items = ofKind(catalog, group.locationType);
+				return (
+					<section
+						key={group.locationType}
+						aria-labelledby={`typologies-${group.locationType}`}
+						className="grid gap-(--space-3)"
+					>
+						<div className="grid gap-(--space-1)">
+							<div className="flex items-baseline justify-between gap-(--space-2)">
+								<h3
+									id={`typologies-${group.locationType}`}
+									className="font-medium"
+								>
+									{group.title}
+								</h3>
+								<span className="text-sm text-muted-foreground">
+									{plural(items.length, "tipologia", "tipologias")}
+								</span>
+							</div>
+							{"description" in group && group.description && (
+								<p className="text-sm text-pretty text-muted-foreground">
+									{group.description}
+								</p>
+							)}
+						</div>
+						<div
+							className={cn(
+								"grid gap-(--space-3)",
+								desktop && "grid-cols-[repeat(auto-fit,minmax(240px,1fr))]",
+							)}
+						>
+							{items.map((typology) => {
+								if (typology.existing) {
+									return (
+										<ExistingTypologyCard
+											key={typology.key}
+											typology={typology}
+											copyDisabled={atLimit}
+											onCopy={(opener) => openCopy(typology, opener)}
+										/>
+									);
+								}
+								const drafted = draft.typologies.find(
+									(item) => item.key === typology.key,
+								);
+								if (!drafted) return null;
+								return (
+									<TypologyCard
+										key={typology.key}
+										typology={drafted}
+										errors={errors}
+										edit={edit}
+										used={used}
+										copyDisabled={atLimit}
+										onCopy={(opener) => openCopy(typology, opener)}
+									/>
+								);
+							})}
+						</div>
+						<Button
+							type="button"
+							variant="outline"
+							className="justify-self-start"
+							disabled={atLimit}
+							onClick={(event) => {
+								const button = event.currentTarget;
+								setNaming({
+									locationType: group.locationType,
+									returnFocus: () => button,
+								});
+							}}
+						>
+							<Plus className="size-5" aria-hidden="true" />
+							{group.create}
+						</Button>
+					</section>
+				);
+			})}
 			<div className="grid gap-(--space-2)">
 				<span className="font-medium">Onde se aplica</span>
 				{desktop && draft.rules.length > 0 && (
@@ -386,6 +541,7 @@ export function TypologiesStep({
 						rule={rule}
 						number={index + 1}
 						draft={draft}
+						unitTypes={unitTypes}
 						errors={errors}
 						edit={edit}
 						desktop={desktop}
@@ -395,8 +551,11 @@ export function TypologiesStep({
 					type="button"
 					variant="ghost"
 					className="justify-self-start text-primary"
-					disabled={draft.typologies.length === 0}
-					onClick={() => edit(withNewRule)}
+					disabled={unitTypes.length === 0}
+					onClick={() => {
+						const first = unitTypes[0];
+						if (first) edit((current) => withNewRule(current, first.key));
+					}}
 				>
 					<Plus className="size-5" aria-hidden="true" />
 					Regra
@@ -407,6 +566,48 @@ export function TypologiesStep({
 					cômodos dela se cadastram nela.
 				</span>
 			</div>
+			{naming && (
+				<TypologyNameDialog
+					draft={{
+						locationType: naming.locationType,
+						takenNames: taken,
+					}}
+					onClose={() => setNaming(undefined)}
+					onCreate={(name) =>
+						edit((current) =>
+							withNewTypology(current, name, naming.locationType),
+						)
+					}
+					returnFocus={naming.returnFocus}
+				/>
+			)}
+			{copying && (
+				<CopyTypologyDialog
+					key={`${copying.key}:${copying.rooms.join("\0")}`}
+					name={copying.name}
+					rooms={copying.rooms.map((name) => ({ id: name, name }))}
+					takenNames={taken}
+					onConfirm={(name) => {
+						const source = copying;
+						edit((current) => {
+							const next = withCopiedTypology(current, source, name);
+							const key = next.typologies.at(-1)?.key;
+							copiedKey.current = key;
+							if (key) setFocusKey(key);
+							return next;
+						});
+						setCopying(undefined);
+						return Promise.resolve();
+					}}
+					onClose={() => setCopying(undefined)}
+					returnFocus={() => {
+						const key = copiedKey.current;
+						copiedKey.current = undefined;
+						if (key) return document.getElementById(typologyCardId(key));
+						return copyOpener.current;
+					}}
+				/>
+			)}
 		</div>
 	);
 }

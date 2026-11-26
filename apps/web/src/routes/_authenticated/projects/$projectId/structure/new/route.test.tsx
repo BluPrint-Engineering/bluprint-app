@@ -205,8 +205,13 @@ async function toPreviewOnPhone() {
 const ruleGroup = (number: number) =>
 	screen.getByRole("group", { name: `Regra ${number}` });
 
-async function addTypology() {
+async function addTypology(name = "Tipologia B") {
 	await user.click(screen.getByRole("button", { name: "Nova tipologia" }));
+	const field = await screen.findByRole("textbox", { name: "Nome" });
+	await user.clear(field);
+	await user.type(field, name);
+	await user.click(screen.getByRole("button", { name: "Criar" }));
+	await screen.findByDisplayValue(name);
 }
 
 async function addRule() {
@@ -1276,8 +1281,8 @@ describe("structure wizard", () => {
 		test("lists the rooms of a typology, refuses a repeated one and takes one out (W3)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
-			const rooms = await screen.findByRole("textbox", {
-				name: "Novo cômodo da Tipologia A",
+			const rooms = await screen.findByRole("combobox", {
+				name: "Novo cômodo",
 			});
 
 			await user.type(rooms, "Sala{Enter}");
@@ -1291,13 +1296,11 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 			expect(screen.getByText("2 cômodos")).toBeInTheDocument();
 
-			await user.click(
-				screen.getByRole("button", { name: "Tirar Sala da Tipologia A" }),
-			);
+			await user.click(screen.getByRole("button", { name: "Tirar Sala" }));
 
 			expect(screen.getByText("1 cômodo")).toBeInTheDocument();
 			expect(
-				screen.queryByRole("button", { name: "Tirar Sala da Tipologia A" }),
+				screen.queryByRole("button", { name: "Tirar Sala" }),
 			).not.toBeInTheDocument();
 		});
 
@@ -1434,8 +1437,8 @@ describe("structure wizard", () => {
 			const { handler, sent } = wizardApi();
 			const { router } = open(handler);
 			await describeTower("1", "01, 02");
-			const rooms = await screen.findByRole("textbox", {
-				name: "Novo cômodo da Tipologia A",
+			const rooms = await screen.findByRole("combobox", {
+				name: "Novo cômodo",
 			});
 			await user.type(rooms, "Sala{Enter}");
 			await user.type(rooms, "Cozinha{Enter}");
@@ -1477,8 +1480,8 @@ describe("structure wizard", () => {
 			open(handler);
 			await describeTower("1", "01, 02");
 			await user.type(
-				await screen.findByRole("textbox", {
-					name: "Novo cômodo da Tipologia A",
+				await screen.findByRole("combobox", {
+					name: "Novo cômodo",
 				}),
 				"Sala{Enter}",
 			);
@@ -1553,9 +1556,7 @@ describe("structure wizard", () => {
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText(
-					"Já existe uma tipologia com o nome “Tipologia A”. Troque esse nome e tente de novo.",
-				),
+				await screen.findByText("Esse nome já existe nesta obra."),
 			).toBeInTheDocument();
 			expect(
 				screen.getByRole("textbox", { name: "Nome da tipologia" }),

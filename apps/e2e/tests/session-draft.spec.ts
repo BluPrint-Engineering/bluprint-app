@@ -67,8 +67,8 @@ test.describe("on a floor whose reserve is spent", () => {
 		await page.getByRole("checkbox", { name: "Hall em cada andar" }).click();
 		await continueTo(page, "Áreas comuns");
 		await continueTo(page, "Tipologias");
-		await page.getByLabel("Novo cômodo da Tipologia A").fill("Sala");
-		await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
+		await page.getByLabel("Novo cômodo").fill("Sala");
+		await page.getByLabel("Novo cômodo").press("Enter");
 		await continueTo(page, "Prévia");
 		await expect(
 			page.getByText(
