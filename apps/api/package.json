@@ -7,8 +7,7 @@
 	"scripts": {
 		"dev": "nest start --watch",
 		"start": "node dist/main",
-		"test": "NODE_OPTIONS=--experimental-vm-modules jest && bun run test:serial",
-		"test:serial": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand --testRegex \"\\.serial-spec\\.ts$\"",
+		"test": "NODE_OPTIONS=--experimental-vm-modules jest",
 		"test:unit": "NODE_OPTIONS=--experimental-vm-modules jest --testPathIgnorePatterns \"\\.int-spec\\.ts$\"",
 		"test:int": "NODE_OPTIONS=--experimental-vm-modules jest --testPathPatterns \"\\.int-spec\\.ts$\"",
 		"typecheck": "tsc -p tsconfig.typecheck.json",
