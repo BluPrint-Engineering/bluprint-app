@@ -71,35 +71,24 @@ export class DisciplineBatchesRepository {
 	): Promise<void> {
 		if (disciplineIds.length === 0) return;
 
-		await this.txHost.tx
-			.insert(locationDiscipline)
-			.select(
-				this.txHost.tx
-					.select({
-						locationId: location.id,
-						disciplineId: discipline.id,
-						projectId: location.projectId,
-						applies: sql<boolean>`${applies}::boolean`.as("applies"),
-					})
-					.from(location)
-					.innerJoin(
-						discipline,
-						and(
-							eq(discipline.projectId, projectId),
-							inArray(discipline.id, disciplineIds),
-						),
-					)
-					.where(scope),
-			)
-			.onConflictDoUpdate({
-				target: [
-					locationDiscipline.locationId,
-					locationDiscipline.disciplineId,
-				],
-				set: {
-					applies: sql`excluded.${sql.identifier(locationDiscipline.applies.name)}`,
-				},
-			});
+		await this.txHost.tx.insert(locationDiscipline).select(
+			this.txHost.tx
+				.select({
+					locationId: location.id,
+					disciplineId: discipline.id,
+					projectId: location.projectId,
+					applies: sql<boolean>`${applies}::boolean`.as("applies"),
+				})
+				.from(location)
+				.innerJoin(
+					discipline,
+					and(
+						eq(discipline.projectId, projectId),
+						inArray(discipline.id, disciplineIds),
+					),
+				)
+				.where(scope),
+		);
 	}
 
 	async clearExceptions(scope: SQL, disciplineIds: string[]): Promise<void> {

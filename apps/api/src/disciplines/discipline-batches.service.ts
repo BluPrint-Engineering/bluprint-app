@@ -51,19 +51,21 @@ export class DisciplineBatchesService {
 		const locations = await this.batches.count(scope);
 		if (locations === 0) return { locations };
 
-		const turnedOn: string[] = [];
-		const turnedOff: string[] = [];
-		const toDefault: string[] = [];
-		for (const { id, applies } of named) {
-			const isDefault =
-				applies === disciplineApplies("unit", catalog.get(id)!, null);
-			if (isDefault) toDefault.push(id);
-			else (applies ? turnedOn : turnedOff).push(id);
+		await this.batches.clearExceptions(
+			scope,
+			named.map(({ id }) => id),
+		);
+		for (const applies of [true, false]) {
+			const toStore = named
+				.filter(
+					(entry) =>
+						entry.applies === applies &&
+						entry.applies !==
+							disciplineApplies("unit", catalog.get(entry.id)!, null),
+				)
+				.map(({ id }) => id);
+			await this.batches.setExceptions(projectId, scope, toStore, applies);
 		}
-
-		await this.batches.clearExceptions(scope, toDefault);
-		await this.batches.setExceptions(projectId, scope, turnedOn, true);
-		await this.batches.setExceptions(projectId, scope, turnedOff, false);
 
 		return { locations };
 	}
