@@ -324,6 +324,24 @@ function newDisciplineEntry(base: string): Entry {
 	};
 }
 
+async function closeBatch() {
+	const batch = screen.queryByRole("dialog", { name: "Disciplinas em lote" });
+	if (batch) {
+		await user.click(within(batch).getByRole("button", { name: "Cancelar" }));
+	}
+}
+
+function newDisciplineInBatchEntry(base: string, opener: string): Entry {
+	return {
+		...newDisciplineEntry(base),
+		open: async () => {
+			await click("button", opener)();
+			await click("button", "Nova disciplina")();
+		},
+		exit: closeBatch,
+	};
+}
+
 function reservationEntry(
 	open: () => Promise<void>,
 	opener: () => Promise<HTMLElement>,
@@ -404,6 +422,10 @@ function floorPage(remaining: number): Page {
 			request: `PATCH ${base}/locations/${hall.id}`,
 		},
 		newDiscipline: newDisciplineEntry(base),
+		newDisciplineInBatch: newDisciplineInBatchEntry(
+			base,
+			"Aplicar às unidades e áreas comuns",
+		),
 	};
 	if (remaining > 0) {
 		Object.assign(entries, {
@@ -634,6 +656,10 @@ function roomsPage(holder: "unit" | "area", remaining: number): Page {
 			request: `PATCH ${base}/rooms/${lavanderia.id}`,
 		},
 		newDiscipline: newDisciplineEntry(base),
+		newDisciplineInBatch: newDisciplineInBatchEntry(
+			base,
+			"Aplicar a outros locais",
+		),
 	};
 	if (remaining > 0) {
 		const radio = (name: string) => () =>
@@ -741,6 +767,10 @@ function towerPage(remaining: number): Page {
 			request: `PATCH ${base}/locations/${piscina.id}`,
 		},
 		newDiscipline: newDisciplineEntry(base),
+		newDisciplineInBatch: newDisciplineInBatchEntry(
+			base,
+			"Aplicar às unidades e áreas comuns",
+		),
 	};
 	if (remaining > 0) {
 		Object.assign(entries, {
@@ -1459,6 +1489,10 @@ export const ROWS: Row[] = [
 	[49, "floor", "newDiscipline", "create-discipline", "entry"],
 	[50, "tower", "newDiscipline", "create-discipline", "entry"],
 	[51, "configuration", "copyTypology", "copy-typology", "full"],
+	[52, "floor", "newDisciplineInBatch", "create-discipline", "entry"],
+	[53, "tower", "newDisciplineInBatch", "create-discipline", "entry"],
+	[54, "unit", "newDisciplineInBatch", "create-discipline", "entry"],
+	[55, "commonArea", "newDisciplineInBatch", "create-discipline", "entry"],
 ];
 
 function rowsReturningFocus(rows: Row[]): Row[] {

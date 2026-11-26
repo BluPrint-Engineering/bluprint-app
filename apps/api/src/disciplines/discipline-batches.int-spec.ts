@@ -683,7 +683,7 @@ describe("POST /api/projects/:id/discipline-batches", () => {
 			id: randomUUID(),
 			name: `Andar ${index + 1}`,
 		}));
-		const rows = [
+		const rows: (typeof location.$inferInsert)[] = [
 			{
 				id: towerId,
 				projectId,

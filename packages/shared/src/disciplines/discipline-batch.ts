@@ -2,10 +2,9 @@ import { z } from "zod";
 
 export const MAX_BATCH_LOCATIONS = 5000;
 
-const disciplineIdsSchema = z.array(z.uuid()).refine(
-	(ids) => new Set(ids).size === ids.length,
-	"Ids must not repeat.",
-);
+const disciplineIdsSchema = z
+	.array(z.uuid())
+	.refine((ids) => new Set(ids).size === ids.length, "Ids must not repeat.");
 
 const batchLocationsTargetSchema = z.object({
 	type: z.literal("locations"),
@@ -13,10 +12,7 @@ const batchLocationsTargetSchema = z.object({
 		.array(z.uuid())
 		.min(1)
 		.max(MAX_BATCH_LOCATIONS)
-		.refine(
-			(ids) => new Set(ids).size === ids.length,
-			"Ids must not repeat.",
-		)
+		.refine((ids) => new Set(ids).size === ids.length, "Ids must not repeat.")
 		.meta({
 			description: `The units and common areas to change, 1 to ${MAX_BATCH_LOCATIONS}, without repeats.`,
 		}),

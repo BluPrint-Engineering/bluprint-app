@@ -33,3 +33,31 @@ export function ownListSentence(type: LocationDetail["type"]) {
 	}
 	return undefined;
 }
+
+export const BATCH_TITLE = "Disciplinas em lote";
+export const BATCH_MENU_LABEL = "Disciplinas em lote";
+export const BATCH_PENDING = "Aplicando…";
+export const BATCH_PLACES_NOTE = "Marque os locais deste andar.";
+export const BATCH_SCOPE_NOTE =
+	"O lote muda as unidades e áreas comuns dali. A lista do próprio andar ou torre não muda.";
+export const GENERAL_NOTE = "Geral vale em todo local e não entra na lista.";
+export const NO_TOWER = "Esta obra ainda não tem torre.";
+export const NO_FLOORS = "Esta torre ainda não tem andares.";
+export const EMPTY_FLOOR = "Este andar não tem unidade nem área comum.";
+export const EMPTY_TOWER = "Esta torre não tem unidade nem área comum.";
+export const BATCH_GONE_TEXT =
+	"Um dos locais marcados não existe mais. Confira a lista e aplique de novo.";
+export const BATCH_FAILED_TEXT = "Confira a conexão e tente de novo.";
+
+export const batchApplyLabel = (count: number) =>
+	count === 0
+		? "Aplicar"
+		: `Aplicar a ${count} ${count === 1 ? "local" : "locais"}`;
+
+export const batchAppliedText = (count: number) =>
+	`Disciplinas aplicadas a ${count} ${count === 1 ? "local" : "locais"}.`;
+
+export const batchCardLabel = (type: LocationDetail["type"]) =>
+	type === "floor" || type === "tower"
+		? "Aplicar às unidades e áreas comuns"
+		: "Aplicar a outros locais";
