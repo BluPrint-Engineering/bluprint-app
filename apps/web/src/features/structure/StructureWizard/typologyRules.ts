@@ -1,8 +1,10 @@
+import type { TypologyLocationType } from "@bluprint/shared";
+
 export interface TypologyDraft {
 	key: string;
 	name: string;
 	rooms: string[];
-	existing?: true;
+	locationType: TypologyLocationType;
 }
 
 export interface RuleDraft {

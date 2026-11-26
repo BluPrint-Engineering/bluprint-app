@@ -34,6 +34,8 @@ function draftOf(
 				name: `Torre ${String.fromCharCode(65 + index)}`,
 				ground: false,
 				hall: false,
+				entranceTypology: null,
+				hallTypology: null,
 				...tower,
 				ranges: (
 					ranges ?? [
@@ -142,9 +144,11 @@ describe("buildPlan", () => {
 	test("adds the areas of the project, of each tower and of one floor", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "2" }, { last: "2" }], {
-				projectAreas: ["Guarita"],
-				towerAreas: ["Salão de festas"],
-				floorAreas: [{ key: "a", tower: 1, floor: "2", name: "Terraço" }],
+				projectAreas: [{ name: "Guarita", typology: null }],
+				towerAreas: [{ name: "Salão de festas", typology: null }],
+				floorAreas: [
+					{ key: "a", tower: 1, floor: "2", name: "Terraço", typology: null },
+				],
 			}),
 			identity,
 		);
@@ -173,7 +177,9 @@ describe("buildPlan", () => {
 
 	test("drops the areas of each tower when there is a single tower", () => {
 		const plan = buildPlan(
-			draftOf([{}], { towerAreas: ["Salão de festas"] }),
+			draftOf([{}], {
+				towerAreas: [{ name: "Salão de festas", typology: null }],
+			}),
 			identity,
 		);
 
@@ -184,8 +190,8 @@ describe("buildPlan", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "2" }], {
 				floorAreas: [
-					{ key: "a", tower: 3, floor: "1", name: "Fantasma" },
-					{ key: "b", tower: 0, floor: "9", name: "Longe" },
+					{ key: "a", tower: 3, floor: "1", name: "Fantasma", typology: null },
+					{ key: "b", tower: 0, floor: "9", name: "Longe", typology: null },
 				],
 			}),
 			identity,
@@ -196,7 +202,9 @@ describe("buildPlan", () => {
 
 	test("lists a parent before its children and keeps positions per parent", () => {
 		const plan = buildPlan(
-			draftOf([{ ground: true, hall: true }], { projectAreas: ["Guarita"] }),
+			draftOf([{ ground: true, hall: true }], {
+				projectAreas: [{ name: "Guarita", typology: null }],
+			}),
 			identity,
 		);
 
@@ -234,8 +242,8 @@ describe("buildPlan", () => {
 					{ ground: true, hall: true },
 				],
 				{
-					projectAreas: ["Guarita"],
-					towerAreas: ["Salão de festas"],
+					projectAreas: [{ name: "Guarita", typology: null }],
+					towerAreas: [{ name: "Salão de festas", typology: null }],
 				},
 			),
 			identity,
@@ -285,10 +293,16 @@ describe("buildPlan", () => {
 	});
 });
 
-const typeOf = (key: string, name: string, rooms: string[] = []) => ({
+const typeOf = (
+	key: string,
+	name: string,
+	rooms: string[] = [],
+	locationType: "unit" | "common_area" = "unit",
+) => ({
 	key,
 	name,
 	rooms,
+	locationType,
 });
 
 const ruleOf = (
@@ -495,6 +509,49 @@ describe("buildPlan typologies", () => {
 		expect(typesOfUnits(plan)).toEqual(["101:-"]);
 	});
 
+	test("gives the entrance hall, the floor halls and a common area the chosen common-area typology", () => {
+		const plan = buildPlan(
+			draftOf(
+				[
+					{
+						last: "1",
+						finals: "01",
+						ground: true,
+						hall: true,
+						entranceTypology: "hall",
+						hallTypology: "hall",
+					},
+				],
+				{
+					typologies: [
+						typeOf("a", "Tipologia A"),
+						typeOf("hall", "Hall padrão", ["Circulação"], "common_area"),
+					],
+					projectAreas: [{ name: "Guarita", typology: "hall" }],
+					rules: [ruleOf("a")],
+				},
+			),
+			identity,
+		);
+
+		expect(
+			plan.typologies.map(({ name, locationType }) => [name, locationType]),
+		).toEqual([
+			["Tipologia A", "unit"],
+			["Hall padrão", "common_area"],
+		]);
+		const hallId = "typology:hall";
+		expect(
+			plan.locations
+				.filter((location) => location.type === "common_area")
+				.map(({ name, typologyId }) => [name, typologyId]),
+		).toEqual([
+			["Hall de entrada", hallId],
+			["Hall", hallId],
+			["Guarita", hallId],
+		]);
+	});
+
 	test("keeps the ground floor and the halls without a typology", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", finals: "01", ground: true, hall: true }]),
@@ -659,7 +716,7 @@ describe("buildPlan from floor ranges", () => {
 		(_name, ranges) => {
 			const plan = buildPlan(
 				draftOf([{ ranges }, { first: "1", last: "1", finals: "01" }], {
-					towerAreas: ["Salão de festas"],
+					towerAreas: [{ name: "Salão de festas", typology: null }],
 				}),
 				identity,
 			);
@@ -730,9 +787,17 @@ describe("buildPlan from floor ranges", () => {
 					{ ground: true, first: "2", last: "10", finals: "01, 04" },
 				],
 				{
-					projectAreas: ["Guarita"],
-					towerAreas: ["Salão de festas"],
-					floorAreas: [{ key: "a", tower: 1, floor: "10", name: "Terraço" }],
+					projectAreas: [{ name: "Guarita", typology: null }],
+					towerAreas: [{ name: "Salão de festas", typology: null }],
+					floorAreas: [
+						{
+							key: "a",
+							tower: 1,
+							floor: "10",
+							name: "Terraço",
+							typology: null,
+						},
+					],
 				},
 			),
 			identity,

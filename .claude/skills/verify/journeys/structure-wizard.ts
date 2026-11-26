@@ -97,11 +97,11 @@ export default async function structureWizard({ page, shot, expect, query }) {
 	await shot("w2-areas");
 	await endOfStep("w2-areas");
 	await continueTo("Tipologias");
-	await page.getByLabel("Novo cômodo da Tipologia A").fill("Sala");
-	await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
-	await expect(page.getByRole("button", { name: "Tirar Sala da Tipologia A" })).toBeVisible();
-	await page.getByLabel("Novo cômodo da Tipologia A").fill("Sála");
-	await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
+	await page.getByLabel("Novo cômodo").fill("Sala");
+	await page.getByLabel("Novo cômodo").press("Enter");
+	await expect(page.getByRole("button", { name: "Tirar Sala" })).toBeVisible();
+	await page.getByLabel("Novo cômodo").fill("Sála");
+	await page.getByLabel("Novo cômodo").press("Enter");
 	await expect(page.getByText("Esse cômodo já está na tipologia.")).toBeVisible();
 	await shot("w3-typologies");
 	await endOfStep("w3-typologies");
@@ -131,6 +131,8 @@ export default async function structureWizard({ page, shot, expect, query }) {
 
 	await expect(page).toHaveURL(`/projects/${target}`);
 	await expect(page.getByText("Estrutura criada: 1 torre e 18 unidades.")).toBeVisible();
+	await expect(page.getByRole("link", { name: "Ver tipologias" })).toHaveAttribute("href", `/projects/${target}/configuration#tipologias`);
+	await shot("w16-ver-tipologias");
 	await expect(page.getByRole("heading", { level: 2, name: "Fachada" })).toBeVisible();
 	await expect(page.getByRole("list", { name: "Fachada" }).getByRole("listitem")).toHaveCount(11);
 	await shot("w10-created");

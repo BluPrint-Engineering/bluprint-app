@@ -131,6 +131,12 @@ test.describe("desktop scrolling", () => {
 			await page
 				.getByRole("button", { name: "Nova tipologia", exact: true })
 				.click();
+			const dialog = page.getByRole("dialog", { name: "Nova tipologia" });
+			await dialog
+				.getByRole("textbox", { name: "Nome" })
+				.fill(`Tipologia ${count + 2}`);
+			await dialog.getByRole("button", { name: "Criar" }).click();
+			await expect(dialog).toBeHidden();
 		}
 		await page.getByRole("button", { name: "Criar estrutura" }).click();
 		await expect(
@@ -188,6 +194,12 @@ test.describe("phone hash", () => {
 			await page
 				.getByRole("button", { name: "Nova tipologia", exact: true })
 				.click();
+			const dialog = page.getByRole("dialog", { name: "Nova tipologia" });
+			await dialog
+				.getByRole("textbox", { name: "Nome" })
+				.fill(`Tipologia ${count + 2}`);
+			await dialog.getByRole("button", { name: "Criar" }).click();
+			await expect(dialog).toBeHidden();
 		}
 		await page.getByRole("button", { name: "Continuar · Prévia" }).click();
 		await page.getByRole("button", { name: "Criar estrutura" }).click();

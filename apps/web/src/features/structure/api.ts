@@ -171,6 +171,11 @@ function useStructureCreation<Variables>(
 					queryKey: ["structure", projectId],
 				});
 			}
+			if (typologyNamesTakenOf(error) !== undefined) {
+				return queryClient.invalidateQueries({
+					queryKey: typologiesQueryOptions(projectId).queryKey,
+				});
+			}
 		},
 	});
 }

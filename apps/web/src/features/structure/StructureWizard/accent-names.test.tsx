@@ -1,7 +1,6 @@
 import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
-import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
 import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
 import { combine, emptyStructure, structureApi } from "@/test/structureApi";
@@ -22,8 +21,8 @@ test("wizard rejects accented room duplicates but allows accented common area na
 		),
 	});
 	renderAt(`/projects/${obra.id}/structure/new`);
-	const rooms = await screen.findByRole("textbox", {
-		name: "Novo cômodo da Tipologia A",
+	const rooms = await screen.findByRole("combobox", {
+		name: "Novo cômodo",
 	});
 	await userEvent.type(rooms, "Suíte{Enter}suite{Enter}");
 	expect(
@@ -66,12 +65,11 @@ test("wizard refuses typology names differing only by accents before sending", a
 		"01, 04",
 	);
 	await userEvent.click(screen.getByRole("button", { name: "Nova tipologia" }));
-	const names = screen.getAllByRole("textbox", { name: "Nome da tipologia" });
-	await userEvent.clear(nth(names, 1));
-	await userEvent.type(nth(names, 1), "TipologÍa A");
-	await userEvent.click(
-		screen.getByRole("button", { name: "Criar estrutura" }),
+	await userEvent.type(
+		await screen.findByRole("textbox", { name: "Nome" }),
+		"TipologÍa A",
 	);
+	await userEvent.click(screen.getByRole("button", { name: "Criar" }));
 	expect(
 		await screen.findByText("Esse nome já existe nesta obra."),
 	).toBeInTheDocument();

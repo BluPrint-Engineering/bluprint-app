@@ -122,6 +122,25 @@ describe("extendedDraft", () => {
 		expect(draft.extend).toMatchObject({ takenFloors: [], named: false });
 	});
 
+	test("selects the typology the highest numbered floor's Hall already follows", () => {
+		const hall = typologyOf("Hall padrão", ["Circulação"], {
+			locationType: "common_area",
+		});
+		const other = typologyOf("Corredor", [], { locationType: "common_area" });
+		const draft = extendedDraft(
+			tower("Torre B", [
+				floor("1º andar", ["101"], [{ name: "Hall", typology: "Corredor" }]),
+				floor("2º andar", ["201"], [{ name: "Hall", typology: "Hall padrão" }]),
+			]),
+			[hall, other],
+			true,
+		);
+
+		expect(draft.towers[0]?.hall).toBe(true);
+		expect(draft.towers[0]?.hallTypology).toBe(hall.id);
+		expect(draft.typologies).toEqual([]);
+	});
+
 	test("leaves the hall out when the last floor has none", () => {
 		const draft = extendedDraft(
 			tower("Torre A", numberedFloors(1, 2, 2)),
@@ -148,15 +167,7 @@ describe("extendedDraft", () => {
 			true,
 		);
 
-		expect(draft.typologies).toEqual([
-			{
-				key: a.id,
-				name: "Tipologia A",
-				rooms: ["Sala", "Quarto"],
-				existing: true,
-			},
-			{ key: b.id, name: "Tipologia B", rooms: ["Sala"], existing: true },
-		]);
+		expect(draft.typologies).toEqual([]);
 		expect(
 			draft.rules.map(({ finals, typology }) => [finals, typology]),
 		).toEqual([
@@ -203,9 +214,8 @@ describe("extendedDraft", () => {
 		const draft = extendedDraft(tower("Torre A"), [], false);
 
 		expect(draft.typologies).toMatchObject([
-			{ name: "Tipologia A", rooms: [] },
+			{ name: "Tipologia A", rooms: [], locationType: "unit" },
 		]);
-		expect(draft.typologies[0]?.existing).toBeUndefined();
 		expect(draft.rules).toHaveLength(1);
 	});
 
@@ -264,7 +274,7 @@ describe("buildPlan for added floors", () => {
 	) {
 		const draft = withTyped(extendedDraft(existing, [type], true), { last });
 		edit?.(draft);
-		return { draft, plan: buildPlan(draft, identity) };
+		return { draft, plan: buildPlan(draft, identity, [type]) };
 	}
 
 	test("hangs the new floors under the tower that exists, numbered on from its last floor", () => {
@@ -301,7 +311,12 @@ describe("buildPlan for added floors", () => {
 
 	test("creates a tipologia that is new and refers to the existing one by its id", () => {
 		const { plan: built, draft } = plan("3", (each) => {
-			each.typologies.push({ key: "novo", name: "Cobertura", rooms: ["Sala"] });
+			each.typologies.push({
+				key: "novo",
+				name: "Cobertura",
+				rooms: ["Sala"],
+				locationType: "unit",
+			});
 			each.rules = [
 				{
 					key: "r1",
@@ -322,7 +337,7 @@ describe("buildPlan for added floors", () => {
 			];
 		});
 
-		expect(draft.typologies).toHaveLength(2);
+		expect(draft.typologies).toHaveLength(1);
 		expect(built.typologies.map(({ name }) => name)).toEqual(["Cobertura"]);
 		const units = built.locations.filter(({ type: kind }) => kind === "unit");
 		expect(units.map(({ typologyId }) => typologyId)).toEqual([
@@ -341,7 +356,9 @@ describe("buildPlan for added floors", () => {
 		const { plan: built } = plan("4", (each) => {
 			each.towers = each.towers.map((one) => ({ ...one, hall: true }));
 			expect(each.towers[0]?.ranges[0]?.finals).toBe("01, 02");
-			each.floorAreas = [{ key: "a", tower: 0, floor: "4", name: "Terraço" }];
+			each.floorAreas = [
+				{ key: "a", tower: 0, floor: "4", name: "Terraço", typology: null },
+			];
 		});
 
 		const areas = built.locations.filter(

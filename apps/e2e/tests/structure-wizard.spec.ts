@@ -84,11 +84,9 @@ test("a new account reserves units for a project, builds its structure with the 
 		page.getByRole("button", { name: "Tirar Guarita" }),
 	).toBeVisible();
 	await continueTo(page, "Tipologias");
-	await page.getByLabel("Novo cômodo da Tipologia A").fill("Sala");
-	await page.getByLabel("Novo cômodo da Tipologia A").press("Enter");
-	await expect(
-		page.getByRole("button", { name: "Tirar Sala da Tipologia A" }),
-	).toBeVisible();
+	await page.getByLabel("Novo cômodo").fill("Sala");
+	await page.getByLabel("Novo cômodo").press("Enter");
+	await expect(page.getByRole("button", { name: "Tirar Sala" })).toBeVisible();
 	await continueTo(page, "Prévia");
 
 	await expect(

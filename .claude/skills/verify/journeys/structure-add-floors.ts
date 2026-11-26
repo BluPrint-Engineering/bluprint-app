@@ -25,12 +25,14 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 	}
 
 	await expect(page.getByRole("heading", { level: 1, name: "Adicionar andares à Torre B" })).toBeVisible();
-	await expect(page.getByText(/^A Torre B tem hoje \d+ andares, do 1º ao 10º, com 2 unidades por andar\.$/)).toBeVisible();
-	await expect(page.getByRole("textbox", { name: "Do andar", exact: true })).toHaveValue("11");
+	const summary = page.getByText(/^A Torre B tem hoje \d+ andares, do 1º ao \d+º, com 2 unidades por andar\.$/);
+	await expect(summary).toBeVisible();
+	const top = Number((await summary.innerText()).match(/ao (\d+)º/)[1]);
+	await expect(page.getByRole("textbox", { name: "Do andar", exact: true })).toHaveValue(String(top + 1));
 	await expect(page.getByRole("textbox", { name: "Finais", exact: true })).toHaveValue("01, 02");
 	await shot("w9-add-floors");
 
-	await page.getByRole("textbox", { name: "Último andar" }).fill("12");
+	await page.getByRole("textbox", { name: "Último andar" }).fill(String(top + 2));
 	if (phone) {
 		await page.getByRole("button", { name: "Continuar · Áreas comuns" }).click();
 		await page.getByRole("button", { name: "Continuar · Tipologias" }).click();
@@ -43,12 +45,12 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 
 	await page.getByRole("button", { name: "Adicionar 2 andares" }).click();
 	await expect(page.getByText("2 andares adicionados à Torre B.")).toBeVisible();
-	await expect(page.getByRole("link", { name: "12º andar" })).toBeVisible();
+	await expect(page.getByRole("link", { name: `${top + 2}º andar` })).toBeVisible();
 	await shot("w10-added");
 	if ((await floorsOf()) !== before + 2) throw new Error(`Torre B has ${await floorsOf()} floors, expected ${before + 2}.`);
 
 	await page.goto(`/projects/${jardins}/structure/new?tower=${towerB}`);
-	await expect(page.getByRole("textbox", { name: "Do andar", exact: true })).toHaveValue("13");
+	await expect(page.getByRole("textbox", { name: "Do andar", exact: true })).toHaveValue(String(top + 3));
 	await page.goto(`/projects/${jardins}/configuration`);
 	await page.getByRole("region", { name: "Estrutura" }).getByRole("button", { name: "Assistente" }).click();
 	await page.getByRole("menuitem", { name: "Adicionar andares à Torre B" }).click();

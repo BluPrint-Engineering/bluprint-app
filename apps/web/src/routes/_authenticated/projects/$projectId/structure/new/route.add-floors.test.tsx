@@ -223,7 +223,18 @@ describe("adding floors to a tower (W9)", () => {
 			).not.toBeInTheDocument();
 			expect(screen.getByText("Quarto")).toBeInTheDocument();
 			expect(
-				screen.queryByRole("button", { name: "Tirar Quarto da Tipologia A" }),
+				screen.queryByRole("button", { name: "Tirar Quarto" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.getAllByText(
+					"Já existe na obra. Os cômodos mudam na Configuração.",
+				),
+			).toHaveLength(2);
+			expect(
+				screen.getByRole("button", { name: "Copiar Tipologia A" }),
+			).toBeInTheDocument();
+			expect(
+				screen.queryByRole("button", { name: "Tirar Tipologia A" }),
 			).not.toBeInTheDocument();
 			const first = within(screen.getByRole("group", { name: "Regra 1" }));
 			expect(first.getByRole("textbox", { name: /^Finais/ })).toHaveValue(
@@ -372,12 +383,11 @@ describe("adding floors to a tower (W9)", () => {
 				await screen.findByText("· Torre B, 12º andar"),
 			).toBeInTheDocument();
 			await user.click(screen.getByRole("button", { name: "Nova tipologia" }));
-			const field = (
-				await screen.findAllByRole("textbox", { name: "Nome da tipologia" })
-			)[0];
-			if (!field) throw new Error("No new tipologia.");
-			await user.clear(field);
-			await user.type(field, "Cobertura");
+			await user.type(
+				await screen.findByRole("textbox", { name: "Nome" }),
+				"Cobertura",
+			);
+			await user.click(screen.getByRole("button", { name: "Criar" }));
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);

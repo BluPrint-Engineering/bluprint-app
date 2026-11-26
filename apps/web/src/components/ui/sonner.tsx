@@ -29,7 +29,8 @@ const Toaster = (props: ToasterProps) => {
 					icon: "mt-px flex size-5 shrink-0 text-muted-foreground [&_svg]:size-5",
 					error: "[&_[data-icon]]:text-destructive",
 					success: "[&_[data-icon]]:text-success",
-					content: "min-w-0 flex-1 py-px",
+					content: "flex min-w-0 flex-1 flex-col gap-1 py-px",
+					description: "text-sm",
 					actionButton: cn(
 						buttonVariants({ variant: "outline", size: "sm" }),
 						"self-center",
