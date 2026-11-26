@@ -3,6 +3,7 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { rememberFailedSubmission } from "@/features/auth";
 import { project } from "@/test/projectsApi";
 import {
 	type ApiHandler,
@@ -106,6 +107,7 @@ describe("typologies in the wizard", () => {
 	afterEach(() => {
 		vi.unstubAllGlobals();
 		toast.dismiss();
+		localStorage.clear();
 	});
 
 	test("keeps two catalogs in the draft until create, and refuses a name the other catalog already has", async () => {
@@ -266,6 +268,62 @@ describe("typologies in the wizard", () => {
 		expect(
 			screen.getByText("Esse nome já existe nesta obra."),
 		).toBeInTheDocument();
+	});
+
+	test("offers no new common-area typology from the selectors once the draft has 50", async () => {
+		rememberFailedSubmission({
+			accountId: signedIn.user.id,
+			path: PATH,
+			kind: "create-structure",
+			variables: {
+				draft: {
+					numbering: "digits",
+					towers: [
+						{
+							key: "tower-1",
+							name: "Torre A",
+							ranges: [
+								{
+									key: "range-1",
+									first: "1",
+									last: "1",
+									finals: "01",
+									noUnits: false,
+								},
+							],
+							ground: true,
+							hall: true,
+							entranceTypology: null,
+							hallTypology: null,
+						},
+					],
+					projectAreas: [],
+					towerAreas: [],
+					floorAreas: [],
+					typologies: Array.from({ length: 50 }, (_, at) => ({
+						key: `type-${at + 1}`,
+						name: `Tipologia ${at + 1}`,
+						rooms: [],
+						locationType: "unit",
+					})),
+					rules: [],
+				},
+			},
+		});
+		const { handler } = wizardApi();
+		open(handler);
+
+		const newOption = (label: string) =>
+			within(screen.getByRole("combobox", { name: label })).getByRole(
+				"option",
+				{ name: "Nova tipologia de área comum…" },
+			);
+		await screen.findByRole("combobox", {
+			name: "Tipologia dos halls (opcional)",
+		});
+		expect(newOption("Tipologia do hall de entrada (opcional)")).toBeDisabled();
+		expect(newOption("Tipologia dos halls (opcional)")).toBeDisabled();
+		expect(newOption("Tipologia da área comum")).toBeDisabled();
 	});
 
 	test("links the created structure to the typologies section", async () => {

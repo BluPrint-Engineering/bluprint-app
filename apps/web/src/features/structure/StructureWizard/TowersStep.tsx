@@ -32,6 +32,7 @@ import {
 	type TowerDraft,
 	towerFieldId,
 	towerLabel,
+	typologyLimitReached,
 	type WizardDraft,
 	withNewRange,
 	withNewTypology,
@@ -365,6 +366,7 @@ function TowerCard({
 			label={label}
 			value={value}
 			options={commonTypes}
+			createDisabled={typologyLimitReached(draft)}
 			onChange={(key) => setType(field, key)}
 			onCreate={(select) =>
 				onCreateType(select, (current, key) => ({

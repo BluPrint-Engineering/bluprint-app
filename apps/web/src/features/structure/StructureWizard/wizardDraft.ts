@@ -1,5 +1,6 @@
 import {
 	comparableLocationName,
+	MAX_TYPOLOGIES_PER_REQUEST,
 	type StructureTower,
 	sameLocationName,
 	sameRoomName,
@@ -147,6 +148,10 @@ function readAreas(value: unknown): AreaDraft[] | undefined {
 		areas.push({ name: area.name, typology });
 	}
 	return areas;
+}
+
+export function typologyLimitReached(draft: WizardDraft): boolean {
+	return draft.typologies.length >= MAX_TYPOLOGIES_PER_REQUEST;
 }
 
 export function readWizardDraft(value: unknown): WizardDraft | undefined {

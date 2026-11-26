@@ -11,6 +11,7 @@ export function CommonAreaTypologySelect({
 	options,
 	onChange,
 	onCreate,
+	createDisabled,
 }: {
 	id: string;
 	label: string;
@@ -18,6 +19,7 @@ export function CommonAreaTypologySelect({
 	options: readonly Pick<CatalogTypology, "key" | "name">[];
 	onChange: (key: string | null) => void;
 	onCreate: (select: HTMLSelectElement) => void;
+	createDisabled: boolean;
 }) {
 	const selected = options.some((option) => option.key === value) ? value : "";
 	return (
@@ -42,7 +44,7 @@ export function CommonAreaTypologySelect({
 						{option.name}
 					</option>
 				))}
-				<option value={NEW_COMMON_AREA_TYPE}>
+				<option value={NEW_COMMON_AREA_TYPE} disabled={createDisabled}>
 					Nova tipologia de área comum…
 				</option>
 			</select>

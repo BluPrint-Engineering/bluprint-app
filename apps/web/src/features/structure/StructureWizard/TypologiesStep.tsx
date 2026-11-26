@@ -1,6 +1,5 @@
 import {
 	MAX_ROOMS_PER_TYPOLOGY,
-	MAX_TYPOLOGIES_PER_REQUEST,
 	type Typology,
 	type TypologyLocationType,
 } from "@bluprint/shared";
@@ -33,6 +32,7 @@ import {
 	type RuleField,
 	ruleFieldId,
 	typologyFieldId,
+	typologyLimitReached,
 	type WizardDraft,
 	withCopiedTypology,
 	withNewRule,
@@ -413,7 +413,7 @@ export function TypologiesStep({
 	const unitTypes = ofKind(catalog, "unit");
 	const taken = takenTypologyNames(draft, existing);
 	const used = usedRoomNames(roomNames, draft.typologies);
-	const atLimit = draft.typologies.length >= MAX_TYPOLOGIES_PER_REQUEST;
+	const atLimit = typologyLimitReached(draft);
 	const [naming, setNaming] = useState<{
 		locationType: TypologyLocationType;
 		returnFocus: () => HTMLElement | null;

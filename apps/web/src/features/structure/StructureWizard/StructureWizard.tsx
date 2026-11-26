@@ -1,6 +1,7 @@
 import {
 	MAX_LOCATIONS_PER_REQUEST,
 	type ProjectSummary,
+	type Typology,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
@@ -67,6 +68,7 @@ const EXTEND_STEP_TITLES = [
 	"Prévia",
 ] as const;
 const STEP_OF_SECTION = { towers: 0, areas: 1, types: 2 } as const;
+const NO_TYPOLOGIES: readonly Typology[] = [];
 const LAST_STEP = STEP_TITLES.length - 1;
 const BLOCKER_ID = "wizard-blocker";
 const AREAS_DESCRIPTION =
@@ -165,7 +167,7 @@ export function StructureWizard({
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const typologies = useQuery(typologiesQueryOptions(project.id));
 	const roomNames = useRoomNames(project.id);
-	const existing = typologies.data?.typologies ?? [];
+	const existing = typologies.data?.typologies ?? NO_TYPOLOGIES;
 	const existingNames = existing.map((typology) => typology.name);
 	const restored = useSessionDraft("create-structure", wizardFields);
 	const restoredReservation = useSessionDraft(

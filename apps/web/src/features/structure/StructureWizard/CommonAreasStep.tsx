@@ -22,6 +22,7 @@ import {
 	floorAreaProblem,
 	listedFloorAreas,
 	SINGLE_TOWER_NAME,
+	typologyLimitReached,
 	type WizardDraft,
 	withNewTypology,
 } from "./wizardDraft";
@@ -168,6 +169,7 @@ function FloorAreaForm({
 				label="Tipologia da área comum"
 				value={typology}
 				options={commonTypes}
+				createDisabled={typologyLimitReached(draft)}
 				onChange={(key) => onChange({ ...value, typology: key })}
 				onCreate={onCreateType}
 			/>
@@ -280,6 +282,7 @@ export function CommonAreasStep({
 						label="Tipologia da área comum"
 						value={chosen(projectType)}
 						options={commonTypes}
+						createDisabled={typologyLimitReached(draft)}
 						onChange={setProjectType}
 						onCreate={(select) => openCreate(select, setProjectType)}
 					/>
@@ -320,6 +323,7 @@ export function CommonAreasStep({
 						label="Tipologia da área comum"
 						value={chosen(towerType)}
 						options={commonTypes}
+						createDisabled={typologyLimitReached(draft)}
 						onChange={setTowerType}
 						onCreate={(select) => openCreate(select, setTowerType)}
 					/>
