@@ -2,7 +2,8 @@ import type { ProjectSummary, Structure, TypologyList } from "@bluprint/shared";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
 import { Link, Navigate, useRouteContext } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
 import { NotFound } from "@/components/NotFound";
@@ -19,8 +20,9 @@ import {
 import { structureQueryOptions, typologiesQueryOptions } from "../api";
 import { STRUCTURE_LOCKED } from "../lockedText";
 import { StructureWizard } from "./StructureWizard";
-import { structureDraftKey } from "./structureDraftStore";
+import { readStructureDraft, structureDraftKey } from "./structureDraftStore";
 import { towerNowLine } from "./towerNow";
+import { UnusableAttemptGate } from "./UnusableAttemptGate";
 import { extendedDraft } from "./wizardDraft";
 
 const H1 =
@@ -50,6 +52,9 @@ export function StructureWizardPage({
 	towerId?: string | undefined;
 }) {
 	const { session } = useRouteContext({ from: "/_authenticated" });
+	const storageKey = structureDraftKey(session.user.id, projectId, towerId);
+	const [stored] = useState(() => readStructureDraft(storageKey));
+	const [attemptMissing, setAttemptMissing] = useState(false);
 	const valid = isProjectId(projectId);
 	const query = useQuery({ ...projectQueryOptions(projectId), enabled: valid });
 	const extending = valid && towerId !== undefined;
@@ -62,22 +67,59 @@ export function StructureWizardPage({
 		enabled: extending,
 	});
 	useEffect(() => {
-		if (query.data?.status === "delivered") {
-			localStorage.removeItem(
-				structureDraftKey(session.user.id, projectId, towerId),
-			);
+		if (
+			query.data?.status === "delivered" &&
+			(!stored?.attempt || attemptMissing)
+		) {
+			localStorage.removeItem(storageKey);
 		}
-	}, [projectId, query.data?.status, session.user.id, towerId]);
+	}, [query.data?.status, stored, attemptMissing, storageKey]);
 
 	if (!valid || isProjectNotFound(query.error)) {
 		return <NotFound variant="project" />;
 	}
 
-	if (
+	const missingTower =
 		towerId !== undefined &&
-		structure.data &&
-		!structure.data.towers.some((tower) => tower.id === towerId)
+		structure.data !== undefined &&
+		!structure.data.towers.some((tower) => tower.id === towerId);
+	if (
+		stored?.attempt &&
+		!attemptMissing &&
+		(towerId === undefined || structure.data !== undefined) &&
+		(query.data?.status === "delivered" || missingTower)
 	) {
+		return (
+			<PageMain>
+				<UnusableAttemptGate
+					projectId={projectId}
+					towerId={towerId}
+					towerName={
+						(structure.data?.towers.length ?? 0) > 1
+							? structure.data?.towers.find((tower) => tower.id === towerId)
+									?.name
+							: undefined
+					}
+					storageKey={storageKey}
+					stored={stored}
+					onMissing={() => {
+						if (missingTower && query.data?.status !== "delivered")
+							toast.info("A torre não existe mais. O rascunho foi descartado.");
+						setAttemptMissing(true);
+					}}
+				/>
+			</PageMain>
+		);
+	}
+
+	if (missingTower && query.data?.status === "delivered")
+		return (
+			<PageMain>
+				<DeliveredBlock projectId={projectId} />
+			</PageMain>
+		);
+
+	if (missingTower && query.data?.status !== "delivered") {
 		return (
 			<Navigate to="/projects/$projectId" params={{ projectId }} replace />
 		);

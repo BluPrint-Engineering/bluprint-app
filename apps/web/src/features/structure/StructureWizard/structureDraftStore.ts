@@ -7,20 +7,31 @@ import {
 export const STRUCTURE_DRAFT_PREFIX = "bluprint.structure-draft.";
 export const SIGN_OUT_REQUEST = "bluprint:structure-draft-sign-out";
 
-export function requestDraftSignOut(): Promise<boolean> {
-	return new Promise((resolve) => {
-		const event = new CustomEvent(SIGN_OUT_REQUEST, {
-			cancelable: true,
-			detail: resolve,
-		});
-		if (window.dispatchEvent(event)) resolve(true);
+export function requestDraftSignOut(): {
+	blocked: boolean;
+	decision: Promise<boolean>;
+} {
+	let resolveDecision: (value: boolean) => void = () => {};
+	const decision = new Promise<boolean>((resolve) => {
+		resolveDecision = resolve;
 	});
+	const event = new CustomEvent(SIGN_OUT_REQUEST, {
+		cancelable: true,
+		detail: resolveDecision,
+	});
+	const blocked = !window.dispatchEvent(event);
+	if (!blocked) resolveDecision(true);
+	return { blocked, decision };
 }
 
-const attemptSchema = z.strictObject({
-	ids: z.record(z.string(), z.uuid()),
-	firstLocationId: z.uuid(),
-});
+const attemptSchema = z
+	.strictObject({
+		ids: z.record(z.string(), z.uuid()),
+		firstLocationId: z.uuid(),
+	})
+	.refine(({ ids, firstLocationId }) =>
+		Object.values(ids).includes(firstLocationId),
+	);
 
 export const structureDraftSchema = z.strictObject({
 	version: z.literal(STRUCTURE_DRAFT_VERSION),

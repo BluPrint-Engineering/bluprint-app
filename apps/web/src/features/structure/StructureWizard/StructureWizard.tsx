@@ -1,9 +1,17 @@
 import {
+	DISCIPLINE_NAME_TAKEN,
+	LOCATION_NAME_TAKEN,
+	LOCATION_NOT_FOUND,
 	MAX_LOCATIONS_PER_REQUEST,
+	NO_UNITS_LEFT,
+	PROJECT_DELIVERED,
 	type ProjectSummary,
+	ROOM_NAME_TAKEN,
+	type StructureCounts,
 	type Typology,
+	TYPOLOGY_NAME_TAKEN,
 } from "@bluprint/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link, useBlocker, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { Check, CircleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -12,15 +20,23 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSessionDraft } from "@/features/auth";
+import { ApiError } from "@/lib/api";
 import { useBottomBarHeight } from "@/lib/useBottomBarHeight";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
-import { availableUnitsOf, reservationDraft } from "../../projects/api";
+import {
+	availableUnitsOf,
+	projectQueryOptions,
+	reservationDraft,
+} from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
+	isBlankStructure,
+	locationQueryOptions,
 	namesTakenOf,
 	projectUnitsQueryOptions,
+	structureQueryOptions,
 	typologiesQueryOptions,
 	typologyNamesTakenOf,
 	useRecreateStructureMutation,
@@ -86,6 +102,22 @@ const TYPES_DESCRIPTION =
 	"A lista de cômodos de cada tipo, num catálogo para unidades e outro para áreas comuns. Uma tipologia de área comum só vale para área comum.";
 
 const identity = (key: string) => key;
+
+function isRefusal(error: unknown): boolean {
+	if (!(error instanceof ApiError)) return false;
+	if ([400, 401, 403, 404].includes(error.status)) return true;
+	return (
+		error.problem?.code !== undefined &&
+		[
+			NO_UNITS_LEFT,
+			LOCATION_NAME_TAKEN,
+			TYPOLOGY_NAME_TAKEN,
+			ROOM_NAME_TAKEN,
+			DISCIPLINE_NAME_TAKEN,
+			PROJECT_DELIVERED,
+		].includes(error.problem.code)
+	);
+}
 
 function StepHeading({
 	number,
@@ -166,7 +198,7 @@ export function StructureWizard({
 }) {
 	const desktop = useIsDesktop();
 	const navigate = useNavigate();
-	const create = useRecreateStructureMutation(project.id);
+	const queryClient = useQueryClient();
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const typologies = useQuery(typologiesQueryOptions(project.id));
 	const roomNames = useRoomNames(project.id);
@@ -179,6 +211,16 @@ export function StructureWizard({
 		start?.extend?.towerId,
 	);
 	const [stored] = useState(() => readStructureDraft(storageKey));
+	const staleRef = useRef(false);
+	const create = useRecreateStructureMutation(project.id, () => {
+		if (staleRef.current) return;
+		const current = readStructureDraft(storageKey);
+		if (current)
+			writeStructureDraft(storageKey, {
+				version: STRUCTURE_DRAFT_VERSION,
+				draft: current.draft,
+			});
+	});
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
 		reservationDraft,
@@ -190,8 +232,20 @@ export function StructureWizard({
 			initialDraft(),
 	);
 	const [dirty, setDirty] = useState(stored !== undefined);
-	const [restored, setRestored] = useState(stored !== undefined);
+	const [restored, setRestored] = useState(
+		stored !== undefined && !stored.attempt,
+	);
 	const [stale, setStale] = useState(false);
+	const [submission, setSubmission] = useState<
+		"editing" | "sending" | "uncertain" | "checking"
+	>(stored?.attempt ? "checking" : "editing");
+	const [connectionMessage, setConnectionMessage] = useState(false);
+	const [checkAction, setCheckAction] = useState<"open" | "retry" | "edit">(
+		"open",
+	);
+	const [openingCheck, setOpeningCheck] = useState(
+		stored?.attempt !== undefined,
+	);
 	const [discardOpen, setDiscardOpen] = useState(false);
 	const signOutAnswer = useRef<((allowed: boolean) => void) | undefined>(
 		undefined,
@@ -208,7 +262,10 @@ export function StructureWizard({
 	});
 	useEffect(() => {
 		function changed(event: StorageEvent) {
-			if (event.key === storageKey) setStale(true);
+			if (event.key === storageKey) {
+				staleRef.current = true;
+				setStale(true);
+			}
 		}
 		window.addEventListener("storage", changed);
 		return () => window.removeEventListener("storage", changed);
@@ -243,7 +300,14 @@ export function StructureWizard({
 	);
 	const reservationButton = useRef<HTMLButtonElement>(null);
 	const createButtonRef = useRef<HTMLButtonElement>(null);
-	const ids = useRef(new Map<string, string>());
+	const ids = useRef(
+		new Map<string, string>(Object.entries(stored?.attempt?.ids ?? {})),
+	);
+	const attemptId = useRef(stored?.attempt?.firstLocationId);
+	const checkStarted = useRef(false);
+	const [checkOnRender, setCheckOnRender] = useState(
+		stored?.attempt !== undefined,
+	);
 	const stepTop = useRef<HTMLDivElement>(null);
 
 	const preview = useMemo(
@@ -309,7 +373,7 @@ export function StructureWizard({
 		update: (draft: WizardDraft) => WizardDraft,
 		touched?: string,
 	): boolean {
-		if (create.isPending || stale) return false;
+		if (submission !== "editing" || staleRef.current) return false;
 		ids.current = new Map();
 		create.reset();
 		const next = update(draft);
@@ -350,67 +414,177 @@ export function StructureWizard({
 		return false;
 	}
 
-	function submit() {
-		if (create.isPending || blocked || !validate()) return;
-		const { typologies, locations } = buildPlan(
-			draft,
-			idFor,
-			existing.map(({ id, name, locationType }) => ({
-				id,
-				name,
-				locationType,
-			})),
-		);
+	function success(counts: StructureCounts) {
+		if (staleRef.current) return;
+		localStorage.removeItem(storageKey);
+		bypassBlock.current = true;
+		void queryClient.invalidateQueries({ queryKey: ["structure", project.id] });
+		if (extend) {
+			toast.success(
+				floorsAddedToast(
+					counts.floors,
+					extend.named ? extend.towerName : undefined,
+				),
+			);
+			void navigate(
+				extend.named
+					? {
+							to: "/projects/$projectId/locations/$locationId",
+							params: { projectId: project.id, locationId: extend.towerId },
+							replace: true,
+						}
+					: {
+							to: "/projects/$projectId",
+							params: { projectId: project.id },
+							replace: true,
+						},
+			);
+			return;
+		}
+		toast.success(createdToast(counts.towers, counts.units), {
+			duration: 12_000,
+			description: (
+				<Link to="/projects/$projectId/configuration" params={{ projectId: project.id }} hash="tipologias" className="font-medium text-primary underline underline-offset-3" onClick={() => toast.dismiss()}>
+					Ver tipologias
+				</Link>
+			),
+		});
+		void navigate({
+			to: "/projects/$projectId",
+			params: { projectId: project.id },
+			replace: true,
+		});
+	}
+
+	function clearAttempt() {
+		if (staleRef.current) return;
+		attemptId.current = undefined;
+		writeStructureDraft(storageKey, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(draft),
+		});
+	}
+
+	function send() {
+		if (staleRef.current) return;
+		const { typologies, locations } = buildPlan(draft, idFor, existing.map(({ id, name, locationType }) => ({ id, name, locationType })));
+		const first = locations[0];
+		if (!first) return;
+		attemptId.current = first.id;
+		writeStructureDraft(storageKey, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(draft),
+			attempt: {
+				ids: Object.fromEntries(ids.current),
+				firstLocationId: first.id,
+			},
+		});
+		setDirty(true);
+		setSubmission("sending");
 		create.mutate(
 			{ typologies, locations },
 			{
-				onSuccess: ({ counts }) => {
-					localStorage.removeItem(storageKey);
-					bypassBlock.current = true;
-					if (extend) {
-						const towerName = extend.named ? extend.towerName : undefined;
-						toast.success(floorsAddedToast(counts.floors, towerName));
-						void navigate(
-							extend.named
-								? {
-										to: "/projects/$projectId/locations/$locationId",
-										params: {
-											projectId: project.id,
-											locationId: extend.towerId,
-										},
-										replace: true,
-									}
-								: {
-										to: "/projects/$projectId",
-										params: { projectId: project.id },
-										replace: true,
-									},
-						);
-						return;
-					}
-					toast.success(createdToast(counts.towers, counts.units), {
-						duration: 12_000,
-						description: (
-							<Link
-								to="/projects/$projectId/configuration"
-								params={{ projectId: project.id }}
-								hash="tipologias"
-								className="font-medium text-primary underline underline-offset-3"
-								onClick={() => toast.dismiss()}
-							>
-								Ver tipologias
-							</Link>
-						),
-					});
-					void navigate({
-						to: "/projects/$projectId",
-						params: { projectId: project.id },
-						replace: true,
-					});
+				onSuccess: ({ counts }) => success(counts),
+				onError: (error) => {
+					if (isRefusal(error)) {
+						clearAttempt();
+						setSubmission("editing");
+					} else setSubmission("uncertain");
+
 				},
 			},
 		);
 	}
+
+	function submit() {
+		if (submission !== "editing" || stale || blocked || !validate()) return;
+		send();
+	}
+
+	async function checkAttempt(action: "open" | "retry" | "edit") {
+		const id = attemptId.current;
+		if (!id) return;
+		setSubmission("checking");
+		setCheckAction(action);
+		setConnectionMessage(false);
+		try {
+			await queryClient.fetchQuery({
+				...locationQueryOptions(project.id, id),
+				staleTime: 0,
+				retry: false,
+			});
+			if (staleRef.current) return;
+			success(buildPlan(draft, idFor).counts);
+		} catch (error) {
+			if (staleRef.current) return;
+			setOpeningCheck(false);
+			if (
+				error instanceof ApiError &&
+				error.status === 404 &&
+				error.problem?.code === LOCATION_NOT_FOUND
+			) {
+				try {
+					const [freshProject, structure] = await Promise.all([
+						queryClient.fetchQuery({
+							...projectQueryOptions(project.id),
+							staleTime: 0,
+							retry: false,
+						}),
+						queryClient.fetchQuery({
+							...structureQueryOptions(project.id),
+							staleTime: 0,
+							retry: false,
+						}),
+					]);
+					if (staleRef.current) return;
+					if (freshProject.status === "delivered") {
+						localStorage.removeItem(storageKey);
+						bypassBlock.current = true;
+						return;
+					}
+					const usable = extend
+						? structure.towers.some((tower) => tower.id === extend.towerId)
+						: isBlankStructure(structure);
+					if (!usable) {
+						localStorage.removeItem(storageKey);
+						bypassBlock.current = true;
+						toast.info(
+							extend
+								? "A torre não existe mais. O rascunho foi descartado."
+								: "Esta obra já tem estrutura. O rascunho foi descartado.",
+						);
+						void navigate({
+							to: "/projects/$projectId",
+							params: { projectId: project.id },
+							replace: true,
+						});
+						return;
+					}
+				} catch {
+					setConnectionMessage(action === "edit");
+					setSubmission("uncertain");
+					return;
+				}
+				if (action === "retry") send();
+				else {
+					clearAttempt();
+					ids.current = new Map();
+					setSubmission("editing");
+					if (action === "open") setRestored(true);
+				}
+			} else {
+				setConnectionMessage(action === "edit");
+				setSubmission("uncertain");
+			}
+		}
+	}
+
+	useEffect(() => {
+		if (!checkOnRender || checkStarted.current) return;
+		checkStarted.current = true;
+		setCheckOnRender(false);
+		void checkAttempt("open");
+	});
 
 	const mode = extend ? "add" : "create";
 	const balance: ReserveBalance = units.isPending
@@ -428,6 +602,7 @@ export function StructureWizard({
 
 	const names = namesTakenOf(create.error);
 	const failed =
+		submission === "editing" &&
 		create.isError &&
 		names === undefined &&
 		refusedNames === undefined &&
@@ -491,7 +666,7 @@ export function StructureWizard({
 			type="button"
 			size="lg"
 			className="w-full"
-			disabled={create.isPending || blocked}
+			disabled={submission !== "editing" || stale || blocked}
 			aria-describedby={blocked ? BLOCKER_ID : undefined}
 			onClick={submit}
 		>
@@ -690,7 +865,7 @@ export function StructureWizard({
 							variant="outline"
 							size="lg"
 							className="flex-1"
-							disabled={create.isPending}
+							disabled={submission !== "editing" || stale}
 							onClick={() => setStep(step - 1)}
 						>
 							Voltar
@@ -701,6 +876,7 @@ export function StructureWizard({
 							type="button"
 							size="lg"
 							className="flex-2"
+							disabled={submission !== "editing" || stale}
 							onClick={() => {
 								if (step === 0 && !validate()) return;
 								setStep(step + 1);
@@ -717,7 +893,7 @@ export function StructureWizard({
 	);
 
 	return (
-		<>
+		<div className="grid gap-(--space-5)">
 			{restored && !stale && (
 				<Alert>
 					<AlertTitle>Rascunho restaurado</AlertTitle>
@@ -739,8 +915,11 @@ export function StructureWizard({
 				<Alert>
 					<AlertTitle>Este rascunho mudou em outra aba</AlertTitle>
 					<AlertDescription>
-						Continue a partir da versão mais recente para não perder nada.{" "}
+						<p>
+							Continue a partir da versão mais recente para não perder nada.
+						</p>
 						<Button
+							className="mt-(--space-2)"
 							type="button"
 							onClick={() => {
 								const latest = readStructureDraft(storageKey);
@@ -750,7 +929,16 @@ export function StructureWizard({
 										initialDraft(),
 								);
 								setDirty(latest !== undefined);
-								setRestored(latest !== undefined);
+								setRestored(latest !== undefined && !latest.attempt);
+								ids.current = new Map(
+									Object.entries(latest?.attempt?.ids ?? {}),
+								);
+								attemptId.current = latest?.attempt?.firstLocationId;
+								setSubmission(latest?.attempt ? "checking" : "editing");
+								setOpeningCheck(latest?.attempt !== undefined);
+								checkStarted.current = false;
+								setCheckOnRender(latest?.attempt !== undefined);
+								staleRef.current = false;
 								setStale(false);
 							}}
 						>
@@ -759,9 +947,60 @@ export function StructureWizard({
 					</AlertDescription>
 				</Alert>
 			)}
-			<fieldset disabled={stale} className="min-w-0">
-				{layout}
-			</fieldset>
+			{openingCheck && submission === "checking" && (
+				<p role="status">
+					{extend
+						? "Conferindo se os andares foram adicionados…"
+						: "Conferindo se a estrutura foi criada…"}
+				</p>
+			)}
+			{(submission === "uncertain" ||
+				(submission === "checking" && !openingCheck)) && (
+				<Alert variant="destructive">
+					<AlertTitle>Não foi possível confirmar</AlertTitle>
+					<AlertDescription>
+						<p>
+							A conexão caiu antes da resposta. Tente de novo: nada é criado
+							duas vezes.
+						</p>
+						{connectionMessage && (
+							<p>
+								Ainda sem conexão. Para editar, o app precisa confirmar antes
+								que nada foi criado.
+							</p>
+						)}
+						<div className="flex flex-wrap gap-2">
+							<Button
+								type="button"
+								disabled={submission === "checking"}
+								onClick={() => void checkAttempt("retry")}
+							>
+								{submission === "checking" && checkAction === "retry"
+									? "Conferindo…"
+									: "Tentar de novo"}
+							</Button>
+							<Button
+								type="button"
+								variant="outline"
+								disabled={submission === "checking"}
+								onClick={() => void checkAttempt("edit")}
+							>
+								{submission === "checking" && checkAction === "edit"
+									? "Conferindo…"
+									: "Voltar a editar"}
+							</Button>
+						</div>
+					</AlertDescription>
+				</Alert>
+			)}
+			{!openingCheck && (
+				<fieldset
+					disabled={stale || submission !== "editing"}
+					className="min-w-0"
+				>
+					{layout}
+				</fieldset>
+			)}
 			{reservationDialog}
 			<DiscardDraftDialog
 				open={discardOpen || navigationBlocker.status === "blocked"}
@@ -789,6 +1028,6 @@ export function StructureWizard({
 					}
 				}}
 			/>
-		</>
+		</div>
 	);
 }

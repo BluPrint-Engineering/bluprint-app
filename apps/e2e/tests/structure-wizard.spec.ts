@@ -58,6 +58,36 @@ async function continueTo(page: Page, step: string) {
 	if (await button.isVisible()) await button.click();
 }
 
+test("a draft survives reload and a second tab cannot overwrite newer changes", async ({
+	page,
+	context,
+}) => {
+	await signUp(page);
+	await createProject(page, "Obra rascunho", "75");
+	await page.getByRole("link", { name: "Montar estrutura" }).click();
+	await describeRange(page, 0, { first: "1", last: "4", finals: "01, 02" });
+	await page.reload();
+	await expect(page.getByText("Rascunho restaurado")).toBeVisible();
+	await expect(page.getByLabel("Último andar", { exact: true })).toHaveValue(
+		"4",
+	);
+	const other = await context.newPage();
+	await other.goto(page.url());
+	await expect(other.getByText("Rascunho restaurado")).toBeVisible();
+	await other.getByLabel("Último andar", { exact: true }).fill("6");
+	await expect(
+		page.getByText("Este rascunho mudou em outra aba"),
+	).toBeVisible();
+	await expect(page.getByLabel("Último andar", { exact: true })).toBeDisabled();
+	await page
+		.getByRole("button", { name: "Carregar a versão mais recente" })
+		.click();
+	await expect(page.getByLabel("Último andar", { exact: true })).toHaveValue(
+		"6",
+	);
+	await other.close();
+});
+
 test("a new account reserves units for a project, builds its structure with the wizard and sees the façade", async ({
 	page,
 }) => {

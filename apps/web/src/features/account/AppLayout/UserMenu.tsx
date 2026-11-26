@@ -57,7 +57,9 @@ export function UserMenu({ user }: { user: AccountUser }) {
 	async function handleSignOut() {
 		if (signingOut) return;
 		setSigningOut(true);
-		if (!(await requestDraftSignOut())) {
+		const request = requestDraftSignOut();
+		if (request.blocked) setOpen(false);
+		if (!(await request.decision)) {
 			setSigningOut(false);
 			return;
 		}

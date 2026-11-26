@@ -284,7 +284,7 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeEnabled();
 			expect(
 				screen.getByText(
-					"Nada é salvo antes de adicionar. Depois, tudo se ajusta na fachada.",
+					"Nada é salvo antes de adicionar. Depois, tudo se ajusta na fachada. O rascunho fica guardado até lá, mesmo se a página for atualizada.",
 				),
 			).toBeInTheDocument();
 		});
