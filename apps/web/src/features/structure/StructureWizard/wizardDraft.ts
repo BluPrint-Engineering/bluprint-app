@@ -6,6 +6,7 @@ import {
 	sameRoomName,
 	type Typology,
 	type TypologyLocationType,
+	typologyLocationTypes,
 } from "@bluprint/shared";
 import { z } from "zod";
 import {
@@ -76,8 +77,9 @@ export interface WizardDraft {
 	rules: RuleDraft[];
 }
 
-export const STRUCTURE_DRAFT_VERSION = 1;
+export const STRUCTURE_DRAFT_VERSION = 2;
 
+const typologyKeySchema = z.string().nullable();
 const rangeSchema = z.strictObject({
 	key: z.string(),
 	first: z.string(),
@@ -91,17 +93,25 @@ const towerSchema = z.strictObject({
 	ranges: z.array(rangeSchema).min(1),
 	ground: z.boolean(),
 	hall: z.boolean(),
+	entranceTypology: typologyKeySchema,
+	hallTypology: typologyKeySchema,
+});
+const areaSchema = z.strictObject({
+	name: z.string(),
+	typology: typologyKeySchema,
 });
 const floorAreaSchema = z.strictObject({
 	key: z.string(),
 	tower: z.number().int(),
 	floor: z.string(),
 	name: z.string(),
+	typology: typologyKeySchema,
 });
 const typologySchema = z.strictObject({
 	key: z.string(),
 	name: z.string(),
 	rooms: z.array(z.string()),
+	locationType: z.enum(typologyLocationTypes),
 });
 const ruleSchema = z.strictObject({
 	key: z.string(),
@@ -114,8 +124,8 @@ const ruleSchema = z.strictObject({
 export const storedWizardDraftSchema = z.strictObject({
 	towers: z.array(towerSchema).min(1),
 	numbering: z.enum(["digits", "letters"]),
-	projectAreas: z.array(z.string()),
-	towerAreas: z.array(z.string()),
+	projectAreas: z.array(areaSchema),
+	towerAreas: z.array(areaSchema),
 	floorAreas: z.array(floorAreaSchema),
 	typologies: z.array(typologySchema),
 	rules: z.array(ruleSchema),
@@ -132,7 +142,7 @@ export function storeWizardDraft(draft: WizardDraft): StoredWizardDraft {
 		projectAreas: draft.projectAreas,
 		towerAreas: draft.towerAreas,
 		floorAreas: draft.floorAreas,
-		typologies: draft.typologies.filter((typology) => !typology.existing),
+		typologies: draft.typologies,
 		rules: draft.rules,
 	};
 }
@@ -155,16 +165,11 @@ export function restoreWizardDraft(
 			RANGE_KEY,
 		),
 	);
-	const typologies = [
-		...(start?.typologies.filter((typology) => typology.existing) ?? []),
-		...stored.typologies,
-	];
-	typeKeys = Math.max(typeKeys, highestKey(typologies, TYPOLOGY_KEY));
+	typeKeys = Math.max(typeKeys, highestKey(stored.typologies, TYPOLOGY_KEY));
 	ruleKeys = Math.max(ruleKeys, highestKey(stored.rules, RULE_KEY));
 	return {
 		...stored,
 		towers,
-		typologies,
 		...(start?.extend ? { extend: start.extend } : {}),
 	};
 }
@@ -207,6 +212,9 @@ function highestKey(items: { key: string }[], prefix: string): number {
 
 export const FIRST_TYPOLOGY_NAME = "Tipologia A";
 
+export function typologyLimitReached(draft: WizardDraft): boolean {
+	return draft.typologies.length >= MAX_TYPOLOGIES_PER_REQUEST;
+}
 
 export function initialDraft(): WizardDraft {
 	const typology: TypologyDraft = {

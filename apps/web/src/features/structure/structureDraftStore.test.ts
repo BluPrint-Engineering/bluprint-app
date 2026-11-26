@@ -1,5 +1,18 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
+import type { RuleDraft, TypologyDraft } from "./StructureWizard/typologyRules";
+import {
+	type AreaDraft,
+	type ExtendDraft,
+	type FloorAreaDraft,
+	initialDraft,
+	type RangeDraft,
+	restoreWizardDraft,
+	STRUCTURE_DRAFT_VERSION,
+	storeWizardDraft,
+	type TowerDraft,
+	type WizardDraft,
+} from "./StructureWizard/wizardDraft";
 import {
 	dropStructureDrafts,
 	readStructureDraft,
@@ -8,17 +21,6 @@ import {
 	structureDraftSchema,
 	writeStructureDraft,
 } from "./structureDraftStore";
-import type { RuleDraft, TypologyDraft } from "./typologyRules";
-import {
-	type ExtendDraft,
-	type FloorAreaDraft,
-	initialDraft,
-	type RangeDraft,
-	STRUCTURE_DRAFT_VERSION,
-	storeWizardDraft,
-	type TowerDraft,
-	type WizardDraft,
-} from "./wizardDraft";
 
 const fields = {
 	wizard: {
@@ -37,6 +39,8 @@ const fields = {
 		ranges: true,
 		ground: true,
 		hall: true,
+		entranceTypology: true,
+		hallTypology: true,
 	} satisfies Record<keyof TowerDraft, true>,
 	range: {
 		key: true,
@@ -50,12 +54,17 @@ const fields = {
 		tower: true,
 		floor: true,
 		name: true,
+		typology: true,
 	} satisfies Record<keyof FloorAreaDraft, true>,
+	area: {
+		name: true,
+		typology: true,
+	} satisfies Record<keyof AreaDraft, true>,
 	typology: {
 		key: true,
 		name: true,
 		rooms: true,
-		existing: true,
+		locationType: true,
 	} satisfies Record<keyof TypologyDraft, true>,
 	rule: {
 		key: true,
@@ -104,18 +113,58 @@ describe("structure draft storage", () => {
 			takenUnits: ["401"],
 			lead: "Server facts",
 		};
-		draft.typologies.push({
-			key: "server-type",
-			name: "Server typology",
-			rooms: ["Server room"],
-			existing: true,
-		});
 		const saved = JSON.stringify(storeWizardDraft(draft));
 		expect(saved).not.toContain("Server tower");
 		expect(saved).not.toContain("401");
-		expect(saved).not.toContain("Server typology");
-		expect(saved).not.toContain("Server room");
+		expect(saved).not.toContain("Server facts");
 		expect(saved).not.toContain("takenFloors");
+	});
+
+	it("reads back a record with the typologies of the entrance, the floor hall and the common areas", () => {
+		const key = structureDraftKey("a", "p");
+		const start = initialDraft();
+		const tower = start.towers[0];
+		if (!tower) throw new Error("the initial draft has no tower");
+		const draft: WizardDraft = {
+			...start,
+			towers: [
+				{
+					...tower,
+					hall: true,
+					entranceTypology: "type-hall",
+					hallTypology: "server-hall",
+				},
+			],
+			projectAreas: [{ name: "Salão de festas", typology: "type-hall" }],
+			towerAreas: [{ name: "Garagem", typology: null }],
+			floorAreas: [
+				{
+					key: "area-1",
+					tower: 0,
+					floor: "1",
+					name: "Lavanderia",
+					typology: "server-hall",
+				},
+			],
+			typologies: [
+				...start.typologies,
+				{
+					key: "type-hall",
+					name: "Hall social",
+					rooms: ["Piso"],
+					locationType: "common_area",
+				},
+			],
+		};
+		writeStructureDraft(key, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(draft),
+		});
+
+		const read = readStructureDraft(key);
+
+		expect(read && restoreWizardDraft(read.draft)).toEqual(draft);
+		expect(localStorage.getItem(key)).not.toBeNull();
 	});
 
 	it("isolates account, project and flow", () => {
@@ -133,7 +182,10 @@ describe("structure draft storage", () => {
 		const key = structureDraftKey("a", "p");
 		for (const value of [
 			"{",
-			JSON.stringify({ version: 0, draft: {} }),
+			JSON.stringify({
+				version: STRUCTURE_DRAFT_VERSION - 1,
+				draft: storeWizardDraft(initialDraft()),
+			}),
 			JSON.stringify({ version: STRUCTURE_DRAFT_VERSION, draft: {} }),
 		]) {
 			localStorage.setItem(key, value);

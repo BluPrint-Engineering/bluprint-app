@@ -2,15 +2,15 @@ import { locationParamsSchema } from "@bluprint/shared";
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { isProjectId, projectQueryOptions } from "@/features/projects/api";
-import { StructureWizardPage } from "@/features/structure";
+import {
+	readStructureDraft,
+	StructureWizardPage,
+	structureDraftKey,
+} from "@/features/structure";
 import {
 	isBlankStructure,
 	structureQueryOptions,
 } from "@/features/structure/api";
-import {
-	readStructureDraft,
-	structureDraftKey,
-} from "@/features/structure/StructureWizard/structureDraftStore";
 
 interface WizardSearch {
 	tower?: string;
@@ -45,16 +45,16 @@ export const Route = createFileRoute(
 			? structure.towers.some(({ id }) => id === search.tower)
 			: isBlankStructure(structure);
 		if (!ok) {
-			const project = await context.queryClient
-				.query({
-					...projectQueryOptions(params.projectId),
-					staleTime: 0,
-					retry: false,
-				})
-				.catch(() => undefined);
-			if (project?.status === "delivered") return;
 			if (draft?.attempt) return;
 			if (draft) {
+				const project = await context.queryClient
+					.query({
+						...projectQueryOptions(params.projectId),
+						staleTime: 0,
+						retry: false,
+					})
+					.catch(() => undefined);
+				if (project?.status === "delivered") return;
 				localStorage.removeItem(key);
 				toast.info(
 					adding

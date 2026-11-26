@@ -24,7 +24,7 @@ import {
 	readStructureDraft,
 	structureDraftKey,
 	writeStructureDraft,
-} from "@/features/structure/StructureWizard/structureDraftStore";
+} from "@/features/structure";
 import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
 import {
@@ -69,7 +69,7 @@ function wizardApi(
 		units?: ProjectUnitsBalance;
 		unitsResponse?: () => Promise<Response> | Response;
 		createAndLoseResponse?: boolean;
-		lookup?: () => Promise<Response> | Response;
+		lookup?: (served: () => Promise<Response>) => Promise<Response> | Response;
 		create?: (
 			body: CreateStructure,
 			attempt: number,
@@ -89,7 +89,11 @@ function wizardApi(
 				url.pathname.startsWith(`/api/projects/${summary.id}/locations/`) &&
 				(init?.method ?? "GET") === "GET"
 			)
-				return options.lookup();
+				return options.lookup(async () => {
+					const answered = await structureApi(summary.id, structure)(url, init);
+					if (!answered) throw new Error("the lookup was not served");
+					return answered;
+				});
 			if (url.pathname === "/api/organization/units") {
 				return json({
 					contracted: 500,
@@ -239,6 +243,20 @@ async function addTypology(name = "Tipologia B") {
 
 async function addRule() {
 	await user.click(screen.getByRole("button", { name: "Regra" }));
+}
+
+function changeInOtherTab() {
+	const key = structureDraftKey(signedIn.user.id, OBRA.id);
+	const stored = readStructureDraft(key);
+	const range = stored?.draft.towers[0]?.ranges[0];
+	if (!stored || !range) throw new Error("missing saved range");
+	range.last = "9";
+	writeStructureDraft(key, stored);
+	act(() =>
+		window.dispatchEvent(
+			new StorageEvent("storage", { key, newValue: localStorage.getItem(key) }),
+		),
+	);
 }
 
 describe("structure wizard", () => {
@@ -450,6 +468,114 @@ describe("structure wizard", () => {
 			expect(
 				screen.getByRole("textbox", { name: "Primeiro andar" }),
 			).toHaveValue("7");
+		});
+
+		test("finishes a creation that answers after another tab changed the draft", async () => {
+			let succeed: () => void = () => {};
+			const { handler, sent } = wizardApi({
+				create: (body) =>
+					new Promise((resolve) => {
+						succeed = () => resolve(json({ counts: countsOf(body) }, 201));
+					}),
+			});
+			const { router } = open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByRole("button", { name: "Criando estrutura…" });
+			changeInOtherTab();
+			expect(
+				await screen.findByText("Este rascunho mudou em outra aba"),
+			).toBeInTheDocument();
+
+			succeed();
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Ver tipologias" }),
+			).toBeVisible();
+			expect(sent).toHaveLength(1);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("finishes a creation that the check finds after another tab changed the draft", async () => {
+			let release: () => void = () => {};
+			const { handler, sent, created } = wizardApi({
+				createAndLoseResponse: true,
+				lookup: (served) =>
+					new Promise((resolve) => {
+						release = () => resolve(served());
+					}),
+			});
+			const { router } = open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+			await screen.findByRole("button", { name: "Conferindo…" });
+			changeInOtherTab();
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			release();
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+			expect(sent).toHaveLength(1);
+			expect(created).toHaveLength(1);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("finishes a creation that the delivered project's check finds after another tab changed the draft", async () => {
+			const first = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+			});
+			open(first.handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			const id = first.sent[0]?.locations[0]?.id;
+			if (!id) throw new Error("missing first location");
+			cleanup();
+			let release: () => void = () => {};
+			const delivered = wizardApi({
+				summary: { ...OBRA, status: "delivered" },
+				structure: structureOf([{ ...tower("Torre A"), id }]),
+				lookup: (served) =>
+					new Promise((resolve) => {
+						release = () => resolve(served());
+					}),
+			});
+			const { router } = open(delivered.handler);
+			await screen.findByText("Conferindo se a estrutura foi criada…");
+			changeInOtherTab();
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			release();
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Ver tipologias" }),
+			).toBeVisible();
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
 		});
 
 		test("restores a draft after reopening the wizard", async () => {
@@ -2341,6 +2467,21 @@ describe("structure wizard", () => {
 				screen.queryByRole("heading", { level: 1, name: "Montar estrutura" }),
 			).not.toBeInTheDocument();
 			expect(sent).toHaveLength(0);
+		});
+
+		test("opens the project instead of the delivered block when a delivered project already has a structure", async () => {
+			const { handler } = wizardApi({
+				summary: { ...OBRA, status: "delivered" },
+				structure: structureOf([tower("Torre A")]),
+			});
+			const { router } = open(handler);
+
+			await waitFor(() => {
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+			});
+			expect(
+				screen.queryByRole("heading", { level: 1, name: "Montar estrutura" }),
+			).not.toBeInTheDocument();
 		});
 
 		test("opens from the project home without waiting for the structure again", async () => {

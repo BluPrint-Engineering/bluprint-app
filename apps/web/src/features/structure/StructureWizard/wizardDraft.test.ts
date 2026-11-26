@@ -846,44 +846,57 @@ describe("a stored draft", () => {
 		expect(storedWizardDraftSchema.safeParse(old).success).toBe(false);
 	});
 
-	test("drops the project's typologies an older draft kept, keeping the rules that point at them", () => {
-		const draft = draftOf({});
+	test("drops a draft that kept the project's typologies whole", () => {
 		const stored = {
-			...JSON.parse(JSON.stringify(draft)),
+			...storeWizardDraft(draftOf({})),
 			typologies: [
 				{
 					key: "server-type-c",
 					name: "Tipologia C",
 					rooms: ["Sala"],
+					locationType: "unit",
 					existing: true,
-				},
-				{ key: "type-1", name: "Tipologia A", rooms: ["Sala", "Cozinha"] },
-			],
-			rules: [
-				{
-					key: "rule-1",
-					tower: 0,
-					finals: "01",
-					from: "1",
-					to: "12",
-					typology: "server-type-c",
 				},
 			],
 		};
 
-		const restored = readWizardDraft(stored);
+		expect(storedWizardDraftSchema.safeParse(stored).success).toBe(false);
+	});
 
-		expect(restored?.typologies).toEqual([
-			{
-				key: "type-1",
-				name: "Tipologia A",
-				rooms: ["Sala", "Cozinha"],
-				locationType: "unit",
-			},
-		]);
-		expect(restored?.rules.map(({ typology }) => typology)).toEqual([
-			"server-type-c",
-		]);
+	test("reads back the typologies of the entrance, the floor hall and the common areas", () => {
+		const draft: WizardDraft = {
+			...draftOf({
+				entranceTypology: "type-hall",
+				hallTypology: "server-hall",
+			}),
+			projectAreas: [{ name: "Salão de festas", typology: "type-hall" }],
+			towerAreas: [{ name: "Garagem", typology: null }],
+			floorAreas: [
+				{
+					key: "area-1",
+					tower: 0,
+					floor: "3",
+					name: "Lavanderia",
+					typology: "server-hall",
+				},
+			],
+			typologies: [
+				{
+					key: "type-hall",
+					name: "Hall social",
+					rooms: ["Piso"],
+					locationType: "common_area",
+				},
+			],
+		};
+
+		expect(
+			restoreWizardDraft(
+				storedWizardDraftSchema.parse(
+					JSON.parse(JSON.stringify(storeWizardDraft(draft))),
+				),
+			),
+		).toEqual(draft);
 	});
 
 	test("drops a draft with a tower without ranges", () => {

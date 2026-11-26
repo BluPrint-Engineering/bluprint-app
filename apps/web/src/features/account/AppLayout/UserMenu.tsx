@@ -16,10 +16,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { discardSession, sessionQueryOptions, signOut } from "@/features/auth";
-import {
-	dropStructureDrafts,
-	requestDraftSignOut,
-} from "@/features/structure/StructureWizard/structureDraftStore";
+import { dropStructureDrafts, requestDraftSignOut } from "@/features/structure";
 import { useTheme } from "@/lib/useTheme";
 import { organizationQueryOptions } from "../api";
 import { initialsOf } from "./initialsOf";

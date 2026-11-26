@@ -3,7 +3,11 @@ import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { rememberFailedSubmission } from "@/features/auth";
+import {
+	STRUCTURE_DRAFT_VERSION,
+	structureDraftKey,
+	writeStructureDraft,
+} from "@/features/structure";
 import { project } from "@/test/projectsApi";
 import {
 	type ApiHandler,
@@ -271,43 +275,39 @@ describe("typologies in the wizard", () => {
 	});
 
 	test("offers no new common-area typology from the selectors once the draft has 50", async () => {
-		rememberFailedSubmission({
-			accountId: signedIn.user.id,
-			path: PATH,
-			kind: "create-structure",
-			variables: {
-				draft: {
-					numbering: "digits",
-					towers: [
-						{
-							key: "tower-1",
-							name: "Torre A",
-							ranges: [
-								{
-									key: "range-1",
-									first: "1",
-									last: "1",
-									finals: "01",
-									noUnits: false,
-								},
-							],
-							ground: true,
-							hall: true,
-							entranceTypology: null,
-							hallTypology: null,
-						},
-					],
-					projectAreas: [],
-					towerAreas: [],
-					floorAreas: [],
-					typologies: Array.from({ length: 50 }, (_, at) => ({
-						key: `type-${at + 1}`,
-						name: `Tipologia ${at + 1}`,
-						rooms: [],
-						locationType: "unit",
-					})),
-					rules: [],
-				},
+		writeStructureDraft(structureDraftKey(signedIn.user.id, OBRA.id), {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: {
+				numbering: "digits",
+				towers: [
+					{
+						key: "tower-1",
+						name: "Torre A",
+						ranges: [
+							{
+								key: "range-1",
+								first: "1",
+								last: "1",
+								finals: "01",
+								noUnits: false,
+							},
+						],
+						ground: true,
+						hall: true,
+						entranceTypology: null,
+						hallTypology: null,
+					},
+				],
+				projectAreas: [],
+				towerAreas: [],
+				floorAreas: [],
+				typologies: Array.from({ length: 50 }, (_, at) => ({
+					key: `type-${at + 1}`,
+					name: `Tipologia ${at + 1}`,
+					rooms: [],
+					locationType: "unit" as const,
+				})),
+				rules: [],
 			},
 		});
 		const { handler } = wizardApi();

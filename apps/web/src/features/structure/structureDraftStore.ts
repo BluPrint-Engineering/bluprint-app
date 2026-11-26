@@ -2,7 +2,7 @@ import { z } from "zod";
 import {
 	STRUCTURE_DRAFT_VERSION,
 	storedWizardDraftSchema,
-} from "./wizardDraft";
+} from "./StructureWizard/wizardDraft";
 
 export const STRUCTURE_DRAFT_PREFIX = "bluprint.structure-draft.";
 export const SIGN_OUT_REQUEST = "bluprint:structure-draft-sign-out";

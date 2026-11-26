@@ -19,8 +19,8 @@ import {
 } from "../../projects/api";
 import { structureQueryOptions, typologiesQueryOptions } from "../api";
 import { STRUCTURE_LOCKED } from "../lockedText";
+import { readStructureDraft, structureDraftKey } from "../structureDraftStore";
 import { StructureWizard } from "./StructureWizard";
-import { readStructureDraft, structureDraftKey } from "./structureDraftStore";
 import { towerNowLine } from "./towerNow";
 import { UnusableAttemptGate } from "./UnusableAttemptGate";
 import { extendedDraft } from "./wizardDraft";

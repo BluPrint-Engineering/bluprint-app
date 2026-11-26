@@ -1,6 +1,6 @@
 import { LOCATION_NOT_FOUND, type StructureCounts } from "@bluprint/shared";
 import { type QueryClient, useQueryClient } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { ApiError } from "@/lib/api";
 import { locationQueryOptions } from "../api";
@@ -40,23 +40,41 @@ export function useFinishAttempt(projectId: string, storageKey: string) {
 	return (counts: StructureCounts, tower?: ExtendedTower) => {
 		localStorage.removeItem(storageKey);
 		void queryClient.invalidateQueries({ queryKey: ["structure", projectId] });
-		toast.success(
-			tower
-				? floorsAddedToast(counts.floors, tower.name)
-				: createdToast(counts.towers, counts.units),
-		);
-		void navigate(
-			tower?.name !== undefined
-				? {
-						to: "/projects/$projectId/locations/$locationId",
-						params: { projectId, locationId: tower.id },
-						replace: true,
-					}
-				: {
-						to: "/projects/$projectId",
-						params: { projectId },
-						replace: true,
-					},
-		);
+		if (tower) {
+			toast.success(floorsAddedToast(counts.floors, tower.name));
+			void navigate(
+				tower.name !== undefined
+					? {
+							to: "/projects/$projectId/locations/$locationId",
+							params: { projectId, locationId: tower.id },
+							replace: true,
+						}
+					: {
+							to: "/projects/$projectId",
+							params: { projectId },
+							replace: true,
+						},
+			);
+			return;
+		}
+		toast.success(createdToast(counts.towers, counts.units), {
+			duration: 12_000,
+			description: (
+				<Link
+					to="/projects/$projectId/configuration"
+					params={{ projectId }}
+					hash="tipologias"
+					className="font-medium text-primary underline underline-offset-3"
+					onClick={() => toast.dismiss()}
+				>
+					Ver tipologias
+				</Link>
+			),
+		});
+		void navigate({
+			to: "/projects/$projectId",
+			params: { projectId },
+			replace: true,
+		});
 	};
 }

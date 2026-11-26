@@ -1,6 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import {
+	readStructureDraft,
+	type StructureDraft,
+} from "../structureDraftStore";
+import {
 	CheckingStatus,
 	StaleDraftAlert,
 	UncertainAlert,
@@ -11,7 +15,6 @@ import {
 	useFinishAttempt,
 } from "./attemptCheck";
 import { buildPlan } from "./buildPlan";
-import type { StructureDraft } from "./structureDraftStore";
 import { initialDraft, restoreWizardDraft } from "./wizardDraft";
 
 export function UnusableAttemptGate({
@@ -33,6 +36,7 @@ export function UnusableAttemptGate({
 	const finish = useFinishAttempt(projectId, storageKey);
 	const [checking, setChecking] = useState<CheckAction | undefined>("open");
 	const [noConnection, setNoConnection] = useState(false);
+	const [current, setCurrent] = useState(stored);
 	const [stale, setStale] = useState(false);
 	const staleRef = useRef(false);
 	const started = useRef(false);
@@ -46,16 +50,15 @@ export function UnusableAttemptGate({
 		window.addEventListener("storage", changed);
 		return () => window.removeEventListener("storage", changed);
 	}, [storageKey]);
-	async function check(action: CheckAction) {
-		if (!stored.attempt) return;
+	async function check(action: CheckAction, record = current) {
+		if (!record.attempt) return;
 		setChecking(action);
 		setNoConnection(false);
 		const outcome = await attemptOutcome(
 			queryClient,
 			projectId,
-			stored.attempt.firstLocationId,
+			record.attempt.firstLocationId,
 		);
-		if (staleRef.current) return;
 		if (outcome === "created") {
 			const start = towerId
 				? {
@@ -70,12 +73,15 @@ export function UnusableAttemptGate({
 						},
 					}
 				: undefined;
-			const draft = restoreWizardDraft(stored.draft, start);
+			const draft = restoreWizardDraft(record.draft, start);
 			finish(
 				buildPlan(draft, (key) => key).counts,
 				towerId === undefined ? undefined : { id: towerId, name: towerName },
 			);
-		} else if (outcome === "missing") {
+			return;
+		}
+		if (staleRef.current) return;
+		if (outcome === "missing") {
 			localStorage.removeItem(storageKey);
 			onMissing();
 		} else {
@@ -83,12 +89,24 @@ export function UnusableAttemptGate({
 			setChecking(undefined);
 		}
 	}
+	function loadLatest() {
+		const latest = readStructureDraft(storageKey);
+		staleRef.current = false;
+		setStale(false);
+		if (latest?.attempt) {
+			setCurrent(latest);
+			void check("open", latest);
+		} else {
+			localStorage.removeItem(storageKey);
+			onMissing();
+		}
+	}
 	useEffect(() => {
 		if (started.current) return;
 		started.current = true;
 		void check("open");
 	});
-	if (stale) return <StaleDraftAlert onLoad={() => window.location.reload()} />;
+	if (stale) return <StaleDraftAlert onLoad={loadLatest} />;
 	if (checking === "open")
 		return <CheckingStatus extending={towerId !== undefined} />;
 	return (

@@ -11,7 +11,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
-import { structureDraftKey } from "@/features/structure/StructureWizard/structureDraftStore";
+import { structureDraftKey } from "@/features/structure";
 import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
 import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";

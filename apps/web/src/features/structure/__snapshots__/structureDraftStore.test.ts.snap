@@ -1,8 +1,12 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`structure draft storage > records the persisted schema shape for version 1 1`] = `
+exports[`structure draft storage > records the persisted schema shape for version 2 1`] = `
 {
   "fields": {
+    "area": {
+      "name": true,
+      "typology": true,
+    },
     "extend": {
       "lead": true,
       "named": true,
@@ -16,6 +20,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
       "key": true,
       "name": true,
       "tower": true,
+      "typology": true,
     },
     "range": {
       "finals": true,
@@ -33,15 +38,17 @@ exports[`structure draft storage > records the persisted schema shape for versio
       "typology": true,
     },
     "tower": {
+      "entranceTypology": true,
       "ground": true,
       "hall": true,
+      "hallTypology": true,
       "key": true,
       "name": true,
       "ranges": true,
     },
     "typology": {
-      "existing": true,
       "key": true,
+      "locationType": true,
       "name": true,
       "rooms": true,
     },
@@ -73,8 +80,10 @@ exports[`structure draft storage > records the persisted schema shape for versio
     "towerAreas": [],
     "towers": [
       {
+        "entranceTypology": "object",
         "ground": "boolean",
         "hall": "boolean",
+        "hallTypology": "object",
         "key": "string",
         "name": "string",
         "ranges": [
@@ -91,6 +100,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
     "typologies": [
       {
         "key": "string",
+        "locationType": "string",
         "name": "string",
         "rooms": [],
       },
@@ -147,12 +157,19 @@ exports[`structure draft storage > records the persisted schema shape for versio
                   "minimum": -9007199254740991,
                   "type": "integer",
                 },
+                "typology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
               },
               "required": [
                 "key",
                 "tower",
                 "floor",
                 "name",
+                "typology",
               ],
               "type": "object",
             },
@@ -167,7 +184,23 @@ exports[`structure draft storage > records the persisted schema shape for versio
           },
           "projectAreas": {
             "items": {
-              "type": "string",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                },
+                "typology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+              },
+              "required": [
+                "name",
+                "typology",
+              ],
+              "type": "object",
             },
             "type": "array",
           },
@@ -210,7 +243,23 @@ exports[`structure draft storage > records the persisted schema shape for versio
           },
           "towerAreas": {
             "items": {
-              "type": "string",
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                },
+                "typology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+              },
+              "required": [
+                "name",
+                "typology",
+              ],
+              "type": "object",
             },
             "type": "array",
           },
@@ -218,11 +267,23 @@ exports[`structure draft storage > records the persisted schema shape for versio
             "items": {
               "additionalProperties": false,
               "properties": {
+                "entranceTypology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
                 "ground": {
                   "type": "boolean",
                 },
                 "hall": {
                   "type": "boolean",
+                },
+                "hallTypology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
                 },
                 "key": {
                   "type": "string",
@@ -269,6 +330,8 @@ exports[`structure draft storage > records the persisted schema shape for versio
                 "ranges",
                 "ground",
                 "hall",
+                "entranceTypology",
+                "hallTypology",
               ],
               "type": "object",
             },
@@ -280,6 +343,13 @@ exports[`structure draft storage > records the persisted schema shape for versio
               "additionalProperties": false,
               "properties": {
                 "key": {
+                  "type": "string",
+                },
+                "locationType": {
+                  "enum": [
+                    "unit",
+                    "common_area",
+                  ],
                   "type": "string",
                 },
                 "name": {
@@ -296,6 +366,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
                 "key",
                 "name",
                 "rooms",
+                "locationType",
               ],
               "type": "object",
             },
@@ -314,7 +385,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
         "type": "object",
       },
       "version": {
-        "const": 1,
+        "const": 2,
         "type": "number",
       },
     },

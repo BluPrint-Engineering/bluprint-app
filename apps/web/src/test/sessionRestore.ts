@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { SessionDraftKind } from "@/features/auth/sessionDraft";
-import { structureDraftKey } from "@/features/structure/StructureWizard/structureDraftStore";
+import { structureDraftKey } from "@/features/structure";
 import { uuidV7 } from "@/lib/uuidV7";
 import { project } from "./projectsApi";
 import { json, organization, renderAt, signedIn } from "./renderApp";

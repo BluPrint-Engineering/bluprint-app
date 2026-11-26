@@ -10,3 +10,11 @@ export { type LocationSearch, readLocationSearch } from "./LocationPage/origin";
 export { STRUCTURE_LOCKED } from "./lockedText";
 export { ProjectStructure } from "./ProjectStructure/ProjectStructure";
 export { StructureWizardPage } from "./StructureWizard/StructureWizardPage";
+export { STRUCTURE_DRAFT_VERSION } from "./StructureWizard/wizardDraft";
+export {
+	dropStructureDrafts,
+	readStructureDraft,
+	requestDraftSignOut,
+	structureDraftKey,
+	writeStructureDraft,
+} from "./structureDraftStore";

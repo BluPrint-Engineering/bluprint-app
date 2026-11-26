@@ -1,4 +1,4 @@
-import { dropStructureDrafts } from "../structure/StructureWizard/structureDraftStore";
+import { dropStructureDrafts } from "@/features/structure";
 
 export const sessionDraftKinds = [
 	"create-project",

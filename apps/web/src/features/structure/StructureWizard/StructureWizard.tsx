@@ -7,12 +7,11 @@ import {
 	type ProjectSummary,
 	ROOM_NAME_TAKEN,
 	type StructureCounts,
-	type Typology,
 	TYPOLOGY_NAME_TAKEN,
+	type Typology,
 } from "@bluprint/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	Link,
 	useBlocker,
 	useNavigate,
 	useRouteContext,
@@ -47,12 +46,16 @@ import {
 } from "../api";
 import { plural } from "../plural";
 import {
-	createdToast,
-	floorsAddedToast,
 	missingReserveText,
 	missingReserveTitle,
 	nameTakenText,
 } from "../reserveText";
+import {
+	readStructureDraft,
+	SIGN_OUT_REQUEST,
+	structureDraftKey,
+	writeStructureDraft,
+} from "../structureDraftStore";
 import {
 	CheckingStatus,
 	StaleDraftAlert,
@@ -61,6 +64,7 @@ import {
 import {
 	attemptOutcome,
 	type CheckAction,
+	useFinishAttempt,
 } from "./attemptCheck";
 import { buildPlan, reserveUsed } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
@@ -72,12 +76,6 @@ import {
 	ReserveBox,
 	UntypedAlert,
 } from "./Preview";
-import {
-	readStructureDraft,
-	SIGN_OUT_REQUEST,
-	structureDraftKey,
-	writeStructureDraft,
-} from "./structureDraftStore";
 import { TowersStep } from "./TowersStep";
 import { TypologiesStep } from "./TypologiesStep";
 import {
@@ -224,6 +222,7 @@ export function StructureWizard({
 	);
 	const [stored] = useState(() => readStructureDraft(storageKey));
 	const staleRef = useRef(false);
+	const finish = useFinishAttempt(project.id, storageKey);
 	const create = useRecreateStructureMutation(project.id, () => {
 		if (staleRef.current) return;
 		const current = readStructureDraft(storageKey);
@@ -426,51 +425,14 @@ export function StructureWizard({
 	}
 
 	function success(counts: StructureCounts) {
-		localStorage.removeItem(storageKey);
 		bypassBlock.current = true;
-		void queryClient.invalidateQueries({ queryKey: ["structure", project.id] });
-		if (extend) {
-			toast.success(
-				floorsAddedToast(
-					counts.floors,
-					extend.named ? extend.towerName : undefined,
-				),
-			);
-			void navigate(
-				extend.named
-					? {
-							to: "/projects/$projectId/locations/$locationId",
-							params: { projectId: project.id, locationId: extend.towerId },
-							replace: true,
-						}
-					: {
-							to: "/projects/$projectId",
-							params: { projectId: project.id },
-							replace: true,
-						},
-			);
-			return;
-		}
-		toast.success(createdToast(counts.towers, counts.units), {
-			duration: 12_000,
-			description: (
-				<Link
-					to="/projects/$projectId/configuration"
-					params={{ projectId: project.id }}
-					hash="tipologias"
-					className="font-medium text-primary underline underline-offset-3"
-					onClick={() => toast.dismiss()}
-				>
-					Ver tipologias
-				</Link>
-			),
-		});
-		void navigate({
-			to: "/projects/$projectId",
-			params: { projectId: project.id },
-			replace: true,
-		});
-
+		finish(
+			counts,
+			extend && {
+				id: extend.towerId,
+				name: extend.named ? extend.towerName : undefined,
+			},
+		);
 	}
 
 	function clearAttempt() {
@@ -515,7 +477,6 @@ export function StructureWizard({
 						clearAttempt();
 						setSubmission("editing");
 					} else setSubmission("uncertain");
-
 				},
 			},
 		);
