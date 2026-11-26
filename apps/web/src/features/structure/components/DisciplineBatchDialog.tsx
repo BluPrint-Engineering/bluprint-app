@@ -141,6 +141,7 @@ export function DisciplineBatchDialog({
 	const [pending, setPending] = useState(false);
 	const sending = useRef(false);
 	const newButton = useRef<HTMLButtonElement>(null);
+	const disciplineSection = useRef<HTMLDivElement>(null);
 	const apply = useApplyDisciplineBatchMutation(projectId);
 	const createDiscipline = useCreateDiscipline(projectId, {
 		onCreated: (created) => {
@@ -373,7 +374,7 @@ export function DisciplineBatchDialog({
 						</p>
 					)}
 				</div>
-				<div className="grid gap-(--space-3)">
+				<div ref={disciplineSection} className="grid gap-(--space-3)">
 					<span className="text-sm font-medium">Disciplinas</span>
 					<DisciplineChecklist
 						label="Disciplinas do lote"
@@ -397,7 +398,14 @@ export function DisciplineBatchDialog({
 					existing={known}
 					onCreate={createDiscipline}
 					onClose={() => setCreating(false)}
-					returnFocus={() => newButton.current}
+					returnFocus={() =>
+						newButton.current ??
+						[
+							...(disciplineSection.current?.querySelectorAll<HTMLElement>(
+								'[role="checkbox"]',
+							) ?? []),
+						].at(-1)
+					}
 				/>
 			)}
 		</>

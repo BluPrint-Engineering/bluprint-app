@@ -743,6 +743,37 @@ describe("creating a discipline from inside the batch", () => {
 			inside().queryByRole("button", { name: "Nova disciplina" }),
 		).not.toBeInTheDocument();
 	});
+
+	test("returns focus to the new discipline's box when creating it reaches the limit", async () => {
+		const server = serverFor();
+		for (let index = 0; index < 7; index += 1) {
+			server.catalog.push(catalogDiscipline(`Extra ${index}`));
+		}
+		await open(server, server.second.id, "2º andar");
+		await openFromCard();
+
+		await user.click(inside().getByRole("button", { name: "Nova disciplina" }));
+		const creating = screen.getByRole("dialog", { name: "Nova disciplina" });
+		await user.type(
+			within(creating).getByRole("textbox", { name: "Nome" }),
+			"Tinta",
+		);
+		await user.click(
+			within(creating).getByRole("radio", { name: "Na obra toda" }),
+		);
+		await user.click(within(creating).getByRole("button", { name: "Criar" }));
+
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("dialog", { name: "Nova disciplina" }),
+			).not.toBeInTheDocument(),
+		);
+		expect(
+			inside().getByText("Esta obra já tem 10 disciplinas extras, o máximo."),
+		).toBeVisible();
+		await waitFor(() => expect(box("Tinta")).toHaveFocus());
+		expect(box("Tinta")).toBeChecked();
+	});
 });
 
 describe("the focus after the batch closes", () => {
