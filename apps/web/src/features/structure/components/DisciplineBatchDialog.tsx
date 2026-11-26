@@ -158,7 +158,12 @@ export function DisciplineBatchDialog({
 		tower?.floors.find(({ id }) => id === selected.floorId) ?? tower?.floors[0];
 	const places = placesOf(floor);
 	const markedPlaces = places.filter(({ id }) => chosen.has(id));
-	const ownRow = start.own;
+	const ownRow =
+		start.own &&
+		[
+			...structure.commonAreas,
+			...towers.flatMap(({ commonAreas }) => commonAreas),
+		].some(({ id }) => id === from.id);
 
 	const target = ((): DisciplineBatch["target"] | undefined => {
 		if (mode === "floor") {

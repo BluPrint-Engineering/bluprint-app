@@ -538,6 +538,35 @@ describe("what the batch refuses", () => {
 		expect(applyButton()).toBeEnabled();
 	});
 
+	test("drops the este local row and keeps the floor's marked when the area it was opened from is gone", async () => {
+		const server = serverFor();
+		await open(server, server.garagem.id, "Garagem");
+		await openFromCard();
+		await toggle("Hall");
+		expect(applyButton()).toHaveTextContent("Aplicar a 2 locais");
+
+		server.structure.commonAreas.splice(0, 1);
+		await user.click(applyButton());
+
+		expect(await inside().findByRole("alert")).toHaveTextContent(
+			"Um dos locais marcados não existe mais. Confira a lista e aplique de novo.",
+		);
+		await waitFor(() =>
+			expect(
+				inside().queryByRole("checkbox", { name: "Garagem · este local" }),
+			).toBeNull(),
+		);
+		expect(box("Hall")).toBeChecked();
+		expect(applyButton()).toHaveTextContent("Aplicar a 1 local");
+
+		await user.click(applyButton());
+		await screen.findByText("Disciplinas aplicadas a 1 local.");
+		expect(nth(server.received, 1).target).toEqual({
+			type: "locations",
+			locationIds: [server.hall.id],
+		});
+	});
+
 	test("tells to check the connection and stays as it was when there is no answer", async () => {
 		const server = serverFor();
 		let lost = false;
