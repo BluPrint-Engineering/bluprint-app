@@ -1,7 +1,8 @@
 import type { ProjectSummary, Structure, TypologyList } from "@bluprint/shared";
 import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { Link, Navigate } from "@tanstack/react-router";
+import { Link, Navigate, useRouteContext } from "@tanstack/react-router";
 import { Lock } from "lucide-react";
+import { useEffect } from "react";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
 import { NotFound } from "@/components/NotFound";
@@ -18,6 +19,7 @@ import {
 import { structureQueryOptions, typologiesQueryOptions } from "../api";
 import { STRUCTURE_LOCKED } from "../lockedText";
 import { StructureWizard } from "./StructureWizard";
+import { structureDraftKey } from "./structureDraftStore";
 import { towerNowLine } from "./towerNow";
 import { extendedDraft } from "./wizardDraft";
 
@@ -47,6 +49,7 @@ export function StructureWizardPage({
 	projectId: string;
 	towerId?: string | undefined;
 }) {
+	const { session } = useRouteContext({ from: "/_authenticated" });
 	const valid = isProjectId(projectId);
 	const query = useQuery({ ...projectQueryOptions(projectId), enabled: valid });
 	const extending = valid && towerId !== undefined;
@@ -58,6 +61,13 @@ export function StructureWizardPage({
 		...typologiesQueryOptions(projectId),
 		enabled: extending,
 	});
+	useEffect(() => {
+		if (query.data?.status === "delivered") {
+			localStorage.removeItem(
+				structureDraftKey(session.user.id, projectId, towerId),
+			);
+		}
+	}, [projectId, query.data?.status, session.user.id, towerId]);
 
 	if (!valid || isProjectNotFound(query.error)) {
 		return <NotFound variant="project" />;

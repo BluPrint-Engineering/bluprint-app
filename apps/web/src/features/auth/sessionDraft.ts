@@ -1,3 +1,5 @@
+import { dropStructureDrafts } from "../structure/StructureWizard/structureDraftStore";
+
 export const sessionDraftKinds = [
 	"create-project",
 	"rename-project",
@@ -109,6 +111,7 @@ export function readSessionDraft(
 }
 
 export function dropDraftsOfOtherAccounts(accountId: string): void {
+	dropStructureDrafts(accountId, true);
 	const keys: string[] = [];
 	for (let index = 0; index < localStorage.length; index++) {
 		const key = localStorage.key(index);

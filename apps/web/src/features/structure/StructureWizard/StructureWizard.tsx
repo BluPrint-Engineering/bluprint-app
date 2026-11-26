@@ -4,7 +4,7 @@ import {
 	type Typology,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { Link, useBlocker, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { Check, CircleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -23,7 +23,7 @@ import {
 	projectUnitsQueryOptions,
 	typologiesQueryOptions,
 	typologyNamesTakenOf,
-	useCreateStructureMutation,
+	useRecreateStructureMutation,
 	useRoomNames,
 } from "../api";
 import { plural } from "../plural";
@@ -36,6 +36,7 @@ import {
 } from "../reserveText";
 import { buildPlan, reserveUsed } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
+import { DiscardDraftDialog } from "./DiscardDraftDialog";
 import {
 	PreviewSummary,
 	PreviewTowers,
@@ -43,13 +44,21 @@ import {
 	ReserveBox,
 	UntypedAlert,
 } from "./Preview";
+import {
+	readStructureDraft,
+	SIGN_OUT_REQUEST,
+	structureDraftKey,
+	writeStructureDraft,
+} from "./structureDraftStore";
 import { TowersStep } from "./TowersStep";
 import { TypologiesStep } from "./TypologiesStep";
 import {
 	type DraftErrors,
 	firstInvalidField,
 	initialDraft,
-	readWizardDraft,
+	restoreWizardDraft,
+	STRUCTURE_DRAFT_VERSION,
+	storeWizardDraft,
 	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
@@ -75,12 +84,6 @@ const AREAS_DESCRIPTION =
 	"O hall de entrada e o Hall em cada andar estão no passo 1. Aqui entram as outras. Cada área comum criada usa 1 da reserva, como uma unidade.";
 const TYPES_DESCRIPTION =
 	"A lista de cômodos de cada tipo, num catálogo para unidades e outro para áreas comuns. Uma tipologia de área comum só vale para área comum.";
-
-function wizardFields(variables: unknown): WizardDraft | undefined {
-	if (typeof variables !== "object" || variables === null) return undefined;
-	if (!("draft" in variables)) return undefined;
-	return readWizardDraft(variables.draft);
-}
 
 const identity = (key: string) => key;
 
@@ -163,20 +166,72 @@ export function StructureWizard({
 }) {
 	const desktop = useIsDesktop();
 	const navigate = useNavigate();
-	const create = useCreateStructureMutation(project.id);
+	const create = useRecreateStructureMutation(project.id);
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const typologies = useQuery(typologiesQueryOptions(project.id));
 	const roomNames = useRoomNames(project.id);
 	const existing = typologies.data?.typologies ?? NO_TYPOLOGIES;
 	const existingNames = existing.map((typology) => typology.name);
-	const restored = useSessionDraft("create-structure", wizardFields);
+	const { session } = useRouteContext({ from: "/_authenticated" });
+	const storageKey = structureDraftKey(
+		session.user.id,
+		project.id,
+		start?.extend?.towerId,
+	);
+	const [stored] = useState(() => readStructureDraft(storageKey));
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
 		reservationDraft,
 	);
 	const [draft, setDraft] = useState<WizardDraft>(
-		restored ?? start ?? initialDraft,
+		() =>
+			(stored && restoreWizardDraft(stored.draft, start)) ??
+			start ??
+			initialDraft(),
 	);
+	const [dirty, setDirty] = useState(stored !== undefined);
+	const [restored, setRestored] = useState(stored !== undefined);
+	const [stale, setStale] = useState(false);
+	const [discardOpen, setDiscardOpen] = useState(false);
+	const signOutAnswer = useRef<((allowed: boolean) => void) | undefined>(
+		undefined,
+	);
+	const bypassBlock = useRef(false);
+	const navigationBlocker = useBlocker({
+		shouldBlockFn: ({ current, next }) =>
+			dirty &&
+			!bypassBlock.current &&
+			next.pathname !== "/login" &&
+			current.pathname !== next.pathname,
+		enableBeforeUnload: false,
+		withResolver: true,
+	});
+	useEffect(() => {
+		function changed(event: StorageEvent) {
+			if (event.key === storageKey) setStale(true);
+		}
+		window.addEventListener("storage", changed);
+		return () => window.removeEventListener("storage", changed);
+	}, [storageKey]);
+	useEffect(() => {
+		function signOut(event: Event) {
+			if (
+				!dirty ||
+				!(event instanceof CustomEvent) ||
+				typeof event.detail !== "function"
+			)
+				return;
+			event.preventDefault();
+			signOutAnswer.current = event.detail;
+			setDiscardOpen(true);
+		}
+		window.addEventListener(SIGN_OUT_REQUEST, signOut);
+		return () => {
+			window.removeEventListener(SIGN_OUT_REQUEST, signOut);
+			signOutAnswer.current?.(false);
+			signOutAnswer.current = undefined;
+		};
+	}, [dirty]);
 	const extend = draft.extend;
 	const stepTitles = extend ? EXTEND_STEP_TITLES : STEP_TITLES;
 	const [errors, setErrors] = useState<DraftErrors>({});
@@ -254,11 +309,17 @@ export function StructureWizard({
 		update: (draft: WizardDraft) => WizardDraft,
 		touched?: string,
 	): boolean {
-		if (create.isPending) return false;
+		if (create.isPending || stale) return false;
 		ids.current = new Map();
 		create.reset();
 		const next = update(draft);
 		setDraft(next);
+		writeStructureDraft(storageKey, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(next),
+		});
+		setDirty(true);
+		setRestored(false);
 		setErrors((current) => {
 			const found = validateDraft(next, existingNames);
 			return Object.fromEntries(
@@ -301,9 +362,11 @@ export function StructureWizard({
 			})),
 		);
 		create.mutate(
-			{ typologies, locations, draft },
+			{ typologies, locations },
 			{
 				onSuccess: ({ counts }) => {
+					localStorage.removeItem(storageKey);
+					bypassBlock.current = true;
 					if (extend) {
 						const towerName = extend.named ? extend.towerName : undefined;
 						toast.success(floorsAddedToast(counts.floors, towerName));
@@ -462,7 +525,8 @@ export function StructureWizard({
 	const note = (
 		<p className="text-sm text-muted-foreground">
 			Nada é salvo antes de {extend ? "adicionar" : "criar"}. Depois, tudo se
-			ajusta na fachada.
+			ajusta na fachada. O rascunho fica guardado até lá, mesmo se a página for
+			atualizada.
 		</p>
 	);
 
@@ -654,8 +718,77 @@ export function StructureWizard({
 
 	return (
 		<>
-			{layout}
+			{restored && !stale && (
+				<Alert>
+					<AlertTitle>Rascunho restaurado</AlertTitle>
+					<AlertDescription>
+						O que você montou continua aqui até{" "}
+						{extend ? "adicionar os andares" : "criar a estrutura"} ou
+						descartar.{" "}
+						<button
+							type="button"
+							className="underline"
+							onClick={() => setDiscardOpen(true)}
+						>
+							Descartar rascunho
+						</button>
+					</AlertDescription>
+				</Alert>
+			)}
+			{stale && (
+				<Alert>
+					<AlertTitle>Este rascunho mudou em outra aba</AlertTitle>
+					<AlertDescription>
+						Continue a partir da versão mais recente para não perder nada.{" "}
+						<Button
+							type="button"
+							onClick={() => {
+								const latest = readStructureDraft(storageKey);
+								setDraft(
+									(latest && restoreWizardDraft(latest.draft, start)) ??
+										start ??
+										initialDraft(),
+								);
+								setDirty(latest !== undefined);
+								setRestored(latest !== undefined);
+								setStale(false);
+							}}
+						>
+							Carregar a versão mais recente
+						</Button>
+					</AlertDescription>
+				</Alert>
+			)}
+			<fieldset disabled={stale} className="min-w-0">
+				{layout}
+			</fieldset>
 			{reservationDialog}
+			<DiscardDraftDialog
+				open={discardOpen || navigationBlocker.status === "blocked"}
+				extending={!!extend}
+				onCancel={() => {
+					setDiscardOpen(false);
+					signOutAnswer.current?.(false);
+					signOutAnswer.current = undefined;
+					navigationBlocker.reset?.();
+				}}
+				onDiscard={() => {
+					localStorage.removeItem(storageKey);
+					setDirty(false);
+					setDiscardOpen(false);
+					if (signOutAnswer.current) {
+						const answer = signOutAnswer.current;
+						signOutAnswer.current = undefined;
+						answer(true);
+					} else if (navigationBlocker.status === "blocked") {
+						bypassBlock.current = true;
+						navigationBlocker.proceed();
+					} else {
+						setDraft(start ?? initialDraft());
+						setRestored(false);
+					}
+				}}
+			/>
 		</>
 	);
 }

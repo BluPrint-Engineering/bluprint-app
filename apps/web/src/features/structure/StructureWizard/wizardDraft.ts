@@ -7,6 +7,7 @@ import {
 	type Typology,
 	type TypologyLocationType,
 } from "@bluprint/shared";
+import { z } from "zod";
 import {
 	convertFinals,
 	floorNumber,
@@ -73,6 +74,88 @@ export interface WizardDraft {
 	floorAreas: FloorAreaDraft[];
 	typologies: TypologyDraft[];
 	rules: RuleDraft[];
+}
+
+export const STRUCTURE_DRAFT_VERSION = 1;
+
+const rangeSchema = z.strictObject({
+	key: z.string(),
+	first: z.string(),
+	last: z.string(),
+	finals: z.string(),
+	noUnits: z.boolean(),
+});
+const towerSchema = z.strictObject({
+	key: z.string(),
+	name: z.string(),
+	ranges: z.array(rangeSchema).min(1),
+	ground: z.boolean(),
+	hall: z.boolean(),
+});
+const floorAreaSchema = z.strictObject({
+	key: z.string(),
+	tower: z.number().int(),
+	floor: z.string(),
+	name: z.string(),
+});
+const typologySchema = z.strictObject({
+	key: z.string(),
+	name: z.string(),
+	rooms: z.array(z.string()),
+});
+const ruleSchema = z.strictObject({
+	key: z.string(),
+	tower: z.number().int(),
+	finals: z.string(),
+	from: z.string(),
+	to: z.string(),
+	typology: z.string(),
+});
+export const storedWizardDraftSchema = z.strictObject({
+	towers: z.array(towerSchema).min(1),
+	numbering: z.enum(["digits", "letters"]),
+	projectAreas: z.array(z.string()),
+	towerAreas: z.array(z.string()),
+	floorAreas: z.array(floorAreaSchema),
+	typologies: z.array(typologySchema),
+	rules: z.array(ruleSchema),
+});
+export type StoredWizardDraft = z.infer<typeof storedWizardDraftSchema>;
+
+export function storeWizardDraft(draft: WizardDraft): StoredWizardDraft {
+	return {
+		towers: draft.towers.map((tower) => ({
+			...tower,
+			name: draft.extend ? "" : tower.name,
+		})),
+		numbering: draft.numbering,
+		projectAreas: draft.projectAreas,
+		towerAreas: draft.towerAreas,
+		floorAreas: draft.floorAreas,
+		typologies: draft.typologies.filter((typology) => !typology.existing),
+		rules: draft.rules,
+	};
+}
+
+export function restoreWizardDraft(
+	stored: StoredWizardDraft,
+	start?: WizardDraft,
+): WizardDraft | undefined {
+	const towers = start?.extend
+		? stored.towers.map((tower) => ({
+				...tower,
+				name: start.extend?.towerName ?? "",
+			}))
+		: stored.towers;
+	return readWizardDraft({
+		...stored,
+		towers,
+		typologies: [
+			...(start?.typologies.filter((typology) => typology.existing) ?? []),
+			...stored.typologies,
+		],
+		...(start?.extend ? { extend: start.extend } : {}),
+	});
 }
 
 export const SINGLE_TOWER_NAME = "Torre A";

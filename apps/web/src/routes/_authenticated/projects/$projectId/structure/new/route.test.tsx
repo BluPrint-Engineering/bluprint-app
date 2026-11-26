@@ -10,6 +10,7 @@ import {
 } from "@bluprint/shared";
 import {
 	act,
+	cleanup,
 	fireEvent,
 	screen,
 	waitFor,
@@ -220,11 +221,29 @@ async function addRule() {
 
 describe("structure wizard", () => {
 	afterEach(() => {
+		localStorage.clear();
 		vi.unstubAllGlobals();
 		toast.dismiss();
 	});
 
 	describe("on the desktop", () => {
+		test("restores a draft after reopening the wizard", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+			open(handler);
+			expect(
+				await screen.findByText("Rascunho restaurado"),
+			).toBeInTheDocument();
+			expect(
+				await screen.findByRole("textbox", { name: "Último andar" }),
+			).toHaveValue("4");
+			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue(
+				"01, 02",
+			);
+		});
+
 		test("opens with the band, one tower, both sections and an empty preview (W1)", async () => {
 			const { handler } = wizardApi();
 			open(handler);

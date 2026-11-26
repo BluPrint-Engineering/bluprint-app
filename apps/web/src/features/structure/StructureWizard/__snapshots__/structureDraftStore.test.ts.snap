@@ -1,0 +1,232 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`structure draft storage > records the persisted schema shape for version 1 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attempt": {
+      "additionalProperties": false,
+      "properties": {
+        "firstLocationId": {
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+          "type": "string",
+        },
+        "ids": {
+          "additionalProperties": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string",
+          },
+          "propertyNames": {
+            "type": "string",
+          },
+          "type": "object",
+        },
+      },
+      "required": [
+        "ids",
+        "firstLocationId",
+      ],
+      "type": "object",
+    },
+    "draft": {
+      "additionalProperties": false,
+      "properties": {
+        "floorAreas": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "floor": {
+                "type": "string",
+              },
+              "key": {
+                "type": "string",
+              },
+              "name": {
+                "type": "string",
+              },
+              "tower": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+            },
+            "required": [
+              "key",
+              "tower",
+              "floor",
+              "name",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "numbering": {
+          "enum": [
+            "digits",
+            "letters",
+          ],
+          "type": "string",
+        },
+        "projectAreas": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "rules": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "finals": {
+                "type": "string",
+              },
+              "from": {
+                "type": "string",
+              },
+              "key": {
+                "type": "string",
+              },
+              "to": {
+                "type": "string",
+              },
+              "tower": {
+                "maximum": 9007199254740991,
+                "minimum": -9007199254740991,
+                "type": "integer",
+              },
+              "typology": {
+                "type": "string",
+              },
+            },
+            "required": [
+              "key",
+              "tower",
+              "finals",
+              "from",
+              "to",
+              "typology",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+        "towerAreas": {
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "towers": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "ground": {
+                "type": "boolean",
+              },
+              "hall": {
+                "type": "boolean",
+              },
+              "key": {
+                "type": "string",
+              },
+              "name": {
+                "type": "string",
+              },
+              "ranges": {
+                "items": {
+                  "additionalProperties": false,
+                  "properties": {
+                    "finals": {
+                      "type": "string",
+                    },
+                    "first": {
+                      "type": "string",
+                    },
+                    "key": {
+                      "type": "string",
+                    },
+                    "last": {
+                      "type": "string",
+                    },
+                    "noUnits": {
+                      "type": "boolean",
+                    },
+                  },
+                  "required": [
+                    "key",
+                    "first",
+                    "last",
+                    "finals",
+                    "noUnits",
+                  ],
+                  "type": "object",
+                },
+                "minItems": 1,
+                "type": "array",
+              },
+            },
+            "required": [
+              "key",
+              "name",
+              "ranges",
+              "ground",
+              "hall",
+            ],
+            "type": "object",
+          },
+          "minItems": 1,
+          "type": "array",
+        },
+        "typologies": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "key": {
+                "type": "string",
+              },
+              "name": {
+                "type": "string",
+              },
+              "rooms": {
+                "items": {
+                  "type": "string",
+                },
+                "type": "array",
+              },
+            },
+            "required": [
+              "key",
+              "name",
+              "rooms",
+            ],
+            "type": "object",
+          },
+          "type": "array",
+        },
+      },
+      "required": [
+        "towers",
+        "numbering",
+        "projectAreas",
+        "towerAreas",
+        "floorAreas",
+        "typologies",
+        "rules",
+      ],
+      "type": "object",
+    },
+    "version": {
+      "const": 1,
+      "type": "number",
+    },
+  },
+  "required": [
+    "version",
+    "draft",
+  ],
+  "type": "object",
+}
+`;

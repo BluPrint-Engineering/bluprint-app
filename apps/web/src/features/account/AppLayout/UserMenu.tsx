@@ -15,7 +15,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-import { discardSession, signOut } from "@/features/auth";
+import { discardSession, sessionQueryOptions, signOut } from "@/features/auth";
+import {
+	dropStructureDrafts,
+	requestDraftSignOut,
+} from "@/features/structure/StructureWizard/structureDraftStore";
 import { useTheme } from "@/lib/useTheme";
 import { organizationQueryOptions } from "../api";
 import { initialsOf } from "./initialsOf";
@@ -53,6 +57,12 @@ export function UserMenu({ user }: { user: AccountUser }) {
 	async function handleSignOut() {
 		if (signingOut) return;
 		setSigningOut(true);
+		if (!(await requestDraftSignOut())) {
+			setSigningOut(false);
+			return;
+		}
+		const accountId = queryClient.getQueryData(sessionQueryOptions.queryKey)
+			?.user.id;
 		try {
 			await signOut();
 		} catch {
@@ -63,6 +73,7 @@ export function UserMenu({ user }: { user: AccountUser }) {
 			);
 			return;
 		}
+		if (accountId) dropStructureDrafts(accountId, false);
 		// the cached session would send the login straight back here
 		discardSession(queryClient);
 		await router.navigate({ to: "/login" });

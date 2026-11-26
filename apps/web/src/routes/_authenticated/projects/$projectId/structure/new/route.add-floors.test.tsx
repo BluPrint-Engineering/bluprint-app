@@ -128,6 +128,7 @@ async function toPreviewOnPhone() {
 
 describe("adding floors to a tower (W9)", () => {
 	afterEach(() => {
+		localStorage.clear();
 		vi.unstubAllGlobals();
 		toast.dismiss();
 	});
