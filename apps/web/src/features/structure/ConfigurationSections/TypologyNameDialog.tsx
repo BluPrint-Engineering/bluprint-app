@@ -75,7 +75,7 @@ function restoredName(
 	return { name: variables.name, version: variables.version };
 }
 
-export function TypologyNameDialog({
+function ServerTypologyNameDialog({
 	projectId,
 	target,
 	typologies,
@@ -245,4 +245,108 @@ export function TypologyNameDialog({
 			)}
 		</FormDialog>
 	);
+}
+
+function DraftTypologyNameDialog({
+	locationType,
+	takenNames,
+	onClose,
+	onCreate,
+	returnFocus,
+}: {
+	locationType: TypologyLocationType;
+	takenNames: readonly string[];
+	onClose: () => void;
+	onCreate: (name: string) => void;
+	returnFocus: () => HTMLElement | null | undefined;
+}) {
+	const fieldId = useId();
+	const [name, setName] = useState("");
+	const [error, setError] = useState<string>();
+	const creating = CREATE_TEXT[locationType];
+
+	function submit() {
+		const invalid = typologyNameError(name);
+		if (invalid) return setError(invalid);
+		const trimmed = name.trim();
+		if (takenNames.some((taken) => sameRoomName(taken, trimmed))) {
+			return setError(TYPOLOGY_NAME_TAKEN_TEXT);
+		}
+		onCreate(trimmed);
+		onClose();
+	}
+
+	return (
+		<FormDialog
+			title={creating.title}
+			submitLabel="Criar"
+			pendingLabel="Criando…"
+			pending={false}
+			formId={fieldId}
+			onSubmit={submit}
+			onClose={onClose}
+			returnFocus={returnFocus}
+		>
+			<Field data-invalid={!!error}>
+				<FieldLabel htmlFor={`${fieldId}-name`}>Nome</FieldLabel>
+				<Input
+					id={`${fieldId}-name`}
+					autoFocus
+					autoComplete="off"
+					enterKeyHint="done"
+					maxLength={TYPOLOGY_NAME_MAX_LENGTH + 20}
+					value={name}
+					aria-invalid={!!error}
+					onFocus={(event) => event.currentTarget.select()}
+					onChange={(event) => {
+						setError(undefined);
+						setName(event.target.value);
+					}}
+				/>
+				{error ? (
+					<FieldError>{error}</FieldError>
+				) : (
+					<FieldDescription>{creating.example}</FieldDescription>
+				)}
+			</Field>
+			<p className="text-sm text-pretty text-muted-foreground">
+				Os cômodos entram depois, no cartão da tipologia.
+			</p>
+		</FormDialog>
+	);
+}
+
+type TypologyNameDialogProps =
+	| {
+			projectId: string;
+			target: NameDialogTarget;
+			typologies: Typology[];
+			onClose: () => void;
+			onCreated: (typology: Typology) => void;
+			returnFocus: () => HTMLElement | null | undefined;
+			draft?: undefined;
+	  }
+	| {
+			draft: {
+				locationType: TypologyLocationType;
+				takenNames: readonly string[];
+			};
+			onClose: () => void;
+			onCreate: (name: string) => void;
+			returnFocus: () => HTMLElement | null | undefined;
+	  };
+
+export function TypologyNameDialog(props: TypologyNameDialogProps) {
+	if (props.draft) {
+		return (
+			<DraftTypologyNameDialog
+				locationType={props.draft.locationType}
+				takenNames={props.draft.takenNames}
+				onClose={props.onClose}
+				onCreate={props.onCreate}
+				returnFocus={props.returnFocus}
+			/>
+		);
+	}
+	return <ServerTypologyNameDialog {...props} />;
 }

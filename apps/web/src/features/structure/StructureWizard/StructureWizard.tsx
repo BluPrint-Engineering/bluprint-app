@@ -1,9 +1,10 @@
 import {
 	MAX_LOCATIONS_PER_REQUEST,
 	type ProjectSummary,
+	type Typology,
 } from "@bluprint/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useNavigate } from "@tanstack/react-router";
+import { Link, useNavigate } from "@tanstack/react-router";
 import { Check, CircleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -20,8 +21,10 @@ import { ChangeReservationDialog } from "../../projects/components/ChangeReserva
 import {
 	namesTakenOf,
 	projectUnitsQueryOptions,
+	typologiesQueryOptions,
 	typologyNamesTakenOf,
 	useCreateStructureMutation,
+	useRoomNames,
 } from "../api";
 import { plural } from "../plural";
 import {
@@ -30,7 +33,6 @@ import {
 	missingReserveText,
 	missingReserveTitle,
 	nameTakenText,
-	typologyNameTakenText,
 } from "../reserveText";
 import { buildPlan, reserveUsed } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
@@ -48,6 +50,7 @@ import {
 	firstInvalidField,
 	initialDraft,
 	readWizardDraft,
+	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
 } from "./wizardDraft";
@@ -65,12 +68,13 @@ const EXTEND_STEP_TITLES = [
 	"Prévia",
 ] as const;
 const STEP_OF_SECTION = { towers: 0, areas: 1, types: 2 } as const;
+const NO_TYPOLOGIES: readonly Typology[] = [];
 const LAST_STEP = STEP_TITLES.length - 1;
 const BLOCKER_ID = "wizard-blocker";
 const AREAS_DESCRIPTION =
 	"O hall de entrada e o Hall em cada andar estão no passo 1. Aqui entram as outras. Cada área comum criada usa 1 da reserva, como uma unidade.";
 const TYPES_DESCRIPTION =
-	"A lista de cômodos de cada tipo de unidade, e onde cada tipo se aplica: por final (a posição da unidade no andar: 01, 02…) e por andar.";
+	"A lista de cômodos de cada tipo, num catálogo para unidades e outro para áreas comuns. Uma tipologia de área comum só vale para área comum.";
 
 function wizardFields(variables: unknown): WizardDraft | undefined {
 	if (typeof variables !== "object" || variables === null) return undefined;
@@ -161,6 +165,10 @@ export function StructureWizard({
 	const navigate = useNavigate();
 	const create = useCreateStructureMutation(project.id);
 	const units = useQuery(projectUnitsQueryOptions(project.id));
+	const typologies = useQuery(typologiesQueryOptions(project.id));
+	const roomNames = useRoomNames(project.id);
+	const existing = typologies.data?.typologies ?? NO_TYPOLOGIES;
+	const existingNames = existing.map((typology) => typology.name);
 	const restored = useSessionDraft("create-structure", wizardFields);
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
@@ -183,7 +191,19 @@ export function StructureWizard({
 	const ids = useRef(new Map<string, string>());
 	const stepTop = useRef<HTMLDivElement>(null);
 
-	const preview = useMemo(() => buildPlan(draft, identity), [draft]);
+	const preview = useMemo(
+		() =>
+			buildPlan(
+				draft,
+				identity,
+				existing.map(({ id, name, locationType }) => ({
+					id,
+					name,
+					locationType,
+				})),
+			),
+		[draft, existing],
+	);
 	const remaining = units.data?.remaining ?? availableUnitsOf(create.error);
 	const admin = project.role === "admin";
 	const used = reserveUsed(preview.spend);
@@ -202,6 +222,24 @@ export function StructureWizard({
 	useEffect(() => {
 		if (step > 0) stepTop.current?.scrollIntoView?.();
 	}, [step]);
+
+	const refusedNames = typologyNamesTakenOf(create.error);
+	const appliedTaken = useRef("");
+	useEffect(() => {
+		if (!refusedNames) {
+			appliedTaken.current = "";
+			return;
+		}
+		const key = refusedNames.join("\0");
+		if (key === appliedTaken.current) return;
+		appliedTaken.current = key;
+		const found = typologyNameTakenErrors(draft, refusedNames);
+		setErrors((current) => ({ ...current, ...found }));
+		const first = firstInvalidField(draft, found);
+		if (!first) return;
+		setStep(STEP_OF_SECTION[first.section]);
+		setReveal(first.id);
+	}, [refusedNames, draft]);
 
 	const wasBlocked = useRef(blocked);
 	useEffect(() => {
@@ -222,7 +260,7 @@ export function StructureWizard({
 		const next = update(draft);
 		setDraft(next);
 		setErrors((current) => {
-			const found = validateDraft(next);
+			const found = validateDraft(next, existingNames);
 			return Object.fromEntries(
 				Object.keys(current)
 					.filter((key) => key !== touched && found[key] !== undefined)
@@ -242,7 +280,7 @@ export function StructureWizard({
 	}
 
 	function validate(): boolean {
-		const found = validateDraft(draft);
+		const found = validateDraft(draft, existingNames);
 		const first = firstInvalidField(draft, found);
 		setErrors(found);
 		if (first === undefined) return true;
@@ -253,7 +291,15 @@ export function StructureWizard({
 
 	function submit() {
 		if (create.isPending || blocked || !validate()) return;
-		const { typologies, locations } = buildPlan(draft, idFor);
+		const { typologies, locations } = buildPlan(
+			draft,
+			idFor,
+			existing.map(({ id, name, locationType }) => ({
+				id,
+				name,
+				locationType,
+			})),
+		);
 		create.mutate(
 			{ typologies, locations, draft },
 			{
@@ -279,7 +325,20 @@ export function StructureWizard({
 						);
 						return;
 					}
-					toast.success(createdToast(counts.towers, counts.units));
+					toast.success(createdToast(counts.towers, counts.units), {
+						duration: 12_000,
+						description: (
+							<Link
+								to="/projects/$projectId/configuration"
+								params={{ projectId: project.id }}
+								hash="tipologias"
+								className="font-medium text-primary underline underline-offset-3"
+								onClick={() => toast.dismiss()}
+							>
+								Ver tipologias
+							</Link>
+						),
+					});
 					void navigate({
 						to: "/projects/$projectId",
 						params: { projectId: project.id },
@@ -305,11 +364,10 @@ export function StructureWizard({
 	);
 
 	const names = namesTakenOf(create.error);
-	const typologyNames = typologyNamesTakenOf(create.error);
 	const failed =
 		create.isError &&
 		names === undefined &&
-		typologyNames === undefined &&
+		refusedNames === undefined &&
 		availableUnitsOf(create.error) === undefined;
 
 	const blocker = blocked ? (
@@ -398,13 +456,6 @@ export function StructureWizard({
 					<AlertDescription>{nameTakenText(names)}</AlertDescription>
 				</Alert>
 			)}
-			{typologyNames !== undefined && (
-				<Alert variant="destructive">
-					<AlertDescription>
-						{typologyNameTakenText(typologyNames)}
-					</AlertDescription>
-				</Alert>
-			)}
 		</>
 	);
 
@@ -416,7 +467,13 @@ export function StructureWizard({
 	);
 
 	const towersStep = (
-		<TowersStep draft={draft} errors={errors} edit={edit} desktop={desktop} />
+		<TowersStep
+			draft={draft}
+			errors={errors}
+			edit={edit}
+			desktop={desktop}
+			existing={existing}
+		/>
 	);
 	const areasStep = (
 		<CommonAreasStep
@@ -425,6 +482,7 @@ export function StructureWizard({
 			edit={edit}
 			floorArea={floorArea}
 			onFloorAreaChange={setFloorArea}
+			existing={existing}
 		/>
 	);
 
@@ -434,6 +492,8 @@ export function StructureWizard({
 			errors={errors}
 			edit={edit}
 			desktop={desktop}
+			existing={existing}
+			roomNames={roomNames}
 		/>
 	);
 
