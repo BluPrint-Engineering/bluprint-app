@@ -323,9 +323,9 @@ export function StructureWizard({
 						);
 						return;
 					}
-					toast.success(
-						<span className="grid gap-1">
-							<span>{createdToast(counts.towers, counts.units)}</span>
+					toast.success(createdToast(counts.towers, counts.units), {
+						duration: 12_000,
+						description: (
 							<Link
 								to="/projects/$projectId/configuration"
 								params={{ projectId: project.id }}
@@ -335,9 +335,8 @@ export function StructureWizard({
 							>
 								Ver tipologias
 							</Link>
-						</span>,
-						{ duration: 12_000 },
-					);
+						),
+					});
 					void navigate({
 						to: "/projects/$projectId",
 						params: { projectId: project.id },
