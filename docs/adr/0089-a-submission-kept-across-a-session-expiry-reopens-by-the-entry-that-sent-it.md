@@ -2,6 +2,8 @@
 
 Amended by [0093](0093-the-restoration-table-runs-the-full-sequence-once-per-kind.md): the table is one file per screen group, every entry keeps a row that restores it alone, and the full hostile sequence runs once per kind and on an entry that opens by address instead of on every row; the rest stands.
 
+Amended by [0095](0095-the-wizards-alterar-reserva-returns-focus-to-itself.md): the wizard's fields now come back from its draft, so a restored "Alterar reserva" returns focus to itself on cancel; the rest stands.
+
 Completes the rule the app has kept since the session started to expire after 8 hours without use ([0077](0077-sessions-end-after-8-hours-without-use.md)): when a save with fields answers that the session is gone, the app keeps what was sent, one slot per account and screen (pathname and search), the latest failure replacing the earlier one, and once the same account signs in again the screen reopens that form with those values. Each form reads the slot when it opens and uses it as its initial value; it is not a live record. Nothing is sent again after the login.
 
 What this record fixes on top of that:

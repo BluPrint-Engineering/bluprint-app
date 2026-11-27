@@ -7,7 +7,7 @@ import {
 	type StructureFloor,
 	type StructureTower,
 } from "@bluprint/shared";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
@@ -200,6 +200,40 @@ describe("adding floors to a tower (W9)", () => {
 				),
 			).toBeInTheDocument();
 			expect(localStorage.getItem(goneKey)).toBeNull();
+		});
+
+		test("starts after the floors another tab added when the stale tab loads the latest version", async () => {
+			const { handler, towerB, created } = scenario();
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "14");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id, towerB.id);
+			towerB.floors.push(
+				...typedFloors(11, 12, [
+					"Tipologia A",
+					"Tipologia B",
+					"Tipologia A",
+					"Tipologia B",
+				]),
+			);
+			localStorage.removeItem(key);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", { key, newValue: null }),
+				),
+			);
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+
+			await waitFor(() =>
+				expect(screen.getByRole("textbox", { name: "Do andar" })).toHaveValue(
+					"13",
+				),
+			);
+			expect(screen.getByRole("textbox", { name: "Do andar" })).toBeEnabled();
+			expect(created).toHaveLength(0);
 		});
 
 		test("opens the band, the tower's fields and nothing for a new tower (W9)", async () => {

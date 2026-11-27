@@ -147,6 +147,9 @@ function wizardApi(
 		setUnits(next: ProjectUnitsBalance) {
 			units = next;
 		},
+		setStructure(next: Structure) {
+			structure = next;
+		},
 	};
 }
 
@@ -465,9 +468,39 @@ describe("structure wizard", () => {
 			await user.click(
 				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
 			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("textbox", { name: "Primeiro andar" }),
+				).toHaveValue("7"),
+			);
 			expect(
 				screen.getByRole("textbox", { name: "Primeiro andar" }),
-			).toHaveValue("7");
+			).toBeEnabled();
+		});
+
+		test("opens the project instead of an empty wizard when the stale tab loads after another tab created the structure", async () => {
+			const api = wizardApi();
+			const { router } = open(api.handler);
+			await describeTower("2", "01, 02");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id);
+			api.setStructure(structureOf([tower("Torre B")]));
+			localStorage.removeItem(key);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", { key, newValue: null }),
+				),
+			);
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(api.sent).toHaveLength(0);
+			expect(localStorage.getItem(key)).toBeNull();
 		});
 
 		test("finishes a creation that answers after another tab changed the draft", async () => {

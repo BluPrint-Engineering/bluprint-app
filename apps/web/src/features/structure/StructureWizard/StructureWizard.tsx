@@ -202,9 +202,11 @@ function MobileBar({ children }: { children: React.ReactNode }) {
 export function StructureWizard({
 	project,
 	start,
+	onReopen,
 }: {
 	project: ProjectSummary;
 	start?: WizardDraft;
+	onReopen: () => void;
 }) {
 	const desktop = useIsDesktop();
 	const navigate = useNavigate();
@@ -889,29 +891,7 @@ export function StructureWizard({
 					</AlertDescription>
 				</Alert>
 			)}
-			{stale && (
-				<StaleDraftAlert
-					onLoad={() => {
-						const latest = readStructureDraft(storageKey);
-						setDraft(
-							(latest && restoreWizardDraft(latest.draft, start)) ??
-								start ??
-								initialDraft(),
-						);
-						setDirty(latest !== undefined);
-						setRestored(latest !== undefined && !latest.attempt);
-						ids.current = new Map(Object.entries(latest?.attempt?.ids ?? {}));
-						attemptId.current = latest?.attempt?.firstLocationId;
-						create.reset();
-						setSubmission(latest?.attempt ? "checking" : "editing");
-						setOpeningCheck(latest?.attempt !== undefined);
-						checkStarted.current = false;
-						setCheckOnRender(latest?.attempt !== undefined);
-						staleRef.current = false;
-						setStale(false);
-					}}
-				/>
-			)}
+			{stale && <StaleDraftAlert onLoad={onReopen} />}
 			{!stale && openingCheck && submission === "checking" && (
 				<CheckingStatus extending={extend !== undefined} />
 			)}

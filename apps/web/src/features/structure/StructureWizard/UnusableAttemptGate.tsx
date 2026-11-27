@@ -1,9 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import {
-	readStructureDraft,
-	type StructureDraft,
-} from "../structureDraftStore";
+import type { StructureDraft } from "../structureDraftStore";
 import {
 	CheckingStatus,
 	StaleDraftAlert,
@@ -23,6 +20,7 @@ export function UnusableAttemptGate({
 	towerName,
 	storageKey,
 	stored,
+	onReopen,
 	onMissing,
 }: {
 	projectId: string;
@@ -30,13 +28,13 @@ export function UnusableAttemptGate({
 	towerName?: string | undefined;
 	storageKey: string;
 	stored: StructureDraft;
+	onReopen: () => void;
 	onMissing: () => void;
 }) {
 	const queryClient = useQueryClient();
 	const finish = useFinishAttempt(projectId, storageKey);
 	const [checking, setChecking] = useState<CheckAction | undefined>("open");
 	const [noConnection, setNoConnection] = useState(false);
-	const [current, setCurrent] = useState(stored);
 	const [stale, setStale] = useState(false);
 	const staleRef = useRef(false);
 	const started = useRef(false);
@@ -50,14 +48,14 @@ export function UnusableAttemptGate({
 		window.addEventListener("storage", changed);
 		return () => window.removeEventListener("storage", changed);
 	}, [storageKey]);
-	async function check(action: CheckAction, record = current) {
-		if (!record.attempt) return;
+	async function check(action: CheckAction) {
+		if (!stored.attempt) return;
 		setChecking(action);
 		setNoConnection(false);
 		const outcome = await attemptOutcome(
 			queryClient,
 			projectId,
-			record.attempt.firstLocationId,
+			stored.attempt.firstLocationId,
 		);
 		if (outcome === "created") {
 			const start = towerId
@@ -73,7 +71,7 @@ export function UnusableAttemptGate({
 						},
 					}
 				: undefined;
-			const draft = restoreWizardDraft(record.draft, start);
+			const draft = restoreWizardDraft(stored.draft, start);
 			finish(
 				buildPlan(draft, (key) => key).counts,
 				towerId === undefined ? undefined : { id: towerId, name: towerName },
@@ -89,24 +87,12 @@ export function UnusableAttemptGate({
 			setChecking(undefined);
 		}
 	}
-	function loadLatest() {
-		const latest = readStructureDraft(storageKey);
-		staleRef.current = false;
-		setStale(false);
-		if (latest?.attempt) {
-			setCurrent(latest);
-			void check("open", latest);
-		} else {
-			localStorage.removeItem(storageKey);
-			onMissing();
-		}
-	}
 	useEffect(() => {
 		if (started.current) return;
 		started.current = true;
 		void check("open");
 	});
-	if (stale) return <StaleDraftAlert onLoad={loadLatest} />;
+	if (stale) return <StaleDraftAlert onLoad={onReopen} />;
 	if (checking === "open")
 		return <CheckingStatus extending={towerId !== undefined} />;
 	return (

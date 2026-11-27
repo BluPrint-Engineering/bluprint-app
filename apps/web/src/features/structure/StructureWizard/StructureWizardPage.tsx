@@ -1,6 +1,15 @@
 import type { ProjectSummary, Structure, TypologyList } from "@bluprint/shared";
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { Link, Navigate, useRouteContext } from "@tanstack/react-router";
+import {
+	type UseQueryResult,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import {
+	Link,
+	Navigate,
+	useRouteContext,
+	useRouter,
+} from "@tanstack/react-router";
 import { Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -44,13 +53,40 @@ function DeliveredBlock({ projectId }: { projectId: string }) {
 	);
 }
 
-export function StructureWizardPage({
-	projectId,
-	towerId,
-}: {
+interface WizardPageProps {
 	projectId: string;
 	towerId?: string | undefined;
-}) {
+}
+
+export function StructureWizardPage({ projectId, towerId }: WizardPageProps) {
+	const queryClient = useQueryClient();
+	const router = useRouter();
+	const [generation, setGeneration] = useState(0);
+	async function reopen() {
+		await Promise.all([
+			queryClient.invalidateQueries({
+				queryKey: projectQueryOptions(projectId).queryKey,
+			}),
+			queryClient.invalidateQueries({ queryKey: ["structure", projectId] }),
+		]);
+		await router.invalidate();
+		setGeneration((current) => current + 1);
+	}
+	return (
+		<WizardPage
+			key={generation}
+			projectId={projectId}
+			towerId={towerId}
+			onReopen={() => void reopen()}
+		/>
+	);
+}
+
+function WizardPage({
+	projectId,
+	towerId,
+	onReopen,
+}: WizardPageProps & { onReopen: () => void }) {
 	const { session } = useRouteContext({ from: "/_authenticated" });
 	const storageKey = structureDraftKey(session.user.id, projectId, towerId);
 	const [stored] = useState(() => readStructureDraft(storageKey));
@@ -102,6 +138,7 @@ export function StructureWizardPage({
 					}
 					storageKey={storageKey}
 					stored={stored}
+					onReopen={onReopen}
 					onMissing={() => {
 						if (missingTower && query.data?.status !== "delivered")
 							toast.info("A torre não existe mais. O rascunho foi descartado.");
@@ -131,6 +168,7 @@ export function StructureWizardPage({
 				project={query.data}
 				towerId={towerId}
 				queries={[structure, typologies]}
+				onReopen={onReopen}
 			/>
 		);
 	}
@@ -161,7 +199,7 @@ export function StructureWizardPage({
 					{delivered ? (
 						<DeliveredBlock projectId={project.id} />
 					) : (
-						<StructureWizard project={project} />
+						<StructureWizard project={project} onReopen={onReopen} />
 					)}
 				</PageMain>
 			</>
@@ -205,9 +243,11 @@ function AddFloorsPage({
 	project,
 	towerId,
 	queries: [structure, typologies],
+	onReopen,
 }: {
 	project: ProjectSummary;
 	towerId: string;
+	onReopen: () => void;
 	queries: [
 		UseQueryResult<Structure, unknown>,
 		UseQueryResult<TypologyList, unknown>,
@@ -255,6 +295,7 @@ function AddFloorsPage({
 						<StructureWizard
 							project={project}
 							start={extendedDraft(tower, typologies.data.typologies, named)}
+							onReopen={onReopen}
 						/>
 					)}
 				</PageMain>
