@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`structure draft storage > records the persisted schema shape for version 2 1`] = `
+exports[`structure draft storage > records the persisted schema shape for version 3 1`] = `
 {
   "fields": {
     "area": {
@@ -8,12 +8,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
       "typology": true,
     },
     "extend": {
-      "lead": true,
-      "named": true,
-      "takenFloors": true,
-      "takenUnits": true,
       "towerId": true,
-      "towerName": true,
     },
     "floorArea": {
       "floor": true,
@@ -385,7 +380,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
         "type": "object",
       },
       "version": {
-        "const": 2,
+        "const": 3,
         "type": "number",
       },
     },

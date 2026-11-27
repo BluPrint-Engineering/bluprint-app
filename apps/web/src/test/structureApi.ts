@@ -105,10 +105,12 @@ export function floor(
 	name: string,
 	units: (string | UnitSpec)[] = [],
 	commonAreas: (string | AreaSpec)[] = [],
+	position = 0,
 ): StructureFloor {
 	return {
 		id: nextId(),
 		name,
+		position,
 		units: units.map(unitOf),
 		commonAreas: commonAreas.map(areaOf),
 	};
@@ -136,7 +138,14 @@ export function tower(
 	floors: StructureFloor[] = [],
 	commonAreas: (string | AreaSpec)[] = [],
 ): StructureTower {
-	return { id: nextId(), name, floors, commonAreas: commonAreas.map(areaOf) };
+	return {
+		id: nextId(),
+		name,
+		floors: floors.map((one, index) =>
+			one.position === 0 && index > 0 ? { ...one, position: index } : one,
+		),
+		commonAreas: commonAreas.map(areaOf),
+	};
 }
 
 export function structureOf(
@@ -339,9 +348,14 @@ function applyCreation(structure: Structure, body: CreateStructureRequest) {
 		if (entry.type === "tower") {
 			structure.towers.push({ id, name, floors: [], commonAreas: [] });
 		} else if (entry.type === "floor") {
-			structure.towers
-				.find((t) => t.id === parentId)
-				?.floors.push({ id, name, units: [], commonAreas: [] });
+			const parent = structure.towers.find((t) => t.id === parentId);
+			parent?.floors.push({
+				id,
+				name,
+				position: entry.position ?? parent.floors.length,
+				units: [],
+				commonAreas: [],
+			});
 		} else if (entry.type === "unit") {
 			structure.towers
 				.flatMap((t) => t.floors)

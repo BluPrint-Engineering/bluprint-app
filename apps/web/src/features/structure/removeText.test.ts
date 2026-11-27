@@ -159,6 +159,7 @@ describe("child counts", () => {
 	const floor = (name: string, units: string[], areas: string[]) => ({
 		id: name,
 		name,
+		position: 0,
 		units: units.map(unit),
 		commonAreas: areas.map(area),
 	});

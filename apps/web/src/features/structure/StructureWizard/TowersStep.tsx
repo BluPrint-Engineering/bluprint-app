@@ -244,15 +244,6 @@ function RangeCard({
 			</p>
 		);
 
-	if (extending) {
-		return (
-			<div className="grid gap-(--space-3)">
-				{fields}
-				{line}
-			</div>
-		);
-	}
-
 	const titleId = `${range.key}-title`;
 	return (
 		<section
@@ -304,6 +295,8 @@ function TowerCard({
 	edit,
 	commonTypes,
 	onCreateType,
+	nowLine,
+	hallDescription,
 }: {
 	tower: TowerDraft;
 	index: number;
@@ -316,6 +309,8 @@ function TowerCard({
 		select: HTMLSelectElement,
 		apply: (draft: WizardDraft, key: string) => WizardDraft,
 	) => void;
+	nowLine?: string;
+	hallDescription?: string;
 }) {
 	const extending = draft.extend !== undefined;
 	const toggle = (field: "ground" | "hall", value: boolean) =>
@@ -383,7 +378,11 @@ function TowerCard({
 			<CheckField
 				id={`tower-${index}-hall`}
 				label="Hall em cada andar"
-				description="Um Hall em cada andar da torre. Cada um usa 1 da reserva."
+				description={
+					extending && hallDescription
+						? hallDescription
+						: "Um Hall em cada andar da torre. Cada um usa 1 da reserva."
+				}
 				checked={tower.hall}
 				onCheckedChange={(checked) => toggle("hall", checked)}
 			/>
@@ -397,11 +396,29 @@ function TowerCard({
 		</>
 	);
 
+	const addition = `Nesta adição: ${plural(units, "unidade", "unidades")} em ${plural(floors.length, "andar", "andares")}`;
+
 	if (extending) {
 		return (
 			<div className="grid gap-(--space-4) rounded-lg bg-background p-(--space-4) shadow-(--ring-hairline)">
-				{rangeCards}
-				{hall}
+				<div className="grid gap-(--space-1)">
+					<h3 className="font-medium">Andares novos</h3>
+					<p className="text-sm text-pretty text-muted-foreground">{nowLine}</p>
+				</div>
+				<div className="grid gap-(--space-2)">{rangeCards}</div>
+				<div className="flex flex-wrap items-center justify-between gap-x-(--space-3)">
+					<Button
+						type="button"
+						variant="ghost"
+						className="text-primary"
+						onClick={() => edit((current) => withNewRange(current, index))}
+					>
+						<Plus className="size-5" aria-hidden="true" />
+						Faixa
+					</Button>
+					<span className="text-sm font-semibold">{addition}</span>
+				</div>
+				<div className="grid border-t border-border pt-(--space-3)">{hall}</div>
 			</div>
 		);
 	}
@@ -484,12 +501,16 @@ export function TowersStep({
 	edit,
 	desktop,
 	existing,
+	nowLine,
+	hallDescription,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
 	edit: Edit;
 	desktop: boolean;
 	existing: readonly Typology[];
+	nowLine?: string;
+	hallDescription?: string;
 }) {
 	const [refusal, setRefusal] = useState<string>();
 	const [naming, setNaming] = useState<{
@@ -536,6 +557,8 @@ export function TowersStep({
 						edit={edit}
 						commonTypes={commonTypes}
 						onCreateType={createType}
+						{...(nowLine !== undefined && { nowLine })}
+						{...(hallDescription !== undefined && { hallDescription })}
 					/>
 				)}
 				{nameDialog}

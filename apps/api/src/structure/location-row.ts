@@ -14,6 +14,7 @@ export interface LocationRow {
 
 export interface StructureRow extends LocationRow {
 	typology: TypologyRef | null;
+	position: number;
 }
 
 export interface PlacedRow extends StructureRow {

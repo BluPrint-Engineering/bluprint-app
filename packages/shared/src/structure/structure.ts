@@ -27,6 +27,10 @@ export const structureCommonAreaSchema = z.object({
 export const structureFloorSchema = z.object({
 	id: z.uuid(),
 	name: locationName,
+	position: z.int().nonnegative().meta({
+		description:
+			"Where this floor sits among the tower's floors, ascending from the lowest. A removed floor leaves its position empty. A floor created with this position moves the floor already there, and every floor after it, one place later.",
+	}),
 	units: z.array(structureUnitSchema).meta({
 		description: "The floor's units, in their stored order.",
 	}),

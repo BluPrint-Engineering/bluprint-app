@@ -51,6 +51,22 @@ function allOperations(): [string, string, OperationObject][] {
 	return operations;
 }
 
+interface SchemaNode {
+	$ref?: string;
+	type?: string;
+	minimum?: number;
+	required?: string[];
+	items?: SchemaNode;
+	properties?: Record<string, SchemaNode>;
+	content?: Record<string, { schema?: SchemaNode }>;
+}
+
+function resolved(node: SchemaNode | undefined): SchemaNode {
+	if (node?.$ref === undefined) return node ?? {};
+	const name = node.$ref.split("/").at(-1) ?? "";
+	return resolved(document.components?.schemas?.[name]);
+}
+
 describe("GET /api/docs/openapi.json", () => {
 	test("is served without a session", async () => {
 		const res = await request(server).get("/api/docs/openapi.json");
@@ -115,6 +131,22 @@ describe("GET /api/docs/openapi.json", () => {
 
 	test("health opts out of the global session requirement", () => {
 		expect(document.paths["/api/health"]?.get?.security).toEqual([{}]);
+	});
+
+	test("the structure floor documents its stored position", () => {
+		const response = document.paths["/api/projects/{id}/structure"]?.get
+			?.responses["200"] as SchemaNode | undefined;
+		const structure = resolved(
+			resolved(response).content?.["application/json"]?.schema,
+		);
+		const tower = resolved(resolved(structure.properties?.towers).items);
+		const floor = resolved(resolved(tower.properties?.floors).items);
+
+		expect(floor.properties?.position).toMatchObject({
+			type: "integer",
+			minimum: 0,
+		});
+		expect(floor.required).toContain("position");
 	});
 
 	test("projects inherits the global session requirement", () => {

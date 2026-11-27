@@ -117,9 +117,6 @@ const addButton = () =>
 
 async function toPreviewOnPhone() {
 	await user.click(
-		await screen.findByRole("button", { name: "Continuar · Áreas comuns" }),
-	);
-	await user.click(
 		await screen.findByRole("button", { name: "Continuar · Tipologias" }),
 	);
 	await user.click(
@@ -248,26 +245,24 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
-					"A Torre B tem hoje 11 andares, do 1º ao 10º, com 4 unidades por andar.",
+					"A Torre B tem hoje do 1º ao 10º andar. Use andares que ela ainda não tem.",
 				),
 			).toBeInTheDocument();
 			expect(screen.getByRole("link", { name: "Torre B" })).toHaveAttribute(
 				"href",
 				`/projects/${OBRA.id}/locations/${towerB.id}`,
 			);
-			for (const name of [
-				"Novos andares",
-				"Áreas comuns",
-				"Tipologias",
-				"Prévia",
-			]) {
+			for (const name of ["Novos andares", "Tipologias", "Prévia"]) {
 				expect(
 					screen.getByRole("heading", { level: 2, name }),
 				).toBeInTheDocument();
 			}
 			expect(
+				screen.queryByRole("heading", { level: 2, name: "Áreas comuns" }),
+			).not.toBeInTheDocument();
+			expect(
 				screen.getByText(
-					"Os andares entram acima do último andar da Torre B, com a mesma numeração.",
+					"Os andares novos entram na Torre B pela ordem do número, com as suas faixas e finais.",
 				),
 			).toBeInTheDocument();
 			expect(screen.getByRole("textbox", { name: "Do andar" })).toHaveValue(
@@ -276,21 +271,22 @@ describe("adding floors to a tower (W9)", () => {
 			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
 				"",
 			);
-			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue(
-				"01, 04",
-			);
+			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue("");
 			expect(
 				screen.getByText("Preencha a faixa para ver as unidades."),
 			).toBeInTheDocument();
+			expect(screen.getByRole("button", { name: "Faixa" })).toBeInTheDocument();
 			expect(
-				screen.queryByRole("button", { name: "Faixa" }),
-			).not.toBeInTheDocument();
-			expect(
-				screen.queryByRole("checkbox", { name: "Andares sem unidades" }),
-			).not.toBeInTheDocument();
+				screen.getByRole("checkbox", { name: "Andares sem unidades" }),
+			).not.toBeChecked();
 			expect(
 				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
 			).toBeChecked();
+			expect(
+				screen.getByText(
+					"Repete a escolha da Torre B. Desmarque para não criar os halls só nesta adição.",
+				),
+			).toBeInTheDocument();
 			expect(
 				screen.queryByRole("checkbox", { name: /Térreo sem unidades/ }),
 			).not.toBeInTheDocument();
@@ -305,8 +301,8 @@ describe("adding floors to a tower (W9)", () => {
 				screen.queryByRole("textbox", { name: "Área comum de cada torre" }),
 			).not.toBeInTheDocument();
 			expect(
-				screen.getByRole("button", { name: "Área comum num andar" }),
-			).toBeInTheDocument();
+				screen.queryByRole("button", { name: "Área comum num andar" }),
+			).not.toBeInTheDocument();
 		});
 
 		test("shows the tipologias the project already has as they are, and mirrors the finals of the last floor", async () => {
@@ -354,6 +350,7 @@ describe("adding floors to a tower (W9)", () => {
 			const { handler, towerB } = scenario({ remaining: 12 });
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
 
 			expect(
 				await screen.findByText("Torre B ganha 2 andares e 8 unidades"),
@@ -386,7 +383,7 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeEnabled();
 			expect(
 				screen.getByText(
-					"Nada é salvo antes de adicionar. Depois, tudo se ajusta na fachada. O rascunho fica guardado até lá, mesmo se a página for atualizada.",
+					"Nada é salvo antes de adicionar. Depois, tudo se ajusta na fachada e na configuração. O rascunho fica guardado até lá, mesmo se a página for atualizada.",
 				),
 			).toBeInTheDocument();
 		});
@@ -398,6 +395,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
 
 			expect(
 				await screen.findByText("Faltam 4 unidades na reserva"),
@@ -421,6 +419,7 @@ describe("adding floors to a tower (W9)", () => {
 			const { handler, towerB, created } = scenario({ remaining: 12 });
 			const { router } = open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
@@ -438,8 +437,8 @@ describe("adding floors to a tower (W9)", () => {
 					.filter(({ type }) => type === "floor")
 					.map(({ name, parentId, position }) => [name, parentId, position]),
 			).toEqual([
-				["11º andar", towerB.id, undefined],
-				["12º andar", towerB.id, undefined],
+				["11º andar", towerB.id, 11],
+				["12º andar", towerB.id, 12],
 			]);
 			expect(
 				body.locations
@@ -467,40 +466,77 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeInTheDocument();
 		});
 
-		test("adds a common area of one of the new floors and a tipologia of its own", async () => {
+		test("drops the halls of this addition without changing the tower's own choice", async () => {
 			const { handler, towerB, created } = scenario({ remaining: 12 });
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01");
+			expect(
+				await screen.findByText(
+					"Estes andares usam 4 das 12 que restam na reserva. Depois de adicionar, sobram 8.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText("2 unidades + 2 halls de andar"),
+			).toBeInTheDocument();
+
 			await user.click(
-				await screen.findByRole("button", { name: "Área comum num andar" }),
-			);
-			await user.type(
-				screen.getByRole("textbox", { name: "Nome da área comum" }),
-				"Terraço",
-			);
-			await user.type(screen.getByRole("textbox", { name: "Andar" }), "12");
-			await user.click(
-				screen.getByRole("button", { name: "Adicionar ao andar" }),
+				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
 			);
 			expect(
-				await screen.findByText("· Torre B, 12º andar"),
+				await screen.findByText(
+					"Estes andares usam 2 das 12 que restam na reserva. Depois de adicionar, sobram 10.",
+				),
 			).toBeInTheDocument();
-			await user.click(screen.getByRole("button", { name: "Nova tipologia" }));
-			await user.type(
-				await screen.findByRole("textbox", { name: "Nome" }),
-				"Cobertura",
-			);
-			await user.click(screen.getByRole("button", { name: "Criar" }));
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
 
 			await waitFor(() => expect(created).toHaveLength(1));
 			const body = nth(created, 0) as CreateStructure;
-			expect(body.typologies.map(({ name }) => name)).toEqual(["Cobertura"]);
-			const terraco = body.locations.find(({ name }) => name === "Terraço");
-			const twelfth = body.locations.find(({ name }) => name === "12º andar");
-			expect(terraco?.parentId).toBe(twelfth?.id);
+			expect(body.locations.some(({ name }) => name === "Hall")).toBe(false);
+			expect(
+				towerB.floors
+					.find((one) => one.name === "10º andar")
+					?.commonAreas.some((area) => area.name === "Hall"),
+			).toBe(true);
+		});
+
+		test("creates a floor with no units when the range says so", async () => {
+			const { handler, towerB, created } = scenario({ remaining: 12 });
+			open(handler, pathFor(towerB.id));
+			await user.click(
+				await screen.findByRole("checkbox", { name: "Andares sem unidades" }),
+			);
+			await typeInto("Último andar", "11");
+			expect(screen.getByText("0 unidades · 1 andar")).toBeInTheDocument();
+			await user.click(
+				await screen.findByRole("button", { name: "Adicionar 1 andar" }),
+			);
+
+			await waitFor(() => expect(created).toHaveLength(1));
+			const body = nth(created, 0) as CreateStructure;
+			expect(body.locations.filter(({ type }) => type === "unit")).toEqual([]);
+			expect(
+				body.locations
+					.filter(({ type }) => type === "floor")
+					.map(({ name }) => name),
+			).toEqual(["11º andar"]);
+		});
+
+		test("validates against the tower read again, not against what the draft stored", async () => {
+			const { handler, towerB, created } = scenario({ remaining: 20 });
+			const { queryClient } = open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01");
+			towerB.floors.push(floor("11º andar", ["1101"], ["Hall"], 11));
+			await queryClient.invalidateQueries({ queryKey: ["structure", OBRA.id] });
+
+			expect(
+				await screen.findByText("A Torre B já tem o 11º andar."),
+			).toBeInTheDocument();
+			await user.click(await addButton());
+			expect(created).toHaveLength(0);
 		});
 
 		test("refuses floors the tower already has before sending anything", async () => {
@@ -508,6 +544,7 @@ describe("adding floors to a tower (W9)", () => {
 			open(handler, pathFor(towerB.id));
 			await typeInto("Do andar", "9");
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 4 andares" }),
 			);
@@ -545,13 +582,14 @@ describe("adding floors to a tower (W9)", () => {
 				await screen.findByRole("textbox", { name: "Do andar" }),
 			).toHaveValue("13");
 			await typeInto("Último andar", "14");
+			await typeInto("Finais", "01");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
 
 			expect(
 				await screen.findByText(
-					"A Torre B já tem a unidade 1301. Comece em um andar acima dela.",
+					"A Torre B já tem a unidade 1301. Use outro andar ou outros finais.",
 				),
 			).toBeInTheDocument();
 			expect(created).toHaveLength(0);
@@ -570,7 +608,9 @@ describe("adding floors to a tower (W9)", () => {
 				screen.getByText("A Torre B ainda não tem andares."),
 			).toBeInTheDocument();
 			expect(
-				screen.getByText("Os andares entram na Torre B, a partir do 1º."),
+				screen.getByText(
+					"Os andares novos entram na Torre B pela ordem do número, com as suas faixas e finais.",
+				),
 			).toBeInTheDocument();
 			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue("");
 		});
@@ -591,6 +631,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
@@ -623,6 +664,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(refused.handler, pathFor(refused.towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
@@ -713,13 +755,14 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeInTheDocument();
 			expect(
 				screen.getByText(
-					"A obra tem hoje 11 andares, do 1º ao 10º, com 4 unidades por andar.",
+					"A obra tem hoje do 1º ao 10º andar. Use andares que ela ainda não tem.",
 				),
 			).toBeInTheDocument();
 			expect(
 				screen.getByRole("link", { name: "Casa Moinhos" }),
 			).toHaveAttribute("href", `/projects/${OBRA.id}`);
 			await typeInto("Último andar", "11");
+			await typeInto("Finais", "01, 04");
 			expect(
 				await screen.findByText("A obra ganha 1 andar e 4 unidades"),
 			).toBeInTheDocument();
@@ -816,19 +859,20 @@ describe("adding floors to a tower (W9)", () => {
 	});
 
 	describe("on the phone", () => {
-		test("goes through four steps to the preview and adds the floors (W9, W10)", async () => {
+		test("goes through three steps to the preview and adds the floors (A1, A8)", async () => {
 			setViewport("phone");
 			const { handler, towerB, created } = scenario({ remaining: 12 });
 			const { router } = open(handler, pathFor(towerB.id));
 
-			expect(await screen.findByText("Passo 1 de 4")).toBeInTheDocument();
+			expect(await screen.findByText("Passo 1 de 3")).toBeInTheDocument();
 			expect(
 				screen.getByRole("heading", { level: 2, name: "Novos andares" }),
 			).toBeInTheDocument();
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
 			await toPreviewOnPhone();
 
-			expect(screen.getByText("Passo 4 de 4")).toBeInTheDocument();
+			expect(screen.getByText("Passo 3 de 3")).toBeInTheDocument();
 			expect(
 				screen.getByText("Torre B ganha 2 andares e 8 unidades"),
 			).toBeInTheDocument();
@@ -855,6 +899,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
 			await toPreviewOnPhone();
 
 			const alert = await screen.findByText("Faltam 4 unidades na reserva");
