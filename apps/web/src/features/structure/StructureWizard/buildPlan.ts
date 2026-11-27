@@ -6,10 +6,14 @@ import {
 	tidyLocationName,
 } from "@bluprint/shared";
 import type { ReserveParts } from "../reserveText";
+import {
+	assignUnits,
+	type DraftUnit,
+	type TowerConflict,
+} from "./assignmentRules";
 import { positionsForNewFloors } from "./floorPosition";
 import { isBlankRange, towerFloors } from "./floorRanges";
 import type { ExtendFacts } from "./towerNow";
-import { typologyKeyFor } from "./typologyRules";
 import { FLOOR_HALL, SINGLE_TOWER_NAME, type WizardDraft } from "./wizardDraft";
 
 export interface PlanArea {
@@ -53,6 +57,8 @@ export interface Plan {
 	towers: PlanTower[];
 	typologyCounts: PlanTypologyCount[];
 	untyped: number;
+	conflicts: TowerConflict[];
+	unitsByRule: Record<string, number>;
 	complete: boolean;
 	spend: ReserveParts;
 }
@@ -115,6 +121,23 @@ export function buildPlan(
 		const stored = knownById.get(key);
 		return stored?.locationType === kind ? key : null;
 	};
+	const numbering = draft.extend && facts ? facts.numbering : draft.numbering;
+	const draftUnits: DraftUnit[] = draft.towers.flatMap((tower) =>
+		(towerFloors(tower.ranges, numbering) ?? []).flatMap(({ number, stacks }) =>
+			stacks.map(({ position }) => ({
+				tower: tower.key,
+				floor: number,
+				final: position,
+			})),
+		),
+	);
+	const assignments = assignUnits(draftUnits, draft.rules);
+	const outcomes = new Map(
+		assignments.units.map(({ unit, outcome }) => [
+			JSON.stringify([unit.tower, unit.floor, unit.final]),
+			outcome,
+		]),
+	);
 	const typedUnits = new Map<string, number>();
 	let untyped = 0;
 	const spend: ReserveParts = {
@@ -128,7 +151,6 @@ export function buildPlan(
 	const towers: PlanTower[] = [];
 
 	draft.towers.forEach((tower, towerIndex) => {
-		const numbering = draft.extend && facts ? facts.numbering : draft.numbering;
 		const name = draft.extend
 			? (facts?.name ?? "")
 			: several
@@ -197,12 +219,10 @@ export function buildPlan(
 			);
 			const units: PlanUnit[] = stacks.map((stack, at) => {
 				const name = `${number}${stack.label}`;
-				const ruled = typologyKeyFor(
-					draft.rules,
-					towerIndex,
-					number,
-					stack.position,
+				const outcome = outcomes.get(
+					JSON.stringify([tower.key, number, stack.position]),
 				);
+				const ruled = outcome?.kind === "typology" ? outcome.typology : null;
 				const typeKey =
 					ruled !== null && typologyNames.has(ruled) ? ruled : null;
 				const typeId = resolvedId(typeKey, "unit");
@@ -214,6 +234,9 @@ export function buildPlan(
 					at,
 					typeId,
 				);
+				if (outcome?.kind === "conflict") {
+					return { name, typology: null };
+				}
 				if (typeKey === null || typeId === null) untyped++;
 				else typedUnits.set(typeKey, (typedUnits.get(typeKey) ?? 0) + 1);
 				return {
@@ -323,6 +346,8 @@ export function buildPlan(
 				units: typedUnits.get(key) ?? 0,
 			})),
 		untyped,
+		conflicts: assignments.conflicts,
+		unitsByRule: assignments.reach,
 		locations,
 		counts: {
 			towers: count("tower"),

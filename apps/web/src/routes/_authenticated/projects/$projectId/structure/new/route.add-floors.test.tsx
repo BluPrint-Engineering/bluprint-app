@@ -110,6 +110,9 @@ async function typeInto(name: string, value: string) {
 	if (value) await user.type(field, value);
 }
 
+const dropRule = (number: number) =>
+	user.click(screen.getByRole("button", { name: `Tirar a regra ${number}` }));
+
 const addButton = () =>
 	screen.findByRole("button", {
 		name: /^(Adicionar \d+ andares?|Adicionar andares|Adicionando andares…)$/,
@@ -336,14 +339,37 @@ describe("adding floors to a tower (W9)", () => {
 				screen.queryByRole("button", { name: "Tirar Tipologia A" }),
 			).not.toBeInTheDocument();
 			const first = within(screen.getByRole("group", { name: "Regra 1" }));
-			expect(first.getByRole("textbox", { name: /^Finais/ })).toHaveValue(
-				"01, 03",
-			);
-			expect(first.getByRole("combobox")).toHaveValue(typeA.id);
+			expect(
+				first.getByRole("button", { name: "Finais da regra 1" }),
+			).toHaveTextContent("01 e 03");
+			expect(
+				first.getByRole("combobox", { name: "Tipologia da regra 1" }),
+			).toHaveValue(typeA.id);
 			const second = within(screen.getByRole("group", { name: "Regra 2" }));
-			expect(second.getByRole("textbox", { name: /^Finais/ })).toHaveValue(
-				"02, 04",
-			);
+			expect(
+				second.getByRole("button", { name: "Finais da regra 2" }),
+			).toHaveTextContent("02 e 04");
+			expect(
+				screen.queryByRole("combobox", { name: /^Torre/ }),
+			).not.toBeInTheDocument();
+		});
+
+		test("keeps the mirrored finals of the rules while the finals are typed", async () => {
+			const { handler, towerB } = scenario({ remaining: 12 });
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
+			await user.tab();
+
+			expect(
+				screen.getByRole("button", { name: "Finais da regra 1" }),
+			).toHaveTextContent("01 e 03");
+			expect(
+				screen.getByRole("button", { name: "Finais da regra 2" }),
+			).toHaveTextContent("02 e 04");
+			expect(
+				screen.queryByText("Escolha ao menos um final."),
+			).not.toBeInTheDocument();
 		});
 
 		test("counts what the new floors use and what is left, marking the new floors in the preview (W9)", async () => {
@@ -471,6 +497,7 @@ describe("adding floors to a tower (W9)", () => {
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
 			await typeInto("Finais", "01");
+			await dropRule(2);
 			expect(
 				await screen.findByText(
 					"Estes andares usam 4 das 12 que restam na reserva. Depois de adicionar, sobram 8.",
@@ -509,7 +536,11 @@ describe("adding floors to a tower (W9)", () => {
 				await screen.findByRole("checkbox", { name: "Andares sem unidades" }),
 			);
 			await typeInto("Último andar", "11");
+			await user.tab();
 			expect(screen.getByText("0 unidades · 1 andar")).toBeInTheDocument();
+			expect(screen.getAllByText("Escolha ao menos um final.")).toHaveLength(2);
+			await dropRule(1);
+			await dropRule(1);
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 1 andar" }),
 			);
@@ -679,6 +710,7 @@ describe("adding floors to a tower (W9)", () => {
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
 			await typeInto("Finais", "01");
+			await dropRule(2);
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);

@@ -77,6 +77,7 @@ import {
 	ReserveBox,
 	UntypedAlert,
 } from "./Preview";
+import { ruleCardId } from "./RuleCard";
 import { TowersStep } from "./TowersStep";
 import { TypologiesStep } from "./TypologiesStep";
 import {
@@ -98,6 +99,8 @@ import {
 	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
+	withCleanRules,
+	withEditedRules,
 } from "./wizardDraft";
 
 const STEP_TITLES = [
@@ -391,7 +394,8 @@ export function StructureWizard({
 	const used = reserveUsed(preview.spend);
 	const over = preview.complete && remaining !== undefined && used > remaining;
 	const tooLarge = preview.locations.length > MAX_LOCATIONS_PER_REQUEST;
-	const blocked = over || tooLarge;
+	const conflicting = preview.conflicts.length > 0;
+	const blocked = conflicting || over || tooLarge;
 
 	useEffect(() => {
 		if (reveal === undefined) return;
@@ -435,11 +439,13 @@ export function StructureWizard({
 	function edit(
 		update: (draft: WizardDraft) => WizardDraft,
 		touched?: string,
+		{ typing }: { typing: boolean } = { typing: false },
 	): boolean {
 		if (submission !== "editing" || staleRef.current) return false;
 		ids.current = new Map();
 		create.reset();
-		const next = update(draft);
+		const edited = update(draft);
+		const next = typing ? edited : withEditedRules(draft, edited);
 		setDraft(next);
 		writeStructureDraft(storageKey, {
 			version: STRUCTURE_DRAFT_VERSION,
@@ -451,6 +457,18 @@ export function StructureWizard({
 			stillFound(current, validateDraft(next, facts, existingNames), touched),
 		);
 		return true;
+	}
+
+	function commitRules() {
+		const cleaned = withCleanRules(draft);
+		if (JSON.stringify(cleaned.rules) !== JSON.stringify(draft.rules))
+			edit(() => cleaned);
+	}
+
+	function showRules() {
+		const first = preview.conflicts[0]?.ruleKeys[0];
+		setStep(stepOf.types);
+		if (first !== undefined) setReveal(ruleCardId(first));
 	}
 
 	function idFor(key: string) {
@@ -652,7 +670,22 @@ export function StructureWizard({
 
 	const blocker = blocked ? (
 		<Alert variant="destructive" id={BLOCKER_ID}>
-			{over && remaining !== undefined ? (
+			{conflicting ? (
+				<>
+					<CircleAlert aria-hidden="true" />
+					<AlertTitle>Regras em conflito</AlertTitle>
+					<AlertDescription>
+						Duas regras dão tipologia às mesmas unidades.{" "}
+						<button
+							type="button"
+							className="relative underline underline-offset-3 after:absolute after:-inset-y-3 after:inset-x-0 hover:text-foreground"
+							onClick={showRules}
+						>
+							Ver regras
+						</button>
+					</AlertDescription>
+				</>
+			) : over && remaining !== undefined ? (
 				<>
 					<CircleAlert aria-hidden="true" />
 					<AlertTitle>
@@ -752,6 +785,7 @@ export function StructureWizard({
 			draft={draft}
 			errors={errors}
 			edit={edit}
+			onCommit={commitRules}
 			desktop={desktop}
 			existing={existing}
 			{...(tower && {
@@ -782,6 +816,7 @@ export function StructureWizard({
 			desktop={desktop}
 			existing={existing}
 			roomNames={roomNames}
+			unitsByRule={preview.unitsByRule}
 		/>
 	);
 

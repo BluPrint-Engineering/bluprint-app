@@ -1,6 +1,5 @@
 import type { Typology, TypologyLocationType } from "@bluprint/shared";
-import type { TypologyDraft } from "./typologyRules";
-import type { WizardDraft } from "./wizardDraft";
+import type { TypologyDraft, WizardDraft } from "./wizardDraft";
 
 export interface CatalogTypology {
 	key: string;

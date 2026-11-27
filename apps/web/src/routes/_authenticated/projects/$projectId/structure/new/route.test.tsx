@@ -248,6 +248,39 @@ async function addRule() {
 	await user.click(screen.getByRole("button", { name: "Regra" }));
 }
 
+const finalsButton = (number: number) =>
+	screen.getByRole("button", {
+		name: `Finais da regra ${number}`,
+		hidden: true,
+	});
+
+async function chooseFinals(number: number, ...items: string[]) {
+	await user.click(finalsButton(number));
+	const menu = await screen.findByRole("menu", {
+		name: `Finais da regra ${number}`,
+	});
+	for (const item of items) {
+		await user.click(
+			within(menu).getByRole("menuitemcheckbox", { name: item }),
+		);
+	}
+	await user.keyboard("{Escape}");
+	await waitFor(() =>
+		expect(screen.queryByRole("menu")).not.toBeInTheDocument(),
+	);
+}
+
+async function chooseFloors(number: number, from: string, to: string) {
+	await user.selectOptions(
+		screen.getByRole("combobox", { name: `Do andar da regra ${number}` }),
+		from,
+	);
+	await user.selectOptions(
+		screen.getByRole("combobox", { name: `Até o andar da regra ${number}` }),
+		to,
+	);
+}
+
 function changeInOtherTab() {
 	const key = structureDraftKey(signedIn.user.id, OBRA.id);
 	const stored = readStructureDraft(key);
@@ -1623,6 +1656,400 @@ describe("structure wizard", () => {
 		});
 	});
 
+	describe("the rules of a typology", () => {
+		const optionsOf = (name: string) =>
+			within(screen.getByRole("combobox", { name }))
+				.getAllByRole("option")
+				.map((option) => option.textContent);
+
+		test("offers only the finals the tower has, and a final tapped with all on leaves only that one (W5)", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("2", "01, 03");
+
+			await user.click(finalsButton(1));
+
+			const menu = await screen.findByRole("menu", {
+				name: "Finais da regra 1",
+			});
+			const items = within(menu).getAllByRole("menuitemcheckbox");
+			expect(items.map((item) => item.textContent)).toEqual([
+				"Todos os finais",
+				"01",
+				"02",
+				"03",
+			]);
+			expect(items[0]).toBeChecked();
+
+			await user.click(nth(items, 2));
+
+			expect(menu).toBeInTheDocument();
+			expect(finalsButton(1)).toHaveTextContent("02");
+			expect(finalsButton(1)).not.toHaveTextContent("Todos");
+			expect(nth(items, 0)).not.toBeChecked();
+			expect(nth(items, 2)).toBeChecked();
+
+			await user.click(nth(items, 3));
+
+			expect(finalsButton(1)).toHaveTextContent("02 e 03");
+
+			await user.click(nth(items, 0));
+
+			expect(finalsButton(1)).toHaveTextContent("Todos os finais");
+			expect(nth(items, 2)).not.toBeChecked();
+		});
+
+		test("works from the keyboard", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("1", "01, 02");
+
+			finalsButton(1).focus();
+			await user.keyboard("{Enter}");
+			await screen.findByRole("menu", { name: "Finais da regra 1" });
+			await user.keyboard("{ArrowDown}");
+			if (document.activeElement?.textContent !== "01") {
+				await user.keyboard("{ArrowDown}");
+			}
+			expect(document.activeElement).toHaveTextContent("01");
+			await user.keyboard("{ }");
+
+			expect(finalsButton(1)).toHaveTextContent("01");
+			expect(screen.getByRole("menu")).toBeInTheDocument();
+		});
+
+		test("asks to fill the ranges before offering finals", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+
+			await user.click(
+				await screen.findByRole("button", { name: /^Finais da regra 1/ }),
+			);
+
+			const menu = await screen.findByRole("menu", {
+				name: "Finais da regra 1",
+			});
+			expect(
+				within(menu).getByText(
+					"Preencha as faixas no passo 1 para escolher os finais.",
+				),
+			).toBeInTheDocument();
+			expect(within(menu).getAllByRole("menuitemcheckbox")).toHaveLength(1);
+		});
+
+		test("offers the floors the tower has, and no end floor below the start floor", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("5", "01");
+
+			expect(optionsOf("Do andar da regra 1")).toEqual([
+				"Primeiro",
+				"1º",
+				"2º",
+				"3º",
+				"4º",
+				"5º",
+			]);
+
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"3º",
+			);
+
+			expect(optionsOf("Até o andar da regra 1")).toEqual([
+				"Último",
+				"3º",
+				"4º",
+				"5º",
+			]);
+
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Até o andar da regra 1" }),
+				"4º",
+			);
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"5º",
+			);
+
+			expect(
+				screen.getByRole("combobox", { name: "Até o andar da regra 1" }),
+			).toHaveDisplayValue("Último");
+		});
+
+		test("shows 0 units for a final the floors of the rule do not have, and does not block (W5)", async () => {
+			const { handler, sent } = wizardApi();
+			open(handler);
+			await describeTower("2", "01, 04");
+			await user.click(screen.getByRole("button", { name: "Faixa" }));
+			await typeInto("Último andar", "4", 1);
+			await typeInto("Finais", "01, 02", 1);
+
+			await chooseFinals(1, "04");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"3º",
+			);
+
+			expect(within(ruleGroup(1)).getByText("0 unidades")).toBeInTheDocument();
+			expect(
+				screen.queryByText("Escolha ao menos um final."),
+			).not.toBeInTheDocument();
+			expect(screen.queryByText("Regras em conflito")).not.toBeInTheDocument();
+
+			await user.click(await createButton());
+
+			await waitFor(() => expect(sent).toHaveLength(1));
+		});
+
+		test("takes the finals a shortened range lost out of the rule and blocks until one is chosen (W5c)", async () => {
+			const { handler, sent } = wizardApi();
+			open(handler);
+			await describeTower("2", "01, 04");
+			await chooseFinals(1, "03", "04");
+			expect(finalsButton(1)).toHaveTextContent("03 e 04");
+
+			await typeInto("Finais", "01, 02");
+			expect(finalsButton(1)).toHaveTextContent("03 e 04");
+			await user.tab();
+
+			expect(finalsButton(1)).toHaveTextContent("Nenhum final");
+			expect(
+				within(ruleGroup(1)).getByText("Escolha ao menos um final."),
+			).toBeInTheDocument();
+
+			await user.click(await createButton());
+
+			await waitFor(() => expect(finalsButton(1)).toHaveFocus());
+			expect(sent).toHaveLength(0);
+
+			await chooseFinals(1, "01");
+
+			expect(
+				screen.queryByText("Escolha ao menos um final."),
+			).not.toBeInTheDocument();
+		});
+
+		test("keeps a rule's start floor while the last floor is typed again", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("20", "01, 02");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"15º",
+			);
+
+			await typeInto("Último andar", "25");
+			await user.tab();
+
+			expect(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+			).toHaveDisplayValue("15º");
+			expect(within(ruleGroup(1)).getByText("22 unidades")).toBeInTheDocument();
+		});
+
+		test("shows a rule's start floor, not to be chosen, while the tower cannot be read", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("20", "01, 02");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"15º",
+			);
+
+			await typeInto("Último andar", "");
+			await user.tab();
+
+			const from = screen.getByRole("combobox", {
+				name: "Do andar da regra 1",
+			});
+			expect(from).toHaveDisplayValue("15º");
+			expect(within(from).getByRole("option", { name: "15º" })).toBeDisabled();
+			expect(within(ruleGroup(1)).getByText("0 unidades")).toBeInTheDocument();
+		});
+
+		test("takes out of a rule the finals and floors the tower it switches to lacks", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("20", "01, 04");
+			await user.click(
+				await screen.findByRole("button", { name: "Uma torre a mais" }),
+			);
+			await describeTower("10", "01, 02", { at: 1 });
+			await user.tab();
+			await chooseFinals(1, "03", "04");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"15º",
+			);
+			expect(finalsButton(1)).toHaveTextContent("03 e 04");
+
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Torre da regra 1" }),
+				"Torre B",
+			);
+
+			expect(finalsButton(1)).toHaveTextContent("Nenhum final");
+			expect(
+				within(ruleGroup(1)).getByText("Escolha ao menos um final."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+			).toHaveDisplayValue("Primeiro");
+			expect(optionsOf("Do andar da regra 1")).toEqual([
+				"Primeiro",
+				"1º",
+				"2º",
+				"3º",
+				"4º",
+				"5º",
+				"6º",
+				"7º",
+				"8º",
+				"9º",
+				"10º",
+			]);
+		});
+
+		test("takes a removed tower out of the rules and blocks the rule left without a tower (W5c)", async () => {
+			const { handler, sent } = wizardApi();
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(
+				await screen.findByRole("button", { name: "Uma torre a mais" }),
+			);
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Torre da regra 1" }),
+				"Torre B",
+			);
+			expect(within(ruleGroup(1)).getByText("4 unidades")).toBeInTheDocument();
+
+			await user.click(
+				screen.getByRole("button", { name: "Uma torre a menos" }),
+			);
+
+			expect(
+				within(ruleGroup(1)).getByText("Escolha ao menos uma torre."),
+			).toBeInTheDocument();
+			expect(within(ruleGroup(1)).getByText("0 unidades")).toBeInTheDocument();
+
+			await user.click(await createButton());
+
+			await waitFor(() =>
+				expect(
+					within(ruleGroup(1)).getByRole("combobox", {
+						name: "Torre da regra 1",
+					}),
+				).toHaveFocus(),
+			);
+			expect(sent).toHaveLength(0);
+		});
+
+		test.each([
+			["the same typology", "Tipologia A", false],
+			["another typology", "Tipologia B", false],
+			["another typology, the narrow rule first", "Tipologia B", true],
+		])(
+			"blocks creating when two rules reach one unit with %s (W5c)",
+			async (_, second, narrowFirst) => {
+				const { handler, sent } = wizardApi();
+				open(handler);
+				await describeTower("2", "01, 02");
+				await addTypology();
+				await addRule();
+				await user.selectOptions(
+					screen.getByRole("combobox", { name: "Tipologia da regra 2" }),
+					second,
+				);
+				await chooseFinals(narrowFirst ? 1 : 2, "01");
+
+				const alert = await screen.findByRole("alert");
+				expect(
+					within(alert).getByText("Regras em conflito"),
+				).toBeInTheDocument();
+				expect(
+					within(alert).getByText(
+						/Duas regras dão tipologia às mesmas unidades\./,
+					),
+				).toBeInTheDocument();
+				expect(await createButton()).toBeDisabled();
+				await user.click(await createButton());
+				expect(sent).toHaveLength(0);
+
+				await user.click(
+					within(alert).getByRole("button", { name: "Ver regras" }),
+				);
+
+				expect(ruleGroup(1)).toHaveFocus();
+
+				await user.click(
+					screen.getByRole("button", { name: "Tirar a regra 2" }),
+				);
+
+				expect(
+					screen.queryByText("Regras em conflito"),
+				).not.toBeInTheDocument();
+				expect(await createButton()).toBeEnabled();
+			},
+		);
+
+		test("leaves the units in conflict out of the counts by typology (W5c)", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("2", "01, 02");
+			await addTypology();
+			await addRule();
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Tipologia da regra 2" }),
+				"Tipologia B",
+			);
+			await chooseFinals(2, "01");
+
+			expect(
+				await screen.findByText("1 área comum · Tipologia A: 2"),
+			).toBeInTheDocument();
+			expect(screen.queryByText(/ficam sem tipologia/)).not.toBeInTheDocument();
+			expect(within(ruleGroup(1)).getByText("4 unidades")).toBeInTheDocument();
+			expect(within(ruleGroup(2)).getByText("2 unidades")).toBeInTheDocument();
+		});
+
+		test("brings the rules back after a reload with the same finals and floors", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("4", "01, 04");
+			await addTypology();
+			await addRule();
+			await addRule();
+			await chooseFinals(1, "01", "03");
+			await chooseFinals(2, "02");
+			await chooseFloors(2, "2º", "3º");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Tipologia da regra 3" }),
+				"Tipologia B",
+			);
+			await chooseFinals(3, "04");
+			cleanup();
+
+			open(handler);
+
+			expect(
+				await screen.findByText("Rascunho restaurado"),
+			).toBeInTheDocument();
+			expect(finalsButton(1)).toHaveTextContent("01 e 03");
+			expect(finalsButton(2)).toHaveTextContent("02");
+			expect(finalsButton(3)).toHaveTextContent("04");
+			expect(
+				screen.getByRole("combobox", { name: "Do andar da regra 2" }),
+			).toHaveDisplayValue("2º");
+			expect(
+				screen.getByRole("combobox", { name: "Até o andar da regra 2" }),
+			).toHaveDisplayValue("3º");
+			expect(
+				screen.getByRole("combobox", { name: "Tipologia da regra 3" }),
+			).toHaveDisplayValue("Tipologia B");
+		});
+	});
+
 	describe("the floor ranges", () => {
 		async function teamRequest() {
 			await describeTower("10", "01, 02", { first: "2" });
@@ -1876,9 +2303,10 @@ describe("structure wizard", () => {
 	});
 
 	describe("the typologies", () => {
-		test("starts with one typology applied to every final and floor, and says how to use it (W3)", async () => {
+		test("starts with one rule that gives the typology to every unit of the tower, and says how to use it (W3)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
+			await describeTower("3", "01, 02");
 
 			expect(
 				await screen.findByRole("heading", { level: 2, name: "Tipologias" }),
@@ -1891,15 +2319,15 @@ describe("structure wizard", () => {
 				screen.getByRole("button", { name: "Nova tipologia" }),
 			).toBeInTheDocument();
 			const rule = within(ruleGroup(1));
+			expect(rule.getByText("Regra 1 · Tipologia A")).toBeInTheDocument();
+			expect(rule.getByText("6 unidades")).toBeInTheDocument();
+			expect(finalsButton(1)).toHaveTextContent("Todos os finais");
 			expect(
-				rule.getByRole("textbox", { name: "Finais da regra 1" }),
-			).toHaveValue("todos");
+				rule.getByRole("combobox", { name: "Do andar da regra 1" }),
+			).toHaveDisplayValue("Primeiro");
 			expect(
-				rule.getByRole("textbox", { name: "Do andar da regra 1" }),
-			).toHaveValue("");
-			expect(
-				rule.getByRole("textbox", { name: "Até o andar da regra 1" }),
-			).toHaveValue("");
+				rule.getByRole("combobox", { name: "Até o andar da regra 1" }),
+			).toHaveDisplayValue("Último");
 			expect(
 				rule.getByRole("combobox", { name: "Tipologia da regra 1" }),
 			).toHaveDisplayValue("Tipologia A");
@@ -1908,7 +2336,12 @@ describe("structure wizard", () => {
 			).not.toBeInTheDocument();
 			expect(
 				screen.getByText(
-					"Uma obra com todas as unidades iguais tem uma tipologia só, em todos os finais e andares. Unidade sem regra fica sem tipologia, e os cômodos dela se cadastram nela.",
+					"Cada regra dá uma tipologia às unidades dos finais e andares escolhidos. Final que a torre não tem fica de fora, sem erro.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByText(
+					"Unidade sem regra fica sem tipologia, e os cômodos dela se cadastram nela.",
 				),
 			).toBeInTheDocument();
 		});
@@ -1946,13 +2379,18 @@ describe("structure wizard", () => {
 
 			await addTypology();
 			await addRule();
-			await typeInto("Finais da regra 1", "01, 03");
-			await typeInto("Finais da regra 2", "02, 04");
+			await chooseFinals(1, "01", "03");
+			await chooseFinals(2, "02", "04");
 			await user.selectOptions(
 				screen.getByRole("combobox", { name: "Tipologia da regra 2" }),
 				"Tipologia B",
 			);
 
+			expect(finalsButton(1)).toHaveTextContent("01 e 03");
+			expect(finalsButton(2)).toHaveTextContent("02 e 04");
+			expect(
+				within(ruleGroup(2)).getByText("Regra 2 · Tipologia B"),
+			).toBeInTheDocument();
 			expect(
 				await screen.findByText(
 					"1 área comum · Tipologia A: 4 · Tipologia B: 4",
@@ -1977,8 +2415,7 @@ describe("structure wizard", () => {
 			open(handler);
 			await describeTower("4", "01, 02");
 
-			await typeInto("Do andar da regra 1", "2");
-			await typeInto("Até o andar da regra 1", "3");
+			await chooseFloors(1, "2º", "3º");
 
 			expect(
 				await screen.findByText(
@@ -2004,7 +2441,7 @@ describe("structure wizard", () => {
 			open(handler);
 			await describeTower("1", "01, 02");
 
-			await typeInto("Finais da regra 1", "1");
+			await chooseFinals(1, "01");
 
 			expect(
 				await screen.findByText(
@@ -2013,7 +2450,7 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 
 			await addRule();
-			await typeInto("Finais da regra 2", "2");
+			await chooseFinals(2, "02");
 
 			await waitFor(() => {
 				expect(
@@ -2044,7 +2481,7 @@ describe("structure wizard", () => {
 			).not.toBeInTheDocument();
 		});
 
-		test("copies the previous tower's rules to a new tower and offers the tower in each rule (W3)", async () => {
+		test("leaves a new tower without a rule and without a typology, and offers the tower in each rule (W3)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
 			await describeTower("2", "01, 02");
@@ -2058,13 +2495,12 @@ describe("structure wizard", () => {
 					name: "Torre da regra 1",
 				}),
 			).toHaveDisplayValue("Torre A");
+			expect(screen.queryByRole("group", { name: "Regra 2" })).toBeNull();
+			expect(within(ruleGroup(1)).getByText("4 unidades")).toBeInTheDocument();
 			expect(
-				within(ruleGroup(2)).getByRole("combobox", {
-					name: "Torre da regra 2",
-				}),
-			).toHaveDisplayValue("Torre B");
-			expect(
-				await screen.findByText(/^2 áreas comuns · Tipologia A: 8$/),
+				await screen.findByText(
+					/^2 áreas comuns · Tipologia A: 4 · Sem tipologia: 4$/,
+				),
 			).toBeInTheDocument();
 		});
 
@@ -2129,20 +2565,22 @@ describe("structure wizard", () => {
 			expect(sent[1]).toEqual(sent[0]);
 		});
 
-		test("asks for the typology's name and explains finals that are not numbers, and focuses the first (W5)", async () => {
+		test("asks for the typology's name and for a final, and focuses the first (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
 			await describeTower("2", "01, 04");
 			await typeInto("Nome da tipologia", "");
-			await typeInto("Finais da regra 1", "um");
+			await chooseFinals(1, "Todos os finais");
+
+			expect(finalsButton(1)).toHaveTextContent("Nenhum final");
+			expect(
+				within(ruleGroup(1)).getByText("Escolha ao menos um final."),
+			).toBeInTheDocument();
 
 			await user.click(await createButton());
 
 			expect(
 				await screen.findByText("Informe o nome da tipologia."),
-			).toBeInTheDocument();
-			expect(
-				screen.getByText("Use números como 01, 03, ou escreva todos."),
 			).toBeInTheDocument();
 			await waitFor(() => {
 				expect(
@@ -2152,33 +2590,19 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(0);
 		});
 
-		test("refuses a repeated typology name and a rule that ends before it starts (W5)", async () => {
+		test("refuses a repeated typology name (W5)", async () => {
 			const { handler, sent } = wizardApi();
 			open(handler);
 			await describeTower("2", "01, 04");
 			await addTypology();
 			await typeInto("Nome da tipologia", " tipologia  a ", 1);
-			await typeInto("Do andar da regra 1", "5");
-			await typeInto("Até o andar da regra 1", "2");
 
 			await user.click(await createButton());
 
 			expect(
 				await screen.findByText("Esse nome já existe nesta obra."),
 			).toBeInTheDocument();
-			expect(
-				screen.getByText(
-					"O andar final precisa ser igual ou maior que o inicial.",
-				),
-			).toBeInTheDocument();
 			expect(sent).toHaveLength(0);
-
-			await typeInto("Até o andar da regra 1", "7");
-			expect(
-				screen.queryByText(
-					"O andar final precisa ser igual ou maior que o inicial.",
-				),
-			).not.toBeInTheDocument();
 		});
 
 		test("shows the typology names that clash and keeps the draft (TYPOLOGY_NAME_TAKEN)", async () => {
@@ -2851,16 +3275,13 @@ describe("structure wizard", () => {
 				screen.getByRole("heading", { level: 2, name: "Tipologias" }),
 			).toBeInTheDocument();
 			const rule = within(ruleGroup(1));
-			expect(
-				rule.getByRole("combobox", { name: "Tipologia" }),
-			).toHaveDisplayValue("Tipologia A");
-			expect(rule.getByRole("textbox", { name: "Finais" })).toHaveValue(
-				"todos",
-			);
-			expect(rule.getByRole("textbox", { name: "Do andar" })).toHaveValue("");
-			expect(rule.getByRole("textbox", { name: "Até o andar" })).toHaveValue(
-				"",
-			);
+			expect(rule.getByText("Regra 1 · Tipologia A")).toBeInTheDocument();
+			expect(rule.getByText("12 unidades")).toBeInTheDocument();
+			expect(rule.getByText("Tipologia")).toBeInTheDocument();
+			expect(rule.getByText("Finais")).toBeInTheDocument();
+			expect(rule.getByLabelText("Do andar da regra 1")).toBeInTheDocument();
+			expect(rule.getByLabelText("Até o andar da regra 1")).toBeInTheDocument();
+			expect(finalsButton(1)).toHaveTextContent("Todos os finais");
 			expect(
 				screen.getByRole("button", { name: "Continuar · Prévia" }),
 			).toBeInTheDocument();
@@ -2872,7 +3293,7 @@ describe("structure wizard", () => {
 			open(handler);
 			await describeTower("2", "01, 04");
 			await toTypologiesOnPhone();
-			await typeInto("Finais", "01, 03");
+			await chooseFinals(1, "01", "03");
 
 			await user.click(
 				screen.getByRole("button", { name: "Continuar · Prévia" }),
@@ -2889,13 +3310,13 @@ describe("structure wizard", () => {
 			).toBeInTheDocument();
 		});
 
-		test("goes back to the typologies step and focuses a wrong rule field (W5)", async () => {
+		test("goes back to the typologies step and focuses the finals of a rule without one (W5)", async () => {
 			setViewport("phone");
 			const { handler, sent } = wizardApi();
 			open(handler);
 			await describeTower("2", "01, 04");
 			await toTypologiesOnPhone();
-			await typeInto("Finais", "um");
+			await chooseFinals(1, "Todos os finais");
 			await user.click(
 				screen.getByRole("button", { name: "Continuar · Prévia" }),
 			);
@@ -2903,10 +3324,10 @@ describe("structure wizard", () => {
 
 			expect(await screen.findByText("Passo 3 de 4")).toBeInTheDocument();
 			expect(
-				screen.getByText("Use números como 01, 03, ou escreva todos."),
+				screen.getByText("Escolha ao menos um final."),
 			).toBeInTheDocument();
 			await waitFor(() => {
-				expect(screen.getByRole("textbox", { name: "Finais" })).toHaveFocus();
+				expect(finalsButton(1)).toHaveFocus();
 			});
 			expect(sent).toHaveLength(0);
 		});

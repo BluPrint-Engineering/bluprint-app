@@ -1,16 +1,17 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { z } from "zod";
-import type { RuleDraft, TypologyDraft } from "./StructureWizard/typologyRules";
 import {
 	type AreaDraft,
 	type ExtendDraft,
 	type FloorAreaDraft,
 	initialDraft,
 	type RangeDraft,
+	type RuleDraft,
 	restoreWizardDraft,
 	STRUCTURE_DRAFT_VERSION,
 	storeWizardDraft,
 	type TowerDraft,
+	type TypologyDraft,
 	type WizardDraft,
 } from "./StructureWizard/wizardDraft";
 import {
@@ -68,10 +69,10 @@ const fields = {
 	} satisfies Record<keyof TypologyDraft, true>,
 	rule: {
 		key: true,
-		tower: true,
+		towers: true,
 		finals: true,
-		from: true,
-		to: true,
+		fromFloor: true,
+		toFloor: true,
 		typology: true,
 	} satisfies Record<keyof RuleDraft, true>,
 	extend: {
@@ -182,6 +183,31 @@ describe("structure draft storage", () => {
 			expect(readStructureDraft(key)).toBeUndefined();
 			expect(localStorage.getItem(key)).toBeNull();
 		}
+	});
+
+	it("discards a record written before rules held towers by key", () => {
+		const key = structureDraftKey("a", "p");
+		const { rules, ...rest } = storeWizardDraft(initialDraft());
+		localStorage.setItem(
+			key,
+			JSON.stringify({
+				version: 3,
+				draft: {
+					...rest,
+					rules: rules.map(({ key: ruleKey, typology }) => ({
+						key: ruleKey,
+						tower: 0,
+						finals: "todos",
+						from: "",
+						to: "",
+						typology,
+					})),
+				},
+			}),
+		);
+
+		expect(readStructureDraft(key)).toBeUndefined();
+		expect(localStorage.getItem(key)).toBeNull();
 	});
 
 	it("removes other accounts and then the signed-out account", () => {
