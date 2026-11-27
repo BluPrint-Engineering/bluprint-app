@@ -632,6 +632,34 @@ describe("adding floors to a tower (W9)", () => {
 				),
 			).toBeInTheDocument();
 			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue("");
+			expect(
+				screen.getByRole("checkbox", { name: "Hall em cada andar" }),
+			).toBeChecked();
+			expect(
+				screen.getByText(
+					"Um Hall em cada andar da torre. Cada um usa 1 da reserva.",
+				),
+			).toBeInTheDocument();
+			expect(screen.queryByText(/^Repete a escolha/)).not.toBeInTheDocument();
+		});
+
+		test("describes the hall as Montar does when the tower has no numbered floor", async () => {
+			const unnumbered = tower("Torre B", [
+				floor("Térreo", [], ["Hall de entrada"]),
+				floor("Cobertura", [], ["Hall"]),
+			]);
+			const { handler } = scenario({ towerB: unnumbered });
+			open(handler, pathFor(unnumbered.id));
+
+			expect(
+				await screen.findByRole("checkbox", { name: "Hall em cada andar" }),
+			).toBeChecked();
+			expect(
+				screen.getByText(
+					"Um Hall em cada andar da torre. Cada um usa 1 da reserva.",
+				),
+			).toBeInTheDocument();
+			expect(screen.queryByText(/^Repete a escolha/)).not.toBeInTheDocument();
 		});
 
 		test("shows the server's refusal when a name is taken and keeps the draft", async () => {

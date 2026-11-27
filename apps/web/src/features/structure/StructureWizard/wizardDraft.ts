@@ -288,11 +288,11 @@ function hallTypologyOf(
 		: null;
 }
 
-export function startsWithFloorHall(tower: StructureTower): boolean {
-	const top = describeTower(tower).lastFloor;
+export function topFloorHasHall(tower: StructureTower): boolean {
 	return (
-		top === undefined ||
-		top.commonAreas.some((area) => sameLocationName(area.name, FLOOR_HALL))
+		describeTower(tower).lastFloor?.commonAreas.some((area) =>
+			sameLocationName(area.name, FLOOR_HALL),
+		) ?? false
 	);
 }
 
@@ -331,7 +331,7 @@ export function extendedDraft(
 			},
 		];
 	}
-	const hasHall = startsWithFloorHall(tower);
+	const hasHall = now.lastFloor === undefined || topFloorHasHall(tower);
 	const numbering: Numbering = now.lettered ? "letters" : "digits";
 	return {
 		extend: { towerId: tower.id },

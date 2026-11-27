@@ -93,8 +93,8 @@ import {
 	initialDraft,
 	restoreWizardDraft,
 	STRUCTURE_DRAFT_VERSION,
-	startsWithFloorHall,
 	storeWizardDraft,
+	topFloorHasHall,
 	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
@@ -758,7 +758,7 @@ export function StructureWizard({
 				nowLine: towerNowLine(tower, named),
 			})}
 			{...(tower &&
-				startsWithFloorHall(tower) && {
+				topFloorHasHall(tower) && {
 					hallDescription: hallRepeatLine(tower, named),
 				})}
 		/>
