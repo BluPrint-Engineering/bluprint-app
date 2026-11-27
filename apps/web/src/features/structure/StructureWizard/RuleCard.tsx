@@ -137,6 +137,7 @@ function FloorSelect({
 	onChange: (floor: number | null) => void;
 }) {
 	const id = `${rule.key}-${field}`;
+	const held = rule[field];
 	return (
 		<Field>
 			<FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -144,7 +145,7 @@ function FloorSelect({
 				id={id}
 				aria-label={`${label} da regra ${number}`}
 				className={SELECT}
-				value={rule[field] ?? ""}
+				value={held ?? ""}
 				onChange={(event) =>
 					onChange(
 						event.target.value === "" ? null : Number(event.target.value),
@@ -152,6 +153,11 @@ function FloorSelect({
 				}
 			>
 				<option value="">{unbounded}</option>
+				{held !== null && !floors.includes(held) && (
+					<option value={held} disabled>
+						{held}º
+					</option>
+				)}
 				{floors.map((floor) => (
 					<option key={floor} value={floor}>
 						{floor}º

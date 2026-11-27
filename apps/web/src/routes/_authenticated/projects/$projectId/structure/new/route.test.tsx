@@ -1848,6 +1848,26 @@ describe("structure wizard", () => {
 			expect(within(ruleGroup(1)).getByText("22 unidades")).toBeInTheDocument();
 		});
 
+		test("shows a rule's start floor, not to be chosen, while the tower cannot be read", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("20", "01, 02");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"15º",
+			);
+
+			await typeInto("Último andar", "");
+			await user.tab();
+
+			const from = screen.getByRole("combobox", {
+				name: "Do andar da regra 1",
+			});
+			expect(from).toHaveDisplayValue("15º");
+			expect(within(from).getByRole("option", { name: "15º" })).toBeDisabled();
+			expect(within(ruleGroup(1)).getByText("0 unidades")).toBeInTheDocument();
+		});
+
 		test("takes out of a rule the finals and floors the tower it switches to lacks", async () => {
 			const { handler } = wizardApi();
 			open(handler);
