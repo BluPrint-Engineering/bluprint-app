@@ -288,6 +288,14 @@ function hallTypologyOf(
 		: null;
 }
 
+export function startsWithFloorHall(tower: StructureTower): boolean {
+	const top = describeTower(tower).lastFloor;
+	return (
+		top === undefined ||
+		top.commonAreas.some((area) => sameLocationName(area.name, FLOOR_HALL))
+	);
+}
+
 export function extendedDraft(
 	tower: StructureTower,
 	existingTypes: Typology[],
@@ -323,11 +331,7 @@ export function extendedDraft(
 			},
 		];
 	}
-	const hasHall =
-		now.lastFloor === undefined ||
-		now.lastFloor.commonAreas.some((area) =>
-			sameLocationName(area.name, FLOOR_HALL),
-		);
+	const hasHall = startsWithFloorHall(tower);
 	const numbering: Numbering = now.lettered ? "letters" : "digits";
 	return {
 		extend: { towerId: tower.id },

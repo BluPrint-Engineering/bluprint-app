@@ -596,6 +596,25 @@ describe("adding floors to a tower (W9)", () => {
 			expect(screen.getByRole("textbox", { name: "Do andar" })).toHaveFocus();
 		});
 
+		test("describes the hall as Montar does when the tower's highest floor has none", async () => {
+			const withoutHall = tower("Torre B", [
+				floor("1º andar", [{ name: "101", typology: "Tipologia A" }]),
+				floor("2º andar", [{ name: "201", typology: "Tipologia A" }]),
+			]);
+			const { handler } = scenario({ towerB: withoutHall });
+			open(handler, pathFor(withoutHall.id));
+
+			expect(
+				await screen.findByRole("checkbox", { name: "Hall em cada andar" }),
+			).not.toBeChecked();
+			expect(
+				screen.getByText(
+					"Um Hall em cada andar da torre. Cada um usa 1 da reserva.",
+				),
+			).toBeInTheDocument();
+			expect(screen.queryByText(/^Repete a escolha/)).not.toBeInTheDocument();
+		});
+
 		test("starts a tower without floors at the 1º", async () => {
 			const empty = tower("Torre B");
 			const { handler } = scenario({ towerB: empty });

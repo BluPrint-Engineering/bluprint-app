@@ -61,14 +61,7 @@ export function UnusableAttemptGate({
 			const start = towerId
 				? {
 						...initialDraft(),
-						extend: {
-							towerId,
-							towerName: "",
-							named: false,
-							takenFloors: [],
-							takenUnits: [],
-							lead: "",
-						},
+						extend: { towerId },
 					}
 				: undefined;
 			const draft = restoreWizardDraft(stored.draft, start);

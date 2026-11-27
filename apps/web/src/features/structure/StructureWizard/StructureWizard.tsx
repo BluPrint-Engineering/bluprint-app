@@ -93,6 +93,7 @@ import {
 	initialDraft,
 	restoreWizardDraft,
 	STRUCTURE_DRAFT_VERSION,
+	startsWithFloorHall,
 	storeWizardDraft,
 	typologyNameTakenErrors,
 	validateDraft,
@@ -755,8 +756,11 @@ export function StructureWizard({
 			existing={existing}
 			{...(tower && {
 				nowLine: towerNowLine(tower, named),
-				hallDescription: hallRepeatLine(tower, named),
 			})}
+			{...(tower &&
+				startsWithFloorHall(tower) && {
+					hallDescription: hallRepeatLine(tower, named),
+				})}
 		/>
 	);
 	const areasStep = (
