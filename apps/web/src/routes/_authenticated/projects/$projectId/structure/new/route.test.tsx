@@ -519,6 +519,9 @@ describe("structure wizard", () => {
 			expect(
 				await screen.findByText("Este rascunho mudou em outra aba"),
 			).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			).toBeDisabled();
 
 			succeed();
 
@@ -571,6 +574,39 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(1);
 		});
 
+		test("offers the latest version once a check that finds nothing returns in a stale tab", async () => {
+			let release: () => void = () => {};
+			const { handler, sent } = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+				lookup: (served) =>
+					new Promise((resolve) => {
+						release = () => resolve(served());
+					}),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+			await screen.findByRole("button", { name: "Conferindo…" });
+			changeInOtherTab();
+			await screen.findByText("Este rascunho mudou em outra aba");
+			expect(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			).toBeDisabled();
+
+			release();
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", {
+						name: "Carregar a versão mais recente",
+					}),
+				).toBeEnabled(),
+			);
+			expect(sent).toHaveLength(1);
+		});
+
 		test("finishes a creation that the check finds after another tab changed the draft", async () => {
 			let release: () => void = () => {};
 			const { handler, sent, created } = wizardApi({
@@ -588,6 +624,9 @@ describe("structure wizard", () => {
 			await screen.findByRole("button", { name: "Conferindo…" });
 			changeInOtherTab();
 			await screen.findByText("Este rascunho mudou em outra aba");
+			expect(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			).toBeDisabled();
 
 			release();
 

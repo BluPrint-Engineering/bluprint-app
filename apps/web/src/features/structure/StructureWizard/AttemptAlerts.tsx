@@ -59,13 +59,24 @@ export function UncertainAlert({
 	);
 }
 
-export function StaleDraftAlert({ onLoad }: { onLoad: () => void }) {
+export function StaleDraftAlert({
+	waiting,
+	onLoad,
+}: {
+	waiting: boolean;
+	onLoad: () => void;
+}) {
 	return (
 		<Alert>
 			<AlertTitle>Este rascunho mudou em outra aba</AlertTitle>
 			<AlertDescription>
 				<p>Continue a partir da versão mais recente para não perder nada.</p>
-				<Button className="mt-(--space-2)" type="button" onClick={onLoad}>
+				<Button
+					className="mt-(--space-2)"
+					type="button"
+					disabled={waiting}
+					onClick={onLoad}
+				>
 					Carregar a versão mais recente
 				</Button>
 			</AlertDescription>

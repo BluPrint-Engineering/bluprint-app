@@ -78,7 +78,10 @@ export function UnusableAttemptGate({
 			);
 			return;
 		}
-		if (staleRef.current) return;
+		if (staleRef.current) {
+			setChecking(undefined);
+			return;
+		}
 		if (outcome === "missing") {
 			localStorage.removeItem(storageKey);
 			onMissing();
@@ -92,7 +95,10 @@ export function UnusableAttemptGate({
 		started.current = true;
 		void check("open");
 	});
-	if (stale) return <StaleDraftAlert onLoad={onReopen} />;
+	if (stale)
+		return (
+			<StaleDraftAlert waiting={checking !== undefined} onLoad={onReopen} />
+		);
 	if (checking === "open")
 		return <CheckingStatus extending={towerId !== undefined} />;
 	return (

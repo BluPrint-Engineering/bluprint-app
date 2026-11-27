@@ -500,7 +500,10 @@ export function StructureWizard({
 			success(buildPlan(draft, idFor).counts);
 			return;
 		}
-		if (staleRef.current) return;
+		if (staleRef.current) {
+			setSubmission("uncertain");
+			return;
+		}
 		setOpeningCheck(false);
 		if (outcome === "unknown") {
 			setConnectionMessage(action === "edit");
@@ -520,7 +523,10 @@ export function StructureWizard({
 					retry: false,
 				}),
 			]);
-			if (staleRef.current) return;
+			if (staleRef.current) {
+				setSubmission("uncertain");
+				return;
+			}
 			if (freshProject.status === "delivered") {
 				localStorage.removeItem(storageKey);
 				bypassBlock.current = true;
@@ -891,7 +897,12 @@ export function StructureWizard({
 					</AlertDescription>
 				</Alert>
 			)}
-			{stale && <StaleDraftAlert onLoad={onReopen} />}
+			{stale && (
+				<StaleDraftAlert
+					waiting={submission === "sending" || submission === "checking"}
+					onLoad={onReopen}
+				/>
+			)}
 			{!stale && openingCheck && submission === "checking" && (
 				<CheckingStatus extending={extend !== undefined} />
 			)}
