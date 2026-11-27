@@ -520,7 +520,11 @@ export function withCleanRules(draft: WizardDraft): WizardDraft {
 }
 
 const shapeKey = (draft: WizardDraft) =>
-	JSON.stringify([draft.towers.map(({ key }) => key), towerShapes(draft)]);
+	JSON.stringify([
+		draft.towers.map(({ key }) => key),
+		draft.rules.map(({ towers }) => towers),
+		towerShapes(draft),
+	]);
 
 export function withEditedRules(
 	before: WizardDraft,

@@ -1810,6 +1810,8 @@ describe("structure wizard", () => {
 			expect(finalsButton(1)).toHaveTextContent("03 e 04");
 
 			await typeInto("Finais", "01, 02");
+			expect(finalsButton(1)).toHaveTextContent("03 e 04");
+			await user.tab();
 
 			expect(finalsButton(1)).toHaveTextContent("Nenhum final");
 			expect(
@@ -1826,6 +1828,67 @@ describe("structure wizard", () => {
 			expect(
 				screen.queryByText("Escolha ao menos um final."),
 			).not.toBeInTheDocument();
+		});
+
+		test("keeps a rule's start floor while the last floor is typed again", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("20", "01, 02");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"15º",
+			);
+
+			await typeInto("Último andar", "25");
+			await user.tab();
+
+			expect(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+			).toHaveDisplayValue("15º");
+			expect(within(ruleGroup(1)).getByText("22 unidades")).toBeInTheDocument();
+		});
+
+		test("takes out of a rule the finals and floors the tower it switches to lacks", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("20", "01, 04");
+			await user.click(
+				await screen.findByRole("button", { name: "Uma torre a mais" }),
+			);
+			await describeTower("10", "01, 02", { at: 1 });
+			await user.tab();
+			await chooseFinals(1, "03", "04");
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+				"15º",
+			);
+			expect(finalsButton(1)).toHaveTextContent("03 e 04");
+
+			await user.selectOptions(
+				screen.getByRole("combobox", { name: "Torre da regra 1" }),
+				"Torre B",
+			);
+
+			expect(finalsButton(1)).toHaveTextContent("Nenhum final");
+			expect(
+				within(ruleGroup(1)).getByText("Escolha ao menos um final."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("combobox", { name: "Do andar da regra 1" }),
+			).toHaveDisplayValue("Primeiro");
+			expect(optionsOf("Do andar da regra 1")).toEqual([
+				"Primeiro",
+				"1º",
+				"2º",
+				"3º",
+				"4º",
+				"5º",
+				"6º",
+				"7º",
+				"8º",
+				"9º",
+				"10º",
+			]);
 		});
 
 		test("takes a removed tower out of the rules and blocks the rule left without a tower (W5c)", async () => {

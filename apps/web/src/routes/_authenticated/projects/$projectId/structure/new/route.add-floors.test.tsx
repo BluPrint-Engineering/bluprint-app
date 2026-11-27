@@ -110,13 +110,6 @@ async function typeInto(name: string, value: string) {
 	if (value) await user.type(field, value);
 }
 
-async function typeFinals(value: string) {
-	const field = await screen.findByRole("textbox", { name: "Finais" });
-	await user.clear(field);
-	await user.click(field);
-	await user.paste(value);
-}
-
 const dropRule = (number: number) =>
 	user.click(screen.getByRole("button", { name: `Tirar a regra ${number}` }));
 
@@ -361,11 +354,29 @@ describe("adding floors to a tower (W9)", () => {
 			).not.toBeInTheDocument();
 		});
 
+		test("keeps the mirrored finals of the rules while the finals are typed", async () => {
+			const { handler, towerB } = scenario({ remaining: 12 });
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "12");
+			await typeInto("Finais", "01, 04");
+			await user.tab();
+
+			expect(
+				screen.getByRole("button", { name: "Finais da regra 1" }),
+			).toHaveTextContent("01 e 03");
+			expect(
+				screen.getByRole("button", { name: "Finais da regra 2" }),
+			).toHaveTextContent("02 e 04");
+			expect(
+				screen.queryByText("Escolha ao menos um final."),
+			).not.toBeInTheDocument();
+		});
+
 		test("counts what the new floors use and what is left, marking the new floors in the preview (W9)", async () => {
 			const { handler, towerB } = scenario({ remaining: 12 });
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 
 			expect(
 				await screen.findByText("Torre B ganha 2 andares e 8 unidades"),
@@ -410,7 +421,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 
 			expect(
 				await screen.findByText("Faltam 4 unidades na reserva"),
@@ -434,7 +445,7 @@ describe("adding floors to a tower (W9)", () => {
 			const { handler, towerB, created } = scenario({ remaining: 12 });
 			const { router } = open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
@@ -485,7 +496,7 @@ describe("adding floors to a tower (W9)", () => {
 			const { handler, towerB, created } = scenario({ remaining: 12 });
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01");
+			await typeInto("Finais", "01");
 			await dropRule(2);
 			expect(
 				await screen.findByText(
@@ -525,6 +536,7 @@ describe("adding floors to a tower (W9)", () => {
 				await screen.findByRole("checkbox", { name: "Andares sem unidades" }),
 			);
 			await typeInto("Último andar", "11");
+			await user.tab();
 			expect(screen.getByText("0 unidades · 1 andar")).toBeInTheDocument();
 			expect(screen.getAllByText("Escolha ao menos um final.")).toHaveLength(2);
 			await dropRule(1);
@@ -547,8 +559,7 @@ describe("adding floors to a tower (W9)", () => {
 			const { handler, towerB, created } = scenario({ remaining: 20 });
 			const { queryClient } = open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01");
-			await dropRule(2);
+			await typeInto("Finais", "01");
 			towerB.floors.push(floor("11º andar", ["1101"], ["Hall"], 11));
 			await queryClient.invalidateQueries({ queryKey: ["structure", OBRA.id] });
 
@@ -564,8 +575,7 @@ describe("adding floors to a tower (W9)", () => {
 			open(handler, pathFor(towerB.id));
 			await typeInto("Do andar", "9");
 			await typeInto("Último andar", "12");
-			await typeFinals("01");
-			await dropRule(2);
+			await typeInto("Finais", "01");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 4 andares" }),
 			);
@@ -603,7 +613,7 @@ describe("adding floors to a tower (W9)", () => {
 				await screen.findByRole("textbox", { name: "Do andar" }),
 			).toHaveValue("13");
 			await typeInto("Último andar", "14");
-			await typeFinals("01");
+			await typeInto("Finais", "01");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
@@ -699,7 +709,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01");
+			await typeInto("Finais", "01");
 			await dropRule(2);
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
@@ -733,7 +743,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(refused.handler, pathFor(refused.towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 			await user.click(
 				await screen.findByRole("button", { name: "Adicionar 2 andares" }),
 			);
@@ -773,8 +783,7 @@ describe("adding floors to a tower (W9)", () => {
 				});
 				open(handler, pathFor(towerB.id));
 				await typeInto("Último andar", "12");
-				await typeFinals("01");
-				await dropRule(2);
+				await typeInto("Finais", "01");
 
 				expect(await screen.findByText(line)).toBeInTheDocument();
 				expect(
@@ -800,8 +809,7 @@ describe("adding floors to a tower (W9)", () => {
 			const { handler, towerB } = scenario({ remaining: 3 });
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01");
-			await dropRule(2);
+			await typeInto("Finais", "01");
 
 			const alert = await screen.findByRole("alert");
 			expect(alert).toHaveTextContent("Falta 1 unidade na reserva");
@@ -833,7 +841,7 @@ describe("adding floors to a tower (W9)", () => {
 				screen.getByRole("link", { name: "Casa Moinhos" }),
 			).toHaveAttribute("href", `/projects/${OBRA.id}`);
 			await typeInto("Último andar", "11");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 			expect(
 				await screen.findByText("A obra ganha 1 andar e 4 unidades"),
 			).toBeInTheDocument();
@@ -940,7 +948,7 @@ describe("adding floors to a tower (W9)", () => {
 				screen.getByRole("heading", { level: 2, name: "Novos andares" }),
 			).toBeInTheDocument();
 			await typeInto("Último andar", "12");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 			await toPreviewOnPhone();
 
 			expect(screen.getByText("Passo 3 de 3")).toBeInTheDocument();
@@ -970,7 +978,7 @@ describe("adding floors to a tower (W9)", () => {
 			});
 			open(handler, pathFor(towerB.id));
 			await typeInto("Último andar", "12");
-			await typeFinals("01, 04");
+			await typeInto("Finais", "01, 04");
 			await toPreviewOnPhone();
 
 			const alert = await screen.findByText("Faltam 4 unidades na reserva");

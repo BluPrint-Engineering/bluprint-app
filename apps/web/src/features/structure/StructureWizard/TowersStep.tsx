@@ -45,6 +45,7 @@ import {
 type Edit = (
 	update: (draft: WizardDraft) => WizardDraft,
 	touched?: string,
+	options?: { typing: boolean },
 ) => void;
 
 function listed(items: string[]): string {
@@ -114,6 +115,7 @@ function RangeInput({
 	help,
 	numeric,
 	onChange,
+	onBlur,
 	className,
 }: {
 	id: string;
@@ -125,6 +127,7 @@ function RangeInput({
 	help?: string;
 	numeric: boolean;
 	onChange: (value: string) => void;
+	onBlur: () => void;
 	className?: string;
 }) {
 	const invalid = error !== undefined || describedBy !== undefined;
@@ -145,6 +148,7 @@ function RangeInput({
 				}
 				value={value}
 				onChange={(event) => onChange(event.target.value)}
+				onBlur={onBlur}
 			/>
 			{error !== undefined && (
 				<FieldError id={`${id}-error`} className="flex gap-(--space-1)">
@@ -166,6 +170,7 @@ function RangeCard({
 	extending,
 	errors,
 	edit,
+	onCommit,
 }: {
 	range: RangeDraft;
 	ranges: RangeDraft[];
@@ -175,11 +180,13 @@ function RangeCard({
 	extending: boolean;
 	errors: DraftErrors;
 	edit: Edit;
+	onCommit: () => void;
 }) {
 	const set = (field: RangeField, value: string) =>
 		edit(
 			(draft) => withRange(draft, tower, range.key, { [field]: value }),
 			rangeFieldId(range.key, field),
+			{ typing: true },
 		);
 	const errorOf = (field: RangeField) => errors[rangeFieldId(range.key, field)];
 	const overlap = rangeOverlap(ranges, number - 1);
@@ -202,6 +209,7 @@ function RangeCard({
 				describedBy={overlap === undefined ? undefined : overlapId}
 				numeric
 				onChange={(value) => set("first", value)}
+				onBlur={onCommit}
 			/>
 			<RangeInput
 				id={rangeFieldId(range.key, "last")}
@@ -210,6 +218,7 @@ function RangeCard({
 				error={errorOf("last")}
 				numeric
 				onChange={(value) => set("last", value)}
+				onBlur={onCommit}
 			/>
 			{!range.noUnits && (
 				<RangeInput
@@ -221,6 +230,7 @@ function RangeCard({
 					help="Separe os finais com vírgula e espaço."
 					numeric={false}
 					onChange={(value) => set("finals", value)}
+					onBlur={onCommit}
 					className="col-span-2 md:col-span-1"
 				/>
 			)}
@@ -295,6 +305,7 @@ function TowerCard({
 	edit,
 	commonTypes,
 	onCreateType,
+	onCommit,
 	nowLine,
 	hallDescription,
 }: {
@@ -309,6 +320,7 @@ function TowerCard({
 		select: HTMLSelectElement,
 		apply: (draft: WizardDraft, key: string) => WizardDraft,
 	) => void;
+	onCommit: () => void;
 	nowLine?: string;
 	hallDescription?: string;
 }) {
@@ -337,6 +349,7 @@ function TowerCard({
 			extending={extending}
 			errors={errors}
 			edit={edit}
+			onCommit={onCommit}
 		/>
 	));
 
@@ -501,12 +514,14 @@ export function TowersStep({
 	edit,
 	desktop,
 	existing,
+	onCommit,
 	nowLine,
 	hallDescription,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
 	edit: Edit;
+	onCommit: () => void;
 	desktop: boolean;
 	existing: readonly Typology[];
 	nowLine?: string;
@@ -557,6 +572,7 @@ export function TowersStep({
 						edit={edit}
 						commonTypes={commonTypes}
 						onCreateType={createType}
+						onCommit={onCommit}
 						{...(nowLine !== undefined && { nowLine })}
 						{...(hallDescription !== undefined && { hallDescription })}
 					/>
@@ -623,6 +639,7 @@ export function TowersStep({
 						edit={edit}
 						commonTypes={commonTypes}
 						onCreateType={createType}
+						onCommit={onCommit}
 					/>
 				))}
 				<div className="grid gap-(--space-2)">

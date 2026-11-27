@@ -99,6 +99,7 @@ import {
 	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
+	withCleanRules,
 	withEditedRules,
 } from "./wizardDraft";
 
@@ -438,11 +439,13 @@ export function StructureWizard({
 	function edit(
 		update: (draft: WizardDraft) => WizardDraft,
 		touched?: string,
+		{ typing }: { typing: boolean } = { typing: false },
 	): boolean {
 		if (submission !== "editing" || staleRef.current) return false;
 		ids.current = new Map();
 		create.reset();
-		const next = withEditedRules(draft, update(draft));
+		const edited = update(draft);
+		const next = typing ? edited : withEditedRules(draft, edited);
 		setDraft(next);
 		writeStructureDraft(storageKey, {
 			version: STRUCTURE_DRAFT_VERSION,
@@ -454,6 +457,12 @@ export function StructureWizard({
 			stillFound(current, validateDraft(next, facts, existingNames), touched),
 		);
 		return true;
+	}
+
+	function commitRules() {
+		const cleaned = withCleanRules(draft);
+		if (JSON.stringify(cleaned.rules) !== JSON.stringify(draft.rules))
+			edit(() => cleaned);
 	}
 
 	function showRules() {
@@ -776,6 +785,7 @@ export function StructureWizard({
 			draft={draft}
 			errors={errors}
 			edit={edit}
+			onCommit={commitRules}
 			desktop={desktop}
 			existing={existing}
 			{...(tower && {

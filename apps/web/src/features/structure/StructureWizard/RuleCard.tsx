@@ -137,11 +137,6 @@ function FloorSelect({
 	onChange: (floor: number | null) => void;
 }) {
 	const id = `${rule.key}-${field}`;
-	const chosen = rule[field];
-	const listed =
-		chosen === null || floors.includes(chosen)
-			? floors
-			: [...floors, chosen].sort((a, b) => a - b);
 	return (
 		<Field>
 			<FieldLabel htmlFor={id}>{label}</FieldLabel>
@@ -157,7 +152,7 @@ function FloorSelect({
 				}
 			>
 				<option value="">{unbounded}</option>
-				{listed.map((floor) => (
+				{floors.map((floor) => (
 					<option key={floor} value={floor}>
 						{floor}º
 					</option>
