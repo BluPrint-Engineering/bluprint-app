@@ -6,7 +6,9 @@ import {
 	sameRoomName,
 	type Typology,
 	type TypologyLocationType,
+	typologyLocationTypes,
 } from "@bluprint/shared";
+import { z } from "zod";
 import {
 	convertFinals,
 	floorNumber,
@@ -75,6 +77,103 @@ export interface WizardDraft {
 	rules: RuleDraft[];
 }
 
+export const STRUCTURE_DRAFT_VERSION = 2;
+
+const typologyKeySchema = z.string().nullable();
+const rangeSchema = z.strictObject({
+	key: z.string(),
+	first: z.string(),
+	last: z.string(),
+	finals: z.string(),
+	noUnits: z.boolean(),
+});
+const towerSchema = z.strictObject({
+	key: z.string(),
+	name: z.string(),
+	ranges: z.array(rangeSchema).min(1),
+	ground: z.boolean(),
+	hall: z.boolean(),
+	entranceTypology: typologyKeySchema,
+	hallTypology: typologyKeySchema,
+});
+const areaSchema = z.strictObject({
+	name: z.string(),
+	typology: typologyKeySchema,
+});
+const floorAreaSchema = z.strictObject({
+	key: z.string(),
+	tower: z.number().int(),
+	floor: z.string(),
+	name: z.string(),
+	typology: typologyKeySchema,
+});
+const typologySchema = z.strictObject({
+	key: z.string(),
+	name: z.string(),
+	rooms: z.array(z.string()),
+	locationType: z.enum(typologyLocationTypes),
+});
+const ruleSchema = z.strictObject({
+	key: z.string(),
+	tower: z.number().int(),
+	finals: z.string(),
+	from: z.string(),
+	to: z.string(),
+	typology: z.string(),
+});
+export const storedWizardDraftSchema = z.strictObject({
+	towers: z.array(towerSchema).min(1),
+	numbering: z.enum(["digits", "letters"]),
+	projectAreas: z.array(areaSchema),
+	towerAreas: z.array(areaSchema),
+	floorAreas: z.array(floorAreaSchema),
+	typologies: z.array(typologySchema),
+	rules: z.array(ruleSchema),
+});
+export type StoredWizardDraft = z.infer<typeof storedWizardDraftSchema>;
+
+export function storeWizardDraft(draft: WizardDraft): StoredWizardDraft {
+	return {
+		towers: draft.towers.map((tower) => ({
+			...tower,
+			name: draft.extend ? "" : tower.name,
+		})),
+		numbering: draft.numbering,
+		projectAreas: draft.projectAreas,
+		towerAreas: draft.towerAreas,
+		floorAreas: draft.floorAreas,
+		typologies: draft.typologies,
+		rules: draft.rules,
+	};
+}
+
+export function restoreWizardDraft(
+	stored: StoredWizardDraft,
+	start?: WizardDraft,
+): WizardDraft {
+	const towers = start?.extend
+		? stored.towers.map((tower) => ({
+				...tower,
+				name: start.extend?.towerName ?? "",
+			}))
+		: stored.towers;
+	towerKeys = Math.max(towerKeys, highestKey(towers, TOWER_KEY));
+	rangeKeys = Math.max(
+		rangeKeys,
+		highestKey(
+			towers.flatMap((tower) => tower.ranges),
+			RANGE_KEY,
+		),
+	);
+	typeKeys = Math.max(typeKeys, highestKey(stored.typologies, TYPOLOGY_KEY));
+	ruleKeys = Math.max(ruleKeys, highestKey(stored.rules, RULE_KEY));
+	return {
+		...stored,
+		towers,
+		...(start?.extend ? { extend: start.extend } : {}),
+	};
+}
+
 export const SINGLE_TOWER_NAME = "Torre A";
 export const FLOOR_HALL = "Hall";
 
@@ -113,237 +212,8 @@ function highestKey(items: { key: string }[], prefix: string): number {
 
 export const FIRST_TYPOLOGY_NAME = "Tipologia A";
 
-function record(value: unknown): Record<string, unknown> | undefined {
-	if (typeof value !== "object" || value === null || Array.isArray(value)) {
-		return undefined;
-	}
-	const entries = Object.entries(value);
-	return Object.fromEntries(entries);
-}
-
-function strings(value: unknown): string[] | undefined {
-	return Array.isArray(value) && value.every((item) => typeof item === "string")
-		? value
-		: undefined;
-}
-
-function optionalKey(value: unknown): string | null | undefined {
-	if (value === undefined || value === null) return null;
-	return typeof value === "string" ? value : undefined;
-}
-
-function readAreas(value: unknown): AreaDraft[] | undefined {
-	if (!Array.isArray(value)) return undefined;
-	const areas: AreaDraft[] = [];
-	for (const item of value) {
-		if (typeof item === "string") {
-			areas.push({ name: item, typology: null });
-			continue;
-		}
-		const area = record(item);
-		const typology = area && optionalKey(area.typology);
-		if (!area || typeof area.name !== "string" || typology === undefined) {
-			return undefined;
-		}
-		areas.push({ name: area.name, typology });
-	}
-	return areas;
-}
-
 export function typologyLimitReached(draft: WizardDraft): boolean {
 	return draft.typologies.length >= MAX_TYPOLOGIES_PER_REQUEST;
-}
-
-export function readWizardDraft(value: unknown): WizardDraft | undefined {
-	const draft = record(value);
-	if (!draft) return undefined;
-	if (draft.numbering !== "digits" && draft.numbering !== "letters") {
-		return undefined;
-	}
-	const projectAreas = readAreas(draft.projectAreas);
-	const towerAreas = readAreas(draft.towerAreas);
-	if (!projectAreas || !towerAreas || !Array.isArray(draft.towers)) {
-		return undefined;
-	}
-	const towers: TowerDraft[] = [];
-	for (const item of draft.towers) {
-		const tower = record(item);
-		const ranges = tower && readRanges(tower.ranges);
-		const entranceTypology = tower && optionalKey(tower.entranceTypology);
-		const hallTypology = tower && optionalKey(tower.hallTypology);
-		if (
-			!tower ||
-			!ranges ||
-			entranceTypology === undefined ||
-			hallTypology === undefined ||
-			typeof tower.key !== "string" ||
-			typeof tower.name !== "string" ||
-			typeof tower.ground !== "boolean" ||
-			typeof tower.hall !== "boolean"
-		) {
-			return undefined;
-		}
-		towers.push({
-			key: tower.key,
-			name: tower.name,
-			ranges,
-			ground: tower.ground,
-			hall: tower.hall,
-			entranceTypology,
-			hallTypology,
-		});
-	}
-	if (!Array.isArray(draft.floorAreas) || !Array.isArray(draft.typologies)) {
-		return undefined;
-	}
-	if (!Array.isArray(draft.rules)) return undefined;
-	const floorAreas: FloorAreaDraft[] = [];
-	for (const item of draft.floorAreas) {
-		const area = record(item);
-		const typology = area && optionalKey(area.typology);
-		if (
-			!area ||
-			typology === undefined ||
-			typeof area.key !== "string" ||
-			typeof area.tower !== "number" ||
-			typeof area.floor !== "string" ||
-			typeof area.name !== "string"
-		) {
-			return undefined;
-		}
-		floorAreas.push({
-			key: area.key,
-			tower: area.tower,
-			floor: area.floor,
-			name: area.name,
-			typology,
-		});
-	}
-	const typologies: TypologyDraft[] = [];
-	for (const item of draft.typologies) {
-		const typology = record(item);
-		if (typology?.existing === true) continue;
-		const rooms = typology && strings(typology.rooms);
-		const locationType =
-			typology?.locationType === "common_area" ||
-			typology?.locationType === "unit"
-				? typology.locationType
-				: typology?.locationType === undefined
-					? "unit"
-					: undefined;
-		if (
-			!typology ||
-			!rooms ||
-			!locationType ||
-			typeof typology.key !== "string" ||
-			typeof typology.name !== "string"
-		) {
-			return undefined;
-		}
-		typologies.push({
-			key: typology.key,
-			name: typology.name,
-			rooms,
-			locationType,
-		});
-	}
-	const rules: RuleDraft[] = [];
-	for (const item of draft.rules) {
-		const rule = record(item);
-		if (
-			!rule ||
-			typeof rule.key !== "string" ||
-			typeof rule.tower !== "number" ||
-			typeof rule.finals !== "string" ||
-			typeof rule.from !== "string" ||
-			typeof rule.to !== "string" ||
-			typeof rule.typology !== "string"
-		) {
-			return undefined;
-		}
-		rules.push({
-			key: rule.key,
-			tower: rule.tower,
-			finals: rule.finals,
-			from: rule.from,
-			to: rule.to,
-			typology: rule.typology,
-		});
-	}
-	const extend = readExtend(draft.extend);
-	if (draft.extend !== undefined && !extend) return undefined;
-	towerKeys = Math.max(towerKeys, highestKey(towers, TOWER_KEY));
-	rangeKeys = Math.max(
-		rangeKeys,
-		highestKey(
-			towers.flatMap((tower) => tower.ranges),
-			RANGE_KEY,
-		),
-	);
-	typeKeys = Math.max(typeKeys, highestKey(typologies, TYPOLOGY_KEY));
-	ruleKeys = Math.max(ruleKeys, highestKey(rules, RULE_KEY));
-	return {
-		...(extend ? { extend } : {}),
-		numbering: draft.numbering,
-		towers,
-		projectAreas,
-		towerAreas,
-		floorAreas,
-		typologies,
-		rules,
-	};
-}
-
-function readRanges(value: unknown): RangeDraft[] | undefined {
-	if (!Array.isArray(value) || value.length === 0) return undefined;
-	const ranges: RangeDraft[] = [];
-	for (const item of value) {
-		const range = record(item);
-		if (
-			!range ||
-			typeof range.key !== "string" ||
-			typeof range.first !== "string" ||
-			typeof range.last !== "string" ||
-			typeof range.finals !== "string" ||
-			typeof range.noUnits !== "boolean"
-		) {
-			return undefined;
-		}
-		ranges.push({
-			key: range.key,
-			first: range.first,
-			last: range.last,
-			finals: range.finals,
-			noUnits: range.noUnits,
-		});
-	}
-	return ranges;
-}
-
-function readExtend(value: unknown): ExtendDraft | undefined {
-	const extend = record(value);
-	if (!extend) return undefined;
-	const takenFloors = extend.takenFloors;
-	const takenUnits = strings(extend.takenUnits);
-	if (
-		typeof extend.towerId !== "string" ||
-		typeof extend.towerName !== "string" ||
-		typeof extend.named !== "boolean" ||
-		typeof extend.lead !== "string" ||
-		!takenUnits ||
-		!Array.isArray(takenFloors) ||
-		!takenFloors.every((floor) => typeof floor === "number")
-	) {
-		return undefined;
-	}
-	return {
-		towerId: extend.towerId,
-		towerName: extend.towerName,
-		named: extend.named,
-		takenFloors,
-		takenUnits,
-		lead: extend.lead,
-	};
 }
 
 export function initialDraft(): WizardDraft {

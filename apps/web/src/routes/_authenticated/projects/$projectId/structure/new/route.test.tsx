@@ -10,6 +10,7 @@ import {
 } from "@bluprint/shared";
 import {
 	act,
+	cleanup,
 	fireEvent,
 	screen,
 	waitFor,
@@ -19,6 +20,11 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { z } from "zod";
+import {
+	readStructureDraft,
+	structureDraftKey,
+	writeStructureDraft,
+} from "@/features/structure";
 import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
 import {
@@ -62,6 +68,8 @@ function wizardApi(
 		structure?: Structure;
 		units?: ProjectUnitsBalance;
 		unitsResponse?: () => Promise<Response> | Response;
+		createAndLoseResponse?: boolean;
+		lookup?: (served: () => Promise<Response>) => Promise<Response> | Response;
 		create?: (
 			body: CreateStructure,
 			attempt: number,
@@ -71,10 +79,21 @@ function wizardApi(
 	let summary = options.summary ?? OBRA;
 	let structure = options.structure ?? emptyStructure;
 	const sent: CreateStructure[] = [];
+	const created: CreateStructure[] = [];
 	const unitsReads: number[] = [];
 	let units = options.units ?? balance(150);
 	const handler: ApiHandler = combine(
 		(url, init) => {
+			if (
+				options.lookup &&
+				url.pathname.startsWith(`/api/projects/${summary.id}/locations/`) &&
+				(init?.method ?? "GET") === "GET"
+			)
+				return options.lookup(async () => {
+					const answered = await structureApi(summary.id, structure)(url, init);
+					if (!answered) throw new Error("the lookup was not served");
+					return answered;
+				});
 			if (url.pathname === "/api/organization/units") {
 				return json({
 					contracted: 500,
@@ -105,6 +124,13 @@ function wizardApi(
 			) {
 				const body = JSON.parse(String(init.body)) as CreateStructure;
 				sent.push(body);
+				if (options.createAndLoseResponse) {
+					const first = body.locations[0];
+					if (!first) throw new Error("missing tower");
+					structure = structureOf([{ ...tower("Torre A"), id: first.id }]);
+					created.push(body);
+					return Promise.reject(new TypeError("connection lost"));
+				}
 				if (options.create) return options.create(body, sent.length);
 				structure = structureOf([tower("Torre A")]);
 				return json({ counts: countsOf(body) }, 201);
@@ -116,9 +142,13 @@ function wizardApi(
 	return {
 		handler,
 		sent,
+		created,
 		unitsReads,
 		setUnits(next: ProjectUnitsBalance) {
 			units = next;
+		},
+		setStructure(next: Structure) {
+			structure = next;
 		},
 	};
 }
@@ -218,13 +248,639 @@ async function addRule() {
 	await user.click(screen.getByRole("button", { name: "Regra" }));
 }
 
+function changeInOtherTab() {
+	const key = structureDraftKey(signedIn.user.id, OBRA.id);
+	const stored = readStructureDraft(key);
+	const range = stored?.draft.towers[0]?.ranges[0];
+	if (!stored || !range) throw new Error("missing saved range");
+	range.last = "9";
+	writeStructureDraft(key, stored);
+	act(() =>
+		window.dispatchEvent(
+			new StorageEvent("storage", { key, newValue: localStorage.getItem(key) }),
+		),
+	);
+}
+
 describe("structure wizard", () => {
 	afterEach(() => {
+		localStorage.clear();
 		vi.unstubAllGlobals();
 		toast.dismiss();
 	});
 
 	describe("on the desktop", () => {
+		test("finds a creation whose response was lost after reopening", async () => {
+			const { handler, sent, created } = wizardApi({
+				createAndLoseResponse: true,
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			cleanup();
+			const { router } = open(handler);
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(sent).toHaveLength(1);
+			expect(created).toHaveLength(1);
+			expect(
+				created[0]?.locations
+					.filter((location) => location.type === "floor")
+					.map((location) => location.name),
+			).toEqual(["Térreo", "1º andar", "2º andar"]);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("checks a pending attempt before showing a delivered project", async () => {
+			const first = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+			});
+			open(first.handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			const id = first.sent[0]?.locations[0]?.id;
+			if (!id) throw new Error("missing first location");
+			cleanup();
+			const delivered = wizardApi({
+				summary: { ...OBRA, status: "delivered" },
+				structure: structureOf([{ ...tower("Torre A"), id }]),
+			});
+			const { router } = open(delivered.handler);
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+		});
+
+		test("checks a lost response before retrying with the same ids", async () => {
+			const { handler, sent } = wizardApi({
+				create: (body, attempt) =>
+					attempt === 1
+						? Promise.reject(new TypeError("offline"))
+						: json({ counts: countsOf(body) }, 201),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			expect(
+				await screen.findByText("Não foi possível confirmar"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("textbox", { name: "Último andar" }),
+			).toBeDisabled();
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+			await waitFor(() => expect(sent).toHaveLength(2));
+			expect(sent[1]).toEqual(sent[0]);
+		});
+
+		test("keeps editing locked when the attempt cannot be checked", async () => {
+			const { handler } = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+				lookup: () => Promise.reject(new TypeError("offline")),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Voltar a editar" }));
+			expect(
+				await screen.findByText(
+					"Ainda sem conexão. Para editar, o app precisa confirmar antes que nada foi criado.",
+				),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("textbox", { name: "Último andar" }),
+			).toBeDisabled();
+		});
+
+		test("checks before editing and creates only the revised floors", async () => {
+			const { handler, sent } = wizardApi({
+				create: (body, attempt) =>
+					attempt === 1
+						? Promise.reject(new TypeError("offline"))
+						: json({ counts: countsOf(body) }, 201),
+			});
+			open(handler);
+			await describeTower("4", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Voltar a editar" }));
+			await waitFor(() =>
+				expect(
+					screen.getByRole("textbox", { name: "Último andar" }),
+				).toBeEnabled(),
+			);
+			await typeInto("Último andar", "2");
+			await user.click(await createButton());
+			await waitFor(() => expect(sent).toHaveLength(2));
+			expect(
+				sent[1]?.locations
+					.filter((location) => location.type === "floor")
+					.map((location) => location.name),
+			).toEqual(["Térreo", "1º andar", "2º andar"]);
+			expect(sent[1]?.locations[0]?.id).not.toEqual(sent[0]?.locations[0]?.id);
+		});
+
+		test("asks before leaving through the logo and discards only on confirmation", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await typeInto("Primeiro andar", "1");
+			await user.click(screen.getByRole("link", { name: "BluPrint, obras" }));
+			expect(
+				await screen.findByText("Descartar o que você montou?"),
+			).toBeInTheDocument();
+			await user.click(
+				screen.getByRole("button", { name: "Continuar montando" }),
+			);
+			expect(router.state.location.pathname).toBe(WIZARD_PATH);
+			await user.click(screen.getByRole("link", { name: "BluPrint, obras" }));
+			await user.click(
+				await screen.findByRole("button", { name: "Descartar" }),
+			);
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("asks before signing out and preserves the session on cancel", async () => {
+			const { fetchMock } = open(wizardApi().handler);
+			await typeInto("Primeiro andar", "1");
+			await user.click(
+				screen.getByRole("button", { name: "Conta de Ana Ribeiro" }),
+			);
+			await user.click(screen.getByRole("menuitem", { name: "Sair" }));
+			await user.click(
+				await screen.findByRole("button", { name: "Continuar montando" }),
+			);
+			expect(
+				fetchMock.mock.calls.some(([url]) => String(url).includes("/sign-out")),
+			).toBe(false);
+			await user.click(
+				screen.getByRole("button", { name: "Conta de Ana Ribeiro" }),
+			);
+			await user.click(screen.getByRole("menuitem", { name: "Sair" }));
+			await user.click(
+				await screen.findByRole("button", { name: "Descartar" }),
+			);
+			await screen.findByLabelText("E-mail");
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("locks a stale tab until it loads the other tab's draft", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await typeInto("Primeiro andar", "1");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id);
+			const stored = readStructureDraft(key);
+			const range = stored?.draft.towers[0]?.ranges[0];
+			if (!stored || !range) throw new Error("missing saved range");
+			range.first = "7";
+			writeStructureDraft(key, stored);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", {
+						key,
+						newValue: localStorage.getItem(key),
+					}),
+				),
+			);
+			expect(
+				await screen.findByText("Este rascunho mudou em outra aba"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("textbox", { name: "Primeiro andar" }),
+			).toBeDisabled();
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+			await waitFor(() =>
+				expect(
+					screen.getByRole("textbox", { name: "Primeiro andar" }),
+				).toHaveValue("7"),
+			);
+			expect(
+				screen.getByRole("textbox", { name: "Primeiro andar" }),
+			).toBeEnabled();
+		});
+
+		test("opens the project instead of an empty wizard when the stale tab loads after another tab created the structure", async () => {
+			const api = wizardApi();
+			const { router } = open(api.handler);
+			await describeTower("2", "01, 02");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id);
+			api.setStructure(structureOf([tower("Torre B")]));
+			localStorage.removeItem(key);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", { key, newValue: null }),
+				),
+			);
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(api.sent).toHaveLength(0);
+			expect(localStorage.getItem(key)).toBeNull();
+		});
+
+		test("finishes a creation that answers after another tab changed the draft", async () => {
+			let succeed: () => void = () => {};
+			const { handler, sent } = wizardApi({
+				create: (body) =>
+					new Promise((resolve) => {
+						succeed = () => resolve(json({ counts: countsOf(body) }, 201));
+					}),
+			});
+			const { router } = open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByRole("button", { name: "Criando estrutura…" });
+			changeInOtherTab();
+			expect(
+				await screen.findByText("Este rascunho mudou em outra aba"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			).toBeDisabled();
+
+			succeed();
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Ver tipologias" }),
+			).toBeVisible();
+			expect(sent).toHaveLength(1);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("offers only the latest version once another tab changed a draft whose answer was lost", async () => {
+			const { handler, sent } = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+
+			changeInOtherTab();
+
+			await screen.findByText("Este rascunho mudou em outra aba");
+			expect(
+				screen.queryByRole("button", { name: "Tentar de novo" }),
+			).not.toBeInTheDocument();
+			expect(
+				screen.queryByRole("button", { name: "Voltar a editar" }),
+			).not.toBeInTheDocument();
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+
+			expect(
+				await screen.findByText("Rascunho restaurado"),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("textbox", { name: "Último andar" }),
+			).not.toBeDisabled();
+			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
+				"9",
+			);
+			expect(sent).toHaveLength(1);
+		});
+
+		test("offers the latest version once a check that finds nothing returns in a stale tab", async () => {
+			let release: () => void = () => {};
+			const { handler, sent } = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+				lookup: (served) =>
+					new Promise((resolve) => {
+						release = () => resolve(served());
+					}),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+			await screen.findByRole("button", { name: "Conferindo…" });
+			changeInOtherTab();
+			await screen.findByText("Este rascunho mudou em outra aba");
+			expect(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			).toBeDisabled();
+
+			release();
+
+			await waitFor(() =>
+				expect(
+					screen.getByRole("button", {
+						name: "Carregar a versão mais recente",
+					}),
+				).toBeEnabled(),
+			);
+			expect(sent).toHaveLength(1);
+		});
+
+		test("finishes a creation that the check finds after another tab changed the draft", async () => {
+			let release: () => void = () => {};
+			const { handler, sent, created } = wizardApi({
+				createAndLoseResponse: true,
+				lookup: (served) =>
+					new Promise((resolve) => {
+						release = () => resolve(served());
+					}),
+			});
+			const { router } = open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
+			await screen.findByRole("button", { name: "Conferindo…" });
+			changeInOtherTab();
+			await screen.findByText("Este rascunho mudou em outra aba");
+			expect(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			).toBeDisabled();
+
+			release();
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+			expect(sent).toHaveLength(1);
+			expect(created).toHaveLength(1);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("finishes a creation that the delivered project's check finds after another tab changed the draft", async () => {
+			const first = wizardApi({
+				create: () => Promise.reject(new TypeError("offline")),
+			});
+			open(first.handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			const id = first.sent[0]?.locations[0]?.id;
+			if (!id) throw new Error("missing first location");
+			cleanup();
+			let release: () => void = () => {};
+			const delivered = wizardApi({
+				summary: { ...OBRA, status: "delivered" },
+				structure: structureOf([{ ...tower("Torre A"), id }]),
+				lookup: (served) =>
+					new Promise((resolve) => {
+						release = () => resolve(served());
+					}),
+			});
+			const { router } = open(delivered.handler);
+			await screen.findByText("Conferindo se a estrutura foi criada…");
+			changeInOtherTab();
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			release();
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText("Estrutura criada: 1 torre e 4 unidades."),
+			).toBeInTheDocument();
+			expect(
+				screen.getByRole("link", { name: "Ver tipologias" }),
+			).toBeVisible();
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("restores a draft after reopening the wizard", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+			open(handler);
+			expect(
+				await screen.findByText("Rascunho restaurado"),
+			).toBeInTheDocument();
+			expect(
+				await screen.findByRole("textbox", { name: "Último andar" }),
+			).toHaveValue("4");
+			expect(screen.getByRole("textbox", { name: "Finais" })).toHaveValue(
+				"01, 02",
+			);
+		});
+
+		test("unlocks editing after a 500 without the old nothing-saved alert", async () => {
+			const { handler } = wizardApi({
+				create: () =>
+					json({ type: "about:blank", title: "Internal", status: 500 }, 500),
+			});
+			open(handler);
+			await describeTower("2", "01, 02");
+			await user.click(await createButton());
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Voltar a editar" }));
+			await waitFor(() =>
+				expect(
+					screen.getByRole("textbox", { name: "Último andar" }),
+				).toBeEnabled(),
+			);
+
+			expect(screen.queryByText(/Nada foi salvo/)).not.toBeInTheDocument();
+			expect(
+				screen.queryByText("Não foi possível confirmar"),
+			).not.toBeInTheDocument();
+		});
+
+		test("leaves a stale tab without asking and keeps the other tab's draft", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await typeInto("Primeiro andar", "1");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id);
+			const stored = readStructureDraft(key);
+			const range = stored?.draft.towers[0]?.ranges[0];
+			if (!stored || !range) throw new Error("missing saved range");
+			range.first = "7";
+			writeStructureDraft(key, stored);
+			const newer = localStorage.getItem(key);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", { key, newValue: newer }),
+				),
+			);
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			await user.click(screen.getByRole("link", { name: "BluPrint, obras" }));
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				screen.queryByText("Descartar o que você montou?"),
+			).not.toBeInTheDocument();
+			expect(localStorage.getItem(key)).toBe(newer);
+		});
+
+		test("asks before the browser's back leaves a changed draft", async () => {
+			stubApi(signedIn, { api: wizardApi().handler });
+			const { router } = renderAt("/projects", { browserHistory: true });
+			await act(() =>
+				router.navigate({
+					to: "/projects/$projectId/structure/new",
+					params: { projectId: OBRA.id },
+				}),
+			);
+			await typeInto("Primeiro andar", "1");
+
+			act(() => router.history.back());
+
+			expect(
+				await screen.findByText("Descartar o que você montou?"),
+			).toBeInTheDocument();
+			await user.click(
+				screen.getByRole("button", { name: "Continuar montando" }),
+			);
+			expect(router.state.location.pathname).toBe(WIZARD_PATH);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).not.toBeNull();
+
+			act(() => router.history.back());
+			await user.click(
+				await screen.findByRole("button", { name: "Descartar" }),
+			);
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+			window.history.replaceState(null, "", "/");
+		});
+
+		test("leaves without asking when nothing changed", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await screen.findByRole("textbox", { name: "Último andar" });
+
+			await user.click(screen.getByRole("link", { name: "BluPrint, obras" }));
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe("/projects"),
+			);
+			expect(
+				screen.queryByText("Descartar o que você montou?"),
+			).not.toBeInTheDocument();
+		});
+
+		test("opens the project after creating without asking to discard", async () => {
+			const { handler } = wizardApi();
+			const { router } = open(handler);
+			await describeTower("2", "01, 02");
+
+			await user.click(await createButton());
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				screen.queryByText("Descartar o que você montou?"),
+			).not.toBeInTheDocument();
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("drops the draft of another account that used this browser", async () => {
+			const { handler } = wizardApi();
+			open(handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+			const mine = structureDraftKey(signedIn.user.id, OBRA.id);
+			const theirs = structureDraftKey("another-account", OBRA.id);
+			localStorage.setItem(theirs, localStorage.getItem(mine) ?? "");
+			localStorage.removeItem(mine);
+
+			open(handler);
+
+			expect(
+				await screen.findByRole("textbox", { name: "Último andar" }),
+			).toHaveValue("");
+			expect(screen.queryByText("Rascunho restaurado")).not.toBeInTheDocument();
+			expect(localStorage.getItem(theirs)).toBeNull();
+		});
+
+		test("drops the draft with a notice when someone else created the structure", async () => {
+			open(wizardApi().handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+
+			const { router } = open(
+				wizardApi({ structure: structureOf([tower("Torre A")]) }).handler,
+			);
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText(
+					"Esta obra já tem estrutura. O rascunho foi descartado.",
+				),
+			).toBeInTheDocument();
+			expect(
+				localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+			).toBeNull();
+		});
+
+		test("drops the draft and shows the delivered project", async () => {
+			open(wizardApi().handler);
+			await describeTower("4", "01, 02");
+			cleanup();
+
+			open(wizardApi({ summary: { ...OBRA, status: "delivered" } }).handler);
+
+			expect(
+				await screen.findByText("A obra foi entregue"),
+			).toBeInTheDocument();
+			await waitFor(() =>
+				expect(
+					localStorage.getItem(structureDraftKey(signedIn.user.id, OBRA.id)),
+				).toBeNull(),
+			);
+		});
+
 		test("opens with the band, one tower, both sections and an empty preview (W1)", async () => {
 			const { handler } = wizardApi();
 			open(handler);
@@ -826,7 +1482,7 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(1);
 		});
 
-		test("keeps a common area typed while the request runs so it can be added after a failure (W6)", async () => {
+		test("locks all common-area controls while the request runs (W11)", async () => {
 			let fail: () => void = () => {};
 			const { handler } = wizardApi({
 				create: () =>
@@ -842,40 +1498,13 @@ describe("structure wizard", () => {
 			const projectArea = screen.getByRole("textbox", {
 				name: "Área comum da obra",
 			});
-			await user.type(projectArea, "Guarita{Enter}");
-			await user.click(
+			expect(projectArea).toBeDisabled();
+			expect(
 				screen.getByRole("button", { name: "Área comum num andar" }),
-			);
-			await user.type(
-				screen.getByRole("textbox", { name: "Nome da área comum" }),
-				"Terraço",
-			);
-			await user.type(screen.getByRole("textbox", { name: "Andar" }), "3");
-			await user.click(
-				screen.getByRole("button", { name: "Adicionar ao andar" }),
-			);
-
-			expect(projectArea).toHaveValue("Guarita");
-			expect(
-				screen.queryByRole("button", { name: "Tirar Guarita" }),
-			).not.toBeInTheDocument();
-			expect(
-				screen.getByRole("textbox", { name: "Nome da área comum" }),
-			).toHaveValue("Terraço");
-			expect(screen.getByRole("textbox", { name: "Andar" })).toHaveValue("3");
-
+			).toBeDisabled();
 			fail();
-			await screen.findByText(/Nada foi salvo/);
-			await user.type(projectArea, "{Enter}");
-			await user.click(
-				screen.getByRole("button", { name: "Adicionar ao andar" }),
-			);
-
-			expect(
-				screen.getByRole("button", { name: "Tirar Guarita" }),
-			).toBeInTheDocument();
-			expect(projectArea).toHaveValue("");
-			expect(screen.getByText("· Torre A, 3º andar")).toBeInTheDocument();
+			await screen.findByText("Não foi possível confirmar");
+			expect(projectArea).toBeDisabled();
 		});
 
 		test("creates the plan in one request with parents before children, then opens the project with the toast (W10)", async () => {
@@ -928,16 +1557,14 @@ describe("structure wizard", () => {
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText(
-					"Não foi possível criar a estrutura. Confira sua conexão e tente de novo. Nada foi salvo.",
-				),
+				await screen.findByText("Não foi possível confirmar"),
 			).toBeInTheDocument();
 			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
 				"3",
 			);
-			expect(await createButton()).toBeEnabled();
+			expect(await createButton()).toBeDisabled();
 
-			await user.click(await createButton());
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
 			await waitFor(() => {
 				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
@@ -954,11 +1581,19 @@ describe("structure wizard", () => {
 			open(handler);
 			await describeTower("3", "01, 04");
 			await user.click(await createButton());
-			await screen.findByText(/Nada foi salvo/);
+			await screen.findByText("Não foi possível confirmar");
+			await user.click(screen.getByRole("button", { name: "Voltar a editar" }));
+			await waitFor(() =>
+				expect(
+					screen.getByRole("textbox", { name: "Último andar" }),
+				).toBeEnabled(),
+			);
 
 			await typeInto("Último andar", "4");
 
-			expect(screen.queryByText(/Nada foi salvo/)).not.toBeInTheDocument();
+			expect(
+				screen.queryByText("Não foi possível confirmar"),
+			).not.toBeInTheDocument();
 			await user.click(await createButton());
 			await waitFor(() => expect(sent).toHaveLength(2));
 			const ids = (body: CreateStructure | undefined) =>
@@ -1486,9 +2121,9 @@ describe("structure wizard", () => {
 				"Sala{Enter}",
 			);
 			await user.click(await createButton());
-			await screen.findByText(/Nada foi salvo/);
+			await screen.findByText("Não foi possível confirmar");
 
-			await user.click(await createButton());
+			await user.click(screen.getByRole("button", { name: "Tentar de novo" }));
 
 			await waitFor(() => expect(sent).toHaveLength(2));
 			expect(sent[1]).toEqual(sent[0]);
@@ -1940,6 +2575,21 @@ describe("structure wizard", () => {
 			expect(sent).toHaveLength(0);
 		});
 
+		test("opens the project instead of the delivered block when a delivered project already has a structure", async () => {
+			const { handler } = wizardApi({
+				summary: { ...OBRA, status: "delivered" },
+				structure: structureOf([tower("Torre A")]),
+			});
+			const { router } = open(handler);
+
+			await waitFor(() => {
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`);
+			});
+			expect(
+				screen.queryByRole("heading", { level: 1, name: "Montar estrutura" }),
+			).not.toBeInTheDocument();
+		});
+
 		test("opens from the project home without waiting for the structure again", async () => {
 			const { handler } = wizardApi();
 			let structureHangs = false;
@@ -2183,12 +2833,10 @@ describe("structure wizard", () => {
 			await user.click(await createButton());
 
 			expect(
-				await screen.findByText(
-					"Não foi possível criar a estrutura. Confira sua conexão e tente de novo. Nada foi salvo.",
-				),
+				await screen.findByText("Não foi possível confirmar"),
 			).toBeInTheDocument();
 			expect(screen.getByText("Passo 4 de 4")).toBeInTheDocument();
-			expect(await createButton()).toBeEnabled();
+			expect(await createButton()).toBeDisabled();
 		});
 		test("shows each rule as a card with its own labels (W3)", async () => {
 			setViewport("phone");

@@ -5,8 +5,10 @@ import {
 	initialDraft,
 	nextTowerName,
 	type RangeDraft,
-	readWizardDraft,
+	restoreWizardDraft,
 	ruleFieldId,
+	storedWizardDraftSchema,
+	storeWizardDraft,
 	type TowerDraft,
 	typologyFieldId,
 	validateDraft,
@@ -777,13 +779,18 @@ describe("a draft restored after the tab reloaded", () => {
 		vi.resetModules();
 		const firstPage = await import("./wizardDraft");
 		const stored: unknown = JSON.parse(
-			JSON.stringify(firstPage.withNewRule(firstPage.initialDraft())),
+			JSON.stringify(
+				firstPage.storeWizardDraft(
+					firstPage.withNewRule(firstPage.initialDraft()),
+				),
+			),
 		);
 		vi.resetModules();
 		const reloaded = await import("./wizardDraft");
 
-		const restored = reloaded.readWizardDraft(stored);
-		if (!restored) throw new Error("the stored draft did not read back");
+		const restored = reloaded.restoreWizardDraft(
+			reloaded.storedWizardDraftSchema.parse(stored),
+		);
 		const grown = reloaded.withTowerCount(
 			reloaded.withNewRange(
 				reloaded.withNewRule(
@@ -801,7 +808,7 @@ describe("a draft restored after the tab reloaded", () => {
 	});
 });
 
-describe("readWizardDraft", () => {
+describe("a stored draft", () => {
 	test("reads back the ranges, finals as typed, the box without units and the numbering", () => {
 		const draft = {
 			...draftOf({
@@ -813,7 +820,13 @@ describe("readWizardDraft", () => {
 			numbering: "letters" as const,
 		};
 
-		expect(readWizardDraft(JSON.parse(JSON.stringify(draft)))).toEqual(draft);
+		expect(
+			restoreWizardDraft(
+				storedWizardDraftSchema.parse(
+					JSON.parse(JSON.stringify(storeWizardDraft(draft))),
+				),
+			),
+		).toEqual(draft);
 	});
 
 	test("drops a draft of the format before floor ranges whole", () => {
@@ -830,47 +843,60 @@ describe("readWizardDraft", () => {
 			})),
 		};
 
-		expect(readWizardDraft(old)).toBeUndefined();
+		expect(storedWizardDraftSchema.safeParse(old).success).toBe(false);
 	});
 
-	test("drops the project's typologies an older draft kept, keeping the rules that point at them", () => {
-		const draft = draftOf({});
+	test("drops a draft that kept the project's typologies whole", () => {
 		const stored = {
-			...JSON.parse(JSON.stringify(draft)),
+			...storeWizardDraft(draftOf({})),
 			typologies: [
 				{
 					key: "server-type-c",
 					name: "Tipologia C",
 					rooms: ["Sala"],
+					locationType: "unit",
 					existing: true,
-				},
-				{ key: "type-1", name: "Tipologia A", rooms: ["Sala", "Cozinha"] },
-			],
-			rules: [
-				{
-					key: "rule-1",
-					tower: 0,
-					finals: "01",
-					from: "1",
-					to: "12",
-					typology: "server-type-c",
 				},
 			],
 		};
 
-		const restored = readWizardDraft(stored);
+		expect(storedWizardDraftSchema.safeParse(stored).success).toBe(false);
+	});
 
-		expect(restored?.typologies).toEqual([
-			{
-				key: "type-1",
-				name: "Tipologia A",
-				rooms: ["Sala", "Cozinha"],
-				locationType: "unit",
-			},
-		]);
-		expect(restored?.rules.map(({ typology }) => typology)).toEqual([
-			"server-type-c",
-		]);
+	test("reads back the typologies of the entrance, the floor hall and the common areas", () => {
+		const draft: WizardDraft = {
+			...draftOf({
+				entranceTypology: "type-hall",
+				hallTypology: "server-hall",
+			}),
+			projectAreas: [{ name: "Salão de festas", typology: "type-hall" }],
+			towerAreas: [{ name: "Garagem", typology: null }],
+			floorAreas: [
+				{
+					key: "area-1",
+					tower: 0,
+					floor: "3",
+					name: "Lavanderia",
+					typology: "server-hall",
+				},
+			],
+			typologies: [
+				{
+					key: "type-hall",
+					name: "Hall social",
+					rooms: ["Piso"],
+					locationType: "common_area",
+				},
+			],
+		};
+
+		expect(
+			restoreWizardDraft(
+				storedWizardDraftSchema.parse(
+					JSON.parse(JSON.stringify(storeWizardDraft(draft))),
+				),
+			),
+		).toEqual(draft);
 	});
 
 	test("drops a draft with a tower without ranges", () => {
@@ -879,10 +905,10 @@ describe("readWizardDraft", () => {
 		};
 
 		expect(
-			readWizardDraft({
+			storedWizardDraftSchema.safeParse({
 				...draft,
 				towers: draft.towers.map((tower) => ({ ...tower, ranges: [] })),
-			}),
-		).toBeUndefined();
+			}).success,
+		).toBe(false);
 	});
 });

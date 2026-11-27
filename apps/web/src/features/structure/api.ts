@@ -193,9 +193,21 @@ export function useCreateStructureMutation(projectId: string) {
 	);
 }
 
-export function useRecreateStructureMutation(projectId: string) {
-	return useStructureCreation(projectId, (body: CreateStructureRequest) =>
-		postStructure(projectId, body),
+export function useRecreateStructureMutation(
+	projectId: string,
+	onUnauthorized?: () => void,
+) {
+	return useStructureCreation(
+		projectId,
+		async (body: CreateStructureRequest) => {
+			try {
+				return await postStructure(projectId, body);
+			} catch (error) {
+				if (error instanceof ApiError && error.status === 401)
+					onUnauthorized?.();
+				throw error;
+			}
+		},
 	);
 }
 

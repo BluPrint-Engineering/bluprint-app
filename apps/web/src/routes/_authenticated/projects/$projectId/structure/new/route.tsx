@@ -1,7 +1,12 @@
 import { locationParamsSchema } from "@bluprint/shared";
 import { createFileRoute, redirect } from "@tanstack/react-router";
-import { isProjectId } from "@/features/projects/api";
-import { StructureWizardPage } from "@/features/structure";
+import { toast } from "sonner";
+import { isProjectId, projectQueryOptions } from "@/features/projects/api";
+import {
+	readStructureDraft,
+	StructureWizardPage,
+	structureDraftKey,
+} from "@/features/structure";
 import {
 	isBlankStructure,
 	structureQueryOptions,
@@ -21,10 +26,16 @@ export const Route = createFileRoute(
 			: {},
 	beforeLoad: async ({ context, params, search }) => {
 		if (!isProjectId(params.projectId)) return;
+		const key = structureDraftKey(
+			context.session.user.id,
+			params.projectId,
+			search.tower,
+		);
+		const draft = readStructureDraft(key);
 		const structure = await context.queryClient
 			.query({
 				...structureQueryOptions(params.projectId),
-				staleTime: Infinity,
+				staleTime: draft ? 0 : Infinity,
 				retry: false,
 			})
 			.catch(() => null);
@@ -34,6 +45,23 @@ export const Route = createFileRoute(
 			? structure.towers.some(({ id }) => id === search.tower)
 			: isBlankStructure(structure);
 		if (!ok) {
+			if (draft?.attempt) return;
+			if (draft) {
+				const project = await context.queryClient
+					.query({
+						...projectQueryOptions(params.projectId),
+						staleTime: 0,
+						retry: false,
+					})
+					.catch(() => undefined);
+				if (project?.status === "delivered") return;
+				localStorage.removeItem(key);
+				toast.info(
+					adding
+						? "A torre não existe mais. O rascunho foi descartado."
+						: "Esta obra já tem estrutura. O rascunho foi descartado.",
+				);
+			}
 			throw redirect({ to: "/projects/$projectId", params, replace: true });
 		}
 	},

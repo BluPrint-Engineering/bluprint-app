@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import type { SessionDraftKind } from "@/features/auth/sessionDraft";
+import { structureDraftKey } from "@/features/structure";
 import { uuidV7 } from "@/lib/uuidV7";
 import { project } from "./projectsApi";
 import { json, organization, renderAt, signedIn } from "./renderApp";
@@ -1234,9 +1235,21 @@ function wizardPage(adding: boolean, remaining: number): Page {
 	const createButton = () => screen.findByRole("button", { name: createLabel });
 	const leaveAndReturn = {
 		cancel: async () => {
+			const hasDraft =
+				localStorage.getItem(
+					structureDraftKey(
+						signedIn.user.id,
+						summary.id,
+						adding ? towerB.id : undefined,
+					),
+				) !== null;
 			await user.click(
 				await screen.findByRole("link", { name: "Casa Moinhos" }),
 			);
+			if (hasDraft)
+				await user.click(
+					await screen.findByRole("button", { name: "Descartar" }),
+				);
 			await waitFor(() =>
 				expect(
 					screen.queryByRole("textbox", { name: "Último andar" }),
@@ -1292,6 +1305,9 @@ function wizardPage(adding: boolean, remaining: number): Page {
 	const describeTower: Pick<Entry, "fill" | "expectTyped" | "expectCurrent"> = {
 		fill: fillTower,
 		expectTyped: async () => {
+			expect(
+				await screen.findByText("Rascunho restaurado"),
+			).toBeInTheDocument();
 			if (adding) {
 				expect(await valuesOf("Último andar")).toEqual(["5"]);
 				expect(await valuesOf("Finais")).toEqual(["01, 03"]);
@@ -1340,10 +1356,20 @@ function wizardPage(adding: boolean, remaining: number): Page {
 				);
 			},
 			...textField("Unidades reservadas", "160", "150"),
+			expectTyped: async () => {
+				expect(
+					await screen.findByText("Rascunho restaurado", {
+						selector: "[data-slot='alert-title']",
+					}),
+				).toBeInTheDocument();
+				expect(
+					await screen.findByRole("textbox", { name: "Unidades reservadas" }),
+				).toHaveValue("160");
+			},
 			submit: SAVE,
 			cancel: CANCEL,
 			shows: ["Alterar reserva"],
-			focusAfterCancel: createButton,
+			focusAfterCancel: byRole("button", "Alterar reserva"),
 			focusAfterPlainCancel: byRole("button", "Alterar reserva"),
 			focusAfterSave: createButton,
 			request: `PATCH /api/projects/${summary.id}/units`,

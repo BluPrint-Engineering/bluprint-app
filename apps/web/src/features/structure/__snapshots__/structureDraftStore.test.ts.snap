@@ -1,0 +1,399 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`structure draft storage > records the persisted schema shape for version 2 1`] = `
+{
+  "fields": {
+    "area": {
+      "name": true,
+      "typology": true,
+    },
+    "extend": {
+      "lead": true,
+      "named": true,
+      "takenFloors": true,
+      "takenUnits": true,
+      "towerId": true,
+      "towerName": true,
+    },
+    "floorArea": {
+      "floor": true,
+      "key": true,
+      "name": true,
+      "tower": true,
+      "typology": true,
+    },
+    "range": {
+      "finals": true,
+      "first": true,
+      "key": true,
+      "last": true,
+      "noUnits": true,
+    },
+    "rule": {
+      "finals": true,
+      "from": true,
+      "key": true,
+      "to": true,
+      "tower": true,
+      "typology": true,
+    },
+    "tower": {
+      "entranceTypology": true,
+      "ground": true,
+      "hall": true,
+      "hallTypology": true,
+      "key": true,
+      "name": true,
+      "ranges": true,
+    },
+    "typology": {
+      "key": true,
+      "locationType": true,
+      "name": true,
+      "rooms": true,
+    },
+    "wizard": {
+      "extend": true,
+      "floorAreas": true,
+      "numbering": true,
+      "projectAreas": true,
+      "rules": true,
+      "towerAreas": true,
+      "towers": true,
+      "typologies": true,
+    },
+  },
+  "initial": {
+    "floorAreas": [],
+    "numbering": "string",
+    "projectAreas": [],
+    "rules": [
+      {
+        "finals": "string",
+        "from": "string",
+        "key": "string",
+        "to": "string",
+        "tower": "number",
+        "typology": "string",
+      },
+    ],
+    "towerAreas": [],
+    "towers": [
+      {
+        "entranceTypology": "object",
+        "ground": "boolean",
+        "hall": "boolean",
+        "hallTypology": "object",
+        "key": "string",
+        "name": "string",
+        "ranges": [
+          {
+            "finals": "string",
+            "first": "string",
+            "key": "string",
+            "last": "string",
+            "noUnits": "boolean",
+          },
+        ],
+      },
+    ],
+    "typologies": [
+      {
+        "key": "string",
+        "locationType": "string",
+        "name": "string",
+        "rooms": [],
+      },
+    ],
+  },
+  "schema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "additionalProperties": false,
+    "properties": {
+      "attempt": {
+        "additionalProperties": false,
+        "properties": {
+          "firstLocationId": {
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+            "type": "string",
+          },
+          "ids": {
+            "additionalProperties": {
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$",
+              "type": "string",
+            },
+            "propertyNames": {
+              "type": "string",
+            },
+            "type": "object",
+          },
+        },
+        "required": [
+          "ids",
+          "firstLocationId",
+        ],
+        "type": "object",
+      },
+      "draft": {
+        "additionalProperties": false,
+        "properties": {
+          "floorAreas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "floor": {
+                  "type": "string",
+                },
+                "key": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "tower": {
+                  "maximum": 9007199254740991,
+                  "minimum": -9007199254740991,
+                  "type": "integer",
+                },
+                "typology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+              },
+              "required": [
+                "key",
+                "tower",
+                "floor",
+                "name",
+                "typology",
+              ],
+              "type": "object",
+            },
+            "type": "array",
+          },
+          "numbering": {
+            "enum": [
+              "digits",
+              "letters",
+            ],
+            "type": "string",
+          },
+          "projectAreas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                },
+                "typology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+              },
+              "required": [
+                "name",
+                "typology",
+              ],
+              "type": "object",
+            },
+            "type": "array",
+          },
+          "rules": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "finals": {
+                  "type": "string",
+                },
+                "from": {
+                  "type": "string",
+                },
+                "key": {
+                  "type": "string",
+                },
+                "to": {
+                  "type": "string",
+                },
+                "tower": {
+                  "maximum": 9007199254740991,
+                  "minimum": -9007199254740991,
+                  "type": "integer",
+                },
+                "typology": {
+                  "type": "string",
+                },
+              },
+              "required": [
+                "key",
+                "tower",
+                "finals",
+                "from",
+                "to",
+                "typology",
+              ],
+              "type": "object",
+            },
+            "type": "array",
+          },
+          "towerAreas": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "name": {
+                  "type": "string",
+                },
+                "typology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+              },
+              "required": [
+                "name",
+                "typology",
+              ],
+              "type": "object",
+            },
+            "type": "array",
+          },
+          "towers": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "entranceTypology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "ground": {
+                  "type": "boolean",
+                },
+                "hall": {
+                  "type": "boolean",
+                },
+                "hallTypology": {
+                  "type": [
+                    "string",
+                    "null",
+                  ],
+                },
+                "key": {
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "ranges": {
+                  "items": {
+                    "additionalProperties": false,
+                    "properties": {
+                      "finals": {
+                        "type": "string",
+                      },
+                      "first": {
+                        "type": "string",
+                      },
+                      "key": {
+                        "type": "string",
+                      },
+                      "last": {
+                        "type": "string",
+                      },
+                      "noUnits": {
+                        "type": "boolean",
+                      },
+                    },
+                    "required": [
+                      "key",
+                      "first",
+                      "last",
+                      "finals",
+                      "noUnits",
+                    ],
+                    "type": "object",
+                  },
+                  "minItems": 1,
+                  "type": "array",
+                },
+              },
+              "required": [
+                "key",
+                "name",
+                "ranges",
+                "ground",
+                "hall",
+                "entranceTypology",
+                "hallTypology",
+              ],
+              "type": "object",
+            },
+            "minItems": 1,
+            "type": "array",
+          },
+          "typologies": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "key": {
+                  "type": "string",
+                },
+                "locationType": {
+                  "enum": [
+                    "unit",
+                    "common_area",
+                  ],
+                  "type": "string",
+                },
+                "name": {
+                  "type": "string",
+                },
+                "rooms": {
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
+                },
+              },
+              "required": [
+                "key",
+                "name",
+                "rooms",
+                "locationType",
+              ],
+              "type": "object",
+            },
+            "type": "array",
+          },
+        },
+        "required": [
+          "towers",
+          "numbering",
+          "projectAreas",
+          "towerAreas",
+          "floorAreas",
+          "typologies",
+          "rules",
+        ],
+        "type": "object",
+      },
+      "version": {
+        "const": 2,
+        "type": "number",
+      },
+    },
+    "required": [
+      "version",
+      "draft",
+    ],
+    "type": "object",
+  },
+}
+`;

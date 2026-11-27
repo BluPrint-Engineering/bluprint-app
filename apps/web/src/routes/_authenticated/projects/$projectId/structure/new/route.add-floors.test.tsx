@@ -7,10 +7,11 @@ import {
 	type StructureFloor,
 	type StructureTower,
 } from "@bluprint/shared";
-import { screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { toast } from "sonner";
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { structureDraftKey } from "@/features/structure";
 import { nth } from "@/test/nth";
 import { project } from "@/test/projectsApi";
 import { json, renderAt, signedIn, stubApi } from "@/test/renderApp";
@@ -128,11 +129,113 @@ async function toPreviewOnPhone() {
 
 describe("adding floors to a tower (W9)", () => {
 	afterEach(() => {
+		localStorage.clear();
 		vi.unstubAllGlobals();
 		toast.dismiss();
 	});
 
 	describe("on the desktop", () => {
+		test("keeps a tower's draft out of another tower and out of setting up", async () => {
+			const { handler, towerB, structure } = scenario();
+			const towerA = nth(structure.towers, 0);
+			const keyB = structureDraftKey(signedIn.user.id, OBRA.id, towerB.id);
+			const setUpKey = structureDraftKey(signedIn.user.id, OBRA.id);
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "14");
+			cleanup();
+
+			open(handler, pathFor(towerA.id));
+
+			expect(
+				await screen.findByRole("heading", {
+					level: 1,
+					name: "Adicionar andares à Torre A",
+				}),
+			).toBeInTheDocument();
+			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
+				"",
+			);
+			expect(screen.queryByText("Rascunho restaurado")).not.toBeInTheDocument();
+			cleanup();
+			localStorage.setItem(setUpKey, localStorage.getItem(keyB) ?? "");
+			localStorage.removeItem(keyB);
+
+			open(handler, pathFor(towerB.id));
+
+			expect(
+				await screen.findByRole("heading", {
+					level: 1,
+					name: "Adicionar andares à Torre B",
+				}),
+			).toBeInTheDocument();
+			expect(screen.getByRole("textbox", { name: "Último andar" })).toHaveValue(
+				"",
+			);
+			expect(screen.queryByText("Rascunho restaurado")).not.toBeInTheDocument();
+			expect(localStorage.getItem(setUpKey)).not.toBeNull();
+		});
+
+		test("drops the draft with a notice when its tower no longer exists", async () => {
+			const { handler, towerB } = scenario();
+			const gone = "0199a1f4-3c2e-7d5a-9b1e-000000000099";
+			const goneKey = structureDraftKey(signedIn.user.id, OBRA.id, gone);
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "14");
+			cleanup();
+			localStorage.setItem(
+				goneKey,
+				localStorage.getItem(
+					structureDraftKey(signedIn.user.id, OBRA.id, towerB.id),
+				) ?? "",
+			);
+
+			const { router } = open(handler, pathFor(gone));
+
+			await waitFor(() =>
+				expect(router.state.location.pathname).toBe(`/projects/${OBRA.id}`),
+			);
+			expect(
+				await screen.findByText(
+					"A torre não existe mais. O rascunho foi descartado.",
+				),
+			).toBeInTheDocument();
+			expect(localStorage.getItem(goneKey)).toBeNull();
+		});
+
+		test("starts after the floors another tab added when the stale tab loads the latest version", async () => {
+			const { handler, towerB, created } = scenario();
+			open(handler, pathFor(towerB.id));
+			await typeInto("Último andar", "14");
+			const key = structureDraftKey(signedIn.user.id, OBRA.id, towerB.id);
+			towerB.floors.push(
+				...typedFloors(11, 12, [
+					"Tipologia A",
+					"Tipologia B",
+					"Tipologia A",
+					"Tipologia B",
+				]),
+			);
+			localStorage.removeItem(key);
+			act(() =>
+				window.dispatchEvent(
+					new StorageEvent("storage", { key, newValue: null }),
+				),
+			);
+			await screen.findByText("Este rascunho mudou em outra aba");
+
+			await user.click(
+				screen.getByRole("button", { name: "Carregar a versão mais recente" }),
+			);
+
+			await waitFor(() =>
+				expect(screen.getByRole("textbox", { name: "Do andar" })).toHaveValue(
+					"13",
+				),
+			);
+			expect(screen.getByRole("textbox", { name: "Do andar" })).toBeEnabled();
+			expect(created).toHaveLength(0);
+		});
+
 		test("opens the band, the tower's fields and nothing for a new tower (W9)", async () => {
 			const { handler, towerB } = scenario();
 			open(handler, pathFor(towerB.id));
@@ -283,7 +386,7 @@ describe("adding floors to a tower (W9)", () => {
 			).toBeEnabled();
 			expect(
 				screen.getByText(
-					"Nada é salvo antes de adicionar. Depois, tudo se ajusta na fachada.",
+					"Nada é salvo antes de adicionar. Depois, tudo se ajusta na fachada. O rascunho fica guardado até lá, mesmo se a página for atualizada.",
 				),
 			).toBeInTheDocument();
 		});

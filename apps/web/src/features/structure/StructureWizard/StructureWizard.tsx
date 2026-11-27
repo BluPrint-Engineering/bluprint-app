@@ -1,10 +1,21 @@
 import {
+	DISCIPLINE_NAME_TAKEN,
+	LOCATION_NAME_TAKEN,
 	MAX_LOCATIONS_PER_REQUEST,
+	NO_UNITS_LEFT,
+	PROJECT_DELIVERED,
 	type ProjectSummary,
+	ROOM_NAME_TAKEN,
+	type StructureCounts,
+	TYPOLOGY_NAME_TAKEN,
 	type Typology,
 } from "@bluprint/shared";
-import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	useBlocker,
+	useNavigate,
+	useRouteContext,
+} from "@tanstack/react-router";
 import { Check, CircleAlert } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -12,30 +23,52 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { useSessionDraft } from "@/features/auth";
+import { ApiError } from "@/lib/api";
 import { useBottomBarHeight } from "@/lib/useBottomBarHeight";
 import { useIsDesktop } from "@/lib/useIsDesktop";
 import { cn } from "@/lib/utils";
 import { uuidV7 } from "@/lib/uuidV7";
-import { availableUnitsOf, reservationDraft } from "../../projects/api";
+import {
+	availableUnitsOf,
+	projectQueryOptions,
+	reservationDraft,
+} from "../../projects/api";
 import { ChangeReservationDialog } from "../../projects/components/ChangeReservationDialog";
 import {
+	isBlankStructure,
 	namesTakenOf,
 	projectUnitsQueryOptions,
+	structureQueryOptions,
 	typologiesQueryOptions,
 	typologyNamesTakenOf,
-	useCreateStructureMutation,
+	useRecreateStructureMutation,
 	useRoomNames,
 } from "../api";
 import { plural } from "../plural";
 import {
-	createdToast,
-	floorsAddedToast,
 	missingReserveText,
 	missingReserveTitle,
 	nameTakenText,
 } from "../reserveText";
+import {
+	readStructureDraft,
+	SIGN_OUT_REQUEST,
+	structureDraftKey,
+	writeStructureDraft,
+} from "../structureDraftStore";
+import {
+	CheckingStatus,
+	StaleDraftAlert,
+	UncertainAlert,
+} from "./AttemptAlerts";
+import {
+	attemptOutcome,
+	type CheckAction,
+	useFinishAttempt,
+} from "./attemptCheck";
 import { buildPlan, reserveUsed } from "./buildPlan";
 import { CommonAreasStep, type FloorAreaInput } from "./CommonAreasStep";
+import { DiscardDraftDialog } from "./DiscardDraftDialog";
 import {
 	PreviewSummary,
 	PreviewTowers,
@@ -49,7 +82,9 @@ import {
 	type DraftErrors,
 	firstInvalidField,
 	initialDraft,
-	readWizardDraft,
+	restoreWizardDraft,
+	STRUCTURE_DRAFT_VERSION,
+	storeWizardDraft,
 	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
@@ -76,13 +111,23 @@ const AREAS_DESCRIPTION =
 const TYPES_DESCRIPTION =
 	"A lista de cômodos de cada tipo, num catálogo para unidades e outro para áreas comuns. Uma tipologia de área comum só vale para área comum.";
 
-function wizardFields(variables: unknown): WizardDraft | undefined {
-	if (typeof variables !== "object" || variables === null) return undefined;
-	if (!("draft" in variables)) return undefined;
-	return readWizardDraft(variables.draft);
-}
-
 const identity = (key: string) => key;
+
+function isRefusal(error: unknown): boolean {
+	if (!(error instanceof ApiError)) return false;
+	if ([400, 401, 403, 404].includes(error.status)) return true;
+	return (
+		error.problem?.code !== undefined &&
+		[
+			NO_UNITS_LEFT,
+			LOCATION_NAME_TAKEN,
+			TYPOLOGY_NAME_TAKEN,
+			ROOM_NAME_TAKEN,
+			DISCIPLINE_NAME_TAKEN,
+			PROJECT_DELIVERED,
+		].includes(error.problem.code)
+	);
+}
 
 function StepHeading({
 	number,
@@ -157,26 +202,105 @@ function MobileBar({ children }: { children: React.ReactNode }) {
 export function StructureWizard({
 	project,
 	start,
+	onReopen,
 }: {
 	project: ProjectSummary;
 	start?: WizardDraft;
+	onReopen: () => void;
 }) {
 	const desktop = useIsDesktop();
 	const navigate = useNavigate();
-	const create = useCreateStructureMutation(project.id);
+	const queryClient = useQueryClient();
 	const units = useQuery(projectUnitsQueryOptions(project.id));
 	const typologies = useQuery(typologiesQueryOptions(project.id));
 	const roomNames = useRoomNames(project.id);
 	const existing = typologies.data?.typologies ?? NO_TYPOLOGIES;
 	const existingNames = existing.map((typology) => typology.name);
-	const restored = useSessionDraft("create-structure", wizardFields);
+	const { session } = useRouteContext({ from: "/_authenticated" });
+	const storageKey = structureDraftKey(
+		session.user.id,
+		project.id,
+		start?.extend?.towerId,
+	);
+	const [stored] = useState(() => readStructureDraft(storageKey));
+	const staleRef = useRef(false);
+	const finish = useFinishAttempt(project.id, storageKey);
+	const create = useRecreateStructureMutation(project.id, () => {
+		if (staleRef.current) return;
+		const current = readStructureDraft(storageKey);
+		if (current)
+			writeStructureDraft(storageKey, {
+				version: STRUCTURE_DRAFT_VERSION,
+				draft: current.draft,
+			});
+	});
 	const restoredReservation = useSessionDraft(
 		"change-reservation",
 		reservationDraft,
 	);
 	const [draft, setDraft] = useState<WizardDraft>(
-		restored ?? start ?? initialDraft,
+		() =>
+			(stored && restoreWizardDraft(stored.draft, start)) ??
+			start ??
+			initialDraft(),
 	);
+	const [dirty, setDirty] = useState(stored !== undefined);
+	const [restored, setRestored] = useState(
+		stored !== undefined && !stored.attempt,
+	);
+	const [stale, setStale] = useState(false);
+	const [submission, setSubmission] = useState<
+		"editing" | "sending" | "uncertain" | "checking"
+	>(stored?.attempt ? "checking" : "editing");
+	const [connectionMessage, setConnectionMessage] = useState(false);
+	const [checkAction, setCheckAction] = useState<CheckAction>("open");
+	const [openingCheck, setOpeningCheck] = useState(
+		stored?.attempt !== undefined,
+	);
+	const [discardOpen, setDiscardOpen] = useState(false);
+	const signOutAnswer = useRef<((allowed: boolean) => void) | undefined>(
+		undefined,
+	);
+	const bypassBlock = useRef(false);
+	const navigationBlocker = useBlocker({
+		shouldBlockFn: ({ current, next }) =>
+			dirty &&
+			!staleRef.current &&
+			!bypassBlock.current &&
+			next.pathname !== "/login" &&
+			current.pathname !== next.pathname,
+		enableBeforeUnload: false,
+		withResolver: true,
+	});
+	useEffect(() => {
+		function changed(event: StorageEvent) {
+			if (event.key === storageKey) {
+				staleRef.current = true;
+				setStale(true);
+			}
+		}
+		window.addEventListener("storage", changed);
+		return () => window.removeEventListener("storage", changed);
+	}, [storageKey]);
+	useEffect(() => {
+		function signOut(event: Event) {
+			if (
+				!dirty ||
+				!(event instanceof CustomEvent) ||
+				typeof event.detail !== "function"
+			)
+				return;
+			event.preventDefault();
+			signOutAnswer.current = event.detail;
+			setDiscardOpen(true);
+		}
+		window.addEventListener(SIGN_OUT_REQUEST, signOut);
+		return () => {
+			window.removeEventListener(SIGN_OUT_REQUEST, signOut);
+			signOutAnswer.current?.(false);
+			signOutAnswer.current = undefined;
+		};
+	}, [dirty]);
 	const extend = draft.extend;
 	const stepTitles = extend ? EXTEND_STEP_TITLES : STEP_TITLES;
 	const [errors, setErrors] = useState<DraftErrors>({});
@@ -188,7 +312,14 @@ export function StructureWizard({
 	);
 	const reservationButton = useRef<HTMLButtonElement>(null);
 	const createButtonRef = useRef<HTMLButtonElement>(null);
-	const ids = useRef(new Map<string, string>());
+	const ids = useRef(
+		new Map<string, string>(Object.entries(stored?.attempt?.ids ?? {})),
+	);
+	const attemptId = useRef(stored?.attempt?.firstLocationId);
+	const checkStarted = useRef(false);
+	const [checkOnRender, setCheckOnRender] = useState(
+		stored?.attempt !== undefined,
+	);
 	const stepTop = useRef<HTMLDivElement>(null);
 
 	const preview = useMemo(
@@ -254,11 +385,17 @@ export function StructureWizard({
 		update: (draft: WizardDraft) => WizardDraft,
 		touched?: string,
 	): boolean {
-		if (create.isPending) return false;
+		if (submission !== "editing" || staleRef.current) return false;
 		ids.current = new Map();
 		create.reset();
 		const next = update(draft);
 		setDraft(next);
+		writeStructureDraft(storageKey, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(next),
+		});
+		setDirty(true);
+		setRestored(false);
 		setErrors((current) => {
 			const found = validateDraft(next, existingNames);
 			return Object.fromEntries(
@@ -289,8 +426,28 @@ export function StructureWizard({
 		return false;
 	}
 
-	function submit() {
-		if (create.isPending || blocked || !validate()) return;
+	function success(counts: StructureCounts) {
+		bypassBlock.current = true;
+		finish(
+			counts,
+			extend && {
+				id: extend.towerId,
+				name: extend.named ? extend.towerName : undefined,
+			},
+		);
+	}
+
+	function clearAttempt() {
+		if (staleRef.current) return;
+		attemptId.current = undefined;
+		writeStructureDraft(storageKey, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(draft),
+		});
+	}
+
+	function send() {
+		if (staleRef.current) return;
 		const { typologies, locations } = buildPlan(
 			draft,
 			idFor,
@@ -300,54 +457,120 @@ export function StructureWizard({
 				locationType,
 			})),
 		);
+		const first = locations[0];
+		if (!first) return;
+		attemptId.current = first.id;
+		writeStructureDraft(storageKey, {
+			version: STRUCTURE_DRAFT_VERSION,
+			draft: storeWizardDraft(draft),
+			attempt: {
+				ids: Object.fromEntries(ids.current),
+				firstLocationId: first.id,
+			},
+		});
+		setDirty(true);
+		setSubmission("sending");
 		create.mutate(
-			{ typologies, locations, draft },
+			{ typologies, locations },
 			{
-				onSuccess: ({ counts }) => {
-					if (extend) {
-						const towerName = extend.named ? extend.towerName : undefined;
-						toast.success(floorsAddedToast(counts.floors, towerName));
-						void navigate(
-							extend.named
-								? {
-										to: "/projects/$projectId/locations/$locationId",
-										params: {
-											projectId: project.id,
-											locationId: extend.towerId,
-										},
-										replace: true,
-									}
-								: {
-										to: "/projects/$projectId",
-										params: { projectId: project.id },
-										replace: true,
-									},
-						);
-						return;
-					}
-					toast.success(createdToast(counts.towers, counts.units), {
-						duration: 12_000,
-						description: (
-							<Link
-								to="/projects/$projectId/configuration"
-								params={{ projectId: project.id }}
-								hash="tipologias"
-								className="font-medium text-primary underline underline-offset-3"
-								onClick={() => toast.dismiss()}
-							>
-								Ver tipologias
-							</Link>
-						),
-					});
-					void navigate({
-						to: "/projects/$projectId",
-						params: { projectId: project.id },
-						replace: true,
-					});
+				onSuccess: ({ counts }) => success(counts),
+				onError: (error) => {
+					if (isRefusal(error)) {
+						clearAttempt();
+						setSubmission("editing");
+					} else setSubmission("uncertain");
 				},
 			},
 		);
 	}
+
+	function submit() {
+		if (submission !== "editing" || stale || blocked || !validate()) return;
+		send();
+	}
+
+	async function checkAttempt(action: CheckAction) {
+		const id = attemptId.current;
+		if (!id) return;
+		setSubmission("checking");
+		setCheckAction(action);
+		setConnectionMessage(false);
+		const outcome = await attemptOutcome(queryClient, project.id, id);
+		if (outcome === "created") {
+			success(buildPlan(draft, idFor).counts);
+			return;
+		}
+		if (staleRef.current) {
+			setSubmission("uncertain");
+			return;
+		}
+		setOpeningCheck(false);
+		if (outcome === "unknown") {
+			setConnectionMessage(action === "edit");
+			setSubmission("uncertain");
+			return;
+		}
+		try {
+			const [freshProject, structure] = await Promise.all([
+				queryClient.fetchQuery({
+					...projectQueryOptions(project.id),
+					staleTime: 0,
+					retry: false,
+				}),
+				queryClient.fetchQuery({
+					...structureQueryOptions(project.id),
+					staleTime: 0,
+					retry: false,
+				}),
+			]);
+			if (staleRef.current) {
+				setSubmission("uncertain");
+				return;
+			}
+			if (freshProject.status === "delivered") {
+				localStorage.removeItem(storageKey);
+				bypassBlock.current = true;
+				return;
+			}
+			const usable = extend
+				? structure.towers.some((tower) => tower.id === extend.towerId)
+				: isBlankStructure(structure);
+			if (!usable) {
+				localStorage.removeItem(storageKey);
+				bypassBlock.current = true;
+				toast.info(
+					extend
+						? "A torre não existe mais. O rascunho foi descartado."
+						: "Esta obra já tem estrutura. O rascunho foi descartado.",
+				);
+				void navigate({
+					to: "/projects/$projectId",
+					params: { projectId: project.id },
+					replace: true,
+				});
+				return;
+			}
+		} catch {
+			setConnectionMessage(action === "edit");
+			setSubmission("uncertain");
+			return;
+		}
+		if (action === "retry") send();
+		else {
+			clearAttempt();
+			ids.current = new Map();
+			create.reset();
+			setSubmission("editing");
+			if (action === "open") setRestored(true);
+		}
+	}
+
+	useEffect(() => {
+		if (!checkOnRender || checkStarted.current) return;
+		checkStarted.current = true;
+		setCheckOnRender(false);
+		void checkAttempt("open");
+	});
 
 	const mode = extend ? "add" : "create";
 	const balance: ReserveBalance = units.isPending
@@ -365,6 +588,7 @@ export function StructureWizard({
 
 	const names = namesTakenOf(create.error);
 	const failed =
+		submission === "editing" &&
 		create.isError &&
 		names === undefined &&
 		refusedNames === undefined &&
@@ -428,7 +652,7 @@ export function StructureWizard({
 			type="button"
 			size="lg"
 			className="w-full"
-			disabled={create.isPending || blocked}
+			disabled={submission !== "editing" || stale || blocked}
 			aria-describedby={blocked ? BLOCKER_ID : undefined}
 			onClick={submit}
 		>
@@ -462,7 +686,8 @@ export function StructureWizard({
 	const note = (
 		<p className="text-sm text-muted-foreground">
 			Nada é salvo antes de {extend ? "adicionar" : "criar"}. Depois, tudo se
-			ajusta na fachada.
+			ajusta na fachada. O rascunho fica guardado até lá, mesmo se a página for
+			atualizada.
 		</p>
 	);
 
@@ -626,7 +851,7 @@ export function StructureWizard({
 							variant="outline"
 							size="lg"
 							className="flex-1"
-							disabled={create.isPending}
+							disabled={submission !== "editing" || stale}
 							onClick={() => setStep(step - 1)}
 						>
 							Voltar
@@ -637,6 +862,7 @@ export function StructureWizard({
 							type="button"
 							size="lg"
 							className="flex-2"
+							disabled={submission !== "editing" || stale}
 							onClick={() => {
 								if (step === 0 && !validate()) return;
 								setStep(step + 1);
@@ -653,9 +879,79 @@ export function StructureWizard({
 	);
 
 	return (
-		<>
-			{layout}
+		<div className="grid gap-(--space-5)">
+			{restored && !stale && (
+				<Alert>
+					<AlertTitle>Rascunho restaurado</AlertTitle>
+					<AlertDescription>
+						O que você montou continua aqui até{" "}
+						{extend ? "adicionar os andares" : "criar a estrutura"} ou
+						descartar.{" "}
+						<button
+							type="button"
+							className="underline"
+							onClick={() => setDiscardOpen(true)}
+						>
+							Descartar rascunho
+						</button>
+					</AlertDescription>
+				</Alert>
+			)}
+			{stale && (
+				<StaleDraftAlert
+					waiting={submission === "sending" || submission === "checking"}
+					onLoad={onReopen}
+				/>
+			)}
+			{!stale && openingCheck && submission === "checking" && (
+				<CheckingStatus extending={extend !== undefined} />
+			)}
+			{!stale &&
+				(submission === "uncertain" ||
+					(submission === "checking" && !openingCheck)) && (
+					<UncertainAlert
+						checking={submission === "checking" ? checkAction : undefined}
+						noConnection={connectionMessage}
+						onRetry={() => void checkAttempt("retry")}
+						onEdit={() => void checkAttempt("edit")}
+					/>
+				)}
+			{!openingCheck && (
+				<fieldset
+					disabled={stale || submission !== "editing"}
+					className="min-w-0"
+				>
+					{layout}
+				</fieldset>
+			)}
 			{reservationDialog}
-		</>
+			<DiscardDraftDialog
+				open={discardOpen || navigationBlocker.status === "blocked"}
+				extending={!!extend}
+				onCancel={() => {
+					setDiscardOpen(false);
+					signOutAnswer.current?.(false);
+					signOutAnswer.current = undefined;
+					navigationBlocker.reset?.();
+				}}
+				onDiscard={() => {
+					if (!staleRef.current) localStorage.removeItem(storageKey);
+					setDirty(false);
+					setDiscardOpen(false);
+					if (signOutAnswer.current) {
+						const answer = signOutAnswer.current;
+						signOutAnswer.current = undefined;
+						answer(true);
+					} else if (navigationBlocker.status === "blocked") {
+						bypassBlock.current = true;
+						navigationBlocker.proceed();
+					} else {
+						create.reset();
+						setDraft(start ?? initialDraft());
+						setRestored(false);
+					}
+				}}
+			/>
+		</div>
 	);
 }

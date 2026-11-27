@@ -1,7 +1,18 @@
 import type { ProjectSummary, Structure, TypologyList } from "@bluprint/shared";
-import { type UseQueryResult, useQuery } from "@tanstack/react-query";
-import { Link, Navigate } from "@tanstack/react-router";
+import {
+	type UseQueryResult,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import {
+	Link,
+	Navigate,
+	useRouteContext,
+	useRouter,
+} from "@tanstack/react-router";
 import { Lock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { LoadFailure } from "@/components/LoadFailure";
 import { LockLine } from "@/components/LockLine";
 import { NotFound } from "@/components/NotFound";
@@ -17,8 +28,10 @@ import {
 } from "../../projects/api";
 import { structureQueryOptions, typologiesQueryOptions } from "../api";
 import { STRUCTURE_LOCKED } from "../lockedText";
+import { readStructureDraft, structureDraftKey } from "../structureDraftStore";
 import { StructureWizard } from "./StructureWizard";
 import { towerNowLine } from "./towerNow";
+import { UnusableAttemptGate } from "./UnusableAttemptGate";
 import { extendedDraft } from "./wizardDraft";
 
 const H1 =
@@ -40,13 +53,44 @@ function DeliveredBlock({ projectId }: { projectId: string }) {
 	);
 }
 
-export function StructureWizardPage({
-	projectId,
-	towerId,
-}: {
+interface WizardPageProps {
 	projectId: string;
 	towerId?: string | undefined;
-}) {
+}
+
+export function StructureWizardPage({ projectId, towerId }: WizardPageProps) {
+	const queryClient = useQueryClient();
+	const router = useRouter();
+	const [generation, setGeneration] = useState(0);
+	async function reopen() {
+		await Promise.all([
+			queryClient.invalidateQueries({
+				queryKey: projectQueryOptions(projectId).queryKey,
+			}),
+			queryClient.invalidateQueries({ queryKey: ["structure", projectId] }),
+		]);
+		await router.invalidate();
+		setGeneration((current) => current + 1);
+	}
+	return (
+		<WizardPage
+			key={generation}
+			projectId={projectId}
+			towerId={towerId}
+			onReopen={() => void reopen()}
+		/>
+	);
+}
+
+function WizardPage({
+	projectId,
+	towerId,
+	onReopen,
+}: WizardPageProps & { onReopen: () => void }) {
+	const { session } = useRouteContext({ from: "/_authenticated" });
+	const storageKey = structureDraftKey(session.user.id, projectId, towerId);
+	const [stored] = useState(() => readStructureDraft(storageKey));
+	const [attemptMissing, setAttemptMissing] = useState(false);
 	const valid = isProjectId(projectId);
 	const query = useQuery({ ...projectQueryOptions(projectId), enabled: valid });
 	const extending = valid && towerId !== undefined;
@@ -58,16 +102,61 @@ export function StructureWizardPage({
 		...typologiesQueryOptions(projectId),
 		enabled: extending,
 	});
+	useEffect(() => {
+		if (
+			query.data?.status === "delivered" &&
+			(!stored?.attempt || attemptMissing)
+		) {
+			localStorage.removeItem(storageKey);
+		}
+	}, [query.data?.status, stored, attemptMissing, storageKey]);
 
 	if (!valid || isProjectNotFound(query.error)) {
 		return <NotFound variant="project" />;
 	}
 
-	if (
+	const missingTower =
 		towerId !== undefined &&
-		structure.data &&
-		!structure.data.towers.some((tower) => tower.id === towerId)
+		structure.data !== undefined &&
+		!structure.data.towers.some((tower) => tower.id === towerId);
+	if (
+		stored?.attempt &&
+		!attemptMissing &&
+		(towerId === undefined || structure.data !== undefined) &&
+		(query.data?.status === "delivered" || missingTower)
 	) {
+		return (
+			<PageMain>
+				<UnusableAttemptGate
+					projectId={projectId}
+					towerId={towerId}
+					towerName={
+						(structure.data?.towers.length ?? 0) > 1
+							? structure.data?.towers.find((tower) => tower.id === towerId)
+									?.name
+							: undefined
+					}
+					storageKey={storageKey}
+					stored={stored}
+					onReopen={onReopen}
+					onMissing={() => {
+						if (missingTower && query.data?.status !== "delivered")
+							toast.info("A torre não existe mais. O rascunho foi descartado.");
+						setAttemptMissing(true);
+					}}
+				/>
+			</PageMain>
+		);
+	}
+
+	if (missingTower && query.data?.status === "delivered")
+		return (
+			<PageMain>
+				<DeliveredBlock projectId={projectId} />
+			</PageMain>
+		);
+
+	if (missingTower && query.data?.status !== "delivered") {
 		return (
 			<Navigate to="/projects/$projectId" params={{ projectId }} replace />
 		);
@@ -79,6 +168,7 @@ export function StructureWizardPage({
 				project={query.data}
 				towerId={towerId}
 				queries={[structure, typologies]}
+				onReopen={onReopen}
 			/>
 		);
 	}
@@ -109,7 +199,7 @@ export function StructureWizardPage({
 					{delivered ? (
 						<DeliveredBlock projectId={project.id} />
 					) : (
-						<StructureWizard project={project} />
+						<StructureWizard project={project} onReopen={onReopen} />
 					)}
 				</PageMain>
 			</>
@@ -153,9 +243,11 @@ function AddFloorsPage({
 	project,
 	towerId,
 	queries: [structure, typologies],
+	onReopen,
 }: {
 	project: ProjectSummary;
 	towerId: string;
+	onReopen: () => void;
 	queries: [
 		UseQueryResult<Structure, unknown>,
 		UseQueryResult<TypologyList, unknown>,
@@ -203,6 +295,7 @@ function AddFloorsPage({
 						<StructureWizard
 							project={project}
 							start={extendedDraft(tower, typologies.data.typologies, named)}
+							onReopen={onReopen}
 						/>
 					)}
 				</PageMain>
