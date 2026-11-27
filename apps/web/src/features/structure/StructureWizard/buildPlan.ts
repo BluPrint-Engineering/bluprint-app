@@ -6,7 +6,9 @@ import {
 	tidyLocationName,
 } from "@bluprint/shared";
 import type { ReserveParts } from "../reserveText";
+import { positionsForNewFloors } from "./floorPosition";
 import { isBlankRange, towerFloors } from "./floorRanges";
+import type { ExtendFacts } from "./towerNow";
 import { typologyKeyFor } from "./typologyRules";
 import { FLOOR_HALL, SINGLE_TOWER_NAME, type WizardDraft } from "./wizardDraft";
 
@@ -69,6 +71,7 @@ export interface KnownTypology {
 export function buildPlan(
 	draft: WizardDraft,
 	idFor: (key: string) => string,
+	facts?: ExtendFacts,
 	known: readonly KnownTypology[] = [],
 ): Plan {
 	const locations: NewLocation[] = [];
@@ -77,18 +80,16 @@ export function buildPlan(
 		parentId: string | null,
 		type: NewLocation["type"],
 		name: string,
-		position: number,
+		position: number | undefined,
 		typologyId: string | null = null,
 	) => {
 		const id = idFor(key);
-		const appended =
-			draft.extend !== undefined && parentId === draft.extend.towerId;
 		locations.push({
 			id,
 			parentId,
 			type,
 			name,
-			...(!appended && { position }),
+			...(position !== undefined && { position }),
 			...(typologyId !== null && { typologyId }),
 		});
 		return id;
@@ -127,12 +128,13 @@ export function buildPlan(
 	const towers: PlanTower[] = [];
 
 	draft.towers.forEach((tower, towerIndex) => {
+		const numbering = draft.extend && facts ? facts.numbering : draft.numbering;
 		const name = draft.extend
-			? draft.extend.towerName
+			? (facts?.name ?? "")
 			: several
 				? tower.name.trim()
 				: SINGLE_TOWER_NAME;
-		const parsed = towerFloors(tower.ranges, draft.numbering);
+		const parsed = towerFloors(tower.ranges, numbering);
 		if (!parsed) {
 			towers.push({
 				key: tower.key,
@@ -151,6 +153,12 @@ export function buildPlan(
 		const floors: PlanFloor[] = [];
 		let position = 0;
 		let towerUnits = 0;
+		const placed = draft.extend
+			? positionsForNewFloors(
+					facts?.storedFloors ?? [],
+					(parsed ?? []).map(({ number }) => number),
+				)
+			: undefined;
 
 		if (tower.ground) {
 			const groundId = add(
@@ -185,7 +193,7 @@ export function buildPlan(
 				towerId,
 				"floor",
 				floorName(number),
-				position++,
+				placed ? placed.get(number) : position++,
 			);
 			const units: PlanUnit[] = stacks.map((stack, at) => {
 				const name = `${number}${stack.label}`;

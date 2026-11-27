@@ -13,6 +13,7 @@ function floor(
 	return {
 		id: id(),
 		name,
+		position: 0,
 		units: Array.from({ length: units }, (_, i) => {
 			const typeName = typologies[i % Math.max(typologies.length, 1)] ?? null;
 			return {

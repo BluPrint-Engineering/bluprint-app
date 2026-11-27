@@ -47,6 +47,9 @@ interface Entry {
 	exit?: () => Promise<void>;
 	reenter?: () => Promise<void>;
 	afterSave?: () => Promise<void>;
+	whileSignedOut?: () => void;
+	afterRestore?: () => Promise<void>;
+	afterCancel?: () => Promise<void>;
 	openedByAddress?: true;
 	shows: string[];
 	focusAfterCancel?: () => Promise<HTMLElement>;
@@ -129,6 +132,7 @@ async function expireOnSave(page: Page, entry: Entry) {
 	page.server.expireNextWrite();
 	await entry.submit();
 	await screen.findByLabelText("E-mail");
+	entry.whileSignedOut?.();
 	await signInAgain();
 	await page.ready();
 }
@@ -168,9 +172,11 @@ async function restoreThenCancel(page: Page, entry: Entry) {
 
 	await expireOnSave(page, entry);
 	await expectRestored(page, entry);
+	await entry.afterRestore?.();
 	expect(page.server.writes).toEqual([entry.request]);
 
 	await entry.cancel();
+	await entry.afterCancel?.();
 	const { focusAfterCancel } = entry;
 	if (focusAfterCancel) {
 		await waitFor(async () => expect(await focusAfterCancel()).toHaveFocus());
@@ -1309,6 +1315,7 @@ function wizardPage(adding: boolean, remaining: number): Page {
 				await screen.findByText("Rascunho restaurado"),
 			).toBeInTheDocument();
 			if (adding) {
+				expect(await valuesOf("Do andar")).toEqual(["3"]);
 				expect(await valuesOf("Último andar")).toEqual(["5"]);
 				expect(await valuesOf("Finais")).toEqual(["01, 03"]);
 				return;
@@ -1329,8 +1336,10 @@ function wizardPage(adding: boolean, remaining: number): Page {
 		},
 		expectCurrent: async () => {
 			expect(await valuesOf("Último andar")).toEqual([""]);
-			expect(await valuesOf("Finais")).toEqual([adding ? "01, 02" : ""]);
-			if (!adding) {
+			expect(await valuesOf("Finais")).toEqual([""]);
+			if (adding) {
+				expect(await valuesOf("Do andar")).toEqual(["3"]);
+			} else {
 				expect(
 					await screen.findByRole("radio", { name: "101, 102" }),
 				).toBeChecked();
@@ -1346,6 +1355,17 @@ function wizardPage(adding: boolean, remaining: number): Page {
 			...leaveAndReturn,
 			shows: [],
 			request: `POST /api/projects/${summary.id}/structure`,
+			...(adding && {
+				whileSignedOut: () => {
+					towerB.floors.push(floor("3º andar", ["301", "302"], [], 2));
+				},
+				afterRestore: async () => {
+					expect(
+						await screen.findByText("A obra já tem o 3º andar."),
+					).toBeInTheDocument();
+					towerB.floors.pop();
+				},
+			}),
 		};
 	} else {
 		entries.reservation = {
@@ -1373,6 +1393,17 @@ function wizardPage(adding: boolean, remaining: number): Page {
 			focusAfterPlainCancel: byRole("button", "Alterar reserva"),
 			focusAfterSave: createButton,
 			request: `PATCH /api/projects/${summary.id}/units`,
+			...(adding && {
+				whileSignedOut: () => {
+					towerB.floors.push(floor("3º andar", ["301", "302"], [], 2));
+				},
+				afterCancel: async () => {
+					expect(
+						await screen.findByText("A obra já tem o 3º andar."),
+					).toBeInTheDocument();
+					towerB.floors.pop();
+				},
+			}),
 		};
 	}
 	return {

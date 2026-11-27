@@ -345,6 +345,7 @@ describe("GET /api/projects/:id/structure", () => {
 						{
 							id: ground,
 							name: "Térreo",
+							position: 0,
 							units: [],
 							commonAreas: [
 								{ id: anyId, name: "Hall de entrada", typology: null },
@@ -353,6 +354,7 @@ describe("GET /api/projects/:id/structure", () => {
 						{
 							id: ninth,
 							name: "9º andar",
+							position: 1,
 							units: [
 								{
 									id: unit901,
@@ -372,6 +374,7 @@ describe("GET /api/projects/:id/structure", () => {
 						{
 							id: anyId,
 							name: "10º andar",
+							position: 2,
 							units: [
 								{ id: unit1001, name: "1001", typology: null, changes: 0 },
 							],

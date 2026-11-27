@@ -258,6 +258,9 @@ describe("POST /api/projects/:id/structure", () => {
 			"2º andar",
 			"3º andar",
 		]);
+		expect(structure.towers[0]!.floors.map((floor) => floor.position)).toEqual([
+			0, 1, 2,
+		]);
 		expect(
 			structure.towers[0]!.floors[1]!.units.map((unit) => unit.name),
 		).toEqual(["201", "202", "203", "204"]);
@@ -265,6 +268,117 @@ describe("POST /api/projects/:id/structure", () => {
 			"Salão de festas",
 		]);
 		expect(structure.commonAreas.map((area) => area.name)).toEqual(["Guarita"]);
+	});
+
+	it("places floors asked for below and between the ones a tower has, through a gap a removal left", async () => {
+		const projectId = await newProject(40);
+		const tower = entry(null, "tower", "Torre A");
+		const ground = entry(tower.id, "floor", "Térreo", 0);
+		const second = entry(tower.id, "floor", "2º andar", 1);
+		const third = entry(tower.id, "floor", "3º andar", 2);
+		const fourth = entry(tower.id, "floor", "4º andar", 3);
+		const fifth = entry(tower.id, "floor", "5º andar", 4);
+		const sixth = entry(tower.id, "floor", "6º andar", 5);
+		const seventh = entry(tower.id, "floor", "7º andar", 6);
+		const ninth = entry(tower.id, "floor", "9º andar", 7);
+		const tenth = entry(tower.id, "floor", "10º andar", 8);
+		const cover = entry(tower.id, "floor", "Cobertura", 9);
+		const created = await create(admin, projectId, [
+			tower,
+			ground,
+			second,
+			third,
+			fourth,
+			fifth,
+			sixth,
+			seventh,
+			ninth,
+			tenth,
+			cover,
+		]);
+		expect(created.status).toBe(201);
+
+		const removed = await admin.agent.delete(
+			`/api/projects/${projectId}/locations/${fourth.id}`,
+		);
+		expect(removed.status).toBe(200);
+		const gapped = await readStructure(projectId);
+		expect(
+			gapped.towers[0]!.floors.map((floor) => [floor.name, floor.position]),
+		).toEqual([
+			["Térreo", 0],
+			["2º andar", 1],
+			["3º andar", 2],
+			["5º andar", 4],
+			["6º andar", 5],
+			["7º andar", 6],
+			["9º andar", 7],
+			["10º andar", 8],
+			["Cobertura", 9],
+		]);
+
+		const first = entry(tower.id, "floor", "1º andar", 1);
+		const eighth = entry(tower.id, "floor", "8º andar", 8);
+		const added = await create(admin, projectId, [eighth, first]);
+		expect(added.status).toBe(201);
+
+		const structure = await readStructure(projectId);
+		expect(structure.towers[0]!.floors.map((floor) => floor.name)).toEqual([
+			"Térreo",
+			"1º andar",
+			"2º andar",
+			"3º andar",
+			"5º andar",
+			"6º andar",
+			"7º andar",
+			"8º andar",
+			"9º andar",
+			"10º andar",
+			"Cobertura",
+		]);
+	});
+
+	it("keeps the Cobertura last when one request fills a removal's hole and adds a floor above", async () => {
+		const projectId = await newProject(40);
+		const tower = entry(null, "tower", "Torre A");
+		const numbered = Array.from({ length: 10 }, (_, index) =>
+			entry(tower.id, "floor", `${index + 1}º andar`, index + 1),
+		);
+		const created = await create(admin, projectId, [
+			tower,
+			entry(tower.id, "floor", "Térreo", 0),
+			...numbered,
+			entry(tower.id, "floor", "Cobertura", 11),
+		]);
+		expect(created.status).toBe(201);
+
+		const removed = await admin.agent.delete(
+			`/api/projects/${projectId}/locations/${numbered[3]!.id}`,
+		);
+		expect(removed.status).toBe(200);
+
+		const added = await create(admin, projectId, [
+			entry(tower.id, "floor", "4º andar", 5),
+			entry(tower.id, "floor", "11º andar", 12),
+		]);
+		expect(added.status).toBe(201);
+
+		const structure = await readStructure(projectId);
+		expect(structure.towers[0]!.floors.map((floor) => floor.name)).toEqual([
+			"Térreo",
+			"1º andar",
+			"2º andar",
+			"3º andar",
+			"4º andar",
+			"5º andar",
+			"6º andar",
+			"7º andar",
+			"8º andar",
+			"9º andar",
+			"10º andar",
+			"11º andar",
+			"Cobertura",
+		]);
 	});
 
 	it("stores trimmed names and no typology", async () => {

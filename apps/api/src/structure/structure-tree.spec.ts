@@ -7,8 +7,9 @@ function row(
 	name: string,
 	parentId: string | null,
 	typology: StructureRow["typology"] = null,
+	position = 0,
 ): StructureRow {
-	return { id, type, name, parentId, typology };
+	return { id, type, name, parentId, typology, position };
 }
 
 const noChanges = new Map<string, number>();
@@ -28,8 +29,8 @@ describe("buildStructure", () => {
 				row("a", "tower", "Torre A", null),
 				row("guarita", "common_area", "Guarita", null),
 				row("b", "tower", "Torre B", null),
-				row("a-ground", "floor", "Térreo", "a"),
-				row("a-1", "floor", "1º andar", "a"),
+				row("a-ground", "floor", "Térreo", "a", null, 0),
+				row("a-1", "floor", "1º andar", "a", null, 2),
 				row("a-salao", "common_area", "Salão de festas", "a"),
 				row("a-hall", "common_area", "Hall de entrada", "a-ground"),
 				row("a-102", "unit", "102", "a-1"),
@@ -57,9 +58,11 @@ describe("buildStructure", () => {
 		expect(towerA!.floors[0]).toEqual({
 			id: "a-ground",
 			name: "Térreo",
+			position: 0,
 			units: [],
 			commonAreas: [{ id: "a-hall", name: "Hall de entrada", typology: null }],
 		});
+		expect(towerA!.floors[1]).toMatchObject({ id: "a-1", position: 2 });
 		expect(towerA!.floors[1]!.units.map((unit) => unit.name)).toEqual([
 			"102",
 			"101",

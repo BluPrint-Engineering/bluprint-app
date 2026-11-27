@@ -30,7 +30,6 @@ import { structureQueryOptions, typologiesQueryOptions } from "../api";
 import { STRUCTURE_LOCKED } from "../lockedText";
 import { readStructureDraft, structureDraftKey } from "../structureDraftStore";
 import { StructureWizard } from "./StructureWizard";
-import { towerNowLine } from "./towerNow";
 import { UnusableAttemptGate } from "./UnusableAttemptGate";
 import { extendedDraft } from "./wizardDraft";
 
@@ -280,13 +279,7 @@ function AddFloorsPage({
 					<h1 className={H1}>
 						{named ? `Adicionar andares à ${tower.name}` : "Adicionar andares"}
 					</h1>
-					{delivered ? (
-						<LockLine>{STRUCTURE_LOCKED}</LockLine>
-					) : (
-						<p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">
-							{towerNowLine(tower, named)}
-						</p>
-					)}
+					{delivered && <LockLine>{STRUCTURE_LOCKED}</LockLine>}
 				</PageBand>
 				<PageMain>
 					{delivered ? (
@@ -294,7 +287,9 @@ function AddFloorsPage({
 					) : (
 						<StructureWizard
 							project={project}
-							start={extendedDraft(tower, typologies.data.typologies, named)}
+							tower={tower}
+							named={named}
+							start={extendedDraft(tower, typologies.data.typologies)}
 							onReopen={onReopen}
 						/>
 					)}

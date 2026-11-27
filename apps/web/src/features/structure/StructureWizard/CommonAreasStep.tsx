@@ -240,8 +240,7 @@ export function CommonAreasStep({
 }) {
 	const several = draft.towers.length > 1;
 	const towerName = (index: number) =>
-		draft.extend?.towerName ??
-		(several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME);
+		several ? (draft.towers[index]?.name ?? "") : SINGLE_TOWER_NAME;
 	const places = listedFloorAreas(draft);
 	const catalog = catalogOf(draft, existing);
 	const commonTypes = ofKind(catalog, "common_area");

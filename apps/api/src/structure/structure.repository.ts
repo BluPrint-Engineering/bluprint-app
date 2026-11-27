@@ -29,6 +29,7 @@ const columns = {
 
 const structureColumns = {
 	...columns,
+	position: location.position,
 	typologyId: typology.id,
 	typologyName: typology.name,
 };
@@ -38,6 +39,7 @@ function toStructureRow({
 	typologyName,
 	...row
 }: LocationRow & {
+	position: number;
 	typologyId: string | null;
 	typologyName: string | null;
 }): StructureRow {

@@ -7,6 +7,7 @@ import {
 	type ProjectSummary,
 	ROOM_NAME_TAKEN,
 	type StructureCounts,
+	type StructureTower,
 	TYPOLOGY_NAME_TAKEN,
 	type Typology,
 } from "@bluprint/shared";
@@ -79,12 +80,21 @@ import {
 import { TowersStep } from "./TowersStep";
 import { TypologiesStep } from "./TypologiesStep";
 import {
+	type ExtendFacts,
+	extendFacts,
+	hallRepeatLine,
+	newFloorsLead,
+	towerNowLine,
+} from "./towerNow";
+import {
 	type DraftErrors,
+	extendConflicts,
 	firstInvalidField,
 	initialDraft,
 	restoreWizardDraft,
 	STRUCTURE_DRAFT_VERSION,
 	storeWizardDraft,
+	topFloorHasHall,
 	typologyNameTakenErrors,
 	validateDraft,
 	type WizardDraft,
@@ -96,15 +106,10 @@ const STEP_TITLES = [
 	"Tipologias",
 	"Prévia",
 ] as const;
-const EXTEND_STEP_TITLES = [
-	"Novos andares",
-	"Áreas comuns",
-	"Tipologias",
-	"Prévia",
-] as const;
+const EXTEND_STEP_TITLES = ["Novos andares", "Tipologias", "Prévia"] as const;
 const STEP_OF_SECTION = { towers: 0, areas: 1, types: 2 } as const;
 const NO_TYPOLOGIES: readonly Typology[] = [];
-const LAST_STEP = STEP_TITLES.length - 1;
+const EXTEND_STEP_OF_SECTION = { towers: 0, areas: 0, types: 1 } as const;
 const BLOCKER_ID = "wizard-blocker";
 const AREAS_DESCRIPTION =
 	"O hall de entrada e o Hall em cada andar estão no passo 1. Aqui entram as outras. Cada área comum criada usa 1 da reserva, como uma unidade.";
@@ -126,6 +131,18 @@ function isRefusal(error: unknown): boolean {
 			DISCIPLINE_NAME_TAKEN,
 			PROJECT_DELIVERED,
 		].includes(error.problem.code)
+	);
+}
+
+function stillFound(
+	shown: DraftErrors,
+	found: DraftErrors,
+	touched?: string,
+): DraftErrors {
+	return Object.fromEntries(
+		Object.keys(shown)
+			.filter((key) => key !== touched && found[key] !== undefined)
+			.map((key) => [key, found[key]]),
 	);
 }
 
@@ -202,10 +219,14 @@ function MobileBar({ children }: { children: React.ReactNode }) {
 export function StructureWizard({
 	project,
 	start,
+	tower,
+	named = false,
 	onReopen,
 }: {
 	project: ProjectSummary;
 	start?: WizardDraft;
+	tower?: StructureTower;
+	named?: boolean;
 	onReopen: () => void;
 }) {
 	const desktop = useIsDesktop();
@@ -238,7 +259,7 @@ export function StructureWizard({
 		"change-reservation",
 		reservationDraft,
 	);
-	const [draft, setDraft] = useState<WizardDraft>(
+	const [typed, setDraft] = useState<WizardDraft>(
 		() =>
 			(stored && restoreWizardDraft(stored.draft, start)) ??
 			start ??
@@ -301,9 +322,38 @@ export function StructureWizard({
 			signOutAnswer.current = undefined;
 		};
 	}, [dirty]);
-	const extend = draft.extend;
+	const extend = typed.extend;
+	const liveFacts = useMemo(
+		() => (tower && extend ? extendFacts(tower, named) : undefined),
+		[tower, named, extend],
+	);
+	const [errors, setErrors] = useState<DraftErrors>(() =>
+		stored && !stored.attempt && liveFacts
+			? extendConflicts(typed, liveFacts)
+			: {},
+	);
+	const [checkedFacts, setCheckedFacts] = useState(liveFacts);
+	const sent = submission !== "editing";
+	const facts = sent ? checkedFacts : liveFacts;
+	const draft = useMemo(
+		() =>
+			facts && typed.numbering !== facts.numbering
+				? { ...typed, numbering: facts.numbering }
+				: typed,
+		[typed, facts],
+	);
 	const stepTitles = extend ? EXTEND_STEP_TITLES : STEP_TITLES;
-	const [errors, setErrors] = useState<DraftErrors>({});
+	const lastStep = stepTitles.length - 1;
+	const stepOf = extend ? EXTEND_STEP_OF_SECTION : STEP_OF_SECTION;
+	if (!sent && liveFacts !== checkedFacts) {
+		setCheckedFacts(liveFacts);
+		if (liveFacts) {
+			setErrors((current) => ({
+				...stillFound(current, validateDraft(draft, liveFacts, existingNames)),
+				...extendConflicts(draft, liveFacts),
+			}));
+		}
+	}
 	const [step, setStep] = useState(0);
 	const [floorArea, setFloorArea] = useState<FloorAreaInput>();
 	const [reveal, setReveal] = useState<string>();
@@ -322,19 +372,20 @@ export function StructureWizard({
 	);
 	const stepTop = useRef<HTMLDivElement>(null);
 
-	const preview = useMemo(
+	const known = useMemo(
 		() =>
-			buildPlan(
-				draft,
-				identity,
-				existing.map(({ id, name, locationType }) => ({
-					id,
-					name,
-					locationType,
-				})),
-			),
-		[draft, existing],
+			existing.map(({ id, name, locationType }) => ({
+				id,
+				name,
+				locationType,
+			})),
+		[existing],
 	);
+	const preview = useMemo(
+		() => buildPlan(draft, identity, facts, known),
+		[draft, facts, known],
+	);
+
 	const remaining = units.data?.remaining ?? availableUnitsOf(create.error);
 	const admin = project.role === "admin";
 	const used = reserveUsed(preview.spend);
@@ -368,9 +419,9 @@ export function StructureWizard({
 		setErrors((current) => ({ ...current, ...found }));
 		const first = firstInvalidField(draft, found);
 		if (!first) return;
-		setStep(STEP_OF_SECTION[first.section]);
+		setStep(stepOf[first.section]);
 		setReveal(first.id);
-	}, [refusedNames, draft]);
+	}, [refusedNames, draft, stepOf]);
 
 	const wasBlocked = useRef(blocked);
 	useEffect(() => {
@@ -396,14 +447,9 @@ export function StructureWizard({
 		});
 		setDirty(true);
 		setRestored(false);
-		setErrors((current) => {
-			const found = validateDraft(next, existingNames);
-			return Object.fromEntries(
-				Object.keys(current)
-					.filter((key) => key !== touched && found[key] !== undefined)
-					.map((key) => [key, found[key]]),
-			);
-		});
+		setErrors((current) =>
+			stillFound(current, validateDraft(next, facts, existingNames), touched),
+		);
 		return true;
 	}
 
@@ -417,11 +463,11 @@ export function StructureWizard({
 	}
 
 	function validate(): boolean {
-		const found = validateDraft(draft, existingNames);
+		const found = validateDraft(draft, facts, existingNames);
 		const first = firstInvalidField(draft, found);
 		setErrors(found);
 		if (first === undefined) return true;
-		setStep(STEP_OF_SECTION[first.section]);
+		setStep(stepOf[first.section]);
 		setReveal(first.id);
 		return false;
 	}
@@ -432,7 +478,7 @@ export function StructureWizard({
 			counts,
 			extend && {
 				id: extend.towerId,
-				name: extend.named ? extend.towerName : undefined,
+				name: facts?.named ? facts.name : undefined,
 			},
 		);
 	}
@@ -446,17 +492,9 @@ export function StructureWizard({
 		});
 	}
 
-	function send() {
+	function send(using = facts) {
 		if (staleRef.current) return;
-		const { typologies, locations } = buildPlan(
-			draft,
-			idFor,
-			existing.map(({ id, name, locationType }) => ({
-				id,
-				name,
-				locationType,
-			})),
-		);
+		const { typologies, locations } = buildPlan(draft, idFor, using, known);
 		const first = locations[0];
 		if (!first) return;
 		attemptId.current = first.id;
@@ -469,6 +507,7 @@ export function StructureWizard({
 			},
 		});
 		setDirty(true);
+		setCheckedFacts(using);
 		setSubmission("sending");
 		create.mutate(
 			{ typologies, locations },
@@ -497,7 +536,7 @@ export function StructureWizard({
 		setConnectionMessage(false);
 		const outcome = await attemptOutcome(queryClient, project.id, id);
 		if (outcome === "created") {
-			success(buildPlan(draft, idFor).counts);
+			success(buildPlan(draft, idFor, facts).counts);
 			return;
 		}
 		if (staleRef.current) {
@@ -510,6 +549,7 @@ export function StructureWizard({
 			setSubmission("uncertain");
 			return;
 		}
+		let fresh: ExtendFacts | undefined;
 		try {
 			const [freshProject, structure] = await Promise.all([
 				queryClient.fetchQuery({
@@ -550,13 +590,29 @@ export function StructureWizard({
 				});
 				return;
 			}
+			const freshTower = structure.towers.find(
+				(each) => each.id === extend?.towerId,
+			);
+			if (freshTower) fresh = extendFacts(freshTower, named);
 		} catch {
 			setConnectionMessage(action === "edit");
 			setSubmission("uncertain");
 			return;
 		}
-		if (action === "retry") send();
-		else {
+		if (action === "retry") {
+			const found = fresh ? validateDraft(draft, fresh, existingNames) : {};
+			const first = firstInvalidField(draft, found);
+			if (first === undefined) send(fresh ?? facts);
+			else {
+				setErrors(found);
+				clearAttempt();
+				ids.current = new Map();
+				create.reset();
+				setSubmission("editing");
+				setStep(stepOf[first.section]);
+				setReveal(first.id);
+			}
+		} else {
 			clearAttempt();
 			ids.current = new Map();
 			create.reset();
@@ -643,7 +699,7 @@ export function StructureWizard({
 		: "Criar estrutura";
 	const pendingLabel = extend ? "Adicionando andares…" : "Criando estrutura…";
 	const heading = extend
-		? `${extend.named ? extend.towerName : "A obra"} ganha ${plural(preview.counts.floors, "andar", "andares")} e ${plural(preview.counts.units, "unidade", "unidades")}`
+		? `${facts?.named ? facts.name : "A obra"} ganha ${plural(preview.counts.floors, "andar", "andares")} e ${plural(preview.counts.units, "unidade", "unidades")}`
 		: undefined;
 
 	const createButton = (
@@ -686,8 +742,8 @@ export function StructureWizard({
 	const note = (
 		<p className="text-sm text-muted-foreground">
 			Nada é salvo antes de {extend ? "adicionar" : "criar"}. Depois, tudo se
-			ajusta na fachada. O rascunho fica guardado até lá, mesmo se a página for
-			atualizada.
+			ajusta na fachada{extend ? " e na configuração" : ""}. O rascunho fica
+			guardado até lá, mesmo se a página for atualizada.
 		</p>
 	);
 
@@ -698,6 +754,13 @@ export function StructureWizard({
 			edit={edit}
 			desktop={desktop}
 			existing={existing}
+			{...(tower && {
+				nowLine: towerNowLine(tower, named),
+			})}
+			{...(tower &&
+				topFloorHasHall(tower) && {
+					hallDescription: hallRepeatLine(tower, named),
+				})}
 		/>
 	);
 	const areasStep = (
@@ -722,11 +785,11 @@ export function StructureWizard({
 		/>
 	);
 
-	const towersDescription =
-		extend?.lead ??
-		"Cada torre com as suas faixas de andares e os finais de cada faixa. Uma torre nova começa igual à anterior, sem o Hall em cada andar.";
+	const towersDescription = tower
+		? newFloorsLead(tower, named)
+		: "Cada torre com as suas faixas de andares e os finais de cada faixa. Uma torre nova começa igual à anterior, sem o Hall em cada andar.";
 
-	const content = [
+	const mobileSteps = [
 		<Section
 			key="towers"
 			number={1}
@@ -736,25 +799,34 @@ export function StructureWizard({
 		>
 			{towersStep}
 		</Section>,
-		<Section
-			key="areas"
-			number={2}
-			title={stepTitles[1]}
-			description={AREAS_DESCRIPTION}
-			desktop={false}
-		>
-			{areasStep}
-		</Section>,
+		...(!extend
+			? [
+					<Section
+						key="areas"
+						number={2}
+						title={STEP_TITLES[1]}
+						description={AREAS_DESCRIPTION}
+						desktop={false}
+					>
+						{areasStep}
+					</Section>,
+				]
+			: []),
 		<Section
 			key="types"
-			number={3}
-			title={stepTitles[2]}
+			number={extend ? 2 : 3}
+			title="Tipologias"
 			description={TYPES_DESCRIPTION}
 			desktop={false}
 		>
 			{typesStep}
 		</Section>,
-		<Section key="preview" number={4} title={stepTitles[3]} desktop={false}>
+		<Section
+			key="preview"
+			number={stepTitles.length}
+			title="Prévia"
+			desktop={false}
+		>
 			<PreviewSummary plan={preview} heading={heading} />
 			{reserveBox}
 			<UntypedAlert plan={preview} />
@@ -764,7 +836,8 @@ export function StructureWizard({
 			{failures}
 			{note}
 		</Section>,
-	][step];
+	];
+	const content = mobileSteps[step];
 
 	const layout = desktop ? (
 		<div className="grid items-start gap-(--space-8) md:grid-cols-[minmax(0,1fr)_360px]">
@@ -777,17 +850,19 @@ export function StructureWizard({
 				>
 					{towersStep}
 				</Section>
+				{!extend && (
+					<Section
+						number={2}
+						title={STEP_TITLES[1]}
+						description={AREAS_DESCRIPTION}
+						desktop
+					>
+						{areasStep}
+					</Section>
+				)}
 				<Section
-					number={2}
-					title={stepTitles[1]}
-					description={AREAS_DESCRIPTION}
-					desktop
-				>
-					{areasStep}
-				</Section>
-				<Section
-					number={3}
-					title={stepTitles[2]}
+					number={extend ? 2 : 3}
+					title="Tipologias"
 					description={TYPES_DESCRIPTION}
 					desktop
 				>
@@ -843,7 +918,7 @@ export function StructureWizard({
 			</div>
 			{content}
 			<MobileBar>
-				{step === LAST_STEP && blocker}
+				{step === lastStep && blocker}
 				<div className="flex gap-(--space-2)">
 					{step > 0 && (
 						<Button
@@ -857,7 +932,7 @@ export function StructureWizard({
 							Voltar
 						</Button>
 					)}
-					{step < LAST_STEP ? (
+					{step < lastStep ? (
 						<Button
 							type="button"
 							size="lg"

@@ -10,6 +10,7 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 	const floorsOf = async () =>
 		(await query("SELECT count(*)::int AS n FROM location WHERE parent_id = $1 AND type = 'floor'", [towerB]))[0].n;
 	const before = await floorsOf();
+	const top = before;
 
 	await page.goto(`/projects/${jardins}/locations/${towerB}`);
 	await expect(page.getByRole("heading", { level: 1, name: "Torre B" })).toBeVisible();
@@ -25,23 +26,31 @@ export default async function structureAddFloors({ page, shot, expect, query }) 
 	}
 
 	await expect(page.getByRole("heading", { level: 1, name: "Adicionar andares à Torre B" })).toBeVisible();
-	const summary = page.getByText(/^A Torre B tem hoje \d+ andares, do 1º ao \d+º, com 2 unidades por andar\.$/);
-	await expect(summary).toBeVisible();
-	const top = Number((await summary.innerText()).match(/ao (\d+)º/)[1]);
+	await expect(page.getByText(`A Torre B tem hoje do 1º ao ${top}º andar. Use andares que ela ainda não tem.`)).toBeVisible();
 	await expect(page.getByRole("textbox", { name: "Do andar", exact: true })).toHaveValue(String(top + 1));
-	await expect(page.getByRole("textbox", { name: "Finais", exact: true })).toHaveValue("01, 02");
-	await shot("w9-add-floors");
-
-	await page.getByRole("textbox", { name: "Último andar" }).fill(String(top + 2));
+	await expect(page.getByRole("textbox", { name: "Último andar", exact: true })).toHaveValue("");
+	await expect(page.getByRole("textbox", { name: "Finais", exact: true })).toHaveValue("");
+	await expect(page.getByRole("checkbox", { name: "Hall em cada andar" })).toBeChecked();
+	await shot("a1-open");
 	if (phone) {
-		await page.getByRole("button", { name: "Continuar · Áreas comuns" }).click();
+		await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+		await shot("a1-open-end", { screenOnly: true });
+	}
+
+	await page.getByRole("textbox", { name: "Último andar", exact: true }).fill(String(top + 2));
+	await page.getByRole("textbox", { name: "Finais", exact: true }).fill("01");
+	if (phone) {
 		await page.getByRole("button", { name: "Continuar · Tipologias" }).click();
 		await page.getByRole("button", { name: "Continuar · Prévia" }).click();
 	}
-	await expect(page.getByText("Torre B ganha 2 andares e 4 unidades")).toBeVisible();
-	await expect(page.getByText(/^Estes andares usam\s6 das \d+ que restam na reserva\. Depois de adicionar, sobram\s\d+\.$/)).toBeVisible();
-	await expect(page.getByText("4 unidades + 2 halls de andar")).toBeVisible();
-	await shot("w9-preview");
+	await expect(page.getByText("Torre B ganha 2 andares e 2 unidades")).toBeVisible();
+	await expect(page.getByText(/^Estes andares usam\s4 das \d+ que restam na reserva\. Depois de adicionar, sobram\s\d+\.$/)).toBeVisible();
+	await expect(page.getByText("2 unidades + 2 halls de andar")).toBeVisible();
+	await shot("a2-preview");
+	if (phone) {
+		await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+		await shot("a2-preview-end", { screenOnly: true });
+	}
 
 	await page.getByRole("button", { name: "Adicionar 2 andares" }).click();
 	await expect(page.getByText("2 andares adicionados à Torre B.")).toBeVisible();

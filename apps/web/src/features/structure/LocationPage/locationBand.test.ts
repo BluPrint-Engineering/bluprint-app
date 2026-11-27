@@ -14,6 +14,7 @@ const tower = (
 				{
 					id: `${id}-floor`,
 					name: "1º andar",
+					position: 0,
 					units: Array.from({ length: units }, (_, i) => ({
 						id: `${id}-u${i}`,
 						name: `10${i + 1}`,

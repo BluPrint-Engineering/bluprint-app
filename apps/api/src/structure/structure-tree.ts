@@ -27,9 +27,10 @@ export function buildStructure(
 			typology,
 		}));
 
-	const floorOf = ({ id, name }: StructureRow): StructureFloor => ({
+	const floorOf = ({ id, name, position }: StructureRow): StructureFloor => ({
 		id,
 		name,
+		position,
 		units: childrenOfType(id, "unit").map((unit) => ({
 			id: unit.id,
 			name: unit.name,

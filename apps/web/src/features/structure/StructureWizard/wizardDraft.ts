@@ -19,11 +19,10 @@ import {
 	rangeFieldErrors,
 	rangeOverlap,
 	readRange,
-	stackLabel,
 	towerFloors,
 	typedStackSpan,
 } from "./floorRanges";
-import { describeTower, newFloorsLead } from "./towerNow";
+import { describeTower, type ExtendFacts } from "./towerNow";
 import {
 	ALL_FINALS,
 	parseFinals,
@@ -59,11 +58,6 @@ export interface FloorAreaDraft {
 
 export interface ExtendDraft {
 	towerId: string;
-	towerName: string;
-	named: boolean;
-	takenFloors: number[];
-	takenUnits: string[];
-	lead: string;
 }
 
 export interface WizardDraft {
@@ -77,7 +71,7 @@ export interface WizardDraft {
 	rules: RuleDraft[];
 }
 
-export const STRUCTURE_DRAFT_VERSION = 2;
+export const STRUCTURE_DRAFT_VERSION = 3;
 
 const typologyKeySchema = z.string().nullable();
 const rangeSchema = z.strictObject({
@@ -154,7 +148,7 @@ export function restoreWizardDraft(
 	const towers = start?.extend
 		? stored.towers.map((tower) => ({
 				...tower,
-				name: start.extend?.towerName ?? "",
+				name: start.towers[0]?.name ?? "",
 			}))
 		: stored.towers;
 	towerKeys = Math.max(towerKeys, highestKey(towers, TOWER_KEY));
@@ -294,10 +288,17 @@ function hallTypologyOf(
 		: null;
 }
 
+export function topFloorHasHall(tower: StructureTower): boolean {
+	return (
+		describeTower(tower).lastFloor?.commonAreas.some((area) =>
+			sameLocationName(area.name, FLOOR_HALL),
+		) ?? false
+	);
+}
+
 export function extendedDraft(
 	tower: StructureTower,
 	existingTypes: Typology[],
-	named: boolean,
 ): WizardDraft {
 	const now = describeTower(tower);
 	const unitTypes = existingTypes.filter(
@@ -330,37 +331,15 @@ export function extendedDraft(
 			},
 		];
 	}
-	const hasHall =
-		now.lastFloor === undefined ||
-		now.lastFloor.commonAreas.some((area) =>
-			sameLocationName(area.name, FLOOR_HALL),
-		);
-	const perFloor = now.lastFloor?.units.length ?? 0;
+	const hasHall = now.lastFloor === undefined || topFloorHasHall(tower);
 	const numbering: Numbering = now.lettered ? "letters" : "digits";
-	const finals =
-		perFloor === 0
-			? []
-			: [...new Set([1, perFloor])].map((position) =>
-					stackLabel(position, numbering),
-				);
 	return {
-		extend: {
-			towerId: tower.id,
-			towerName: tower.name,
-			named,
-			takenFloors: now.numbered,
-			takenUnits: tower.floors.flatMap((floor) =>
-				floor.units.map((unit) => unit.name),
-			),
-			lead: newFloorsLead(tower, named),
-		},
+		extend: { towerId: tower.id },
 		towers: [
 			{
 				key: nextTowerKey(),
 				name: tower.name,
-				ranges: [
-					newRange(String((now.numbered.at(-1) ?? 0) + 1), finals.join(", ")),
-				],
+				ranges: [newRange(String((now.numbered.at(-1) ?? 0) + 1))],
 				ground: false,
 				hall: hasHall,
 				entranceTypology: null,
@@ -562,12 +541,9 @@ export function withRange(
 }
 
 export function towerLabel(draft: WizardDraft, index: number): string {
-	return (
-		draft.extend?.towerName ??
-		(draft.towers.length > 1
-			? (draft.towers[index]?.name.trim() ?? "")
-			: SINGLE_TOWER_NAME)
-	);
+	return draft.towers.length > 1
+		? (draft.towers[index]?.name.trim() ?? "")
+		: SINGLE_TOWER_NAME;
 }
 
 export type NumberingChange =
@@ -700,29 +676,49 @@ function clashingUnit(
 }
 
 function extendProblem(
-	extend: ExtendDraft,
+	facts: ExtendFacts,
 	range: RangeDraft,
-	numbering: Numbering,
 ): string | undefined {
 	const first = floorNumber(range.first);
 	if (first === undefined) return undefined;
 	const last = floorNumber(range.last) ?? first;
-	const label = extend.named ? `A ${extend.towerName}` : "A obra";
-	const taken = extend.takenFloors.find(
+	const label = facts.named ? `A ${facts.name}` : "A obra";
+	const taken = facts.takenFloors.find(
 		(number) => number >= first && number <= last,
 	);
 	if (taken !== undefined) return `${label} já tem o ${taken}º andar.`;
-	const clash = clashingUnit(range, numbering, extend.takenUnits);
+	const clash = clashingUnit(range, facts.numbering, facts.takenUnits);
 	return clash === undefined
 		? undefined
-		: `${label} já tem a unidade ${clash}. Comece em um andar acima dela.`;
+		: `${label} já tem a unidade ${clash}. Use outro andar ou outros finais.`;
+}
+
+export function extendConflicts(
+	draft: WizardDraft,
+	facts: ExtendFacts,
+): DraftErrors {
+	if (!draft.extend) return {};
+	const errors: DraftErrors = {};
+	for (const tower of draft.towers) {
+		for (const range of tower.ranges) {
+			if (rangeFieldErrors(range, facts.numbering).first !== undefined)
+				continue;
+			const message = extendProblem(facts, range);
+			if (message !== undefined) {
+				errors[rangeFieldId(range.key, "first")] = message;
+			}
+		}
+	}
+	return errors;
 }
 
 export function validateDraft(
 	draft: WizardDraft,
+	facts?: ExtendFacts,
 	existingNames: readonly string[] = [],
 ): DraftErrors {
 	const errors: DraftErrors = {};
+	const numbering = facts?.numbering ?? draft.numbering;
 	const several = draft.towers.length > 1;
 
 	draft.towers.forEach((tower, index) => {
@@ -739,7 +735,7 @@ export function validateDraft(
 		}
 
 		tower.ranges.forEach((range, at) => {
-			const found = rangeFieldErrors(range, draft.numbering);
+			const found = rangeFieldErrors(range, numbering);
 			for (const field of ["first", "last", "finals"] as const) {
 				const message = found[field];
 				if (message !== undefined) {
@@ -748,15 +744,9 @@ export function validateDraft(
 			}
 			const overlap = rangeOverlap(tower.ranges, at);
 			if (overlap !== undefined) errors[rangeOverlapId(range.key)] = overlap;
-			const extended =
-				draft.extend && found.first === undefined
-					? extendProblem(draft.extend, range, draft.numbering)
-					: undefined;
-			if (extended !== undefined) {
-				errors[rangeFieldId(range.key, "first")] = extended;
-			}
 		});
 	});
+	if (facts) Object.assign(errors, extendConflicts(draft, facts));
 
 	const listed = listedFloorAreas(draft);
 	listed.forEach((area, index) => {

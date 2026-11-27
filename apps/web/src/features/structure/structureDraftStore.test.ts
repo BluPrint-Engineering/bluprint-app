@@ -76,11 +76,6 @@ const fields = {
 	} satisfies Record<keyof RuleDraft, true>,
 	extend: {
 		towerId: true,
-		towerName: true,
-		named: true,
-		takenFloors: true,
-		takenUnits: true,
-		lead: true,
 	} satisfies Record<keyof ExtendDraft, true>,
 };
 
@@ -105,19 +100,14 @@ describe("structure draft storage", () => {
 	});
 	it("stores typed fields without server facts", () => {
 		const draft = initialDraft();
-		draft.extend = {
-			towerId: "server-id",
-			towerName: "Server tower",
-			named: true,
-			takenFloors: [4],
-			takenUnits: ["401"],
-			lead: "Server facts",
-		};
+		draft.extend = { towerId: "server-id" };
+		draft.towers = draft.towers.map((tower) => ({
+			...tower,
+			name: "Server tower",
+		}));
 		const saved = JSON.stringify(storeWizardDraft(draft));
 		expect(saved).not.toContain("Server tower");
-		expect(saved).not.toContain("401");
-		expect(saved).not.toContain("Server facts");
-		expect(saved).not.toContain("takenFloors");
+		expect(saved).not.toContain("server-id");
 	});
 
 	it("reads back a record with the typologies of the entrance, the floor hall and the common areas", () => {
