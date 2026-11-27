@@ -10,6 +10,12 @@ import {
 } from "@bluprint/shared";
 import { z } from "zod";
 import {
+	type AssignmentRule,
+	blockedRules,
+	cleanRules,
+	type DraftTowerShape,
+} from "./assignmentRules";
+import {
 	convertFinals,
 	floorNumber,
 	MAX_LETTER_STACKS,
@@ -23,15 +29,17 @@ import {
 	typedStackSpan,
 } from "./floorRanges";
 import { describeTower, type ExtendFacts } from "./towerNow";
-import {
-	ALL_FINALS,
-	parseFinals,
-	parseFloorBound,
-	type RuleDraft,
-	type TypologyDraft,
-} from "./typologyRules";
 
 export type { Numbering, RangeDraft } from "./floorRanges";
+
+export interface TypologyDraft {
+	key: string;
+	name: string;
+	rooms: string[];
+	locationType: TypologyLocationType;
+}
+
+export type RuleDraft = AssignmentRule;
 
 export interface TowerDraft {
 	key: string;
@@ -71,7 +79,7 @@ export interface WizardDraft {
 	rules: RuleDraft[];
 }
 
-export const STRUCTURE_DRAFT_VERSION = 3;
+export const STRUCTURE_DRAFT_VERSION = 4;
 
 const typologyKeySchema = z.string().nullable();
 const rangeSchema = z.strictObject({
@@ -109,10 +117,10 @@ const typologySchema = z.strictObject({
 });
 const ruleSchema = z.strictObject({
 	key: z.string(),
-	tower: z.number().int(),
-	finals: z.string(),
-	from: z.string(),
-	to: z.string(),
+	towers: z.array(z.string()),
+	finals: z.union([z.literal("all"), z.array(z.number().int().min(1))]),
+	fromFloor: z.number().int().nullable(),
+	toFloor: z.number().int().nullable(),
 	typology: z.string(),
 });
 export const storedWizardDraftSchema = z.strictObject({
@@ -161,11 +169,13 @@ export function restoreWizardDraft(
 	);
 	typeKeys = Math.max(typeKeys, highestKey(stored.typologies, TYPOLOGY_KEY));
 	ruleKeys = Math.max(ruleKeys, highestKey(stored.rules, RULE_KEY));
-	return {
+	return withCleanRules({
 		...stored,
 		towers,
-		...(start?.extend ? { extend: start.extend } : {}),
-	};
+		...(start?.extend
+			? { extend: start.extend, numbering: start.numbering }
+			: {}),
+	});
 }
 
 export const SINGLE_TOWER_NAME = "Torre A";
@@ -217,10 +227,11 @@ export function initialDraft(): WizardDraft {
 		rooms: [],
 		locationType: "unit",
 	};
+	const towerKey = nextTowerKey();
 	return {
 		towers: [
 			{
-				key: nextTowerKey(),
+				key: towerKey,
 				name: SINGLE_TOWER_NAME,
 				ranges: [newRange()],
 				ground: true,
@@ -234,22 +245,25 @@ export function initialDraft(): WizardDraft {
 		towerAreas: [],
 		floorAreas: [],
 		typologies: [typology],
-		rules: [
-			{
-				key: nextRuleKey(),
-				tower: 0,
-				finals: ALL_FINALS,
-				from: "",
-				to: "",
-				typology: typology.key,
-			},
-		],
+		rules: [wholeTowerRule(towerKey, typology.key)],
+	};
+}
+
+function wholeTowerRule(towerKey: string, typology: string): RuleDraft {
+	return {
+		key: nextRuleKey(),
+		towers: [towerKey],
+		finals: "all",
+		fromFloor: null,
+		toFloor: null,
+		typology,
 	};
 }
 
 function mirroredRules(
 	tower: StructureTower,
 	unitTypeIds: ReadonlySet<string>,
+	towerKey: string,
 ): RuleDraft[] | undefined {
 	const units = describeTower(tower).lastFloor?.units ?? [];
 	if (units.length === 0) return undefined;
@@ -260,15 +274,8 @@ function mirroredRules(
 		finalsByType.set(id, [...(finalsByType.get(id) ?? []), at + 1]);
 	});
 	return [...finalsByType].map(([typology, finals]) => ({
-		key: nextRuleKey(),
-		tower: 0,
-		finals:
-			finals.length === units.length
-				? ALL_FINALS
-				: finals.map((final) => String(final).padStart(2, "0")).join(", "),
-		from: "",
-		to: "",
-		typology,
+		...wholeTowerRule(towerKey, typology),
+		finals: finals.length === units.length ? "all" : finals,
 	}));
 }
 
@@ -305,9 +312,11 @@ export function extendedDraft(
 		(typology) => typology.locationType === "unit",
 	);
 	const typologies: TypologyDraft[] = [];
+	const towerKey = nextTowerKey();
 	let rules = mirroredRules(
 		tower,
 		new Set(unitTypes.map((typology) => typology.id)),
+		towerKey,
 	);
 	if (rules === undefined) {
 		const first = unitTypes[0];
@@ -320,16 +329,7 @@ export function extendedDraft(
 					locationType: "unit" as const,
 				};
 		if (typology) typologies.push(typology);
-		rules = [
-			{
-				key: nextRuleKey(),
-				tower: 0,
-				finals: ALL_FINALS,
-				from: "",
-				to: "",
-				typology: first?.id ?? typology?.key ?? "",
-			},
-		];
+		rules = [wholeTowerRule(towerKey, first?.id ?? typology?.key ?? "")];
 	}
 	const hasHall = now.lastFloor === undefined || topFloorHasHall(tower);
 	const numbering: Numbering = now.lettered ? "letters" : "digits";
@@ -337,7 +337,7 @@ export function extendedDraft(
 		extend: { towerId: tower.id },
 		towers: [
 			{
-				key: nextTowerKey(),
+				key: towerKey,
 				name: tower.name,
 				ranges: [newRange(String((now.numbered.at(-1) ?? 0) + 1))],
 				ground: false,
@@ -424,20 +424,11 @@ export function withNewRule(
 	const typology =
 		typologyKey ??
 		draft.typologies.find((item) => item.locationType === "unit")?.key;
-	if (!typology) return draft;
+	const first = draft.towers[0];
+	if (!typology || !first) return draft;
 	return {
 		...draft,
-		rules: [
-			...draft.rules,
-			{
-				key: nextRuleKey(),
-				tower: 0,
-				finals: ALL_FINALS,
-				from: "",
-				to: "",
-				typology,
-			},
-		],
+		rules: [...draft.rules, wholeTowerRule(first.key, typology)],
 	};
 }
 
@@ -459,17 +450,11 @@ export function nextTowerName(previous: string): string {
 export function withTowerCount(draft: WizardDraft, count: number): WizardDraft {
 	const target = Math.max(1, count);
 	if (target <= draft.towers.length) {
-		return {
-			...draft,
-			towers: draft.towers.slice(0, target),
-			rules: draft.rules.filter((rule) => rule.tower < target),
-		};
+		return { ...draft, towers: draft.towers.slice(0, target) };
 	}
 	const towers = [...draft.towers];
-	const rules = [...draft.rules];
 	while (towers.length < target) {
-		const previousIndex = towers.length - 1;
-		const previous = towers[previousIndex] as TowerDraft;
+		const previous = towers[towers.length - 1] as TowerDraft;
 		towers.push({
 			...previous,
 			key: nextTowerKey(),
@@ -481,12 +466,67 @@ export function withTowerCount(draft: WizardDraft, count: number): WizardDraft {
 			hall: false,
 			hallTypology: null,
 		});
-		const inherited = rules.filter((other) => other.tower === previousIndex);
-		for (const rule of inherited) {
-			rules.push({ ...rule, key: nextRuleKey(), tower: towers.length - 1 });
-		}
 	}
-	return { ...draft, towers, rules };
+	return { ...draft, towers };
+}
+
+export function towerShapes(draft: WizardDraft): DraftTowerShape[] {
+	return draft.towers.flatMap((tower): DraftTowerShape[] => {
+		const floors = towerFloors(tower.ranges, draft.numbering);
+		if (!floors) return [];
+		const finals = new Set(
+			floors.flatMap(({ stacks }) => stacks.map(({ position }) => position)),
+		);
+		return [
+			{
+				key: tower.key,
+				finals: [...finals].sort((a, b) => a - b),
+				floors: floors.map(({ number }) => number),
+			},
+		];
+	});
+}
+
+export function withCleanRules(draft: WizardDraft): WizardDraft {
+	const shapes = towerShapes(draft);
+	const known = new Set(shapes.map(({ key }) => key));
+	const unreadable = new Set(
+		draft.towers.map(({ key }) => key).filter((key) => !known.has(key)),
+	);
+	const cleaned = cleanRules(
+		draft.rules,
+		draft.towers.map(
+			({ key }) =>
+				shapes.find((shape) => shape.key === key) ?? {
+					key,
+					finals: [],
+					floors: [],
+				},
+		),
+	);
+	return {
+		...draft,
+		rules: draft.rules.map((rule, at) =>
+			rule.towers.some((key) => unreadable.has(key))
+				? {
+						...rule,
+						towers: rule.towers.filter((key) =>
+							draft.towers.some((tower) => tower.key === key),
+						),
+					}
+				: (cleaned[at] ?? rule),
+		),
+	};
+}
+
+const shapeKey = (draft: WizardDraft) =>
+	JSON.stringify([draft.towers.map(({ key }) => key), towerShapes(draft)]);
+
+export function withEditedRules(
+	before: WizardDraft,
+	after: WizardDraft,
+): WizardDraft {
+	return shapeKey(before) === shapeKey(after) ? after : withCleanRules(after);
 }
 
 function withTower(
@@ -603,7 +643,7 @@ export const floorAreaFieldId = (key: string) => `floor-area-${key}`;
 export const listedFloorAreas = (draft: WizardDraft) =>
 	draft.floorAreas.filter((area) => area.tower < draft.towers.length);
 
-export type RuleField = "finals" | "from" | "to";
+export type RuleField = "towers" | "finals";
 
 export const typologyFieldId = (key: string) => `${key}-name`;
 
@@ -768,19 +808,23 @@ export function validateDraft(
 		}
 	});
 
-	for (const rule of draft.rules) {
-		if (parseFinals(rule.finals) === undefined) {
-			errors[ruleFieldId(rule.key, "finals")] =
-				"Use números como 01, 03, ou escreva todos.";
-		}
-		const from = parseFloorBound(rule.from);
-		const to = parseFloorBound(rule.to);
-		if (from !== undefined && to !== undefined && to < from) {
-			errors[ruleFieldId(rule.key, "to")] =
-				"O andar final precisa ser igual ou maior que o inicial.";
-		}
-	}
+	Object.assign(errors, ruleErrors(draft.rules));
 
+	return errors;
+}
+
+const RULE_BLOCK_MESSAGES = {
+	"no-tower": { field: "towers", message: "Escolha ao menos uma torre." },
+	"no-final": { field: "finals", message: "Escolha ao menos um final." },
+} as const;
+
+export function ruleErrors(rules: RuleDraft[]): DraftErrors {
+	const errors: DraftErrors = {};
+	for (const { ruleKey, reason } of blockedRules(rules, [])) {
+		if (reason === "conflict") continue;
+		const { field, message } = RULE_BLOCK_MESSAGES[reason];
+		errors[ruleFieldId(ruleKey, field)] = message;
+	}
 	return errors;
 }
 
@@ -826,7 +870,7 @@ export function firstInvalidField(
 			section: "types" as const,
 		})),
 		...draft.rules.flatMap((rule) =>
-			(["finals", "from", "to"] as const).map((field) => ({
+			(["towers", "finals"] as const).map((field) => ({
 				id: ruleFieldId(rule.key, field),
 				section: "types" as const,
 			})),

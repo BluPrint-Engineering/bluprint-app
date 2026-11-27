@@ -206,10 +206,14 @@ describe("extendedDraft", () => {
 
 		expect(draft.typologies).toEqual([]);
 		expect(
-			draft.rules.map(({ finals, typology }) => [finals, typology]),
+			draft.rules.map(({ towers, finals, typology }) => [
+				towers,
+				finals,
+				typology,
+			]),
 		).toEqual([
-			["01, 03", a.id],
-			["02, 04", b.id],
+			[[draft.towers[0]?.key], [1, 3], a.id],
+			[[draft.towers[0]?.key], [2, 4], b.id],
 		]);
 	});
 
@@ -225,7 +229,15 @@ describe("extendedDraft", () => {
 			[a],
 		);
 
-		expect(draft.rules).toMatchObject([{ finals: "todos", typology: a.id }]);
+		expect(draft.rules).toMatchObject([
+			{
+				towers: [draft.towers[0]?.key],
+				finals: "all",
+				fromFloor: null,
+				toFloor: null,
+				typology: a.id,
+			},
+		]);
 	});
 
 	test("leaves the new units without tipologia when the last floor has none", () => {
@@ -241,7 +253,15 @@ describe("extendedDraft", () => {
 		const b = typologyOf("Tipologia B", []);
 		const draft = extendedDraft(tower("Torre A"), [a, b]);
 
-		expect(draft.rules).toMatchObject([{ finals: "todos", typology: a.id }]);
+		expect(draft.rules).toMatchObject([
+			{
+				towers: [draft.towers[0]?.key],
+				finals: "all",
+				fromFloor: null,
+				toFloor: null,
+				typology: a.id,
+			},
+		]);
 	});
 
 	test("starts a new Tipologia A when the project has none", () => {
@@ -359,18 +379,18 @@ describe("buildPlan for added floors", () => {
 			each.rules = [
 				{
 					key: "r1",
-					tower: 0,
-					finals: "01",
-					from: "",
-					to: "",
+					towers: [each.towers[0]?.key ?? ""],
+					finals: [1],
+					fromFloor: null,
+					toFloor: null,
 					typology: type.id,
 				},
 				{
 					key: "r2",
-					tower: 0,
-					finals: "02",
-					from: "",
-					to: "",
+					towers: [each.towers[0]?.key ?? ""],
+					finals: [2],
+					fromFloor: null,
+					toFloor: null,
 					typology: "novo",
 				},
 			];

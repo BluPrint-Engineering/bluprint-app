@@ -14,7 +14,7 @@ import { CopyTypologyDialog } from "../components/CopyTypologyDialog";
 import { RoomList } from "../components/RoomList";
 import { RoomSuggestField } from "../components/RoomSuggestField";
 import { plural } from "../plural";
-import { SELECT } from "./fieldStyles";
+import { RuleCard } from "./RuleCard";
 import {
 	type CatalogTypology,
 	catalogOf,
@@ -23,14 +23,8 @@ import {
 	usedRoomNames,
 } from "./typologyCatalog";
 import {
-	ALL_FINALS,
-	type RuleDraft,
-	type TypologyDraft,
-} from "./typologyRules";
-import {
 	type DraftErrors,
-	type RuleField,
-	ruleFieldId,
+	type TypologyDraft,
 	typologyFieldId,
 	typologyLimitReached,
 	type WizardDraft,
@@ -44,10 +38,6 @@ type Edit = (
 	update: (draft: WizardDraft) => WizardDraft,
 	touched?: string,
 ) => void;
-
-const RULE_GRID =
-	"grid-cols-[1fr_0.7fr_0.7fr_1.3fr_44px] items-start gap-(--space-2)";
-const RULE_GRID_WITH_TOWER = "grid-cols-[1.1fr_1fr_0.7fr_0.7fr_1.3fr_44px]";
 
 const GROUPS = [
 	{ locationType: "unit", title: "Unidades", create: "Nova tipologia" },
@@ -220,179 +210,6 @@ function TypologyCard({
 	);
 }
 
-function RuleRow({
-	rule,
-	number,
-	draft,
-	unitTypes,
-	errors,
-	edit,
-	desktop,
-}: {
-	rule: RuleDraft;
-	number: number;
-	draft: WizardDraft;
-	unitTypes: readonly CatalogTypology[];
-	errors: DraftErrors;
-	edit: Edit;
-	desktop: boolean;
-}) {
-	const several = draft.towers.length > 1;
-	const set = (patch: Partial<RuleDraft>, touched?: string) =>
-		edit(
-			(current) => ({
-				...current,
-				rules: current.rules.map((other) =>
-					other.key === rule.key ? { ...other, ...patch } : other,
-				),
-			}),
-			touched,
-		);
-	const errorOf = (field: RuleField) => errors[ruleFieldId(rule.key, field)];
-	const describedBy = (field: RuleField) =>
-		errorOf(field) ? `${ruleFieldId(rule.key, field)}-error` : undefined;
-	const messages = (["finals", "from", "to"] as const).flatMap((field) => {
-		const message = errorOf(field);
-		return message ? [{ field, message }] : [];
-	});
-
-	const text = (field: RuleField, label: string, placeholder?: string) => {
-		const id = ruleFieldId(rule.key, field);
-		const digits = field !== "finals";
-		return (
-			<Input
-				id={id}
-				aria-label={desktop ? `${label} da regra ${number}` : undefined}
-				autoComplete="off"
-				inputMode={digits ? "numeric" : "text"}
-				maxLength={digits ? 3 : 40}
-				placeholder={placeholder}
-				aria-invalid={errorOf(field) !== undefined}
-				aria-describedby={describedBy(field)}
-				value={rule[field]}
-				onChange={(event) =>
-					set(
-						{
-							[field]: digits
-								? event.target.value.replace(/\D/g, "")
-								: event.target.value,
-						},
-						id,
-					)
-				}
-			/>
-		);
-	};
-	const towerSelect = several && (
-		<select
-			id={`${rule.key}-tower`}
-			aria-label={desktop ? `Torre da regra ${number}` : undefined}
-			className={SELECT}
-			value={rule.tower}
-			onChange={(event) => set({ tower: Number(event.target.value) })}
-		>
-			{draft.towers.map((tower, index) => (
-				<option key={tower.key} value={index}>
-					{tower.name}
-				</option>
-			))}
-		</select>
-	);
-	const typeSelect = (
-		<select
-			id={`${rule.key}-type`}
-			aria-label={desktop ? `Tipologia da regra ${number}` : undefined}
-			className={SELECT}
-			value={rule.typology}
-			onChange={(event) => set({ typology: event.target.value })}
-		>
-			{unitTypes.map((typology) => (
-				<option key={typology.key} value={typology.key}>
-					{typology.name}
-				</option>
-			))}
-		</select>
-	);
-	const remove = (
-		<Button
-			type="button"
-			variant="ghost"
-			size="icon"
-			aria-label={`Tirar regra ${number}`}
-			onClick={() =>
-				edit((current) => ({
-					...current,
-					rules: current.rules.filter((other) => other.key !== rule.key),
-				}))
-			}
-		>
-			<X className="size-5" aria-hidden="true" />
-		</Button>
-	);
-	const errorList = messages.map(({ field, message }) => (
-		<FieldError key={field} id={`${ruleFieldId(rule.key, field)}-error`}>
-			{message}
-		</FieldError>
-	));
-
-	if (desktop) {
-		return (
-			<fieldset className="grid min-w-0 gap-1">
-				<legend className="sr-only">Regra {number}</legend>
-				<div className={cn("grid", RULE_GRID, several && RULE_GRID_WITH_TOWER)}>
-					{towerSelect}
-					{text("finals", "Finais", ALL_FINALS)}
-					{text("from", "Do andar", "Primeiro")}
-					{text("to", "Até o andar", "Último")}
-					{typeSelect}
-					{remove}
-				</div>
-				{errorList}
-			</fieldset>
-		);
-	}
-
-	return (
-		<fieldset className="grid min-w-0 gap-(--space-3) rounded-lg bg-background p-(--space-3) shadow-(--ring-hairline)">
-			<legend className="sr-only">Regra {number}</legend>
-			<div className="grid grid-cols-[minmax(0,1fr)_44px] items-end gap-(--space-2)">
-				<Field>
-					<FieldLabel htmlFor={`${rule.key}-type`}>Tipologia</FieldLabel>
-					{typeSelect}
-				</Field>
-				{remove}
-			</div>
-			{several && (
-				<Field>
-					<FieldLabel htmlFor={`${rule.key}-tower`}>Torre</FieldLabel>
-					{towerSelect}
-				</Field>
-			)}
-			<div className="grid grid-cols-3 items-start gap-(--space-2)">
-				<Field data-invalid={errorOf("finals") !== undefined}>
-					<FieldLabel htmlFor={ruleFieldId(rule.key, "finals")}>
-						Finais
-					</FieldLabel>
-					{text("finals", "Finais", ALL_FINALS)}
-				</Field>
-				<Field data-invalid={errorOf("from") !== undefined}>
-					<FieldLabel htmlFor={ruleFieldId(rule.key, "from")}>
-						Do andar
-					</FieldLabel>
-					{text("from", "Do andar", "Primeiro")}
-				</Field>
-				<Field data-invalid={errorOf("to") !== undefined}>
-					<FieldLabel htmlFor={ruleFieldId(rule.key, "to")}>
-						Até o andar
-					</FieldLabel>
-					{text("to", "Até o andar", "Último")}
-				</Field>
-			</div>
-			{errorList}
-		</fieldset>
-	);
-}
-
 export function TypologiesStep({
 	draft,
 	errors,
@@ -400,6 +217,7 @@ export function TypologiesStep({
 	desktop,
 	existing,
 	roomNames,
+	unitsByRule,
 }: {
 	draft: WizardDraft;
 	errors: DraftErrors;
@@ -407,8 +225,8 @@ export function TypologiesStep({
 	desktop: boolean;
 	existing: readonly Typology[];
 	roomNames: readonly string[];
+	unitsByRule: Readonly<Record<string, number>>;
 }) {
-	const several = draft.towers.length > 1;
 	const catalog = catalogOf(draft, existing);
 	const unitTypes = ofKind(catalog, "unit");
 	const taken = takenTypologyNames(draft, existing);
@@ -516,37 +334,32 @@ export function TypologiesStep({
 					</section>
 				);
 			})}
-			<div className="grid gap-(--space-2)">
-				<span className="font-medium">Onde se aplica</span>
-				{desktop && draft.rules.length > 0 && (
-					<div
-						aria-hidden="true"
-						className={cn(
-							"grid text-xs font-semibold text-muted-foreground",
-							RULE_GRID,
-							several && RULE_GRID_WITH_TOWER,
-						)}
-					>
-						{several && <span>Torre</span>}
-						<span>Finais</span>
-						<span>Do andar</span>
-						<span>Até o andar</span>
-						<span>Tipologia</span>
-						<span />
-					</div>
-				)}
-				{draft.rules.map((rule, index) => (
-					<RuleRow
-						key={rule.key}
-						rule={rule}
-						number={index + 1}
-						draft={draft}
-						unitTypes={unitTypes}
-						errors={errors}
-						edit={edit}
-						desktop={desktop}
-					/>
-				))}
+			<div className="grid gap-(--space-3)">
+				<div className="grid gap-(--space-1)">
+					<span className="font-medium">Onde se aplica</span>
+					<p className="text-sm text-pretty text-muted-foreground">
+						Cada regra dá uma tipologia às unidades dos finais e andares
+						escolhidos. Final que a torre não tem fica de fora, sem erro.
+					</p>
+				</div>
+				<div
+					className={cn(
+						"grid gap-(--space-3)",
+						desktop && "grid-cols-[repeat(auto-fit,minmax(280px,1fr))]",
+					)}
+				>
+					{draft.rules.map((rule, index) => (
+						<RuleCard
+							key={rule.key}
+							rule={rule}
+							number={index + 1}
+							draft={draft}
+							unitTypes={unitTypes}
+							units={unitsByRule[rule.key] ?? 0}
+							edit={edit}
+						/>
+					))}
+				</div>
 				<Button
 					type="button"
 					variant="ghost"
@@ -561,9 +374,8 @@ export function TypologiesStep({
 					Regra
 				</Button>
 				<span className="text-sm text-pretty text-muted-foreground">
-					Uma obra com todas as unidades iguais tem uma tipologia só, em todos
-					os finais e andares. Unidade sem regra fica sem tipologia, e os
-					cômodos dela se cadastram nela.
+					Unidade sem regra fica sem tipologia, e os cômodos dela se cadastram
+					nela.
 				</span>
 			</div>
 			{naming && (

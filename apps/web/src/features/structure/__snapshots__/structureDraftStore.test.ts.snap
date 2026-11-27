@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`structure draft storage > records the persisted schema shape for version 3 1`] = `
+exports[`structure draft storage > records the persisted schema shape for version 4 1`] = `
 {
   "fields": {
     "area": {
@@ -26,10 +26,10 @@ exports[`structure draft storage > records the persisted schema shape for versio
     },
     "rule": {
       "finals": true,
-      "from": true,
+      "fromFloor": true,
       "key": true,
-      "to": true,
-      "tower": true,
+      "toFloor": true,
+      "towers": true,
       "typology": true,
     },
     "tower": {
@@ -65,10 +65,12 @@ exports[`structure draft storage > records the persisted schema shape for versio
     "rules": [
       {
         "finals": "string",
-        "from": "string",
+        "fromFloor": "object",
         "key": "string",
-        "to": "string",
-        "tower": "number",
+        "toFloor": "object",
+        "towers": [
+          "string",
+        ],
         "typology": "string",
       },
     ],
@@ -204,21 +206,53 @@ exports[`structure draft storage > records the persisted schema shape for versio
               "additionalProperties": false,
               "properties": {
                 "finals": {
-                  "type": "string",
+                  "anyOf": [
+                    {
+                      "const": "all",
+                      "type": "string",
+                    },
+                    {
+                      "items": {
+                        "maximum": 9007199254740991,
+                        "minimum": 1,
+                        "type": "integer",
+                      },
+                      "type": "array",
+                    },
+                  ],
                 },
-                "from": {
-                  "type": "string",
+                "fromFloor": {
+                  "anyOf": [
+                    {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
                 },
                 "key": {
                   "type": "string",
                 },
-                "to": {
-                  "type": "string",
+                "toFloor": {
+                  "anyOf": [
+                    {
+                      "maximum": 9007199254740991,
+                      "minimum": -9007199254740991,
+                      "type": "integer",
+                    },
+                    {
+                      "type": "null",
+                    },
+                  ],
                 },
-                "tower": {
-                  "maximum": 9007199254740991,
-                  "minimum": -9007199254740991,
-                  "type": "integer",
+                "towers": {
+                  "items": {
+                    "type": "string",
+                  },
+                  "type": "array",
                 },
                 "typology": {
                   "type": "string",
@@ -226,10 +260,10 @@ exports[`structure draft storage > records the persisted schema shape for versio
               },
               "required": [
                 "key",
-                "tower",
+                "towers",
                 "finals",
-                "from",
-                "to",
+                "fromFloor",
+                "toFloor",
                 "typology",
               ],
               "type": "object",
@@ -380,7 +414,7 @@ exports[`structure draft storage > records the persisted schema shape for versio
         "type": "object",
       },
       "version": {
-        "const": 3,
+        "const": 4,
         "type": "number",
       },
     },

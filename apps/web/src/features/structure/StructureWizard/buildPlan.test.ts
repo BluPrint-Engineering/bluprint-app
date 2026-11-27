@@ -26,8 +26,10 @@ function draftOf(
 	towers: TowerOf[],
 	rest: Partial<WizardDraft> = {},
 ): WizardDraft {
+	const initial = initialDraft();
 	return {
-		...initialDraft(),
+		...initial,
+		rules: initial.rules.map((rule) => ({ ...rule, towers: ["tower-0"] })),
 		towers: towers.map(
 			({ ranges, first, last, finals, noUnits, ...tower }, index) => ({
 				key: `tower-${index}`,
@@ -310,10 +312,10 @@ const ruleOf = (
 	rest: Partial<WizardDraft["rules"][number]> = {},
 ) => ({
 	key: `rule-${typology}-${Math.random()}`,
-	tower: 0,
-	finals: "todos",
-	from: "",
-	to: "",
+	towers: ["tower-0"],
+	finals: "all" as "all" | number[],
+	fromFloor: null as number | null,
+	toFloor: null as number | null,
 	typology,
 	...rest,
 });
@@ -354,8 +356,8 @@ describe("buildPlan typologies", () => {
 			draftOf([{ last: "2", finals: "01, 04" }], {
 				typologies: [typeOf("a", "A"), typeOf("b", "B")],
 				rules: [
-					ruleOf("a", { finals: "01, 03" }),
-					ruleOf("b", { finals: "02, 04" }),
+					ruleOf("a", { finals: [1, 3] }),
+					ruleOf("b", { finals: [2, 4] }),
 				],
 			}),
 			identity,
@@ -383,7 +385,7 @@ describe("buildPlan typologies", () => {
 		const plan = buildPlan(
 			draftOf([{ first: "1", last: "4", finals: "01" }], {
 				typologies: [typeOf("a", "A")],
-				rules: [ruleOf("a", { from: "2", to: "3" })],
+				rules: [ruleOf("a", { fromFloor: 2, toFloor: 3 })],
 			}),
 			identity,
 		);
@@ -399,7 +401,7 @@ describe("buildPlan typologies", () => {
 		const plan = buildPlan(
 			draftOf([{ first: "1", last: "3", finals: "01" }], {
 				typologies: [typeOf("a", "A"), typeOf("c", "Cobertura")],
-				rules: [ruleOf("c", { from: "3" }), ruleOf("a", { to: "2" })],
+				rules: [ruleOf("c", { fromFloor: 3 }), ruleOf("a", { toFloor: 2 })],
 			}),
 			identity,
 		);
@@ -407,16 +409,71 @@ describe("buildPlan typologies", () => {
 		expect(typesOfUnits(plan)).toEqual(["101:A", "201:A", "301:Cobertura"]);
 	});
 
-	test("lets the first rule that matches win", () => {
+	test("leaves a unit two rules reach without a typology and out of every count", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", finals: "01, 02" }], {
 				typologies: [typeOf("a", "A"), typeOf("b", "B")],
-				rules: [ruleOf("b", { finals: "2" }), ruleOf("a")],
+				rules: [
+					ruleOf("b", { key: "rule-b", finals: [2] }),
+					ruleOf("a", { key: "rule-a" }),
+				],
 			}),
 			identity,
 		);
 
-		expect(typesOfUnits(plan)).toEqual(["101:A", "102:B"]);
+		expect(typesOfUnits(plan)).toEqual(["101:A", "102:-"]);
+		expect(
+			plan.locations.filter((l) => l.type === "unit").map((l) => l.typologyId),
+		).toEqual(["typology:a", undefined]);
+		expect(plan.untyped).toBe(0);
+		expect(plan.typologyCounts.map(({ name, units }) => [name, units])).toEqual(
+			[["A", 1]],
+		);
+		expect(plan.conflicts).toEqual([
+			{
+				ruleKeys: ["rule-a", "rule-b"],
+				tower: "tower-0",
+				finals: [2],
+				floors: [1],
+			},
+		]);
+	});
+
+	test("reports a conflict between rules with the same typology", () => {
+		const plan = buildPlan(
+			draftOf([{ last: "1", finals: "01" }], {
+				typologies: [typeOf("a", "A")],
+				rules: [
+					ruleOf("a", { key: "rule-1" }),
+					ruleOf("a", { key: "rule-2", fromFloor: 1 }),
+				],
+			}),
+			identity,
+		);
+
+		expect(plan.conflicts).toHaveLength(1);
+		expect(typesOfUnits(plan)).toEqual(["101:-"]);
+		expect(plan.untyped).toBe(0);
+	});
+
+	test("counts the units each rule reaches, including a rule that reaches none", () => {
+		const plan = buildPlan(
+			draftOf([{ first: "1", last: "3", finals: "01, 02" }], {
+				typologies: [typeOf("a", "A")],
+				rules: [
+					ruleOf("a", { key: "rule-all" }),
+					ruleOf("a", { key: "rule-two", finals: [2], fromFloor: 2 }),
+					ruleOf("a", { key: "rule-void", finals: [4] }),
+				],
+			}),
+			identity,
+		);
+
+		expect(plan.unitsByRule).toEqual({
+			"rule-all": 6,
+			"rule-two": 2,
+			"rule-void": 0,
+		});
 	});
 
 	test("keeps each tower's rules to that tower", () => {
@@ -428,7 +485,10 @@ describe("buildPlan typologies", () => {
 				],
 				{
 					typologies: [typeOf("a", "A"), typeOf("b", "B")],
-					rules: [ruleOf("a", { tower: 0 }), ruleOf("b", { tower: 1 })],
+					rules: [
+						ruleOf("a", { towers: ["tower-0"] }),
+						ruleOf("b", { towers: ["tower-1"] }),
+					],
 				},
 			),
 			identity,
@@ -441,7 +501,7 @@ describe("buildPlan typologies", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", finals: "01, 03" }], {
 				typologies: [typeOf("a", "A")],
-				rules: [ruleOf("a", { finals: "1" })],
+				rules: [ruleOf("a", { finals: [1] })],
 			}),
 			identity,
 		);
@@ -451,11 +511,11 @@ describe("buildPlan typologies", () => {
 		expect(plan.typologyCounts).toHaveLength(1);
 	});
 
-	test("ignores a rule whose finals cannot be read", () => {
+	test("gives no typology from a rule without finals", () => {
 		const plan = buildPlan(
 			draftOf([{ last: "1", finals: "01" }], {
 				typologies: [typeOf("a", "A")],
-				rules: [ruleOf("a", { finals: "um" })],
+				rules: [ruleOf("a", { finals: [] })],
 			}),
 			identity,
 		);

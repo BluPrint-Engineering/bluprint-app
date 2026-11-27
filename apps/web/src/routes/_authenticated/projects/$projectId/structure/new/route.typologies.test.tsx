@@ -441,6 +441,67 @@ describe("typologies in the wizard", () => {
 		expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 	});
 
+	test("restores three rules with the same finals and floors after the session expires on create", async () => {
+		const { handler, sent } = wizardApi();
+		const server = expiringServer(handler);
+		renderAt(PATH);
+		await user.type(
+			await screen.findByRole("textbox", { name: "Primeiro andar" }),
+			"1",
+		);
+		await user.type(screen.getByRole("textbox", { name: "Último andar" }), "4");
+		await user.type(screen.getByRole("textbox", { name: "Finais" }), "01, 04");
+		await user.click(screen.getByRole("button", { name: "Regra" }));
+		await user.click(screen.getByRole("button", { name: "Regra" }));
+		const pick = async (number: number, ...labels: string[]) => {
+			await user.click(
+				screen.getByRole("button", { name: `Finais da regra ${number}` }),
+			);
+			const menu = await screen.findByRole("menu");
+			for (const label of labels) {
+				await user.click(
+					within(menu).getByRole("menuitemcheckbox", { name: label }),
+				);
+			}
+			await user.keyboard("{Escape}");
+			await waitFor(() =>
+				expect(screen.queryByRole("menu")).not.toBeInTheDocument(),
+			);
+		};
+		await pick(1, "01", "03");
+		await pick(2, "02");
+		await user.selectOptions(
+			screen.getByRole("combobox", { name: "Do andar da regra 2" }),
+			"2º",
+		);
+		await user.selectOptions(
+			screen.getByRole("combobox", { name: "Até o andar da regra 2" }),
+			"3º",
+		);
+		await pick(3, "04");
+
+		server.expireNextWrite();
+		await user.click(screen.getByRole("button", { name: "Criar estrutura" }));
+		await signInAgain();
+
+		expect(
+			await screen.findByRole("button", { name: "Finais da regra 3" }),
+		).toHaveTextContent("04");
+		expect(
+			screen.getByRole("button", { name: "Finais da regra 1" }),
+		).toHaveTextContent("01 e 03");
+		expect(
+			screen.getByRole("button", { name: "Finais da regra 2" }),
+		).toHaveTextContent("02");
+		expect(
+			screen.getByRole("combobox", { name: "Do andar da regra 2" }),
+		).toHaveDisplayValue("2º");
+		expect(
+			screen.getByRole("combobox", { name: "Até o andar da regra 2" }),
+		).toHaveDisplayValue("3º");
+		expect(sent).toHaveLength(0);
+	});
+
 	test("shows an existing typology without editing it, and preselects the tower's hall typology when adding floors", async () => {
 		const hall = typologyOf("Hall padrão", ["Circulação"], {
 			locationType: "common_area",

@@ -5,6 +5,7 @@ import {
 	initialDraft,
 	nextTowerName,
 	type RangeDraft,
+	type RuleDraft,
 	restoreWizardDraft,
 	ruleFieldId,
 	storedWizardDraftSchema,
@@ -13,6 +14,8 @@ import {
 	typologyFieldId,
 	validateDraft,
 	type WizardDraft,
+	withCleanRules,
+	withEditedRules,
 	withNewRange,
 	withNewRule,
 	withNewTypology,
@@ -29,8 +32,10 @@ type TowerOf = Partial<Omit<TowerDraft, "ranges">> &
 	RangeOf & { ranges?: RangeOf[] };
 
 function draftOf(...towers: TowerOf[]): WizardDraft {
+	const initial = initialDraft();
 	return {
-		...initialDraft(),
+		...initial,
+		rules: initial.rules.map((rule) => ({ ...rule, towers: ["tower-0"] })),
 		towers: towers.map(
 			({ ranges, first, last, finals, noUnits, ...tower }, index) => ({
 				key: `tower-${index}`,
@@ -620,30 +625,37 @@ describe("typologies in the draft", () => {
 		]);
 		expect(draft.rules).toEqual([
 			expect.objectContaining({
-				tower: 0,
-				finals: "todos",
-				from: "",
-				to: "",
+				towers: [draft.towers[0]?.key],
+				finals: "all",
+				fromFloor: null,
+				toFloor: null,
 				typology: draft.typologies[0]?.key,
 			}),
 		]);
 	});
 
-	test("copies the previous tower's rules to a new tower and drops them with the tower", () => {
+	test("gives a new tower no rule, so it keeps no typology", () => {
 		const draft = initialDraft();
 
 		const three = withTowerCount(draft, 3);
 
-		expect(three.rules.map((rule) => rule.tower)).toEqual([0, 1, 2]);
-		expect(new Set(three.rules.map((rule) => rule.key)).size).toBe(3);
-		expect(
-			three.rules.every((rule) => rule.typology === draft.rules[0]?.typology),
-		).toBe(true);
-		expect(withTowerCount(three, 2).rules.map((rule) => rule.tower)).toEqual([
-			0, 1,
-		]);
-		expect(withTowerCount(three, 1).rules.map((rule) => rule.tower)).toEqual([
-			0,
+		expect(three.towers).toHaveLength(3);
+		expect(three.rules).toEqual(draft.rules);
+	});
+
+	test("drops a removed tower from the rules and leaves a rule without a tower empty", () => {
+		const [rule] = initialDraft().rules;
+		const base = draftOf({}, {}, {});
+		const rules = [
+			{ ...(rule as RuleDraft), key: "rule-a", towers: ["tower-0", "tower-1"] },
+			{ ...(rule as RuleDraft), key: "rule-b", towers: ["tower-1"] },
+		];
+
+		const cleaned = withCleanRules(withTowerCount({ ...base, rules }, 1));
+
+		expect(cleaned.rules.map(({ key, towers }) => [key, towers])).toEqual([
+			["rule-a", ["tower-0"]],
+			["rule-b", []],
 		]);
 	});
 
@@ -679,8 +691,10 @@ describe("typologies in the draft", () => {
 		expect(draft.rules).toHaveLength(2);
 		expect(draft.rules[1]).toEqual(
 			expect.objectContaining({
-				tower: 0,
-				finals: "todos",
+				towers: [draft.towers[0]?.key],
+				finals: "all",
+				fromFloor: null,
+				toFloor: null,
 				typology: draft.typologies[0]?.key,
 			}),
 		);
@@ -714,37 +728,33 @@ describe("typologies in the draft", () => {
 		expect(errors[typologyFieldId(first?.key ?? "")]).toBeUndefined();
 	});
 
-	test("refuses finals that are not numbers and a last floor below the first", () => {
-		const draft = initialDraft();
-		const rule = draft.rules[0];
-		const bad = {
-			...draft,
-			towers: draftOf({ last: "5" }).towers,
-			rules: [{ ...rule, finals: "um", from: "5", to: "2" }],
-		} as WizardDraft;
+	test("refuses a rule without a tower and a rule without a final, and one that reaches no unit is fine", () => {
+		const base = draftOf({ last: "5", finals: "01, 02" });
+		const [rule] = initialDraft().rules as [RuleDraft];
+		const rules: RuleDraft[] = [
+			{ ...rule, key: "rule-none", towers: [] },
+			{ ...rule, key: "rule-empty", towers: ["tower-0"], finals: [] },
+			{ ...rule, key: "rule-void", towers: ["tower-0"], finals: [4] },
+		];
 
-		const errors = validateDraft(bad);
+		const errors = validateDraft({ ...base, rules });
 
-		expect(errors[ruleFieldId(rule?.key ?? "", "finals")]).toBe(
-			"Use números como 01, 03, ou escreva todos.",
-		);
-		expect(errors[ruleFieldId(rule?.key ?? "", "to")]).toBe(
-			"O andar final precisa ser igual ou maior que o inicial.",
-		);
-		expect(errors[ruleFieldId(rule?.key ?? "", "from")]).toBeUndefined();
+		expect(errors).toEqual({
+			[ruleFieldId("rule-none", "towers")]: "Escolha ao menos uma torre.",
+			[ruleFieldId("rule-empty", "finals")]: "Escolha ao menos um final.",
+		});
 	});
 
 	test("points firstInvalidField at the typologies section after the towers and areas", () => {
-		const draft = withNewRule(initialDraft());
-		const rule = draft.rules[1];
+		const base = draftOf({ last: "5" });
+		const [rule] = initialDraft().rules as [RuleDraft];
 		const bad = {
-			...draft,
-			towers: draftOf({ last: "5" }).towers,
-			rules: [draft.rules[0], { ...rule, finals: "x" }],
-		} as WizardDraft;
+			...base,
+			rules: [{ ...rule, key: "rule-empty", towers: ["tower-0"], finals: [] }],
+		};
 
 		expect(firstInvalidField(bad, validateDraft(bad))).toEqual({
-			id: ruleFieldId(rule?.key ?? "", "finals"),
+			id: ruleFieldId("rule-empty", "finals"),
 			section: "types",
 		});
 	});
@@ -768,6 +778,87 @@ describe("typologies in the draft", () => {
 		} as WizardDraft;
 
 		expect(validateDraft(filled)).toEqual({});
+	});
+});
+
+describe("cleaning the rules of a draft", () => {
+	const [initialRule] = initialDraft().rules as [RuleDraft];
+	const rule = (patch: Partial<RuleDraft>): RuleDraft => ({
+		...initialRule,
+		key: "rule-x",
+		towers: ["tower-0"],
+		...patch,
+	});
+
+	test("takes out the finals and floors a shortened range no longer has", () => {
+		const base = draftOf({ first: "1", last: "6", finals: "01, 02" });
+		const rules = [
+			rule({ finals: [2, 3, 4], fromFloor: 5, toFloor: 9 }),
+			rule({ key: "rule-y", finals: "all" }),
+		];
+
+		const cleaned = withCleanRules({ ...base, rules });
+
+		expect(cleaned.rules).toEqual([
+			expect.objectContaining({ finals: [2], fromFloor: 5, toFloor: null }),
+			expect.objectContaining({ finals: "all", fromFloor: null }),
+		]);
+	});
+
+	test("reads the finals of every range of the tower", () => {
+		const base = draftOf({
+			ranges: [
+				{ first: "1", last: "3", finals: "01, 02" },
+				{ first: "4", last: "6", finals: "03, 04" },
+			],
+		});
+
+		const cleaned = withCleanRules({
+			...base,
+			rules: [rule({ finals: [1, 4, 5], fromFloor: 4, toFloor: 6 })],
+		});
+
+		expect(cleaned.rules[0]).toEqual(
+			expect.objectContaining({ finals: [1, 4], fromFloor: 4, toFloor: 6 }),
+		);
+	});
+
+	test("keeps what a rule chose on a tower whose ranges cannot be read yet", () => {
+		const base = draftOf({ first: "1", last: "", finals: "01" });
+		const rules = [rule({ finals: [3, 4], fromFloor: 2, toFloor: 4 })];
+
+		expect(withCleanRules({ ...base, rules }).rules).toEqual(rules);
+	});
+
+	test("cleans after a change of ranges but not after a change of the rule itself", () => {
+		const base = draftOf({ first: "1", last: "6", finals: "01, 02" });
+		const before = { ...base, rules: [rule({ finals: [1, 2] })] };
+
+		const ruleEdited = { ...before, rules: [rule({ finals: [4] })] };
+		const rangeEdited = withRange(before, 0, "range-0-0", { finals: "01" });
+
+		expect(withEditedRules(before, ruleEdited).rules[0]?.finals).toEqual([4]);
+		expect(withEditedRules(before, rangeEdited).rules[0]?.finals).toEqual([1]);
+	});
+
+	test("cleans a stored draft when it is restored", () => {
+		const base = draftOf({ first: "1", last: "6", finals: "01, 02" });
+		const stored = storedWizardDraftSchema.parse(
+			JSON.parse(
+				JSON.stringify(
+					storeWizardDraft({
+						...base,
+						rules: [
+							rule({ finals: [1, 2, 3, 4], towers: ["tower-0", "gone"] }),
+						],
+					}),
+				),
+			),
+		);
+
+		expect(restoreWizardDraft(stored).rules).toEqual([
+			expect.objectContaining({ finals: [1, 2], towers: ["tower-0"] }),
+		]);
 	});
 });
 
